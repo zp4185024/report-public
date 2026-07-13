@@ -1,0 +1,32 @@
+{
+  "$schema": "https://gitee.com/dotnetchina/Furion/raw/v4/schemas/v4/furion-schema.json",
+
+  "Wechat": {
+    // 公众号
+    "WechatAppId": "",
+    "WechatAppSecret": "",
+    "WechatToken": "", // 微信公众号服务器配置中的令牌(Token)
+    "WechatEncodingAESKey": "", // 微信公众号服务器配置中的消息加解密密钥(EncodingAESKey)
+    // 小程序
+    "WxOpenAppId": "",
+    "WxOpenAppSecret": "",
+    "WxToken": "", // 小程序消息推送中的令牌(Token)
+    "WxEncodingAESKey": "", // 小程序消息推送中的消息加解密密钥(EncodingAESKey)
+    "QRImagePath": "" //小程序生成带参数二维码保存位置（绝对路径 eg: D:\\Web\\wwwroot\\upload\\QRImage），如果不配置，则默认保存在项目根目录下wwwroot\\upload\\QRImage
+  },
+  // 微信支付
+  "WechatPay": {
+    "AppId": "", // 微信公众平台AppId、开放平台AppId、小程序AppId、企业微信CorpId
+    "MerchantId": "", // 商户平台的商户号
+    "MerchantV3Secret": "", // 商户平台的APIv3密钥
+    "MerchantCertificateSerialNumber": "", // 商户平台的证书序列号
+    "MerchantCertificatePrivateKey": "WxPayCert/apiclient_key.pem" // 商户平台的API证书私钥(apiclient_key.pem文件内容)
+  },
+  // 支付回调
+  "PayCallBack": {
+    "WechatPayUrl": "https://xxx/api/sysWechatPay/payCallBack", // 微信支付回调
+    "WechatRefundUrl": "", // 微信退款回调
+    "AlipayUrl": "", // 支付宝支付回调
+    "AlipayRefundUrl": "" // 支付宝退款回调
+  }
+}

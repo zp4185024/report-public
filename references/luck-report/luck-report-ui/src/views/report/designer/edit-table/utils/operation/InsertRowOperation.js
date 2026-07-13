@@ -1,0 +1,168 @@
+/**
+ * Created by Jacky.Gao on 2017-02-17.
+ */
+import {buildNewCellDef, resetTableData, setDirty, undoManager} from '@/utils/table.js';
+import {renderRowHeader} from '@/views/report/designer/edit-table/utils/HeaderUtils.js';
+import {$t} from "@/locales";
+import {showAlert} from "@/utils/comnon";
+import {
+    addCell,
+    adjustDelRowHeaders,
+    adjustInsertRowHeaders,
+    getCell,
+    getContext,
+    removeCell
+} from "@/utils/contextActions";
+import {deepCopy} from '@/components/utils';
+
+export function doInsertRow(above, number = 1) {
+    const selected = this.getSelected();
+    if (!selected) {
+        showAlert($t('table.rowTip')).then(r => {
+        });
+        return;
+    }
+    const [startRow, startCol, endRow, endCol] = selected[0];
+    let position = startRow;
+    if (startRow > endRow) {
+        if (above) {
+            position = endRow;
+        } else {
+            position = startRow + 1;
+        }
+    } else {
+        if (above) {
+            position = startRow;
+        } else {
+            position = endRow + 1;
+        }
+    }
+    let rowHeights = this.getSettings().rowHeights;
+    let newRowHeights = rowHeights.concat([]);
+    for (let i = 0; i < number; i++) {
+        newRowHeights.splice(position, 0, 25);
+    }
+    this.alter("insert_row", position, number);
+    adjustInsertRowHeaders(position);
+    renderRowHeader(this);
+
+    buildNewRowCells(this, position, number);
+    this.updateSettings({
+        rowHeights: newRowHeights,
+        manualRowResize: newRowHeights
+    });
+    resetTableData(this);
+    setDirty();
+
+    const _this = this;
+    const context = getContext();
+    const cellsMap = context.cellsMap
+    const removeCells = [];
+    let removeRowHeight = 25;
+    undoManager.add({
+        redo: function () {
+            rowHeights = _this.getSettings().rowHeights;
+            newRowHeights = rowHeights.concat([]);
+            for (let i = 0; i < number; i++) {
+                newRowHeights.splice(position, 0, removeRowHeight);
+            }
+            _this.alter("insert_row", position, number);
+            adjustInsertRowHeaders(position);
+            renderRowHeader(_this);
+            let changeCells = [];
+            for (let cell of cellsMap.values()) {
+                let rowIndex = cell.rowNumber - 1;
+                if (rowIndex >= position) {
+                    changeCells.push(cell);
+                }
+            }
+            for (let cell of changeCells) {
+                removeCell(cell);
+            }
+            for (let cell of changeCells) {
+                cell.rowNumber = cell.rowNumber + number;
+                addCell(cell);
+            }
+            for (let cell of removeCells) {
+                addCell(cell);
+            }
+            _this.updateSettings({
+                rowHeights: newRowHeights,
+                manualRowResize: newRowHeights
+            });
+            resetTableData(_this);
+            setDirty();
+        },
+        undo: function () {
+            removeCells.splice(0, removeCells.length);
+            rowHeights = _this.getSettings().rowHeights;
+            newRowHeights = rowHeights.concat([]);
+            for (let i = 0; i < number; i++) {
+                removeRowHeight = newRowHeights[position];
+                newRowHeights.splice(position, 1);
+            }
+            _this.alter('remove_row', position, number);
+            adjustDelRowHeaders(position);
+            renderRowHeader(_this);
+            _this.updateSettings({
+                rowHeights: newRowHeights,
+                manualRowResize: newRowHeights
+            });
+            let countCols = _this.countCols();
+            for (let i = 0; i < number; i++) {
+                for (let j = 0; j < countCols; j++) {
+                    let cell = getCell(position, j);
+                    if (cell) {
+                        removeCells.push(cell);
+                        removeCell(cell);
+                    }
+                }
+            }
+            let changeCells = [];
+            for (let cell of cellsMap.values()) {
+                let rowIndex = cell.rowNumber - 1;
+                if (rowIndex > position) {
+                    changeCells.push(cell);
+                }
+            }
+            for (let cell of changeCells) {
+                removeCell(cell);
+            }
+            for (let cell of changeCells) {
+                cell.rowNumber = cell.rowNumber - number;
+                addCell(cell);
+            }
+            resetTableData(_this);
+            setDirty();
+        }
+    });
+};
+
+
+function buildNewRowCells(hot, position, number) {
+    const countCols = hot.countCols();
+    const countRows = hot.countRows();
+    const context = getContext();
+    const cellsMap = context.cellsMap;
+    const changeCells = [];
+    for (let cell of cellsMap.values()) {
+        let rowIndex = cell.rowNumber - 1;
+        if (rowIndex >= position) {
+            changeCells.push(cell);
+        }
+    }
+    for (let cell of changeCells) {
+        removeCell(cell);
+    }
+    for (let cell of changeCells) {
+        let newCell = deepCopy(cell);
+        newCell.rowNumber = cell.rowNumber + number;
+        addCell(newCell);
+    }
+    for (let i = 0; i < number; i++) {
+        for (let j = 0; j < countCols; j++) {
+            let newCellDef = buildNewCellDef(position + i + 1, (j + 1));
+            addCell(newCellDef);
+        }
+    }
+};

@@ -1,0 +1,421 @@
+// Admin.NET 项目的版权、商标、专利和其他相关权利均受相应法律法规的保护。使用本项目应遵守相关法律法规和许可证的要求。
+//
+// 本项目主要遵循 MIT 许可证和 Apache 许可证（版本 2.0）进行分发和使用。许可证位于源代码树根目录中的 LICENSE-MIT 和 LICENSE-APACHE 文件。
+//
+// 不得利用本项目从事危害国家安全、扰乱社会秩序、侵犯他人合法权益等法律法规禁止的活动！任何基于本项目二次开发而产生的一切法律纠纷和责任，我们不承担任何责任！
+
+using Admin.NET.Core.Service;
+using Microsoft.AspNetCore.Http;
+using Furion.DatabaseAccessor;
+using Furion.FriendlyException;
+using Mapster;
+using SqlSugar;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using @(Model.NameSpace).Entity;
+namespace @(Model.NameSpace);
+
+/// <summary>
+/// @(Model.BusName)服务 🧩
+/// </summary>
+[ApiDescriptionSettings(@(Model.ProjectLastName)Const.GroupName, Order = 100)]
+public partial class @(Model.ClassName)Service : IDynamicApiController, ITransient
+{
+    private readonly SqlSugarRepository<@(Model.ClassName)> _@(Model.LowerClassName)Rep;
+    @foreach(var kv in Model.InjectServiceMap) {
+    @:private readonly @(kv.Key) _@(kv.Value);
+    }
+
+    public @(Model.ClassName)Service(SqlSugarRepository<@(Model.ClassName)> @(Model.LowerClassName)Rep@(Model.InjectServiceArgs))
+    {
+        _@(Model.LowerClassName)Rep = @(Model.LowerClassName)Rep;
+        @foreach(var kv in Model.InjectServiceMap) {
+        @:_@(kv.Value) = @(kv.Value);
+        }
+    }
+
+    /// <summary>
+    /// 分页查询@(Model.BusName) 🔖
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    [DisplayName("分页查询@(Model.BusName)")]
+    [ApiDescriptionSettings(Name = "Page"), HttpPost]
+    public async Task<SqlSugarPagedList<@(Model.ClassName)Output>> Page(Page@(Model.ClassName)Input input)
+    {
+        input.Keyword = input.Keyword?.Trim();
+        var query = _@(Model.LowerClassName)Rep.AsQueryable()
+    @{
+          string joinTableName = "u";
+          var queryFields = Model.TableField.Where(u => u.WhetherQuery == "Y");
+          // 关键字模糊查询
+          if (queryFields.Any(u => u.QueryType == "like")) {
+            @:.WhereIF(!string.IsNullOrWhiteSpace(input.Keyword), u => @string.Join(" || ", queryFields.Where(u => u.QueryType == "like").Select(col => $"u.{col.PropertyName}.Contains(input.Keyword)")))
+          }
+
+          // 单字段模糊查询
+          foreach(var column in queryFields.Where(u => u.QueryType == "like")) {
+            @:.WhereIF(!string.IsNullOrWhiteSpace(input.@(column.PropertyName)), u => u.@(column.PropertyName).Contains(input.@(column.PropertyName).Trim()))
+          }
+
+          // 字段组合查询
+          foreach(var column in queryFields.Where(u => u.QueryType != "like")) {
+            if (column.NetType.TrimEnd('?') == "string") {
+            @:.WhereIF(!string.IsNullOrWhiteSpace(input.@(column.PropertyName)), u => u.@(column.PropertyName) == input.@(column.PropertyName))
+            } else if (column.NetType.TrimEnd('?') == "int" || column.NetType.TrimEnd('?') == "long") {
+            @:.WhereIF(input.@(column.PropertyName) != null, u => u.@(column.PropertyName) @(column.QueryType) input.@(column.PropertyName))
+            } else if (column.NetType.TrimEnd('?').EndsWith("Enum")) {
+            @:.WhereIF(input.@(column.PropertyName).HasValue, u => u.@(column.PropertyName) == input.@(column.PropertyName))
+            } else if (column.NetType.TrimEnd('?') == "DateTime" && column.QueryType == "~") {
+            @:.WhereIF(input.@(column.PropertyName)Range?.Length == 2, u => u.@(column.PropertyName) >= input.@(column.PropertyName)Range[0] && u.@(column.PropertyName) <= input.@(column.PropertyName)Range[1])
+            } else if (column.NetType.TrimEnd('?').EndsWith("bool")) {
+            @:.WhereIF(input.@(column.PropertyName).HasValue, u => u.@(column.PropertyName) == input.@(column.PropertyName))
+            }
+
+          }
+          // 联表
+          if (Model.HasJoinTable) {
+            foreach (var column in Model.TableField.Where(u => u.EffectType == "ForeignKey" || u.EffectType == "ApiTreeSelector")){
+            joinTableName += ", " + column.LowerPropertyNameTrimEndId;
+            @:.LeftJoin<@column.FkEntityName>((@joinTableName) => u.@(column.PropertyName) == @(column.LowerPropertyNameTrimEndId).@(column.FkLinkColumnName))
+          }
+            // 查询列表
+            @:.Select((@joinTableName) => new @(Model.ClassName)Output
+            @:{
+            foreach (var column in Model.TableField) {
+                if(column.NetType.TrimEnd('?').EndsWith("Enum")) {
+                @:@(column.PropertyName) = (@(column.NetType))u.@(column.PropertyName),
+                }else{
+                @:@(column.PropertyName) = u.@(column.PropertyName),
+                }
+                if (column.EffectType == "ForeignKey" || column.EffectType == "ApiTreeSelector") {
+                @:@(column.ExtendedPropertyName) = @column.GetDisplayColumn(column.LowerPropertyNameTrimEndId),
+                }
+            }
+            @:});
+         } else {
+            // 无联表
+            @:.Select<@(Model.ClassName)Output>();
+         }
+    }
+		return await query.OrderBuilder(input).ToPagedListAsync(input.Page, input.PageSize);
+    }
+
+    /// <summary>
+    /// 获取@(Model.BusName)详情 ℹ️
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    [DisplayName("获取@(Model.BusName)详情")]
+    [ApiDescriptionSettings(Name = "Detail"), HttpGet]
+    public async Task<@(Model.ClassName)> Detail([FromQuery] QueryById@(Model.ClassName)Input input)
+    {
+        return await _@(Model.LowerClassName)Rep.GetFirstAsync(u => @Model.PrimaryKeysFormat(" && ", "u.{0} == input.{0}"));
+    }
+
+    /// <summary>
+    /// 增加@(Model.BusName) ➕
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    [DisplayName("增加@(Model.BusName)")]
+    [ApiDescriptionSettings(Name = "Add"), HttpPost]
+    public async Task<long> Add(Add@(Model.ClassName)Input input)
+    {
+        var entity = input.Adapt<@(Model.ClassName)>();
+        @foreach (var config in Model.TableUniqueConfigList) {
+        @:if (await _@(Model.LowerClassName)Rep.IsAnyAsync(u => @(string.Join(" && ", @config.Columns.Select(x => $"u.{x} != null && u.{x} == input.{x}"))))) throw Oops.Oh("@(config.Message)已存在");
+        }
+        return await _@(Model.LowerClassName)Rep.InsertAsync(entity) ? entity.Id : 0;
+    }
+
+    /// <summary>
+    /// 更新@(Model.BusName) ✏️
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    [DisplayName("更新@(Model.BusName)")]
+    [ApiDescriptionSettings(Name = "Update"), HttpPost]
+    public async Task Update(Update@(Model.ClassName)Input input)
+    {
+        @{
+        var primaryKeyWhere = Model.PrimaryKeysFormat(" && ", "u.{0} != input.{0}");
+        foreach (var config in Model.TableUniqueConfigList) {
+        @:if (await _@(Model.LowerClassName)Rep.IsAnyAsync(u => @primaryKeyWhere && @config.Format(" && ", "u.{0} != null && u.{0} == input.{0}"))) throw Oops.Oh("@(config.Message)已存在");
+        }
+        }
+        var entity = input.Adapt<@(Model.ClassName)>();
+        await _@(Model.LowerClassName)Rep.AsUpdateable(entity)
+        @if (Model.IgnoreUpdateFieldList.Count > 0) {
+        @:.IgnoreColumns(u => new {
+        foreach (var column in Model.IgnoreUpdateFieldList) {
+            @:u.@(column.PropertyName),
+        }
+        @:})
+        }
+        .ExecuteCommandAsync();
+    }
+
+    /// <summary>
+    /// 删除@(Model.BusName) ❌
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    [DisplayName("删除@(Model.BusName)")]
+    [ApiDescriptionSettings(Name = "Delete"), HttpPost]
+    public async Task Delete(Delete@(Model.ClassName)Input input)
+    {
+        var entity = await _@(Model.LowerClassName)Rep.GetFirstAsync(u => @Model.PrimaryKeysFormat(" && ", "u.{0} == input.{0}")) ?? throw Oops.Oh(ErrorCodeEnum.D1002); 
+@{ 
+    @if(Model.TableField.Where(x => x.ColumnName == "IsDelete").Any())
+    {
+        @:await _@(Model.LowerClassName)Rep.FakeDeleteAsync(entity);   //假删除
+    }
+    else{
+        @:await _@(Model.LowerClassName)Rep.DeleteAsync(entity);   //真删除 
+    }
+}  
+    }
+
+    /// <summary>
+    /// 批量删除@(Model.BusName) ❌
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    [DisplayName("批量删除@(Model.BusName)")]
+    [ApiDescriptionSettings(Name = "BatchDelete"), HttpPost]
+    public async Task<int> BatchDelete([Required(ErrorMessage = "主键列表不能为空")]List<Delete@(Model.ClassName)Input> input)
+    {
+        var exp = Expressionable.Create<@(Model.ClassName)>();
+        foreach (var row in input) exp = exp.Or(it => @Model.PrimaryKeysFormat(" && ", "it.{0} == row.{0}"));
+        var list = await _@(Model.LowerClassName)Rep.AsQueryable().Where(exp.ToExpression()).ToListAsync();
+@{ 
+    @if(Model.TableField.Where(x => x.ColumnName == "IsDelete").Any())
+    {
+        @:return await _@(Model.LowerClassName)Rep.FakeDeleteAsync(list);   //假删除
+    }
+    else{ 
+        @:return await _@(Model.LowerClassName)Rep.Context.Deleteable(list).ExecuteCommandAsync();   //真删除--返回受影响的行数
+    }
+}  
+    }
+    @if (Model.HasSetStatus) {
+    @:
+    @:/// <summary>
+    @:/// 设置@(Model.BusName)状态 🚫
+    @:/// </summary>
+    @:/// <param name="input"></param>
+    @:/// <returns></returns>
+    @:[DisplayName("设置@(Model.BusName)状态")]
+    @:[ApiDescriptionSettings(Name = "SetStatus"), HttpPost]
+    @:public async Task Set@(Model.ClassName)Status(Set@(Model.ClassName)StatusInput input)
+    @:{
+        @:await _@(Model.LowerClassName)Rep.AsUpdateable().SetColumns(u => u.Status, input.Status).Where(u => @Model.PrimaryKeysFormat(" && ", "u.{0} == input.{0}")).ExecuteCommandAsync();
+    @:}
+    }
+    @foreach (var column in Model.UploadFieldList) {
+    @:
+    @:/// <summary>
+    @:/// 上传@(column.ColumnComment) ⬆️
+    @:/// </summary>
+    @:/// <param name="file"></param>
+    @:/// <returns></returns>
+    @:[DisplayName("上传@(column.ColumnComment)")]
+    @:[ApiDescriptionSettings(Name = "Upload@(column.PropertyName)"), HttpPost]
+    @:public async Task<SysFile> Upload@(column.PropertyName)([Required] IFormFile file)
+    @:{
+        @:return await _sysFileService.UploadFile(new UploadFileInput { File = file },"upload/@(Model.ClassName)/@(column.PropertyName)"); 
+    @:}
+    }
+    @if (Model.DropdownFieldList.Count > 0) {
+    @:
+    @:/// <summary>
+    @:/// 获取下拉列表数据 🔖
+    @:/// </summary>
+    @:/// <returns></returns>
+    @:[DisplayName("获取下拉列表数据")]
+    @:[ApiDescriptionSettings(Name = "DropdownData"), HttpPost]
+    @:public async Task<Dictionary<string, dynamic>> DropdownData(DropdownData@(Model.ClassName)Input input)
+    @:{
+        foreach (var column in Model.DropdownFieldList) {
+        @:var @(column.LowerPropertyName)Data = await _@(Model.LowerClassName)Rep.Context.Queryable<@(column.FkEntityName)>()
+            if (column.EffectType != "ApiTreeSelector") {
+            @:.InnerJoinIF<@Model.ClassName>(input.FromPage, (u, r) => u.@(column.FkLinkColumnName) == r.@(column.PropertyName))
+            }
+            if (column.EffectType != "ApiTreeSelector") {
+            @:.Select(u => new {
+                @:Value = u.@(column.FkLinkColumnName),
+                @:Label = @column.GetDisplayColumn("u")
+            @:}).ToListAsync();
+            } else {
+            @:.Select(u => new Tree@(column.PropertyNameTrimEndId)Output {
+                @:Value = u.@(column.FkLinkColumnName),
+                @:Label = @column.GetDisplayColumn("u")
+            @:}, true).ToTreeAsync(u => u.Children, u => u.@(column.PidColumn), @(column.WhetherRequired == "Y" ? "0" : "null"));
+            }
+        }
+        @:return new Dictionary<string, dynamic>
+        @:{
+            foreach (var column in Model.DropdownFieldList) {
+            @:{ "@(column.LowerPropertyName)", @(column.LowerPropertyName)Data },
+            }
+        @:};
+    @:}
+    }
+    @if (Model.ImportFieldList.Count > 0) {
+    @:
+    @:/// <summary>
+    @:/// 导出@(Model.BusName)记录 🔖
+    @:/// </summary>
+    @:/// <param name="input"></param>
+    @:/// <returns></returns>
+    @:[DisplayName("导出@(Model.BusName)记录")]
+    @:[ApiDescriptionSettings(Name = "Export"), HttpPost, NonUnify]
+    @:public async Task<IActionResult> Export(Page@(Model.ClassName)Input input)
+    @:{
+        @:var list = (await Page(input)).Items?.Adapt<List<Export@(Model.ClassName)Output>>() ?? new();
+        @:if (input.SelectKeyList?.Count > 0) list = list.Where(x => input.SelectKeyList.Contains(x.@(Model.PrimaryKeyFieldList.First().PropertyName))).ToList();
+        var dictFields = Model.TableField.Where(x => x.WhetherImport == "Y" && x.EffectType == "DictSelector") ?? default;
+        foreach (var column in dictFields) {
+        @:var @(column.LowerPropertyName)DictMap = _sysDictTypeService.GetDataList(new GetDataDictTypeInput { Code = "@(column.DictTypeCode)" }).Result.ToDictionary(x => x.Value, x => x.Label);
+        }
+        if (dictFields.Count() > 0) {
+        @:list.ForEach(e => {
+        foreach (var column in dictFields) {
+            @:e.@(column.ExtendedPropertyName) = @(column.LowerPropertyName)DictMap.GetValueOrDefault(e.@(column.PropertyName) ?? "", e.@(column.PropertyName));
+        }
+        @:});
+        }
+        @:return ExcelHelper.ExportTemplate(list, "@(Model.BusName)导出记录");
+    @:}
+    @:
+    @:/// <summary>
+    @:/// 下载@(Model.BusName)数据导入模板 ⬇️
+    @:/// </summary>
+    @:/// <returns></returns>
+    @:[DisplayName("下载@(Model.BusName)数据导入模板")]
+    @:[ApiDescriptionSettings(Name = "Import"), HttpGet, NonUnify]
+    @:public IActionResult DownloadTemplate()
+    @:{
+        var fieldsList = Model.ImportFieldList.Where(u => u.EffectType == "ForeignKey" || u.EffectType == "ApiTreeSelector").ToList();
+        if (fieldsList.Any()) {
+        @:return ExcelHelper.ExportTemplate(new List<Export@(Model.ClassName)Output>(), "@(Model.BusName)导入模板", (_, info) =>
+        @:{
+            foreach (var column in fieldsList) {
+            var columnList = column.FkDisplayColumnList.Select(n => $"{{u.{n}}}").ToList();
+            @:if (nameof(Export@(Model.ClassName)Output.@column.ExtendedPropertyName) == info.Name) return _@(Model.LowerClassName)Rep.Context.Queryable<@(column.FkEntityName)>().Select(u => $"@(string.Join("-", columnList))").Distinct().ToList();
+            }
+            @:return null;
+        @:});
+        } else {
+        @:return ExcelHelper.ExportTemplate(new List<Export@(Model.ClassName)Output>(), "@(Model.BusName)导入模板");
+        }
+    @:}
+    @:
+    @:private static readonly object _@(Model.LowerClassName)ImportLock = new object();
+    @:/// <summary>
+    @:/// 导入@(Model.BusName)记录 💾
+    @:/// </summary>
+    @:/// <returns></returns>
+    @:[DisplayName("导入@(Model.BusName)记录")]
+    @:[ApiDescriptionSettings(Name = "Import"), HttpPost, NonUnify, UnitOfWork]
+    @:public IActionResult ImportData([Required] IFormFile file)
+    @:{
+        @:lock (_@(Model.LowerClassName)ImportLock)
+        @:{
+            var dictTableField = Model.TableField.Where(x => x.WhetherImport == "Y" && x.EffectType == "DictSelector") ?? default;
+            foreach (var column in dictTableField){
+            @:var @(column.LowerPropertyName)DictMap = _sysDictTypeService.GetDataList(new GetDataDictTypeInput { Code = "@(column.DictTypeCode)" }).Result.ToDictionary(x => x.Label!, x => x.Value);
+            }
+
+            @:var stream = ExcelHelper.ImportData<Import@(Model.ClassName)Input, @(Model.ClassName)>(file, (list, markerErrorAction) =>
+            @:{
+                @:_sqlSugarClient.Utilities.PageEach(list, 2048, pageItems =>
+                @:{
+                    foreach (var column in Model.ImportFieldList.Where(u => u.EffectType == "ForeignKey" || u.EffectType == "ApiTreeSelector")) {
+                    @:// 链接 @(column.ColumnComment)
+                    @:var @(column.LowerPropertyName)LabelList = pageItems.Where(x => x.@column.ExtendedPropertyName != null).Select(x => x.@column.ExtendedPropertyName).Distinct().ToList();
+                    @:if (@(column.LowerPropertyName)LabelList.Any()) {
+                        var columnList = column.FkDisplayColumnList.Select(n => $"{{u.{n}}}").ToList();
+                        @:var @(column.LowerPropertyName)LinkMap = _@(Model.LowerClassName)Rep.Context.Queryable<@(column.FkEntityName)>().Where(u => @(column.LowerPropertyName)LabelList.Contains($"@(string.Join("-", columnList))")).ToList().ToDictionary(u => $"@(string.Join("-", columnList))", u => u.@(column.FkLinkColumnName)  as @(column.NetType.TrimEnd('?') == "long" ? "long?": column.NetType));
+                        @:pageItems.ForEach(e => {
+                            @:e.@(column.PropertyName) = @(column.LowerPropertyName)LinkMap.GetValueOrDefault(e.@column.ExtendedPropertyName ?? "");
+                            @:if (e.@(column.PropertyName) == null) e.Error = "@(column.ColumnComment)链接失败";
+                        @:});
+                    @:}
+                    }
+
+                    if (dictTableField.Any()) {
+                    @:
+                    @:// 映射字典值
+                    @:foreach(var item in pageItems) {
+                        @:System.Text.StringBuilder sbError = new System.Text.StringBuilder();
+                        foreach (var column in dictTableField) {
+                        @:if (!string.IsNullOrWhiteSpace(item.@(column.ExtendedPropertyName))) {
+                            @:item.@(column.PropertyName) = @(column.LowerPropertyName)DictMap.GetValueOrDefault(item.@(column.ExtendedPropertyName));
+                            @:if (item.@(column.PropertyName) == null) sbError.AppendLine("@(column.ColumnComment)字典映射失败");
+                        @:}
+                        }
+                        @:item.Error = sbError.ToString();
+                    @:}
+                    }
+
+                    @:
+                    @:// 校验并过滤必填基本类型为null的字段
+                    @:var rows = pageItems.Where(x => {
+                        @:if (!string.IsNullOrWhiteSpace(x.Error)) return false;
+                        foreach (var column in Model.ImportFieldList.Where(x => x.WhetherRequired == "Y" && Regex.IsMatch(x.NetType, "(int|long|double|float|bool|Enum[?]?)"))){
+                        @:if (x.@(column.PropertyName) == null){
+                            @:x.Error = "@(column.ColumnComment)不能为空";
+                            @:return false;
+                        @:}
+                        }
+                        @:return true;
+                    @:}).Adapt<List<@(Model.ClassName)>>();
+                                   
+                    @{var updateFields = new List<string>();}  
+                    @:
+                    @:var storageable = _@(Model.LowerClassName)Rep.Context.Storageable(rows)
+                        foreach (var column in Model.ImportFieldList){
+                        if (column.WhetherImport == "Y"){
+                        updateFields.Add(column.PropertyName);
+                        }
+                        if (column.WhetherRequired == "Y"){
+                        if(column.NetType.TrimEnd('?') == "string"){
+                        @:.SplitError(it => string.IsNullOrWhiteSpace(it.Item.@(column.PropertyName)), "@(column.ColumnComment)不能为空")
+                        } else if(column.NetType.EndsWith('?') == true){
+                        @:.SplitError(it => it.Item.@(column.PropertyName) == null, "@(column.ColumnComment)不能为空")
+                        }}
+                        if (column.NetType?.TrimEnd('?') == "string" && column.ColumnLength > 0){
+                        @:.SplitError(it => it.Item.@(column.PropertyName)?.Length > @(column.ColumnLength), "@(column.ColumnComment)长度不能超过@(column.ColumnLength)个字符")
+                        }}
+                        if(Model.TableUniqueConfigList.Count>0){
+                        foreach (var config in Model.TableUniqueConfigList) {
+                        @:.WhereColumns(it => new { @config.Format(", ", "it.{0}") })
+                        }
+                        @:.SplitInsert(it=> !it.Any())
+                        @:.SplitUpdate(it=> it.Any())
+                        }else{                        
+                        @:.SplitInsert(_=> true) // 没有设置唯一键代表插入所有数据
+                        }
+                        @:.ToStorage();
+                    @:
+                    @:storageable.AsInsertable.ExecuteCommand();// 不存在插入
+                    @:storageable.AsUpdateable.UpdateColumns(it => new
+                    @:{
+                    @foreach (var field in updateFields)
+                    {
+                    @:    it.@(field),
+                    }
+                    @:}).ExecuteCommand();// 存在更新
+                    @:
+                    @:// 标记错误信息
+                    @:markerErrorAction.Invoke(storageable, pageItems, rows);
+                @:});
+            @:});
+            @:
+            @:return stream;
+        @:}
+    @:}
+    }
+}

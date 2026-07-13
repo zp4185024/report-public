@@ -1,0 +1,20 @@
+﻿{
+  "$schema": "https://gitee.com/dotnetchina/Furion/raw/v4/schemas/v4/furion-schema.json",
+
+  "CDConfig": {
+    "Enabled": true, // 启用持续部署
+    "Owner": "zuohuaijun", // gitee用户名
+    "Repo": "Admin.NET", // 仓库名
+    "Branch": "v2", // 分支名
+    "AccessToken": "xxxxxxxxxxxxxxxxxxxxxxxxx", // gitee用户授权码
+    "UpdateInterval": 0, // 最小更新间隔(分钟)，0不限制
+    "BackupCount": 10, // 备份文件保留数量，0不限制
+    "BackendOutput": "D:\\Admin.NET", // 后端输出目录
+    "Publish": { // 后端发布选项
+      "Configuration": "Release", // 发布运行版本
+      "TargetFramework": "net8.0", // 发布.NET版本
+      "RuntimeIdentifier": "linux-x64" // 运行平台
+    },
+    "ExcludeFiles": [ "Configuration\\*.json" ] // 排除文件
+  }
+}

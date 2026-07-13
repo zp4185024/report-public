@@ -1,0 +1,198 @@
+<script lang="ts" name="@(Model.LowerClassName)" setup>
+import { ref, reactive, onMounted } from "vue";
+import { ElMessage } from "element-plus";
+import type { FormRules } from "element-plus";
+@if(Model.TableField.Any(x => x.EffectType == "DatePicker")) {
+@:import { formatDate } from '/@@/utils/formatTime';
+}
+@if(Model.UploadFieldList.Count > 0) {
+@:import { Plus,Document } from "@@element-plus/icons-vue";
+@:import { UploadRequestOptions } from "element-plus";
+}
+@if(Model.HasConstField) {
+@:import { useUserInfo } from "/@@/stores/userInfo";
+}
+import { use@(Model.ClassName)Api } from '/@@/api/@(Model.PagePath)/@(Model.LowerClassName)';
+@if(@Model.TableField.Any(x=>x.EffectType == "Editor")){
+@:import Editor from '/@@/components/editor/index.vue';
+}
+//父级传递来的函数，用于回调
+const emit = defineEmits(["reloadTable"]);
+const @(Model.LowerClassName)Api = use@(Model.ClassName)Api();
+const ruleFormRef = ref();
+
+const state = reactive({
+	title: '',
+	loading: false,
+	showDialog: false,
+	ruleForm: {} as any,
+	stores: @(Model.HasConstField ? "useUserInfo()" : "{}"),
+	dropdownData: {} as any,
+});
+
+// 自行添加其他规则
+const rules = ref<FormRules>({
+  @foreach (var column in Model.AddUpdateFieldList.Where(col => col.WhetherRequired == "Y")) {
+  var trigger = column.EffectType == "DatePicker" || column.EffectType == "DictSelector" || column.EffectType == "EnumSelector" || column.EffectType == "ApiTreeSelector" ? "change" : "blur";
+  @:@column.LowerPropertyName: [{required: true, message: '请选择@(column.ColumnComment)！', trigger: '@trigger',},],
+  }
+});
+
+// 页面加载时
+onMounted(async () => {
+  @if (Model.DropdownFieldList.Count > 0) {
+  @:const data = await @(Model.LowerClassName)Api.getDropdownData(false).then(res => res.data.result) ?? {};
+  @foreach (var column in Model.DropdownFieldList) {
+  @:state.dropdownData.@(column.LowerPropertyName) = data.@(column.LowerPropertyName) ?? [];
+  }
+  }
+});
+
+// 打开弹窗
+const openDialog = async (row: any, title: string) => {
+	state.title = title;
+	row = row ?? { @(Model.GetAddDefaultValue()) };
+	state.ruleForm = row.id ? await @(Model.LowerClassName)Api.detail(row.id).then(res => res.data.result) : JSON.parse(JSON.stringify(row));
+	state.showDialog = true;
+};
+
+// 关闭弹窗
+const closeDialog = () => {
+	emit("reloadTable");
+	state.showDialog = false;
+};
+
+// 提交
+const submit = async () => {
+	ruleFormRef.value.validate(async (isValid: boolean, fields?: any) => {
+		if (isValid) {
+			let values = state.ruleForm;
+			await @(Model.LowerClassName)Api[state.ruleForm.@(Model.PrimaryKeyFieldList.First().LowerPropertyName) ? 'update' : 'add'](values);
+			closeDialog();
+		} else {
+			ElMessage({
+				message: `表单有${Object.keys(fields).length}处验证失败，请修改后再提交`,
+				type: "error",
+			});
+		}
+	});
+};
+
+@foreach (var column in Model.UploadFieldList) {
+@:const upload@(column.PropertyName)Handle = async (options: UploadRequestOptions) => {
+	@:const res = await @(Model.LowerClassName)Api.upload@(column.PropertyName)(options);
+	@:state.ruleForm.@(column.LowerPropertyName) = res.data.result?.url;
+	@:};
+@:
+}
+//将属性或者函数暴露给父组件
+defineExpose({ openDialog });
+</script>
+<template>
+	<div class="@(Model.LowerClassName)-container">
+		<el-dialog v-model="state.showDialog" :width="800" draggable :close-on-click-modal="false">
+			<template #header>
+				<div style="color: #fff">
+					<span>{{ state.title }}</span>
+				</div>
+			</template>
+			<el-form :model="state.ruleForm" ref="ruleFormRef" label-width="auto" :rules="rules">
+				<el-row :gutter="35">
+					@foreach (var column in Model.PrimaryKeyFieldList) {
+					@:<el-form-item v-show="false">
+						@:<el-input v-model="state.ruleForm.@(column.LowerPropertyName)" />
+					@:</el-form-item>
+					}
+					@foreach (var column in Model.AddUpdateFieldList) {
+					var showStatus = Model.IsStatus(column) ? $"v-if=\"state.ruleForm.{Model.PrimaryKeyFieldList.First().LowerPropertyName}\" " : "";
+					if (column.EffectType == "InputTextArea"||column.EffectType == "Editor"){
+					@:<el-col :xs="24" class="mb20" @showStatus>
+							} else{
+						@:<el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12" class="mb20" @showStatus>
+							} 
+						@:<el-form-item label="@column.ColumnComment" prop="@(column.LowerPropertyName)">
+						if (column.IsSelectorEffectType) {
+							if (column.EffectType == "ApiTreeSelector") {
+							@:<el-cascader
+								@::options="state.dropdownData.@(column.LowerPropertyName)"
+								@::props="{ checkStrictly: true, emitPath: false }"
+								@:v-model="state.ruleForm.@(column.LowerPropertyName)"
+								@:placeholder="请选择@(column.ColumnComment)"
+								@:clearable
+								@:filterable
+								@:class="w100">
+								@:<template #default="{ node, data }">
+									@:<span>{{ data.label }}</span>
+									@:<span v-if="!node.isLeaf"> ({{ data.children.length }}) </span>
+								@:</template>
+							@:</el-cascader>
+							} else if (column.EffectType == "DictSelector" || column.EffectType == "EnumSelector") {
+							@:<g-sys-dict v-model="state.ruleForm.@(column.LowerPropertyName)" code="@(column.DictTypeCode)" render-as="select" placeholder="请选择@(column.ColumnComment)" clearable filterable />
+							} else {
+							@:<el-select clearable filterable v-model="state.ruleForm.@(column.LowerPropertyName)" placeholder="请选择@(column.ColumnComment)">
+								if (column.EffectType == "ForeignKey") {
+								@:<el-option v-for="(item,index) in state.dropdownData.@(column.LowerPropertyName)" :key="index" :value="item.value" :label="item.label" />
+								} else if (column.EffectType == "ConstSelector") {
+								@:<el-option v-for="(item, index) in state.stores.getConstDataByTypeCode('@column.DictTypeCode')" :key="index" :label="item.name" :value="item.code" />
+								}
+							@:</el-select>
+							}
+						} else if (column.EffectType == "Upload") {
+							@:<el-upload
+								@:list-type="picture-card"
+								@::show-file-list="false"
+								@::http-request="upload@(column.PropertyName)Handle">
+								@:<img
+									@:v-if="state.ruleForm.@(column.LowerPropertyName)"
+									@::src="state.ruleForm.@(column.LowerPropertyName)"
+									@:@@click="state.ruleForm.@(column.LowerPropertyName)=''"
+									@:style="width: 100%; height: 100%; object-fit: contain"/>
+									@:<el-icon v-else><Plus /></el-icon>
+							@:</el-upload>
+						}else if (column.EffectType == "Upload_SingleFile") {
+							@:<el-upload 
+							  @::show-file-list="false"
+							  @::http-request="upload@(column.PropertyName)Handle">
+								@:<template #trigger="">
+									@:<el-button class="mr10" type="primary" icon="ele-MostlyCloudy">选择文件</el-button> 
+									@:</template>
+								@:</el-upload>
+							@:<a
+							  @::href="state.ruleForm.@(column.LowerPropertyName)" target="_blank"
+							  @:v-if="state.ruleForm.@(column.LowerPropertyName)">
+								@:<el-icon class="mr5"><Document /></el-icon>
+								@:<span>{{ state.ruleForm.@(column.LowerPropertyName).split('/').pop() }}</span>
+								@:</a>
+							}
+                             else if (column.EffectType == "InputNumber") {
+							@:<el-input-number v-model="state.ruleForm.@(column.LowerPropertyName)" placeholder="请输入@(column.ColumnComment)" clearable />
+						} else if (column.EffectType == "Switch") {
+							@:<el-switch v-model="state.ruleForm.@(column.LowerPropertyName)" />
+						} else if (column.EffectType == "DatePicker") {
+							@:<el-date-picker v-model="state.ruleForm.@(column.LowerPropertyName)" type="date" placeholder="@(column.ColumnComment)" />
+						}else if(@column.EffectType == "Editor"){
+							@:<Editor v-model:get-html="state.ruleForm.@(@column.LowerPropertyName)" /> 
+						} else {
+							var inputType = column.EffectType == "InputTextArea" ? "type=\"textarea\" " : "";
+					        var maxlength = column.ColumnLength > 0 ? $"maxlength=\"{column.ColumnLength}\" " : "";
+							@:<el-input v-model="state.ruleForm.@(column.LowerPropertyName)" placeholder="请输入@(column.ColumnComment)" @(maxlength)@(inputType)show-word-limit clearable />
+						}
+						@:</el-form-item>
+					@:</el-col>
+					}
+				</el-row>
+			</el-form>
+			<template #footer>
+				<span class="dialog-footer">
+					<el-button @@click="() => state.showDialog = false">取 消</el-button>
+					<el-button @@click="submit" type="primary" v-reclick="1000">确 定</el-button>
+				</span>
+			</template>
+		</el-dialog>
+	</div>
+</template>
+<style lang="scss" scoped>
+:deep(.el-select), :deep(.el-input-number) {
+  width: 100%;
+}
+</style>

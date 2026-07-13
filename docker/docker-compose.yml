@@ -1,0 +1,110 @@
+version: "3"
+
+services:
+  nginx:
+    image: nginx:1.20.2
+    ports:
+      - "9100:80"
+      - "9103:443"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ../Web/dist:/usr/share/nginx/html
+      - "./nginx/conf/nginx.conf:/etc/nginx/nginx.conf:ro"
+      - "./nginx/key:/etc/nginx/key/"
+    links:
+      - adminNet
+  mysql:
+    image: mysql:5.7
+    ports:
+      - 9101:3306
+    restart: unless-stopped
+    privileged: true
+    ulimits:
+       nproc: 655350
+       nofile:
+         soft: 131072
+         hard: 400000
+    #healthcheck:
+    #  test: "/usr/bin/mysql --user=root --password=root --execute \"SHOW DATABASES;\""
+    #  interval: 10s # 间隔时间
+    #  timeout: 3s  # 超时时间
+    #  retries: 50   # 重试次数
+    environment:
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: admin
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Shanghai
+    volumes:
+      - ./mysql/mysql:/var/lib/mysql
+      - ./mysql/mysql.cnf:/etc/mysql/conf.d/mysql.cnf
+  redis:
+    image: 'redis:latest' # 使用最新版本的 Redis 镜像，也可以指定特定版本如 'redis:6.2.7'
+    container_name: my-redis # 自定义容器名称
+    ports:
+      - '6379:6379' # 映射宿主机的 6379 端口到容器的 6379 端口
+    volumes: # 持久化数据
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./redis/data:/data:rw
+      - ./redis/logs:/logs
+    #command: ['redis-server', '--appendonly', 'yes'] # 启用AOF持久化
+    command: ['redis-server','/usr/local/etc/redis/redis.conf']
+    environment: # 设置环境变量，例如密码
+      - REDIS_PASSWORD=123456
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: minio
+    restart: always
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=admin123456
+    volumes:
+      - ./minio/data:/data
+      - ./minio/config:/root/.minio
+    ports:
+      - "9104:9000"  # API端口
+      - "9105:9001"  # 控制台端口
+    command: server /data --console-address ":9001"
+  tdengine:
+    image: tdengine/tdengine:3.3.6.13
+    volumes:
+      - ./tdengine/taos/dnode/data:/var/lib/taos
+      - ./tdengine/taos/dnode/log:/var/log/taos      
+    hostname: tdengine
+    container_name: tdengine
+    privileged: true
+    environment:
+      TAOS_FQDN: "tdengine"
+      TAOS_FIRST_EP: "tdengine"  # 指向首个节点主机名
+      TAOS_SECOND_EP: "tdengine" # 可选备用节点 
+
+
+    ports:
+     - 6030:6030
+     - 6041:6041
+     - 6044-6049:6044-6049
+     - 6044-6045:6044-6045/udp
+     - 6060:6060
+
+
+
+  
+
+
+  adminNet:
+    image: mcr.microsoft.com/dotnet/aspnet:9.0
+    ports:
+      - "9102:5050"
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ../Admin.NET/Admin.NET.Web.Entry/bin/Release/net9.0/:/app
+      - ./app/Configuration/:/app/Configuration/
+      - ./app/wait-for-it.sh:/app/wait-for-it.sh
+    working_dir: /app
+    command: ["/bin/bash", "-c", "/app/wait-for-it.sh mysql:3306 -t 120 && dotnet Admin.NET.Web.Entry.dll --content-root /app/wwwroot"]
+
+    depends_on:
+      - mysql
+      - redis
+

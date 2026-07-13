@@ -1,0 +1,326 @@
+<script lang="ts" setup name="@(Model.LowerClassName)">
+import { ref, reactive, onMounted } from "vue";
+import { auth } from '/@@/utils/authFunction';
+import { ElMessageBox, ElMessage } from "element-plus";
+import { downloadStreamFile } from "/@@/utils/download";
+@if(Model.PrintType == "custom") {
+@:// 推荐设置操作 width 为 200
+@:import { hiprint } from 'vue-plugin-hiprint';
+@:import { getAPI } from '/@@/utils/axios-utils';
+@:import { SysPrintApi } from '/@@/api-services/api';
+@:import { SysPrint } from '/@@/api-services/models';
+@:import { formatDate } from '/@@/utils/formatTime';
+}
+import { use@(Model.ClassName)Api } from '/@@/api/@(Model.PagePath)/@(Model.LowerClassName)';
+@if(Model.HasConstField) {
+@:import { useUserInfo } from "/@@/stores/userInfo";
+}
+import editDialog from '/@@/views/@(Model.PagePath)/@(Model.LowerClassName)/component/editDialog.vue'
+import printDialog from '/@@/views/system/print/component/hiprint/preview.vue'
+import ModifyRecord from '/@@/components/table/modifyRecord.vue';
+@if(Model.ImportFieldList.Count > 0) {
+@:import ImportData from "/@@/components/table/importData.vue";
+}
+
+const @(Model.LowerClassName)Api = use@(Model.ClassName)Api();
+const printDialogRef = ref();
+const editDialogRef = ref();
+@if (Model.ImportFieldList.Count > 0) {
+@:const importDataRef = ref();
+}
+const state = reactive({
+  exportLoading: false,
+  tableLoading: false,
+  stores: @(Model.HasConstField ? "useUserInfo()" : "{}"),
+  showAdvanceQueryUI: @(Model.HasLikeQuery ? "false" : "true"),
+  dropdownData: {} as any,
+  selectData: [] as any[],
+  tableQueryParams: {} as any,
+  tableParams: {
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    field: 'createTime', // 默认的排序字段
+    order: 'descending', // 排序方向
+    descStr: 'descending', // 降序排序的关键字符
+  },
+  tableData: [],
+});
+
+// 页面加载时
+onMounted(async () => {
+  @if (Model.DropdownFieldList.Count > 0) {
+  @:const data = await @(Model.LowerClassName)Api.getDropdownData(true).then(res => res.data.result) ?? {};
+  @foreach (var column in Model.DropdownFieldList) {
+  @:state.dropdownData.@(column.LowerPropertyName) = data.@(column.LowerPropertyName);
+  }
+  }
+});
+
+// 查询操作
+const handleQuery = async (params: any = {}) => {
+  state.tableLoading = true;
+  state.tableParams = Object.assign(state.tableParams, params);
+  const result = await @(Model.LowerClassName)Api.page(Object.assign(state.tableQueryParams, state.tableParams)).then(res => res.data.result);
+  state.tableParams.total = result?.total;
+  state.tableData = result?.items ?? [];
+  state.tableLoading = false;
+};
+
+// 列排序
+const sortChange = async (column: any) => {
+  state.tableParams.field = column.prop;
+  state.tableParams.order = column.order;
+  await handleQuery();
+};
+
+// 删除
+const del@(Model.ClassName) = (row: any) => {
+  ElMessageBox.confirm(`确定要删除吗?`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(async () => {
+    await @(Model.LowerClassName)Api.delete({ @(Model.PrimaryKeysFormat(", ", "{0}: row.{0}", true)) });
+    handleQuery();
+    ElMessage.success("删除成功");
+  }).catch(() => {});
+};
+
+// 批量删除
+const batchDel@(Model.ClassName) = () => {
+  ElMessageBox.confirm(`确定要删除${state.selectData.length}条记录吗?`, "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    type: "warning",
+  }).then(async () => {
+    await @(Model.LowerClassName)Api.batchDelete(state.selectData.map(u => ({ @(Model.PrimaryKeysFormat(", ", "{0}: u.{0}", true)) }) )).then(res => {
+      ElMessage.success(`成功批量删除${res.data.result}条记录`);
+      handleQuery();
+    });
+  }).catch(() => {});
+};
+@if(Model.PrintType == "custom") {
+@:
+@:// 打开打印页面
+@:const openPrint@(Model.ClassName) = async (row: any) => {
+  @:var res = await getAPI(SysPrintApi).apiSysPrintPrintNameGet('@Model.PrintName');
+  @:var printTemplate = res.data.result as SysPrint;
+  @:var template = JSON.parse(printTemplate.template);
+  @:row['printDate'] = formatDate(new Date(), 'YYYY-mm-dd HH:MM:SS')
+  @:printDialogRef.value.showDialog(new hiprint.PrintTemplate({template: template}), row, template.panels[0].width);
+  @:}
+}
+@if (Model.HasSetStatus) {
+@:
+@:// 设置状态
+@:const change@(Model.ClassName)Status = async (row: any) => {
+  @:await @(Model.LowerClassName)Api.setStatus({ @(Model.PrimaryKeysFormat(", ", "{0}: row.{0}", true)), status: row.status }).then(() => ElMessage.success('状态设置成功'));
+@:};
+}
+@if (Model.ImportFieldList.Count > 0) {
+@:
+@:// 导出数据
+@:const export@(Model.ClassName)Command = async (command: string) => {
+  @:try {
+    @:state.exportLoading = true;
+    @:if (command === 'select') {
+      @:const params = Object.assign({}, state.tableQueryParams, state.tableParams, { selectKeyList: state.selectData.map(u => u.@(Model.PrimaryKeyFieldList.First().LowerPropertyName)) });
+      @:await @(Model.LowerClassName)Api.exportData(params).then(res => downloadStreamFile(res));
+    @:} else if (command === 'current') {
+      @:const params = Object.assign({}, state.tableQueryParams, state.tableParams);
+      @:await @(Model.LowerClassName)Api.exportData(params).then(res => downloadStreamFile(res));
+    @:} else if (command === 'all') {
+      @:const params = Object.assign({}, state.tableQueryParams, state.tableParams, { page: 1, pageSize: 99999999 });
+      @:await @(Model.LowerClassName)Api.exportData(params).then(res => downloadStreamFile(res));
+    @:}
+  @:} finally {
+    @:state.exportLoading = false;
+  @:}
+@:}
+}
+
+handleQuery();
+</script>
+<template>
+  <div class="@(Model.LowerClassName)-container" v-loading="state.exportLoading">
+    <el-card shadow="hover" :body-style="{ paddingBottom: '0' }"> 
+      <el-form :model="state.tableQueryParams" ref="queryForm" labelWidth="90">
+        <el-row>
+          @if(Model.QueryWhetherList.Count > 0) {
+          if(Model.HasLikeQuery) {
+          @:<el-col :xs="24" :sm="12" :md="12" :lg="8" :xl="4" class="mb10">
+            @:<el-form-item label="关键字">
+              @:<el-input v-model="state.tableQueryParams.keyword" clearable placeholder="请输入模糊查询关键字"/>
+            @:</el-form-item>
+          @:</el-col>
+          }
+          foreach (var column in Model.QueryWhetherList) {
+          @:<el-col :xs="24" :sm="12" :md="12" :lg="8" :xl="4" class="mb10" v-if="state.showAdvanceQueryUI">
+            @:<el-form-item label="@column.ColumnComment">
+            if(column.EffectType == "Input" || column.EffectType == "InputTextArea"){
+              @:<el-input v-model="state.tableQueryParams.@(column.LowerPropertyName)" clearable placeholder="请输入@(column.ColumnComment)"/>
+            }else if(column.EffectType == "InputTextArea"){
+              @:<el-input-number v-model="state.tableQueryParams.@(column.LowerPropertyName)"  clearable placeholder="请输入@(column.ColumnComment)"/>
+            }else if(column.EffectType == "InputNumber"){
+              @:<el-input-number v-model="state.tableQueryParams.@(column.LowerPropertyName)"  clearable placeholder="请输入@(column.ColumnComment)"/>
+            }else if(column.IsSelectorEffectType || column.EffectType == "ForeignKey") {
+              if (column.EffectType == "DictSelector" || column.EffectType == "EnumSelector") {
+              @:<g-sys-dict v-model="state.tableQueryParams.@(column.LowerPropertyName)" code="@(column.DictTypeCode)" render-as="select" placeholder="请选择@(column.ColumnComment)" clearable filterable />
+              } else {
+              @:<el-select clearable filterable v-model="state.tableQueryParams.@(column.LowerPropertyName)" placeholder="请选择@(column.ColumnComment)">
+                if (column.EffectType == "ForeignKey") {
+                @:<el-option v-for="(item,index) in state.dropdownData.@(column.LowerPropertyName) ?? []" :key="index" :value="item.value" :label="item.label" />
+                } else if (column.EffectType == "ConstSelector") {
+                @:<el-option v-for="(item, index) in state.stores.getConstDataByTypeCode('@column.DictTypeCode')" :key="index" :label="item.name" :value="item.code" />
+                }
+              @:</el-select>
+              }
+            }else if(column.EffectType == "ApiTreeSelector"){
+              @:<el-cascader
+                @::options="state.dropdownData.@(column.LowerPropertyName) ?? []"
+                @:@:props="{ checkStrictly: true, emitPath: false }"
+                @:placeholder="请选择@(column.ColumnComment)"
+                @:clearable
+                @:filterable
+                @:class="w100"
+                @:v-model="state.tableQueryParams.@(column.LowerPropertyName)"
+                @:>
+                  @:<template #default="{ node, data }">
+                    @:<span>{{ data.label }}</span>
+                    @:<span v-if="!node.isLeaf"> ({{ data.children.length }}) </span>
+                  @:</template>
+              @:</el-cascader>
+            } else if (column.EffectType == "DatePicker"){
+              if (column.QueryType == "~") {
+              @:<el-date-picker type="daterange" v-model="state.tableQueryParams.@(column.LowerPropertyName)Range"  value-format="YYYY-MM-DD HH:mm:ss" start-placeholder="开始日期" end-placeholder="结束日期" :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]" />
+              } else {
+              @:<el-date-picker placeholder="请选择@(column.ColumnComment)" value-format="YYYY/MM/DD"  v-model="state.tableQueryParams.@(column.LowerPropertyName)" />
+              }
+            } else if  (column.EffectType == "Switch"){ 
+                  @:<el-select clearable filterable v-model="state.tableQueryParams.@(column.LowerPropertyName)" placeholder="请选择@(column.ColumnComment)"> 
+                    @:<el-option     value="true" label="是" /> 
+                    @:<el-option     value="false" label="否" />  
+                  @:</el-select>
+            } else {
+              @:<el-input v-model="state.tableQueryParams.@(column.LowerPropertyName)" clearable placeholder="请输入@(column.ColumnComment)"/>
+            }
+            @:</el-form-item>
+          @:</el-col>
+          }
+          }
+          <el-col :xs="24" :sm="12" :md="12" :lg="8" :xl="4" class="mb10">
+            <el-form-item @(Model.QueryWhetherList.Count > 0 ? "" : "label-width=\"0px\"")>
+              <el-button-group style="display: flex; align-items: center;">
+                <el-button type="primary"  icon="ele-Search" @@click="handleQuery" v-auth="'@(Model.LowerClassName):page'" v-reclick="1000"> @(Model.QueryWhetherList.Count > 0 ? "查询" : "刷新") </el-button>
+                @if (Model.QueryWhetherList.Count > 0) {
+                @:<el-button icon="ele-Refresh" @@click="() => state.tableQueryParams = {}"> 重置 </el-button>
+                @if (Model.HasLikeQuery) {
+                @:<el-button icon="ele-ZoomIn" @@click="() => state.showAdvanceQueryUI = true" v-if="!state.showAdvanceQueryUI" style="margin-left:5px;"> 高级查询 </el-button>
+                @:<el-button icon="ele-ZoomOut" @@click="() => state.showAdvanceQueryUI = false" v-if="state.showAdvanceQueryUI" style="margin-left:5px;"> 隐藏 </el-button>
+                }
+                }
+                <el-button type="danger" style="margin-left:5px;" icon="ele-Delete" @@click="batchDel@(Model.ClassName)" :disabled="state.selectData.length == 0" v-auth="'@(Model.LowerClassName):batchDelete'"> 删除 </el-button>
+                <el-button type="primary" style="margin-left:5px;" icon="ele-Plus" @@click="editDialogRef.openDialog(null, '新增@(Model.BusName)')" v-auth="'@(Model.LowerClassName):add'"> 新增 </el-button>
+                @if (Model.ImportFieldList.Count > 0) {
+                @:<el-dropdown :show-timeout="70" :hide-timeout="50" @@command="export@(Model.ClassName)Command">
+                  @:<el-button type="primary" style="margin-left:5px;" icon="ele-FolderOpened" v-reclick="20000" v-auth="'@(Model.LowerClassName):export'"> 导出 </el-button>
+                  @:<template #dropdown>
+                    @:<el-dropdown-menu>
+                      @:<el-dropdown-item command="select" :disabled="state.selectData.length == 0">导出选中</el-dropdown-item>
+                      @:<el-dropdown-item command="current">导出本页</el-dropdown-item>
+                      @:<el-dropdown-item command="all">导出全部</el-dropdown-item>
+                    @:</el-dropdown-menu>
+                  @:</template>
+                @:</el-dropdown>
+                @:<el-button type="warning" style="margin-left:5px;" icon="ele-MostlyCloudy" @@click="importDataRef.openDialog()" v-auth="'@(Model.LowerClassName):import'"> 导入 </el-button>
+                }
+              </el-button-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        @* 操作区另起一行
+        @:<el-row>
+          @:<el-col>
+            @:<el-button-group style="margin-left:20px;margin-bottom:5px;">
+              @:<el-button type="primary" icon="ele-Plus" @@click="editDialogRef.openDialog(null, '新增@(Model.BusName)')" v-auth="'@(Model.LowerClassName):add'"> 新增 </el-button>
+            </el-button-group>
+          @:</el-col>
+        @:</el-row>
+		*@
+      </el-form>
+    </el-card>
+    <el-card class="full-table" shadow="hover" style="margin-top: 5px">
+      <el-table :data="state.tableData" @@selection-change="(val: any[]) => { state.selectData = val; }" style="width: 100%" v-loading="state.tableLoading" tooltip-effect="light" row-key="@Model.PrimaryKeyFieldList.First().LowerPropertyName" @@sort-change="sortChange" border>
+        <el-table-column type="selection" width="40" align="center" v-if="auth('@(Model.LowerClassName):batchDelete') || auth('@(Model.LowerClassName):export')" />
+        <el-table-column type="index" label="序号" width="55" align="center"/>
+    @foreach (var column in Model.TableField.Where(u => u.WhetherTable == "Y")){
+      if(column.EffectType == "DictSelector" || column.EffectType == "EnumSelector" || column.EffectType == "Upload" || @column.EffectType == "Switch") {
+        @:<el-table-column @(Model.GetElTableColumnCustomProperty(column)) show-overflow-tooltip>
+          @:<template #default="scope">
+        if (column.EffectType == "Upload") {
+            @:<el-image
+              @:v-if="scope.row.@column.LowerPropertyName"
+              @:style="width: 60px; height: 60px"
+              @::src="scope.row.@column.LowerPropertyName"
+              @::lazy="true"
+              @::hide-on-click-modal="true"
+              @::preview-src-list="[scope.row.@column.LowerPropertyName]"
+              @::initial-index="0"
+              @:fit="scale-down"
+              @:preview-teleported />
+        } else if (column.EffectType == "Switch") {
+            @:<el-tag v-if="scope.row.@(column.LowerPropertyName)"> 是 </el-tag>
+            @:<el-tag type="danger" v-else> 否 </el-tag>
+        } else if (Model.IsStatus(column)) {
+            @:<el-switch v-model="scope.row.@column.LowerPropertyName" :active-value="1" :inactive-value="2" size="small" @@change="change@(Model.ClassName)Status(scope.row)" />
+        } else {
+            @:<g-sys-dict v-model="scope.row.@column.LowerPropertyName" code="@(column.DictTypeCode)" />
+        }
+          @:</template>
+        @:</el-table-column>
+      } else if (column.EffectType == "ConstSelector" || column.EffectType == "ForeignKey" || column.EffectType == "ApiTreeSelector") {
+        var formatter = column.EffectType == "ConstSelector" ? $"state.stores.getConstItemNameByType('{column.DictTypeCode}', row.{column.LowerPropertyName})" : $"row.{column.LowerExtendedPropertyName}";
+        @:<el-table-column @(Model.GetElTableColumnCustomProperty(column)) :formatter="(row: any) => @(formatter)" show-overflow-tooltip />
+      } else {
+        @:<el-table-column @(Model.GetElTableColumnCustomProperty(column)) show-overflow-tooltip />
+      }
+    }
+        <el-table-column label="修改记录" width="100" align="center" show-overflow-tooltip>
+          <template #default="scope">
+            <ModifyRecord :data="scope.row" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="@(Model.PrintType == "custom" ? "200" : "140")" align="center" fixed="right" show-overflow-tooltip v-if="auth('@(Model.LowerClassName):update') || auth('@(Model.LowerClassName):delete')">
+          <template #default="scope">
+            @if (Model.PrintType == "custom") {
+            @:<el-button icon="ele-Printer" size="small" text type="primary" @@click="openPrint@(Model.ClassName)(scope.row)" v-auth="'@(Model.LowerClassName):print'"> 打印 </el-button>
+            }
+            <el-button icon="ele-Edit" size="small" text type="primary" @@click="editDialogRef.openDialog(scope.row, '编辑@(Model.BusName)')" v-auth="'@(Model.LowerClassName):update'"> 编辑 </el-button>
+            <el-button icon="ele-Delete" size="small" text type="primary" @@click="del@(Model.ClassName)(scope.row)" v-auth="'@(Model.LowerClassName):delete'"> 删除 </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination 
+              v-model:currentPage="state.tableParams.page"
+              v-model:page-size="state.tableParams.pageSize"
+              @@size-change="(val: any) => handleQuery({ pageSize: val })"
+              @@current-change="(val: any) => handleQuery({ page: val })"
+              layout="total, sizes, prev, pager, next, jumper"
+              :page-sizes="[10, 20, 50, 100, 200, 500]"
+              :total="state.tableParams.total"
+              size="small"
+              background />
+      @if (Model.ImportFieldList.Count > 0) {
+      @:<ImportData ref="importDataRef" :import="@(Model.LowerClassName)Api.importData" :download="@(Model.LowerClassName)Api.downloadTemplate" v-auth="'@(Model.LowerClassName):import'" @@refresh="handleQuery"/>
+      }
+      <printDialog ref="printDialogRef" :title="'打印@(Model.BusName)'" @@reloadTable="handleQuery" />
+      <editDialog ref="editDialogRef" @@reloadTable="handleQuery" />
+    </el-card>
+  </div>
+</template>
+<style scoped>
+:deep(.el-input), :deep(.el-select), :deep(.el-input-number) {
+  width: 100%;
+}
+</style>

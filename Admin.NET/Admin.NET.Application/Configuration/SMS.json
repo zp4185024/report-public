@@ -1,0 +1,60 @@
+{
+  "$schema": "https://gitee.com/dotnetchina/Furion/raw/v4/schemas/v4/furion-schema.json",
+
+  // 短信配置
+  "SMS": {
+    "VerifyCodeExpireSeconds": 60, // 验证码缓存过期时间（秒），默认60秒
+    // 阿里云短信
+    "Aliyun": {
+      "AccessKeyId": "",
+      "AccessKeySecret": "",
+      "Templates": [
+        {
+          "Id": "0",
+          "SignName": "AdminNET 平台",
+          "TemplateCode": "SMS_xxx",
+          "Content": "您的验证码为：${code}，请勿泄露于他人！"
+        },
+        {
+          "Id": "1",
+          "SignName": "AdminNET 平台",
+          "TemplateCode": "SMS_xxx",
+          "Content": "注册成功，感谢您的注册，请妥善保管您的账户信息"
+        }
+      ]
+    },
+    // 腾讯云短信
+    "Tencentyun": {
+      "SdkAppId": "",
+      "AccessKeyId": "",
+      "AccessKeySecret": "",
+      "Templates": [
+        {
+          "Id": "0",
+          "SignName": "AdminNET 平台",
+          "TemplateCode": "",
+          "Content": ""
+        }
+      ]
+    },
+    // 自定义短信接口
+    "Custom": {
+      "Enabled": false, // 是否启用自定义短信接口
+      "Method": "GET", // 请求方法: GET 或 POST
+      "ApiUrl": "https://api.xxxx.com/sms?u=xxxx&key=59e03f49c3dbb5033&m={mobile}&c={content}", // API接口地址，支持占位符: {mobile}, {content}, {code}
+      "ContentType": "application/x-www-form-urlencoded", // POST请求的Content-Type: application/json 或 application/x-www-form-urlencoded
+      "PostData": "", // POST请求的数据模板，支持占位符，JSON 格式示例: {"mobile":"{mobile}","content":"{content}","apikey":"your_key"}；Form 格式示例: mobile={mobile}&content={content}&apikey=your_key
+      "SuccessFlag": "0", // 成功响应标识，响应内容包含此字符串则认为发送成功
+      "Templates": [
+        {
+          "Id": "0",
+          "Content": "您的验证码为：{code}，请勿泄露于他人！"
+        },
+        {
+          "Id": "1",
+          "Content": "注册成功，感谢您的注册，请妥善保管您的账户信息"
+        }
+      ]
+    }
+  }
+}
