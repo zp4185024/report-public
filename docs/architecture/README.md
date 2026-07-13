@@ -29,7 +29,7 @@ Admin.NET 系统库使用 SQL Server：
 Server=192.168.2.5;Database=lis_admin;User Id=hdhis;Password=CHANGE_ME;Encrypt=True;TrustServerCertificate=True;
 ```
 
-提交到仓库的配置不能包含真实密码。开发和部署时通过环境变量 `DbConnection__ConnectionConfigs__0__ConnectionString` 覆盖完整连接串。报表查询外部系统时，再为 HIS、LIS、PACS 等系统单独配置只读数据源。
+提交到仓库的配置不能包含真实密码。开发和部署时通过环境变量 `HD_REPORT_CENTER_DB_PASSWORD` 覆盖密码，或者通过 `HD_REPORT_CENTER_DB_CONNECTION_STRING` 覆盖完整连接串。报表查询外部系统时，再为 HIS、LIS、PACS 等系统单独配置只读数据源。
 
 ## 第一版能力拆分
 

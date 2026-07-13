@@ -28,11 +28,42 @@ public sealed class DbConnectionOptions : IConfigurableOptions<DbConnectionOptio
 
     public void PostConfigure(DbConnectionOptions options, IConfiguration configuration)
     {
+        ApplyReportCenterDatabaseSecret(options);
+
         foreach (var dbConfig in options.ConnectionConfigs)
         {
             if (dbConfig.ConfigId == null || string.IsNullOrWhiteSpace(dbConfig.ConfigId.ToString()))
                 dbConfig.ConfigId = SqlSugarConst.MainConfigId;
         }
+    }
+
+    private static void ApplyReportCenterDatabaseSecret(DbConnectionOptions options)
+    {
+        var mainConfig = options.ConnectionConfigs?.FirstOrDefault();
+        if (mainConfig == null)
+        {
+            return;
+        }
+
+        var connectionString = Environment.GetEnvironmentVariable("HD_REPORT_CENTER_DB_CONNECTION_STRING");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            mainConfig.ConnectionString = connectionString;
+            return;
+        }
+
+        var password = Environment.GetEnvironmentVariable("HD_REPORT_CENTER_DB_PASSWORD");
+        if (string.IsNullOrWhiteSpace(password) || string.IsNullOrWhiteSpace(mainConfig.ConnectionString))
+        {
+            return;
+        }
+
+        var connectionStringBuilder = new System.Data.Common.DbConnectionStringBuilder
+        {
+            ConnectionString = mainConfig.ConnectionString
+        };
+        connectionStringBuilder["Password"] = password;
+        mainConfig.ConnectionString = connectionStringBuilder.ConnectionString;
     }
 }
 

@@ -41,10 +41,17 @@ dotnet build .\Admin.NET\Admin.NET.sln -f net8.0 --no-restore
 Server=192.168.2.5;Database=lis_admin;User Id=hdhis;Password=CHANGE_ME;Encrypt=True;TrustServerCertificate=True;
 ```
 
-不要把真实密码提交到仓库。开发运行时用环境变量覆盖完整连接串：
+不要把真实密码提交到仓库。开发运行时推荐只用环境变量覆盖密码：
 
 ```powershell
-$env:DbConnection__ConnectionConfigs__0__ConnectionString='Server=192.168.2.5;Database=lis_admin;User Id=hdhis;Password=实际密码;Encrypt=True;TrustServerCertificate=True;'
+$env:HD_REPORT_CENTER_DB_PASSWORD='实际密码'
+dotnet run --project .\Admin.NET\Admin.NET.Web.Entry\Admin.NET.Web.Entry.csproj --urls http://localhost:5005
+```
+
+如果需要覆盖完整连接串，也可以使用：
+
+```powershell
+$env:HD_REPORT_CENTER_DB_CONNECTION_STRING='Server=192.168.2.5;Database=lis_admin;User Id=hdhis;Password=实际密码;Encrypt=True;TrustServerCertificate=True;'
 ```
 
 后端健康检查接口占位：
