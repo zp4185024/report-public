@@ -116,6 +116,26 @@ describe('scanTemplateBindings', () => {
     ]);
   });
 
+  it('uses ordinal ordering for mixed-case sheet ids and parameter codes', () => {
+    const mixedCaseDefinition: ReportDefinition = {
+      ...definition,
+      parameters: [
+        { ...definition.parameters[0], code: 'aCode' },
+        { ...definition.parameters[1], code: 'BCode' },
+      ],
+    };
+    const snapshot = workbook({
+      a: { cellData: { 0: { 0: { v: '{{params.aCode}}{{params.BCode}}' } } } },
+      B: { cellData: { 0: { 0: { v: '{{params.aCode}}' } } } },
+    });
+
+    expect(scanTemplateBindings(snapshot, mixedCaseDefinition).parameterBindings).toEqual([
+      { code: 'aCode', sheetId: 'B', row: 0, column: 0 },
+      { code: 'BCode', sheetId: 'a', row: 0, column: 0 },
+      { code: 'aCode', sheetId: 'a', row: 0, column: 0 },
+    ]);
+  });
+
   it('returns an empty binding when sheets or cell data are missing or empty', () => {
     const emptyBinding = {
       version: 1,

@@ -150,17 +150,17 @@ export function scanTemplateBindings(
 
   parameterBindings.sort(
     (left, right) =>
-      left.sheetId.localeCompare(right.sheetId) ||
+      compareOrdinal(left.sheetId, right.sheetId) ||
       left.row - right.row ||
       left.column - right.column ||
-      left.code.localeCompare(right.code),
+      compareOrdinal(left.code, right.code),
   );
 
   let detailBinding: DetailBinding | null = null;
   if (detailLocation !== null) {
     ensureDetailRowIsNotMerged(sheets, detailLocation, detailFields[0]?.column ?? 0);
     detailFields.sort(
-      (left, right) => left.column - right.column || left.code.localeCompare(right.code),
+      (left, right) => left.column - right.column || compareOrdinal(left.code, right.code),
     );
     detailBinding = {
       datasetCode: 'detail',
@@ -183,6 +183,13 @@ function emptyBinding(): TemplateBinding {
     parameterBindings: [],
     detailBinding: null,
   };
+}
+
+function compareOrdinal(left: string, right: string): number {
+  if (left === right) {
+    return 0;
+  }
+  return left < right ? -1 : 1;
 }
 
 function ensureKnownCode(
