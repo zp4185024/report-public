@@ -136,6 +136,7 @@ export const UniverTemplateHost = forwardRef<
   const runtimeRef = useRef<UniverRuntime | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const commandSubscriptionRef = useRef<CommandSubscription | null>(null);
+  const currentWorkbookEditableRef = useRef<boolean | null>(null);
   const internalOperationDepthRef = useRef(0);
   const operationGenerationRef = useRef(0);
   const activeTemplateOperationRef = useRef<TemplateOperation | null>(null);
@@ -150,13 +151,33 @@ export const UniverTemplateHost = forwardRef<
   onRenderedRef.current = onRendered;
   onErrorRef.current = onError;
 
-  const notifyError = useCallback((error: Error) => {
+  const safeNotifyError = useCallback((error: Error) => {
     try {
       onErrorRef.current(error);
-    } catch {
-      // Consumer callback failures must not hide the original Univer error.
+    } catch (callbackError) {
+      try {
+        console.error('页面错误回调失败。', callbackError);
+      } catch {
+        // Logging must not let a consumer callback escape into Univer or React.
+      }
     }
   }, []);
+
+  const safeNotifyChanged = useCallback(() => {
+    try {
+      onChangedRef.current();
+    } catch (error) {
+      safeNotifyError(operationError('页面变更回调失败', error));
+    }
+  }, [safeNotifyError]);
+
+  const safeNotifyRendered = useCallback((duration: number) => {
+    try {
+      onRenderedRef.current(duration);
+    } catch (error) {
+      safeNotifyError(operationError('页面渲染回调失败', error));
+    }
+  }, [safeNotifyError]);
 
   const acquireInternalOperation = useCallback(() => {
     internalOperationDepthRef.current += 1;
@@ -199,6 +220,21 @@ export const UniverTemplateHost = forwardRef<
     }
   }, []);
 
+  const attachCommandSubscription = useCallback((
+    workbook: UniverWorkbook,
+    errorContext: string,
+  ): CommandSubscription => {
+    try {
+      return workbook.onCommandExecuted(() => {
+        if (modeRef.current === 'design' && internalOperationDepthRef.current === 0) {
+          safeNotifyChanged();
+        }
+      });
+    } catch (error) {
+      throw operationError(errorContext, error);
+    }
+  }, [safeNotifyChanged]);
+
   const replaceWorkbook = useCallback((
     snapshot: IWorkbookData,
     editable: boolean,
@@ -210,95 +246,224 @@ export const UniverTemplateHost = forwardRef<
       throw new Error('Univer 编辑器尚未初始化，无法切换工作簿。');
     }
 
-    const previousSubscription = commandSubscriptionRef.current;
-    try {
-      previousSubscription?.dispose();
-    } catch (error) {
-      throw operationError('Univer 释放工作簿命令订阅失败', error);
-    }
-    if (commandSubscriptionRef.current === previousSubscription) {
-      commandSubscriptionRef.current = null;
-    }
-
-    let activeWorkbook: UniverWorkbook | null;
-    try {
-      activeWorkbook = runtime.univerAPI.getActiveWorkbook();
-    } catch (error) {
-      throw operationError('Univer 读取当前工作簿失败', error);
-    }
-    if (activeWorkbook !== null) {
-      let activeWorkbookId: string;
-      try {
-        activeWorkbookId = activeWorkbook.getId();
-      } catch (error) {
-        throw operationError('Univer 读取当前工作簿标识失败', error);
-      }
-
-      let disposed: boolean;
-      try {
-        disposed = runtime.univerAPI.disposeUnit(activeWorkbookId);
-      } catch (error) {
-        throw operationError(`Univer 释放当前工作簿 '${activeWorkbookId}' 失败`, error);
-      }
-      if (!disposed) {
-        throw new Error(`Univer 无法释放当前工作簿 '${activeWorkbookId}'。`);
-      }
-    }
-
     let clonedSnapshot: IWorkbookData;
     try {
       clonedSnapshot = structuredClone(snapshot);
     } catch (error) {
-      throw operationError('Univer 克隆工作簿快照失败', error);
+      throw operationError('Univer 克隆目标工作簿快照失败', error);
     }
 
-    let workbook: UniverWorkbook;
+    let previousWorkbook: UniverWorkbook | null;
     try {
-      workbook = runtime.univerAPI.createWorkbook(clonedSnapshot);
+      previousWorkbook = runtime.univerAPI.getActiveWorkbook();
     } catch (error) {
-      throw operationError('Univer 创建工作簿失败', error);
+      throw operationError('Univer 读取当前工作簿失败', error);
     }
 
-    const disposeCreatedWorkbook = () => {
+    let previousWorkbookId: string | null = null;
+    let previousSnapshot: IWorkbookData | null = null;
+    let previousEditable: boolean | null = null;
+    if (previousWorkbook !== null) {
       try {
-        runtime.univerAPI.disposeUnit(workbook.getId());
-      } catch {
-        // Keep the facade error that made workbook setup fail.
+        previousWorkbookId = previousWorkbook.getId();
+      } catch (error) {
+        throw operationError('Univer 读取当前工作簿标识失败', error);
+      }
+      previousEditable = currentWorkbookEditableRef.current;
+      if (previousEditable === null) {
+        throw new Error('Univer 无法确认当前工作簿的编辑状态，已取消切换。');
+      }
+      try {
+        previousSnapshot = previousWorkbook.save();
+      } catch (error) {
+        throw operationError('Univer 保存旧工作簿恢复快照失败', error);
+      }
+    }
+
+    const previousSubscription = commandSubscriptionRef.current;
+    let previousUnitDisposed = false;
+    let newWorkbook: UniverWorkbook | null = null;
+    let newSubscription: CommandSubscription | null = null;
+
+    const getWorkbookId = (workbook: UniverWorkbook, context: string): string => {
+      try {
+        return workbook.getId();
+      } catch (error) {
+        throw operationError(context, error);
+      }
+    };
+
+    const disposeWorkbook = (workbook: UniverWorkbook, context: string): void => {
+      const workbookId = getWorkbookId(workbook, `${context}时读取工作簿标识失败`);
+      let disposed: boolean;
+      try {
+        disposed = runtime.univerAPI.disposeUnit(workbookId);
+      } catch (error) {
+        throw operationError(`${context} '${workbookId}' 失败`, error);
+      }
+      if (!disposed) {
+        throw new Error(`${context} '${workbookId}' 失败：Univer 返回未释放。`);
+      }
+    };
+
+    const restorePreviousWorkbook = (): void => {
+      if (
+        previousWorkbook === null ||
+        previousWorkbookId === null ||
+        previousSnapshot === null ||
+        previousEditable === null
+      ) {
+        return;
+      }
+
+      const rollbackErrors: Error[] = [];
+      if (newSubscription !== null) {
+        try {
+          newSubscription.dispose();
+        } catch (error) {
+          rollbackErrors.push(operationError('Univer 回滚时释放新工作簿命令订阅失败', error));
+        }
+      }
+
+      if (newWorkbook !== null) {
+        try {
+          disposeWorkbook(newWorkbook, 'Univer 回滚时释放新工作簿');
+        } catch (error) {
+          rollbackErrors.push(normalizeError(error));
+        }
+      }
+
+      let restoredWorkbook: UniverWorkbook | null = null;
+      try {
+        let activeWorkbook: UniverWorkbook | null;
+        try {
+          activeWorkbook = runtime.univerAPI.getActiveWorkbook();
+        } catch (error) {
+          throw operationError('Univer 回滚时读取活动工作簿失败', error);
+        }
+
+        if (!previousUnitDisposed && activeWorkbook === previousWorkbook) {
+          restoredWorkbook = previousWorkbook;
+        } else {
+          if (activeWorkbook !== null) {
+            disposeWorkbook(activeWorkbook, 'Univer 回滚时清理残留工作簿');
+          }
+          let rollbackSnapshot: IWorkbookData;
+          try {
+            rollbackSnapshot = structuredClone(previousSnapshot);
+          } catch (error) {
+            throw operationError('Univer 克隆旧工作簿恢复快照失败', error);
+          }
+          try {
+            restoredWorkbook = runtime.univerAPI.createWorkbook(rollbackSnapshot);
+          } catch (error) {
+            throw operationError('Univer 重新创建旧工作簿失败', error);
+          }
+        }
+
+        try {
+          restoredWorkbook.setEditable(previousEditable);
+        } catch (error) {
+          throw operationError('Univer 恢复旧工作簿编辑状态失败', error);
+        }
+        const restoredSubscription = attachCommandSubscription(
+          restoredWorkbook,
+          'Univer 恢复旧工作簿命令订阅失败',
+        );
+        commandSubscriptionRef.current = restoredSubscription;
+        currentWorkbookEditableRef.current = previousEditable;
+      } catch (error) {
+        rollbackErrors.push(normalizeError(error));
+      }
+
+      if (rollbackErrors.length > 0) {
+        throw new Error(rollbackErrors.map((error) => error.message).join('；'));
       }
     };
 
     try {
-      workbook.setEditable(editable);
-    } catch (error) {
-      disposeCreatedWorkbook();
-      throw operationError('Univer 设置工作簿编辑状态失败', error);
-    }
-    let commandSubscription: CommandSubscription;
-    try {
-      commandSubscription = workbook.onCommandExecuted(() => {
-        if (modeRef.current === 'design' && internalOperationDepthRef.current === 0) {
-          onChangedRef.current();
-        }
-      });
-    } catch (error) {
-      disposeCreatedWorkbook();
-      throw operationError('Univer 订阅工作簿命令失败', error);
-    }
-    if (!isCurrentGeneration(generation)) {
+      currentWorkbookEditableRef.current = null;
       try {
-        commandSubscription.dispose();
-      } catch {
-        // The cancellation error is more useful than a subscription cleanup failure.
+        previousSubscription?.dispose();
+      } catch (error) {
+        commandSubscriptionRef.current = null;
+        throw operationError('Univer 释放旧工作簿命令订阅失败', error);
       }
-      if (commandSubscriptionRef.current === commandSubscription) {
+      if (commandSubscriptionRef.current === previousSubscription) {
         commandSubscriptionRef.current = null;
       }
-      disposeCreatedWorkbook();
-      throw new Error(operationCancelledMessage);
+
+      if (previousWorkbook !== null && previousWorkbookId !== null) {
+        let disposed: boolean;
+        try {
+          disposed = runtime.univerAPI.disposeUnit(previousWorkbookId);
+        } catch (error) {
+          throw operationError(`Univer 释放旧工作簿 '${previousWorkbookId}' 失败`, error);
+        }
+        if (!disposed) {
+          throw new Error(`Univer 无法释放旧工作簿 '${previousWorkbookId}'。`);
+        }
+        previousUnitDisposed = true;
+      }
+
+      assertCurrentGeneration(generation);
+      try {
+        newWorkbook = runtime.univerAPI.createWorkbook(clonedSnapshot);
+      } catch (error) {
+        throw operationError('Univer 创建新工作簿失败', error);
+      }
+      try {
+        newWorkbook.setEditable(editable);
+      } catch (error) {
+        throw operationError('Univer 设置新工作簿编辑状态失败', error);
+      }
+      newSubscription = attachCommandSubscription(
+        newWorkbook,
+        'Univer 订阅新工作簿命令失败',
+      );
+      assertCurrentGeneration(generation);
+
+      commandSubscriptionRef.current = newSubscription;
+      currentWorkbookEditableRef.current = editable;
+      return newWorkbook;
+    } catch (error) {
+      if (!isCurrentGeneration(generation)) {
+        throw new Error(operationCancelledMessage);
+      }
+
+      const loadError = operationError('Univer 加载新工作簿失败', error);
+      if (previousWorkbook === null || previousSnapshot === null) {
+        if (newSubscription !== null) {
+          try {
+            newSubscription.dispose();
+          } catch {
+            // Initialization cleanup owns the runtime when no previous workbook exists.
+          }
+        }
+        if (newWorkbook !== null) {
+          try {
+            disposeWorkbook(newWorkbook, 'Univer 清理加载失败的新工作簿');
+          } catch {
+            // Initialization cleanup owns the runtime when no previous workbook exists.
+          }
+        }
+        throw loadError;
+      }
+
+      try {
+        restorePreviousWorkbook();
+      } catch (rollbackError) {
+        throw new Error(
+          `新工作簿加载失败且旧工作簿恢复失败：${loadError.message}；${normalizeError(rollbackError).message}`,
+        );
+      }
+      throw loadError;
     }
-    commandSubscriptionRef.current = commandSubscription;
-    return workbook;
-  }, [assertCurrentGeneration, isCurrentGeneration]);
+  }, [
+    assertCurrentGeneration,
+    attachCommandSubscription,
+    isCurrentGeneration,
+  ]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -366,10 +531,22 @@ export const UniverTemplateHost = forwardRef<
       if (initializationOperation !== null) {
         finishTemplateOperation(initializationOperation);
       }
-      resizeObserver?.disconnect();
-      mutationObserver?.disconnect();
+      try {
+        resizeObserver?.disconnect();
+      } catch {
+        // Initialization reports one normalized error below.
+      }
+      try {
+        mutationObserver?.disconnect();
+      } catch {
+        // Initialization reports one normalized error below.
+      }
       if (resizeFrame !== null) {
-        cancelAnimationFrame(resizeFrame);
+        try {
+          cancelAnimationFrame(resizeFrame);
+        } catch {
+          // Initialization reports one normalized error below.
+        }
       }
       try {
         commandSubscriptionRef.current?.dispose();
@@ -377,6 +554,7 @@ export const UniverTemplateHost = forwardRef<
         // Initialization reports one normalized error below.
       }
       commandSubscriptionRef.current = null;
+      currentWorkbookEditableRef.current = null;
       runtimeRef.current = null;
       workerRef.current = null;
       try {
@@ -389,7 +567,7 @@ export const UniverTemplateHost = forwardRef<
       } catch {
         // Initialization reports one normalized error below.
       }
-      notifyError(operationError('Univer 初始化失败', error));
+      safeNotifyError(operationError('Univer 初始化失败', error));
       return;
     }
 
@@ -398,29 +576,47 @@ export const UniverTemplateHost = forwardRef<
       activeTemplateOperationRef.current?.releaseInternal();
       activeTemplateOperationRef.current = null;
       internalOperationDepthRef.current = 0;
-      resizeObserver?.disconnect();
-      mutationObserver?.disconnect();
+      try {
+        resizeObserver?.disconnect();
+      } catch (error) {
+        safeNotifyError(operationError('Univer 卸载时断开尺寸观察器失败', error));
+      }
+      try {
+        mutationObserver?.disconnect();
+      } catch (error) {
+        safeNotifyError(operationError('Univer 卸载时断开结构观察器失败', error));
+      }
       if (resizeFrame !== null) {
-        cancelAnimationFrame(resizeFrame);
+        try {
+          cancelAnimationFrame(resizeFrame);
+        } catch (error) {
+          safeNotifyError(operationError('Univer 卸载时取消渲染帧失败', error));
+        }
       }
       try {
         commandSubscriptionRef.current?.dispose();
-      } catch {
-        // The component is already unmounting.
+      } catch (error) {
+        safeNotifyError(operationError('Univer 卸载时释放命令订阅失败', error));
       }
       commandSubscriptionRef.current = null;
+      currentWorkbookEditableRef.current = null;
       runtimeRef.current = null;
       workerRef.current = null;
       try {
         runtime?.univer.dispose();
-      } finally {
+      } catch (error) {
+        safeNotifyError(operationError('Univer 卸载时释放运行时失败', error));
+      }
+      try {
         worker?.terminate();
+      } catch (error) {
+        safeNotifyError(operationError('Univer 卸载时终止 Worker 失败', error));
       }
     };
   }, [
     beginTemplateOperation,
     finishTemplateOperation,
-    notifyError,
+    safeNotifyError,
     replaceWorkbook,
   ]);
 
@@ -443,7 +639,7 @@ export const UniverTemplateHost = forwardRef<
         }
       } catch (error) {
         const contextual = operationError('Univer 保存模板草稿失败', error);
-        notifyError(contextual);
+        safeNotifyError(contextual);
         throw contextual;
       }
     },
@@ -458,7 +654,7 @@ export const UniverTemplateHost = forwardRef<
           throw new Error(operationCancelledMessage);
         }
         const contextual = operationError('Univer 加载设计模板失败', error);
-        notifyError(contextual);
+        safeNotifyError(contextual);
         throw contextual;
       } finally {
         finishTemplateOperation(operation);
@@ -468,11 +664,7 @@ export const UniverTemplateHost = forwardRef<
         if (!isCurrentGeneration(operation.generation)) {
           return;
         }
-        try {
-          onRenderedRef.current(performance.now() - startedAt);
-        } catch (error) {
-          notifyError(operationError('Univer 报告设计模板渲染耗时失败', error));
-        }
+        safeNotifyRendered(performance.now() - startedAt);
       });
     },
 
@@ -480,6 +672,18 @@ export const UniverTemplateHost = forwardRef<
       try {
         if (token.trim().length === 0) {
           throw new Error('绑定 token 不能为空。');
+        }
+        if (
+          activeTemplateOperationRef.current !== null ||
+          internalOperationDepthRef.current > 0
+        ) {
+          throw new Error('模板操作进行中，暂时不能插入绑定 token。');
+        }
+        if (modeRef.current !== 'design') {
+          throw new Error('当前不是设计模式，不能插入绑定 token。');
+        }
+        if (currentWorkbookEditableRef.current !== true) {
+          throw new Error('当前工作簿为只读状态，不能插入绑定 token。');
         }
 
         let workbook: UniverWorkbook | null | undefined;
@@ -536,10 +740,10 @@ export const UniverTemplateHost = forwardRef<
         } finally {
           releaseInternal();
         }
-        onChangedRef.current();
+        safeNotifyChanged();
       } catch (error) {
         const contextual = operationError('Univer 插入绑定 token 失败', error);
-        notifyError(contextual);
+        safeNotifyError(contextual);
         throw contextual;
       }
     },
@@ -692,15 +896,12 @@ export const UniverTemplateHost = forwardRef<
         } catch (error) {
           throw operationError('Univer 将预览工作簿切换为只读失败', error);
         }
+        currentWorkbookEditableRef.current = false;
         assertCurrentGeneration(operation.generation);
         await waitForTwoAnimationFrames();
         assertCurrentGeneration(operation.generation);
         const duration = performance.now() - startedAt;
-        try {
-          onRenderedRef.current(duration);
-        } catch (error) {
-          throw operationError('Univer 报告模板预览渲染耗时失败', error);
-        }
+        safeNotifyRendered(duration);
         assertCurrentGeneration(operation.generation);
         return duration;
       } catch (error) {
@@ -712,6 +913,7 @@ export const UniverTemplateHost = forwardRef<
         if (previewWorkbook !== null) {
           try {
             previewWorkbook.setEditable(false);
+            currentWorkbookEditableRef.current = false;
           } catch (readonlyError) {
             const readonlyContext = operationError(
               'Univer 在预览失败后将工作簿切换为只读失败',
@@ -720,7 +922,7 @@ export const UniverTemplateHost = forwardRef<
             contextual = new Error(`${contextual.message}；${readonlyContext.message}`);
           }
         }
-        notifyError(contextual);
+        safeNotifyError(contextual);
         throw contextual;
       } finally {
         finishTemplateOperation(operation);
@@ -732,7 +934,9 @@ export const UniverTemplateHost = forwardRef<
     beginTemplateOperation,
     finishTemplateOperation,
     isCurrentGeneration,
-    notifyError,
+    safeNotifyChanged,
+    safeNotifyError,
+    safeNotifyRendered,
     replaceWorkbook,
   ]);
 
