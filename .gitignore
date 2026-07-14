@@ -36,6 +36,7 @@ output/playwright/
 /Admin.NET/Admin.NET.Web.Entry/.config
 
 # folders
+.worktrees/
 dist/
 node_modules/
 /Web/package-lock.json
