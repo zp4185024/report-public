@@ -52,9 +52,10 @@ function oneSheet(
 function expectBindingError(
   snapshot: IWorkbookData,
   expected: { sheetId?: string; row?: number; column?: number; cellAddress?: string },
+  reportDefinition: ReportDefinition = definition,
 ): TemplateBindingError {
   try {
-    scanTemplateBindings(snapshot, definition);
+    scanTemplateBindings(snapshot, reportDefinition);
   } catch (error) {
     expect(error).toBeInstanceOf(TemplateBindingError);
     const bindingError = error as TemplateBindingError;
@@ -185,6 +186,77 @@ describe('scanTemplateBindings', () => {
       oneSheet({ 2: { 1: { v: '科室：{{detail.departmentName}}' } } }),
       { sheetId: 'sheet-1', row: 2, column: 1, cellAddress: 'B3' },
     );
+  });
+
+  it.each([
+    ['space', ' '],
+    ['tab', '\t'],
+    ['carriage return', '\r'],
+    ['line feed', '\n'],
+    ['form feed', '\f'],
+    ['vertical tab', '\v'],
+  ])('accepts ASCII %s inside tokens and around a detail token', (_label, whitespace) => {
+    const snapshot = oneSheet({
+      0: { 0: { v: `{{${whitespace}params.hospitalId${whitespace}}}` } },
+      1: { 0: { v: `${whitespace}{{${whitespace}detail.sequence${whitespace}}}${whitespace}` } },
+    });
+
+    expect(scanTemplateBindings(snapshot, definition)).toEqual({
+      version: 1,
+      parameterBindings: [
+        { code: 'hospitalId', sheetId: 'sheet-1', row: 0, column: 0 },
+      ],
+      detailBinding: {
+        datasetCode: 'detail',
+        sheetId: 'sheet-1',
+        templateRow: 1,
+        fields: [{ code: 'sequence', column: 0 }],
+      },
+    });
+  });
+
+  it.each([
+    ['U+FEFF inside a token', '\uFEFF', 'inside'],
+    ['U+0085 inside a token', '\u0085', 'inside'],
+    ['U+FEFF around a detail token', '\uFEFF', 'outside'],
+    ['U+0085 around a detail token', '\u0085', 'outside'],
+  ])('rejects non-ASCII whitespace: %s', (_label, whitespace, placement) => {
+    const value = placement === 'inside'
+      ? `{{${whitespace}params.hospitalId}}`
+      : `${whitespace}{{detail.sequence}}${whitespace}`;
+
+    expectBindingError(
+      oneSheet({ 0: { 0: { v: value } } }),
+      { sheetId: 'sheet-1', row: 0, column: 0, cellAddress: 'A1' },
+    );
+  });
+
+  it('allows non-ASCII whitespace characters in ordinary text without tokens', () => {
+    expect(scanTemplateBindings(
+      oneSheet({ 0: { 0: { v: '普通\uFEFF文本\u0085内容' } } }),
+      definition,
+    )).toEqual({
+      version: 1,
+      parameterBindings: [],
+      detailBinding: null,
+    });
+  });
+
+  it('rejects a detail code outside the WorkloadRow field whitelist', () => {
+    const expandedDefinition: ReportDefinition = {
+      ...definition,
+      columns: [
+        ...definition.columns,
+        { code: 'runtimeOnlyField', header: '运行时字段', dataType: 'text', width: 100, formulaTemplate: null },
+      ],
+    };
+    const error = expectBindingError(
+      oneSheet({ 0: { 0: { v: '{{detail.runtimeOnlyField}}' } } }),
+      { sheetId: 'sheet-1', row: 0, column: 0, cellAddress: 'A1' },
+      expandedDefinition,
+    );
+
+    expect(error.message).toContain('runtimeOnlyField');
   });
 
   it('rejects detail tokens from different rows or sheets', () => {

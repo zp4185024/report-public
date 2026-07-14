@@ -142,6 +142,73 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A6", exception.Message);
     }
 
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    [InlineData("\r")]
+    [InlineData("\n")]
+    [InlineData("\f")]
+    [InlineData("\v")]
+    public void Scan_AcceptsAsciiWhitespaceInsideTokensAndAroundDetail(string whitespace)
+    {
+        var snapshot = CreateSnapshot();
+        SetCellValue(snapshot, 1, 0, "{{" + whitespace + "params.hospitalId" + whitespace + "}}");
+        SetCellValue(
+            snapshot,
+            5,
+            0,
+            whitespace + "{{" + whitespace + "detail.sequence" + whitespace + "}}" + whitespace);
+
+        var binding = PocTemplateValidator.Scan(snapshot.ToString());
+
+        Assert.Equal(
+            [new PocParameterBinding("hospitalId", "report-sheet", 1, 0)],
+            binding.ParameterBindings);
+        Assert.NotNull(binding.DetailBinding);
+    }
+
+    [Theory]
+    [InlineData("\uFEFF")]
+    [InlineData("\u0085")]
+    public void Scan_RejectsNonAsciiWhitespaceInsideToken(string whitespace)
+    {
+        var snapshot = CreateSnapshot();
+        SetCellValue(snapshot, 1, 0, "{{" + whitespace + "params.hospitalId}}");
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains("report-sheet", exception.Message);
+        Assert.Contains("A2", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("\uFEFF")]
+    [InlineData("\u0085")]
+    public void Scan_RejectsNonAsciiWhitespaceAroundDetailToken(string whitespace)
+    {
+        var snapshot = CreateSnapshot();
+        SetCellValue(snapshot, 5, 0, whitespace + "{{detail.sequence}}" + whitespace);
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains("report-sheet", exception.Message);
+        Assert.Contains("A6", exception.Message);
+    }
+
+    [Fact]
+    public void Scan_AllowsNonAsciiWhitespaceInOrdinaryTextWithoutTokens()
+    {
+        var snapshot = CreateSnapshot();
+        SetCellValue(snapshot, 1, 0, "普通\uFEFF文本\u0085内容");
+
+        var binding = PocTemplateValidator.Scan(snapshot.ToString());
+
+        Assert.Empty(binding.ParameterBindings);
+        Assert.NotNull(binding.DetailBinding);
+    }
+
     [Fact]
     public void Scan_RejectsDetailTokensOnDifferentRows()
     {

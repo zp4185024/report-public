@@ -58,6 +58,15 @@ export interface WorkloadRow {
   dischargeCount: number;
 }
 
+export const workloadRowFieldCodes = [
+  'sequence',
+  'departmentName',
+  'outpatientCount',
+  'dischargeCount',
+] as const satisfies readonly (keyof WorkloadRow)[];
+
+export type WorkloadRowFieldCode = typeof workloadRowFieldCodes[number];
+
 export interface ParameterBinding {
   code: string;
   sheetId: string;
@@ -66,7 +75,7 @@ export interface ParameterBinding {
 }
 
 export interface DetailFieldBinding {
-  code: keyof WorkloadRow;
+  code: WorkloadRowFieldCode;
   column: number;
 }
 

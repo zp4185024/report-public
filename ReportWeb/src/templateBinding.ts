@@ -1,15 +1,17 @@
 import type { IWorkbookData } from '@univerjs/presets';
+import { workloadRowFieldCodes } from './types';
 import type {
   DetailBinding,
   DetailFieldBinding,
   ParameterBinding,
   ReportDefinition,
   TemplateBinding,
-  WorkloadRow,
+  WorkloadRowFieldCode,
 } from './types';
 
-const tokenRegex = /\{\{\s*(params|detail)\.([A-Za-z][A-Za-z0-9]*)\s*\}\}/g;
+const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}/g;
 const maximumCoordinate = 2_147_483_647;
+const workloadRowFieldCodeSet: ReadonlySet<string> = new Set(workloadRowFieldCodes);
 
 interface ErrorLocation {
   sheetId?: string;
@@ -125,10 +127,13 @@ export function scanTemplateBindings(
             continue;
           }
 
-          if (value.trim() !== match[0]) {
+          if (trimAsciiWhitespace(value) !== match[0]) {
             throw new TemplateBindingError('明细 token 必须独占整个单元格。', location);
           }
           ensureKnownCode(detailCodes, scope, code, location);
+          if (!isWorkloadRowFieldCode(code)) {
+            throw new TemplateBindingError(`未知的 detail code '${code}'。`, location);
+          }
           if (
             detailLocation !== null &&
             (detailLocation.sheetId !== sheetId || detailLocation.row !== row)
@@ -137,7 +142,7 @@ export function scanTemplateBindings(
           }
 
           detailLocation ??= { sheetId, row };
-          detailFields.push({ code: code as keyof WorkloadRow, column });
+          detailFields.push({ code, column });
         }
 
         const remainingValue = value.replace(tokenRegex, '');
@@ -190,6 +195,14 @@ function compareOrdinal(left: string, right: string): number {
     return 0;
   }
   return left < right ? -1 : 1;
+}
+
+function trimAsciiWhitespace(value: string): string {
+  return value.replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, '');
+}
+
+function isWorkloadRowFieldCode(code: string): code is WorkloadRowFieldCode {
+  return workloadRowFieldCodeSet.has(code);
 }
 
 function ensureKnownCode(

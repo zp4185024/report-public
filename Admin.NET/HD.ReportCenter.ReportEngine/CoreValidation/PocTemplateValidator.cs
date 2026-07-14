@@ -101,7 +101,10 @@ public static partial class PocTemplateValidator
                             }
                             else
                             {
-                                if (!string.Equals(value.Trim(), match.Value, StringComparison.Ordinal))
+                                if (!string.Equals(
+                                        value.Trim(' ', '\t', '\r', '\n', '\f', '\v'),
+                                        match.Value,
+                                        StringComparison.Ordinal))
                                 {
                                     throw new PocTemplateValidationException(
                                         $"Detail token must occupy the entire cell at sheet '{sheetProperty.Name}', " +
@@ -249,6 +252,6 @@ public static partial class PocTemplateValidator
         return $"{letters}{row + 1}";
     }
 
-    [GeneratedRegex(@"\{\{\s*(params|detail)\.([A-Za-z][A-Za-z0-9]*)\s*\}\}", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}", RegexOptions.CultureInvariant)]
     private static partial Regex TokenRegex();
 }
