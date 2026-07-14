@@ -30,34 +30,68 @@ public static partial class PocTemplateValidator
         string? detailSheetId = null;
         var detailRow = -1;
 
-        if (snapshot["sheets"] is JObject sheets)
+        var sheetsToken = snapshot["sheets"];
+        if (sheetsToken is not null && sheetsToken.Type != JTokenType.Null)
         {
+            if (sheetsToken is not JObject sheets)
+            {
+                throw new PocTemplateValidationException("Template 'sheets' must be an object.");
+            }
+
             foreach (var sheetProperty in sheets.Properties())
             {
-                if (sheetProperty.Value["cellData"] is not JObject cellData)
+                if (sheetProperty.Value is not JObject sheet)
+                {
+                    throw new PocTemplateValidationException(
+                        $"Sheet '{sheetProperty.Name}' must be an object.");
+                }
+
+                var cellDataToken = sheet["cellData"];
+                if (cellDataToken is null || cellDataToken.Type == JTokenType.Null)
                 {
                     continue;
                 }
 
+                if (cellDataToken is not JObject cellData)
+                {
+                    throw new PocTemplateValidationException(
+                        $"cellData at sheet '{sheetProperty.Name}' must be an object.");
+                }
+
                 foreach (var rowProperty in cellData.Properties())
                 {
-                    var row = int.Parse(rowProperty.Name, CultureInfo.InvariantCulture);
+                    var row = ParseCoordinate(rowProperty.Name, "row", sheetProperty.Name);
                     if (rowProperty.Value is not JObject rowData)
                     {
-                        continue;
+                        throw new PocTemplateValidationException(
+                            $"Row {row + 1} at sheet '{sheetProperty.Name}' must be an object.");
                     }
 
                     foreach (var columnProperty in rowData.Properties())
                     {
-                        var column = int.Parse(columnProperty.Name, CultureInfo.InvariantCulture);
-                        if (columnProperty.Value["v"]?.Type != JTokenType.String)
+                        var column = ParseCoordinate(columnProperty.Name, "column", sheetProperty.Name, row);
+                        if (columnProperty.Value is not JObject cell)
+                        {
+                            throw new PocTemplateValidationException(
+                                $"Cell {GetCellAddress(row, column)} at sheet '{sheetProperty.Name}' must be an object.");
+                        }
+
+                        if (cell["v"]?.Type != JTokenType.String)
                         {
                             continue;
                         }
 
-                        var value = columnProperty.Value.Value<string>("v")!;
+                        var value = cell.Value<string>("v")!;
                         foreach (Match match in TokenRegex().Matches(value))
                         {
+                            if ((match.Index > 0 && value[match.Index - 1] == '{') ||
+                                (match.Index + match.Length < value.Length && value[match.Index + match.Length] == '}'))
+                            {
+                                throw new PocTemplateValidationException(
+                                    $"Malformed template token at sheet '{sheetProperty.Name}', " +
+                                    $"cell {GetCellAddress(row, column)}.");
+                            }
+
                             var scope = match.Groups[1].Value;
                             var code = match.Groups[2].Value;
                             if (scope == "params")
@@ -131,15 +165,27 @@ public static partial class PocTemplateValidator
 
     private static void EnsureDetailRowIsNotMerged(JObject snapshot, string sheetId, int detailRow)
     {
-        if (snapshot["sheets"]?[sheetId]?["mergeData"] is not JArray mergeData)
+        var mergeDataToken = snapshot["sheets"]?[sheetId]?["mergeData"];
+        if (mergeDataToken is null || mergeDataToken.Type == JTokenType.Null)
         {
             return;
         }
 
-        foreach (var merge in mergeData.OfType<JObject>())
+        if (mergeDataToken is not JArray mergeData)
         {
-            var startRow = merge.Value<int?>("startRow");
-            var endRow = merge.Value<int?>("endRow");
+            throw CreateMergeDataException(sheetId, detailRow);
+        }
+
+        foreach (var mergeToken in mergeData)
+        {
+            if (mergeToken is not JObject merge ||
+                !TryReadCoordinate(merge["startRow"], out var startRow) ||
+                !TryReadCoordinate(merge["endRow"], out var endRow) ||
+                endRow < startRow)
+            {
+                throw CreateMergeDataException(sheetId, detailRow);
+            }
+
             if (startRow <= detailRow && detailRow <= endRow)
             {
                 throw new PocTemplateValidationException(
@@ -147,6 +193,34 @@ public static partial class PocTemplateValidator
                     $"cell {GetCellAddress(detailRow, 0)}.");
             }
         }
+    }
+
+    private static PocTemplateValidationException CreateMergeDataException(string sheetId, int detailRow) =>
+        new(
+            $"mergeData at sheet '{sheetId}' must contain valid row coordinates near " +
+            $"cell {GetCellAddress(detailRow, 0)}.");
+
+    private static bool TryReadCoordinate(JToken? token, out int coordinate)
+    {
+        coordinate = 0;
+        return token?.Type == JTokenType.Integer &&
+               int.TryParse(token.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out coordinate);
+    }
+
+    private static int ParseCoordinate(
+        string key,
+        string coordinateName,
+        string sheetId,
+        int? row = null)
+    {
+        if (int.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out var coordinate))
+        {
+            return coordinate;
+        }
+
+        var rowContext = row.HasValue ? $", row {row.Value + 1}" : string.Empty;
+        throw new PocTemplateValidationException(
+            $"Invalid {coordinateName} key '{key}' at sheet '{sheetId}'{rowContext}.");
     }
 
     private static void EnsureKnownCode(

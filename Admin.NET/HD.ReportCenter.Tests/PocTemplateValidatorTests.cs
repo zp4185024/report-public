@@ -199,6 +199,150 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A2", exception.Message);
     }
 
+    [Theory]
+    [InlineData("row", "not-a-row")]
+    [InlineData("row", "-1")]
+    [InlineData("column", "not-a-column")]
+    [InlineData("column", "-1")]
+    public void Scan_RejectsInvalidCoordinateKeys(string coordinate, string invalidKey)
+    {
+        var snapshot = CreateSnapshot();
+        var cellData = (JObject)snapshot["sheets"]!["report-sheet"]!["cellData"]!;
+        if (coordinate == "row")
+        {
+            cellData[invalidKey] = new JObject();
+        }
+        else
+        {
+            ((JObject)cellData["1"]!)[invalidKey] = new JObject();
+        }
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains("report-sheet", exception.Message);
+        Assert.Contains(invalidKey, exception.Message);
+    }
+
+    [Theory]
+    [InlineData("sheets", "sheets")]
+    [InlineData("sheet", "report-sheet")]
+    [InlineData("cellData", "report-sheet")]
+    [InlineData("row", "report-sheet")]
+    [InlineData("cell", "report-sheet")]
+    public void Scan_RejectsPrimitiveSnapshotNodes(string target, string expectedContext)
+    {
+        var snapshot = CreateSnapshot();
+        var sheets = (JObject)snapshot["sheets"]!;
+        switch (target)
+        {
+            case "sheets":
+                snapshot["sheets"] = 42;
+                break;
+            case "sheet":
+                sheets["report-sheet"] = 42;
+                break;
+            case "cellData":
+                sheets["report-sheet"]!["cellData"] = 42;
+                break;
+            case "row":
+                sheets["report-sheet"]!["cellData"]!["1"] = 42;
+                break;
+            case "cell":
+                sheets["report-sheet"]!["cellData"]!["1"]!["0"] = 42;
+                break;
+        }
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains(expectedContext, exception.Message);
+    }
+
+    [Theory]
+    [InlineData("mergeData")]
+    [InlineData("mergeEntry")]
+    [InlineData("mergeRow")]
+    public void Scan_RejectsMalformedMergeDataNodes(string target)
+    {
+        var snapshot = CreateSnapshot();
+        var sheet = snapshot["sheets"]!["report-sheet"]!;
+        sheet["mergeData"] = target switch
+        {
+            "mergeData" => 42,
+            "mergeEntry" => new JArray(42),
+            _ => new JArray(
+                new JObject
+                {
+                    ["startRow"] = "not-a-row",
+                    ["endRow"] = 5
+                })
+        };
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains("report-sheet", exception.Message);
+        Assert.Contains("A6", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("missing-sheets")]
+    [InlineData("empty-sheets")]
+    [InlineData("missing-cellData")]
+    [InlineData("empty-cellData")]
+    public void Scan_AllowsMissingOrEmptySheetsAndCellData(string scenario)
+    {
+        var snapshot = new JObject();
+        if (scenario != "missing-sheets")
+        {
+            snapshot["sheets"] = new JObject();
+        }
+
+        if (scenario is "missing-cellData" or "empty-cellData")
+        {
+            snapshot["sheets"]!["report-sheet"] = new JObject();
+        }
+
+        if (scenario == "empty-cellData")
+        {
+            snapshot["sheets"]!["report-sheet"]!["cellData"] = new JObject();
+        }
+
+        var binding = PocTemplateValidator.Scan(snapshot.ToString());
+
+        Assert.Empty(binding.ParameterBindings);
+        Assert.Null(binding.DetailBinding);
+    }
+
+    [Theory]
+    [InlineData("{{{params.hospitalId}}")]
+    [InlineData("{{params.hospitalId}}}")]
+    public void Scan_RejectsTokenAdjacentToExtraBrace(string value)
+    {
+        var snapshot = CreateSnapshot();
+        SetCellValue(snapshot, 1, 0, value);
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains("report-sheet", exception.Message);
+        Assert.Contains("A2", exception.Message);
+    }
+
+    [Fact]
+    public void Scan_AllowsOrdinarySingleBraceTextAroundParameterToken()
+    {
+        var snapshot = CreateSnapshot();
+        SetCellValue(snapshot, 1, 0, "医院 {名称}：{{params.hospitalId}} {可选}");
+
+        var binding = PocTemplateValidator.Scan(snapshot.ToString());
+
+        Assert.Equal(
+            [new PocParameterBinding("hospitalId", "report-sheet", 1, 0)],
+            binding.ParameterBindings);
+    }
+
     [Fact]
     public void Scan_RejectsSnapshotLargerThanFourMebibytesBeforeParsing()
     {
