@@ -30,6 +30,90 @@ public sealed class PocTemplateValidatorTests
             detail.Fields);
     }
 
+    [Fact]
+    public void Scan_PreservesParameterBindingsWhenDetailTokensAreAbsent()
+    {
+        var snapshot = new JObject
+        {
+            ["sheets"] = new JObject
+            {
+                ["report-sheet"] = new JObject
+                {
+                    ["cellData"] = new JObject
+                    {
+                        ["0"] = new JObject
+                        {
+                            ["0"] = new JObject { ["v"] = "科室工作量" }
+                        },
+                        ["1"] = new JObject
+                        {
+                            ["0"] = new JObject { ["v"] = "医院：{{params.hospitalId}}" }
+                        }
+                    },
+                    ["mergeData"] = new JArray()
+                }
+            }
+        };
+
+        var binding = PocTemplateValidator.Scan(snapshot.ToString());
+
+        Assert.Equal(
+            [new PocParameterBinding("hospitalId", "report-sheet", 1, 0)],
+            binding.ParameterBindings);
+        Assert.Null(binding.DetailBinding);
+    }
+
+    [Fact]
+    public void Scan_SortsParameterBindingsByCanonicalLocationAndCode()
+    {
+        var snapshot = new JObject
+        {
+            ["sheets"] = new JObject
+            {
+                ["z-sheet"] = new JObject
+                {
+                    ["cellData"] = new JObject
+                    {
+                        ["9"] = new JObject
+                        {
+                            ["3"] = new JObject { ["v"] = "{{params.personId}}" }
+                        }
+                    }
+                },
+                ["a-sheet"] = new JObject
+                {
+                    ["cellData"] = new JObject
+                    {
+                        ["2"] = new JObject
+                        {
+                            ["5"] = new JObject { ["v"] = "{{params.startDate}}" }
+                        },
+                        ["0"] = new JObject
+                        {
+                            ["4"] = new JObject { ["v"] = "{{params.hospitalId}}" },
+                            ["1"] = new JObject
+                            {
+                                ["v"] = "截止 {{params.endDate}} / 科室 {{params.deptId}}"
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var binding = PocTemplateValidator.Scan(snapshot.ToString());
+
+        Assert.Equal(
+            [
+                new PocParameterBinding("deptId", "a-sheet", 0, 1),
+                new PocParameterBinding("endDate", "a-sheet", 0, 1),
+                new PocParameterBinding("hospitalId", "a-sheet", 0, 4),
+                new PocParameterBinding("startDate", "a-sheet", 2, 5),
+                new PocParameterBinding("personId", "z-sheet", 9, 3)
+            ],
+            binding.ParameterBindings);
+    }
+
     [Theory]
     [InlineData(1, 0, "{{params.unknown}}", "A2")]
     [InlineData(5, 0, "{{detail.unknown}}", "A6")]
