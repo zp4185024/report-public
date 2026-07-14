@@ -1,5 +1,6 @@
 using Furion.FriendlyException;
 using HD.ReportCenter.ReportEngine.CoreValidation;
+using Newtonsoft.Json;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
@@ -11,6 +12,31 @@ public sealed class PocReportApi : IDynamicApiController
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     private static readonly PocLargeExportJobStore LargeExportJobs = new();
+
+    private readonly PocTemplateService _templateService;
+
+    public PocReportApi(PocTemplateService templateService)
+    {
+        _templateService = templateService;
+    }
+
+    [HttpGet("/api/report-center/poc/{reportCode}/template")]
+    public async Task<PocTemplateDocument> GetTemplate([FromRoute] string reportCode)
+    {
+        EnsureReportExists(reportCode);
+        return await HandleTemplateOperation(
+            () => _templateService.GetAsync(PocReportCatalog.ReportCode));
+    }
+
+    [HttpPut("/api/report-center/poc/{reportCode}/template")]
+    public async Task<PocTemplateDocument> SaveTemplate(
+        [FromRoute] string reportCode,
+        [FromBody] PocSaveTemplateRequest request)
+    {
+        EnsureReportExists(reportCode);
+        return await HandleTemplateOperation(
+            () => _templateService.SaveAsync(PocReportCatalog.ReportCode, request));
+    }
 
     [HttpGet("/api/report-center/poc/{reportCode}/definition")]
     public PocReportDefinition Definition([FromRoute] string reportCode)
@@ -92,6 +118,30 @@ public sealed class PocReportApi : IDynamicApiController
         catch (Exception exception) when (exception is KeyNotFoundException or InvalidOperationException)
         {
             throw Oops.Oh(exception.Message);
+        }
+    }
+
+    private static async Task<T> HandleTemplateOperation<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (PocTemplateRevisionConflictException)
+        {
+            throw Oops.Oh("TEMPLATE_REVISION_CONFLICT").StatusCode(409);
+        }
+        catch (PocTemplateBindingMismatchException)
+        {
+            throw Oops.Oh(PocTemplateBindingMismatchException.ErrorCode).StatusCode(400);
+        }
+        catch (PocTemplateValidationException exception)
+        {
+            throw Oops.Oh("TEMPLATE_VALIDATION_FAILED: {0}", exception.Message).StatusCode(400);
+        }
+        catch (JsonException)
+        {
+            throw Oops.Oh("TEMPLATE_SNAPSHOT_INVALID").StatusCode(400);
         }
     }
 }

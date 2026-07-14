@@ -1,0 +1,124 @@
+{
+  "id": "report-validation-workbook",
+  "rev": 1,
+  "name": "科室工作量统计（可编辑模板）",
+  "appVersion": "1.0.0",
+  "locale": "zhCN",
+  "styles": {
+    "title": {
+      "ff": "Microsoft YaHei",
+      "fs": 16,
+      "bl": 1,
+      "ht": 2,
+      "vt": 2
+    },
+    "meta": {
+      "ff": "Microsoft YaHei",
+      "fs": 10,
+      "cl": { "rgb": "#344054" },
+      "vt": 2
+    },
+    "header": {
+      "ff": "Microsoft YaHei",
+      "fs": 10,
+      "bl": 1,
+      "bg": { "rgb": "#e9eef5" },
+      "cl": { "rgb": "#18212b" },
+      "ht": 2,
+      "vt": 2,
+      "tb": 3
+    },
+    "center": {
+      "ht": 2,
+      "vt": 2
+    },
+    "number": {
+      "ht": 3,
+      "vt": 2,
+      "n": { "pattern": "#,##0" }
+    },
+    "formula": {
+      "bg": { "rgb": "#eef8f1" },
+      "ht": 3,
+      "vt": 2,
+      "n": { "pattern": "#,##0.00" }
+    }
+  },
+  "sheetOrder": ["report-sheet"],
+  "sheets": {
+    "report-sheet": {
+      "id": "report-sheet",
+      "name": "科室工作量",
+      "tabColor": "#2563eb",
+      "hidden": 0,
+      "freeze": {
+        "xSplit": 0,
+        "ySplit": 5,
+        "startRow": 5,
+        "startColumn": 0
+      },
+      "rowCount": 50,
+      "columnCount": 12,
+      "zoomRatio": 1,
+      "scrollTop": 0,
+      "scrollLeft": 0,
+      "defaultColumnWidth": 100,
+      "defaultRowHeight": 26,
+      "mergeData": [
+        { "startRow": 0, "endRow": 0, "startColumn": 0, "endColumn": 5 },
+        { "startRow": 1, "endRow": 1, "startColumn": 0, "endColumn": 1 },
+        { "startRow": 1, "endRow": 1, "startColumn": 2, "endColumn": 3 },
+        { "startRow": 1, "endRow": 1, "startColumn": 4, "endColumn": 5 },
+        { "startRow": 2, "endRow": 2, "startColumn": 0, "endColumn": 5 }
+      ],
+      "cellData": {
+        "0": {
+          "0": { "v": "科室工作量统计（可编辑模板）", "s": "title" }
+        },
+        "1": {
+          "0": { "v": "医院：{{params.hospitalId}}", "s": "meta" },
+          "2": { "v": "科室：{{params.deptId}}", "s": "meta" },
+          "4": { "v": "人员：{{params.personId}}", "s": "meta" }
+        },
+        "2": {
+          "0": { "v": "统计期间：{{params.startDate}} 至 {{params.endDate}}", "s": "meta" }
+        },
+        "4": {
+          "0": { "v": "序号", "s": "header" },
+          "1": { "v": "科室", "s": "header" },
+          "2": { "v": "门诊人次", "s": "header" },
+          "3": { "v": "出院人次", "s": "header" },
+          "4": { "v": "合计", "s": "header" },
+          "5": { "v": "平均值", "s": "header" }
+        },
+        "5": {
+          "0": { "v": "{{detail.sequence}}", "s": "center" },
+          "1": { "v": "{{detail.departmentName}}" },
+          "2": { "v": "{{detail.outpatientCount}}", "s": "number" },
+          "3": { "v": "{{detail.dischargeCount}}", "s": "number" },
+          "4": { "f": "=C6+D6", "s": "formula" },
+          "5": { "f": "=AVERAGE(C6:D6)", "s": "formula" }
+        }
+      },
+      "rowData": {
+        "0": { "h": 42 },
+        "1": { "h": 30 },
+        "2": { "h": 30 },
+        "3": { "h": 10 },
+        "4": { "h": 34 }
+      },
+      "columnData": {
+        "0": { "w": 70 },
+        "1": { "w": 180 },
+        "2": { "w": 110 },
+        "3": { "w": 110 },
+        "4": { "w": 110 },
+        "5": { "w": 110 }
+      },
+      "rowHeader": { "width": 46, "hidden": 0 },
+      "columnHeader": { "height": 24, "hidden": 0 },
+      "showGridlines": 1,
+      "rightToLeft": 0
+    }
+  }
+}
