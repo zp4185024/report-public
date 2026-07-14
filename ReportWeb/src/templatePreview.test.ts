@@ -4,7 +4,7 @@ import {
   createTemplatePreviewPlan,
   TemplatePreviewError,
 } from './templatePreview';
-import type { ExecuteResult, TemplateBinding } from './types';
+import type { ExecuteResult, TemplateBinding, WorkloadRowFieldCode } from './types';
 
 function workbookWithSheets(sheets: IWorkbookData['sheets']): IWorkbookData {
   return {
@@ -103,6 +103,73 @@ function expectPreviewError(
 }
 
 describe('createTemplatePreviewPlan', () => {
+  it.each([
+    {
+      name: 'null binding',
+      snapshot: workbook({}),
+      binding: null,
+      result: executeResult(),
+    },
+    {
+      name: 'unsupported binding version',
+      snapshot: workbook({}),
+      binding: { version: 2, parameterBindings: [], detailBinding: null },
+      result: executeResult(),
+    },
+    {
+      name: 'non-array parameter bindings',
+      snapshot: workbook({}),
+      binding: { version: 1, parameterBindings: {}, detailBinding: null },
+      result: executeResult(),
+    },
+    {
+      name: 'numeric parameter sheet id',
+      snapshot: workbookWithSheets({
+        '123': {
+          id: '123',
+          name: '数字名称',
+          cellData: { 0: { 0: { v: '{{params.hospitalId}}' } } },
+        },
+      }),
+      binding: {
+        version: 1,
+        parameterBindings: [{ code: 'hospitalId', sheetId: 123, row: 0, column: 0 }],
+        detailBinding: null,
+      },
+      result: executeResult(),
+    },
+    {
+      name: 'non-object resolved parameters',
+      snapshot: workbook({}),
+      binding: { version: 1, parameterBindings: [], detailBinding: null },
+      result: { ...executeResult(), parameters: null },
+    },
+    {
+      name: 'non-string resolved parameter value',
+      snapshot: workbook({}),
+      binding: { version: 1, parameterBindings: [], detailBinding: null },
+      result: {
+        ...executeResult(),
+        parameters: { ...executeResult().parameters, hospitalId: 123 },
+      },
+    },
+    {
+      name: 'non-array result rows',
+      snapshot: workbook({}),
+      binding: { version: 1, parameterBindings: [], detailBinding: null },
+      result: { ...executeResult(), rows: {} },
+    },
+  ])('rejects an invalid top-level input: $name', ({ snapshot, binding, result }) => {
+    expectPreviewError(
+      () => createTemplatePreviewPlan(
+        snapshot,
+        binding as unknown as TemplateBinding,
+        result as unknown as ExecuteResult,
+      ),
+      {},
+    );
+  });
+
   it('replaces an embedded parameter token while preserving fixed text', () => {
     const snapshot = workbook({
       2: {
@@ -386,6 +453,131 @@ describe('createTemplatePreviewPlan', () => {
     expectPreviewError(
       () => createTemplatePreviewPlan(workbook({}), binding, executeResult()),
       location,
+    );
+  });
+
+  it.each([
+    {
+      name: 'missing bound cell',
+      snapshot: workbook({}),
+    },
+    {
+      name: 'formula cell',
+      snapshot: workbook({
+        7: { 0: { v: '{{detail.sequence}}', f: '=ROW()' } },
+      }),
+    },
+    {
+      name: 'mismatched detail token',
+      snapshot: workbook({
+        7: { 0: { v: '{{detail.departmentName}}' } },
+      }),
+    },
+  ])('rejects an invalid detail template cell: $name', ({ snapshot }) => {
+    expectPreviewError(
+      () => createTemplatePreviewPlan(
+        snapshot,
+        detailBinding({ fields: [{ code: 'sequence', column: 0 }] }),
+        executeResult(),
+      ),
+      { sheetId: 'sheet-1', row: 7, column: 0, cellAddress: 'A8' },
+    );
+  });
+
+  it.each([
+    {
+      name: 'null row',
+      code: 'sequence',
+      column: 0,
+      rows: [null],
+      location: { sheetId: 'sheet-1', row: 7, column: 0, cellAddress: 'A8' },
+    },
+    {
+      name: 'array row',
+      code: 'sequence',
+      column: 0,
+      rows: [[1]],
+      location: { sheetId: 'sheet-1', row: 7, column: 0, cellAddress: 'A8' },
+    },
+    {
+      name: 'missing own field on second row',
+      code: 'sequence',
+      column: 0,
+      rows: [{ sequence: 1 }, {}],
+      location: { sheetId: 'sheet-1', row: 8, column: 0, cellAddress: 'A9' },
+    },
+    {
+      name: 'string number field',
+      code: 'sequence',
+      column: 0,
+      rows: [{ sequence: '1' }],
+      location: { sheetId: 'sheet-1', row: 7, column: 0, cellAddress: 'A8' },
+    },
+    {
+      name: 'boolean number field',
+      code: 'outpatientCount',
+      column: 2,
+      rows: [{ outpatientCount: true }],
+      location: { sheetId: 'sheet-1', row: 7, column: 2, cellAddress: 'C8' },
+    },
+    {
+      name: 'NaN number field',
+      code: 'dischargeCount',
+      column: 3,
+      rows: [{ dischargeCount: Number.NaN }],
+      location: { sheetId: 'sheet-1', row: 7, column: 3, cellAddress: 'D8' },
+    },
+    {
+      name: 'infinite number field',
+      code: 'sequence',
+      column: 0,
+      rows: [{ sequence: Number.POSITIVE_INFINITY }],
+      location: { sheetId: 'sheet-1', row: 7, column: 0, cellAddress: 'A8' },
+    },
+    {
+      name: 'object text field',
+      code: 'departmentName',
+      column: 1,
+      rows: [{ departmentName: {} }],
+      location: { sheetId: 'sheet-1', row: 7, column: 1, cellAddress: 'B8' },
+    },
+  ])('rejects an invalid result row: $name', ({ code, column, rows, location }) => {
+    const snapshot = workbook({
+      7: { [column]: { v: `{{detail.${code}}}` } },
+    });
+    const binding = detailBinding({
+      fields: [{ code: code as WorkloadRowFieldCode, column }],
+    });
+
+    expectPreviewError(
+      () => createTemplatePreviewPlan(
+        snapshot,
+        binding,
+        executeResult({ rows: rows as unknown as ExecuteResult['rows'] }),
+      ),
+      location,
+    );
+  });
+
+  it.each([
+    ['fixed text only', '医院名称'],
+    ['different parameter code', '{{params.deptId}}'],
+    ['malformed extra braces', '{{{params.hospitalId}}}'],
+  ])('rejects a parameter binding without its exact token: %s', (_name, value) => {
+    const snapshot = workbook({
+      3: { 1: { v: value } },
+    });
+    const binding: TemplateBinding = {
+      version: 1,
+      parameterBindings: [
+        { code: 'hospitalId', sheetId: 'sheet-1', row: 3, column: 1 },
+      ],
+      detailBinding: null,
+    };
+
+    expectPreviewError(
+      () => createTemplatePreviewPlan(snapshot, binding, executeResult()),
+      { sheetId: 'sheet-1', row: 3, column: 1, cellAddress: 'B4' },
     );
   });
 });
