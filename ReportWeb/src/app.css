@@ -261,6 +261,10 @@ h1 {
   min-height: 560px;
 }
 
+.report-sheet > [data-u-comp="workbench-layout"] {
+  min-height: inherit;
+}
+
 .loading-sheet {
   display: grid;
   place-items: center;

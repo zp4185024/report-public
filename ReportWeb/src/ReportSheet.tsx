@@ -58,7 +58,23 @@ export function ReportSheet({ definition, result, onRendered }: ReportSheetProps
     runtimeRef.current = runtime;
     runtime.univerAPI.createWorkbook(workbookData);
 
+    const container = containerRef.current;
+    const syncWorkbenchHeight = () => {
+      const workbench = container.firstElementChild as HTMLElement | null;
+      if (workbench) {
+        workbench.style.height = `${container.clientHeight}px`;
+      }
+    };
+    const resizeObserver = new ResizeObserver(syncWorkbenchHeight);
+    const mutationObserver = new MutationObserver(syncWorkbenchHeight);
+    resizeObserver.observe(container);
+    mutationObserver.observe(container, { childList: true });
+    syncWorkbenchHeight();
+    requestAnimationFrame(syncWorkbenchHeight);
+
     return () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
       runtimeRef.current = null;
       workerRef.current = null;
       runtime.univer.dispose();

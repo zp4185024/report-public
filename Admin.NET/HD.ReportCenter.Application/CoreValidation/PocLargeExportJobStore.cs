@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
-using System.Text.Json.Serialization;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+[Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
 public enum PocExportJobStatus
 {
     Pending,
@@ -91,7 +91,7 @@ public sealed class PocLargeExportJobStore
             using (var stream = new FileStream(
                        state.FilePath,
                        FileMode.CreateNew,
-                       FileAccess.ReadWrite,
+                       FileAccess.Write,
                        FileShare.Read,
                        1024 * 1024,
                        FileOptions.SequentialScan))

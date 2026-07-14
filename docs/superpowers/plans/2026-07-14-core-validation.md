@@ -19,7 +19,7 @@ The POC must prove:
 - The hard-coded template is `Paged` with 20 rows per page; the server controls page size.
 - Formula columns are calculated by Univer in a Web Worker for the current page.
 - Normal export keeps formula text and enables full calculation when Excel/WPS opens the file.
-- Large export writes at least 100,000 rows with `OpenXmlWriter`, reports progress, supports cancel/download, and does not build a full row list.
+- Large export writes at least 100,000 rows with `ZipArchive + XmlWriter`, reports progress, supports cancel/download, and does not build a full row list. Open XML SDK reopens the result for compatibility validation.
 
 The POC must not add database entities, a generic SQL editor, template upload/import, authentication modes, or a second formula engine.
 
@@ -225,7 +225,7 @@ Expected: compilation fails because `PocExcelExporter` does not exist.
 
 `PocExcelExporter.Write(Stream, IEnumerable<PocWorkloadRow>, Action<long>? progress = null, CancellationToken cancellationToken = default)` must:
 
-- create one workbook and worksheet with `OpenXmlWriter`;
+- create the minimal Open XML package with `ZipArchive` and write worksheet XML forward-only with `XmlWriter`;
 - write title rows, parameter headers, column headers, and data starting at row 6;
 - write formulas `C{row}+D{row}` and `IFERROR(E{row}/(C{row}+D{row}),0)` without cached values;
 - set calculation mode to automatic with full calculation on load;

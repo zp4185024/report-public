@@ -1,11 +1,17 @@
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
+using System.Globalization;
+using System.IO.Compression;
+using System.Text;
+using System.Xml;
 
 namespace HD.ReportCenter.ReportEngine.CoreValidation;
 
 public static class PocExcelExporter
 {
+    private const string SpreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+    private const string OfficeRelationshipsNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    private const string PackageRelationshipsNamespace = "http://schemas.openxmlformats.org/package/2006/relationships";
+    private const string ContentTypesNamespace = "http://schemas.openxmlformats.org/package/2006/content-types";
+
     private static readonly string[] Headers =
     [
         "序号",
@@ -36,53 +42,46 @@ public static class PocExcelExporter
             output.SetLength(0);
         }
 
-        using var packageStream = new NonClosingStream(output);
-        using var document = SpreadsheetDocument.Create(
-            packageStream,
-            SpreadsheetDocumentType.Workbook,
-            true);
-
-        var workbookPart = document.AddWorkbookPart();
-        var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-        var relationshipId = workbookPart.GetIdOfPart(worksheetPart);
-
-        WriteWorksheet(worksheetPart, rows, progress, cancellationToken);
-
-        workbookPart.Workbook = new Workbook(
-            new Sheets(
-                new Sheet
-                {
-                    Id = relationshipId,
-                    SheetId = 1U,
-                    Name = "科室工作量"
-                }),
-            new CalculationProperties
-            {
-                CalculationMode = CalculateModeValues.Auto,
-                ForceFullCalculation = true,
-                FullCalculationOnLoad = true
-            });
-        workbookPart.Workbook.Save();
+        using var archive = new ZipArchive(output, ZipArchiveMode.Create, true, Encoding.UTF8);
+        WriteEntry(archive, "[Content_Types].xml", WriteContentTypes);
+        WriteEntry(archive, "_rels/.rels", WritePackageRelationships);
+        WriteEntry(archive, "xl/workbook.xml", WriteWorkbook);
+        WriteEntry(archive, "xl/_rels/workbook.xml.rels", WriteWorkbookRelationships);
+        WriteEntry(
+            archive,
+            "xl/worksheets/sheet1.xml",
+            writer => WriteWorksheet(writer, rows, progress, cancellationToken));
     }
 
     private static void WriteWorksheet(
-        WorksheetPart worksheetPart,
+        XmlWriter writer,
         IEnumerable<PocWorkloadRow> rows,
         Action<long>? progress,
         CancellationToken cancellationToken)
     {
-        using var writer = OpenXmlWriter.Create(worksheetPart);
-        writer.WriteStartElement(new Worksheet());
-        writer.WriteStartElement(new SheetData());
+        writer.WriteStartDocument();
+        writer.WriteStartElement("worksheet", SpreadsheetNamespace);
+        WriteColumns(writer);
+        writer.WriteStartElement("sheetData", SpreadsheetNamespace);
 
-        WriteRow(writer, 1, TextCell("A1", "科室工作量统计"));
-        WriteRow(writer, 2, TextCell("A2", "公式由 Excel/WPS 打开文件时自动计算"));
-        WriteRow(writer, 3, TextCell("A3", "核心功能验证导出"));
-        WriteRow(writer, 4);
-        WriteRow(
-            writer,
-            5,
-            Headers.Select((header, index) => TextCell($"{ColumnName(index + 1)}5", header)).ToArray());
+        StartRow(writer, 1);
+        WriteTextCell(writer, "A1", "科室工作量统计");
+        writer.WriteEndElement();
+        StartRow(writer, 2);
+        WriteTextCell(writer, "A2", "公式由 Excel/WPS 打开文件时自动计算");
+        writer.WriteEndElement();
+        StartRow(writer, 3);
+        WriteTextCell(writer, "A3", "核心功能验证导出");
+        writer.WriteEndElement();
+        StartRow(writer, 4);
+        writer.WriteEndElement();
+        StartRow(writer, 5);
+        for (var index = 0; index < Headers.Length; index++)
+        {
+            WriteTextCell(writer, $"{ColumnName(index + 1)}5", Headers[index]);
+        }
+
+        writer.WriteEndElement();
 
         long written = 0;
         foreach (var row in rows)
@@ -90,15 +89,14 @@ public static class PocExcelExporter
             cancellationToken.ThrowIfCancellationRequested();
 
             var sheetRow = checked((uint)(written + 6));
-            WriteRow(
-                writer,
-                sheetRow,
-                NumberCell($"A{sheetRow}", row.Sequence),
-                TextCell($"B{sheetRow}", row.DepartmentName),
-                NumberCell($"C{sheetRow}", row.OutpatientCount),
-                NumberCell($"D{sheetRow}", row.DischargeCount),
-                FormulaCell($"E{sheetRow}", $"C{sheetRow}+D{sheetRow}"),
-                FormulaCell($"F{sheetRow}", $"AVERAGE(C{sheetRow}:D{sheetRow})"));
+            StartRow(writer, sheetRow);
+            WriteNumberCell(writer, $"A{sheetRow}", row.Sequence);
+            WriteTextCell(writer, $"B{sheetRow}", row.DepartmentName);
+            WriteNumberCell(writer, $"C{sheetRow}", row.OutpatientCount);
+            WriteNumberCell(writer, $"D{sheetRow}", row.DischargeCount);
+            WriteFormulaCell(writer, $"E{sheetRow}", $"C{sheetRow}+D{sheetRow}");
+            WriteFormulaCell(writer, $"F{sheetRow}", $"AVERAGE(C{sheetRow}:D{sheetRow})");
+            writer.WriteEndElement();
 
             written++;
             if (written % 1_000 == 0)
@@ -114,40 +112,155 @@ public static class PocExcelExporter
 
         writer.WriteEndElement();
         writer.WriteEndElement();
+        writer.WriteEndDocument();
     }
 
-    private static void WriteRow(OpenXmlWriter writer, uint rowIndex, params Cell[] cells)
+    private static void WriteContentTypes(XmlWriter writer)
     {
-        writer.WriteStartElement(new Row { RowIndex = rowIndex });
-        foreach (var cell in cells)
+        writer.WriteStartDocument();
+        writer.WriteStartElement("Types", ContentTypesNamespace);
+        WriteContentType(writer, "Default", "Extension", "rels", "application/vnd.openxmlformats-package.relationships+xml");
+        WriteContentType(writer, "Default", "Extension", "xml", "application/xml");
+        WriteContentType(writer, "Override", "PartName", "/xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
+        WriteContentType(writer, "Override", "PartName", "/xl/worksheets/sheet1.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml");
+        writer.WriteEndElement();
+        writer.WriteEndDocument();
+    }
+
+    private static void WriteContentType(
+        XmlWriter writer,
+        string elementName,
+        string keyName,
+        string keyValue,
+        string contentType)
+    {
+        writer.WriteStartElement(elementName, ContentTypesNamespace);
+        writer.WriteAttributeString(keyName, keyValue);
+        writer.WriteAttributeString("ContentType", contentType);
+        writer.WriteEndElement();
+    }
+
+    private static void WritePackageRelationships(XmlWriter writer)
+    {
+        writer.WriteStartDocument();
+        writer.WriteStartElement("Relationships", PackageRelationshipsNamespace);
+        WriteRelationship(
+            writer,
+            "rId1",
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+            "xl/workbook.xml");
+        writer.WriteEndElement();
+        writer.WriteEndDocument();
+    }
+
+    private static void WriteWorkbookRelationships(XmlWriter writer)
+    {
+        writer.WriteStartDocument();
+        writer.WriteStartElement("Relationships", PackageRelationshipsNamespace);
+        WriteRelationship(
+            writer,
+            "rId1",
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet",
+            "worksheets/sheet1.xml");
+        writer.WriteEndElement();
+        writer.WriteEndDocument();
+    }
+
+    private static void WriteRelationship(XmlWriter writer, string id, string type, string target)
+    {
+        writer.WriteStartElement("Relationship", PackageRelationshipsNamespace);
+        writer.WriteAttributeString("Id", id);
+        writer.WriteAttributeString("Type", type);
+        writer.WriteAttributeString("Target", target);
+        writer.WriteEndElement();
+    }
+
+    private static void WriteWorkbook(XmlWriter writer)
+    {
+        writer.WriteStartDocument();
+        writer.WriteStartElement("workbook", SpreadsheetNamespace);
+        writer.WriteAttributeString("xmlns", "r", null, OfficeRelationshipsNamespace);
+        writer.WriteStartElement("sheets", SpreadsheetNamespace);
+        writer.WriteStartElement("sheet", SpreadsheetNamespace);
+        writer.WriteAttributeString("name", "科室工作量");
+        writer.WriteAttributeString("sheetId", "1");
+        writer.WriteAttributeString("r", "id", OfficeRelationshipsNamespace, "rId1");
+        writer.WriteEndElement();
+        writer.WriteEndElement();
+        writer.WriteStartElement("calcPr", SpreadsheetNamespace);
+        writer.WriteAttributeString("calcMode", "auto");
+        writer.WriteAttributeString("fullCalcOnLoad", "1");
+        writer.WriteAttributeString("forceFullCalc", "1");
+        writer.WriteEndElement();
+        writer.WriteEndElement();
+        writer.WriteEndDocument();
+    }
+
+    private static void WriteColumns(XmlWriter writer)
+    {
+        double[] widths = [10, 26, 16, 16, 16, 16];
+        writer.WriteStartElement("cols", SpreadsheetNamespace);
+        for (var index = 0; index < widths.Length; index++)
         {
-            writer.WriteElement(cell);
+            writer.WriteStartElement("col", SpreadsheetNamespace);
+            writer.WriteAttributeString("min", (index + 1).ToString(CultureInfo.InvariantCulture));
+            writer.WriteAttributeString("max", (index + 1).ToString(CultureInfo.InvariantCulture));
+            writer.WriteAttributeString("width", widths[index].ToString(CultureInfo.InvariantCulture));
+            writer.WriteAttributeString("customWidth", "1");
+            writer.WriteEndElement();
         }
 
         writer.WriteEndElement();
     }
 
-    private static Cell TextCell(string reference, string value) =>
-        new()
-        {
-            CellReference = reference,
-            DataType = CellValues.InlineString,
-            InlineString = new InlineString(new Text(value))
-        };
+    private static void StartRow(XmlWriter writer, uint rowIndex)
+    {
+        writer.WriteStartElement("row", SpreadsheetNamespace);
+        writer.WriteAttributeString("r", rowIndex.ToString(CultureInfo.InvariantCulture));
+    }
 
-    private static Cell NumberCell(string reference, int value) =>
-        new()
-        {
-            CellReference = reference,
-            CellValue = new CellValue(value)
-        };
+    private static void WriteTextCell(XmlWriter writer, string reference, string value)
+    {
+        writer.WriteStartElement("c", SpreadsheetNamespace);
+        writer.WriteAttributeString("r", reference);
+        writer.WriteAttributeString("t", "inlineStr");
+        writer.WriteStartElement("is", SpreadsheetNamespace);
+        writer.WriteElementString("t", SpreadsheetNamespace, value);
+        writer.WriteEndElement();
+        writer.WriteEndElement();
+    }
 
-    private static Cell FormulaCell(string reference, string formula) =>
-        new()
-        {
-            CellReference = reference,
-            CellFormula = new CellFormula(formula)
-        };
+    private static void WriteNumberCell(XmlWriter writer, string reference, int value)
+    {
+        writer.WriteStartElement("c", SpreadsheetNamespace);
+        writer.WriteAttributeString("r", reference);
+        writer.WriteElementString("v", SpreadsheetNamespace, value.ToString(CultureInfo.InvariantCulture));
+        writer.WriteEndElement();
+    }
+
+    private static void WriteFormulaCell(XmlWriter writer, string reference, string formula)
+    {
+        writer.WriteStartElement("c", SpreadsheetNamespace);
+        writer.WriteAttributeString("r", reference);
+        writer.WriteElementString("f", SpreadsheetNamespace, formula);
+        writer.WriteEndElement();
+    }
+
+    private static void WriteEntry(ZipArchive archive, string path, Action<XmlWriter> write)
+    {
+        var entry = archive.CreateEntry(path, CompressionLevel.Fastest);
+        using var stream = entry.Open();
+        using var writer = XmlWriter.Create(
+            stream,
+            new XmlWriterSettings
+            {
+                Encoding = new UTF8Encoding(false),
+                CloseOutput = false,
+                Indent = false,
+                OmitXmlDeclaration = false
+            });
+        write(writer);
+    }
 
     private static string ColumnName(int number)
     {
@@ -163,32 +276,4 @@ public static class PocExcelExporter
         return new string(buffer[index..]);
     }
 
-    private sealed class NonClosingStream(Stream inner) : Stream
-    {
-        public override bool CanRead => inner.CanRead;
-        public override bool CanSeek => inner.CanSeek;
-        public override bool CanWrite => inner.CanWrite;
-        public override long Length => inner.Length;
-        public override long Position
-        {
-            get => inner.Position;
-            set => inner.Position = value;
-        }
-
-        public override void Flush() => inner.Flush();
-        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
-        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
-        public override void SetLength(long value) => inner.SetLength(value);
-        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                inner.Flush();
-            }
-
-            base.Dispose(disposing);
-        }
-    }
 }
