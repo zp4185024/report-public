@@ -27,18 +27,38 @@ The POC must not add database entities, a generic SQL editor, template upload/im
 
 **Files:**
 
-- Modify: `Admin.NET/Admin.NET.Test/Admin.NET.Test.csproj`
-- Create: `Admin.NET/Admin.NET.Test/ReportCenter/PocReportCatalogTests.cs`
+- Modify: `Admin.NET/Admin.NET.sln`
+- Create: `Admin.NET/HD.ReportCenter.Tests/HD.ReportCenter.Tests.csproj`
+- Create: `Admin.NET/HD.ReportCenter.Tests/PocReportCatalogTests.cs`
 - Create: `Admin.NET/HD.ReportCenter.ReportEngine/CoreValidation/PocReportContracts.cs`
 - Create: `Admin.NET/HD.ReportCenter.ReportEngine/CoreValidation/PocReportCatalog.cs`
 
-- [ ] **Step 1: Reference the report engine from the existing test project**
+- [ ] **Step 1: Create a discoverable report-center test project**
 
-Add this project reference beside the existing `Admin.NET.Core` reference:
+Use the standard xUnit test SDK configuration that is verified by `dotnet test` in this repository environment:
 
 ```xml
-<ProjectReference Include="..\HD.ReportCenter.ReportEngine\HD.ReportCenter.ReportEngine.csproj" />
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HD.ReportCenter.ReportEngine\HD.ReportCenter.ReportEngine.csproj" />
+  </ItemGroup>
+</Project>
 ```
+
+Add it to `Admin.NET.sln` with `dotnet sln Admin.NET/Admin.NET.sln add Admin.NET/HD.ReportCenter.Tests/HD.ReportCenter.Tests.csproj`.
 
 - [ ] **Step 2: Write failing catalog tests**
 
@@ -48,7 +68,7 @@ Create tests that require a paged definition, server defaults, stable paging, an
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using Xunit;
 
-namespace Admin.NET.Test.ReportCenter;
+namespace HD.ReportCenter.Tests;
 
 public sealed class PocReportCatalogTests
 {
@@ -87,7 +107,7 @@ public sealed class PocReportCatalogTests
 Run:
 
 ```powershell
-dotnet test Admin.NET/Admin.NET.Test/Admin.NET.Test.csproj -c Release --no-restore --filter PocReportCatalogTests --nologo
+dotnet test Admin.NET/HD.ReportCenter.Tests/HD.ReportCenter.Tests.csproj -c Release --no-restore --filter PocReportCatalogTests --nologo
 ```
 
 Expected: compilation fails because `CoreValidation` contracts do not exist.
@@ -136,7 +156,7 @@ Expected: both tests pass.
 - [ ] **Step 6: Commit catalog slice**
 
 ```powershell
-git add Admin.NET/Admin.NET.Test/Admin.NET.Test.csproj Admin.NET/Admin.NET.Test/ReportCenter Admin.NET/HD.ReportCenter.ReportEngine/CoreValidation
+git add Admin.NET/Admin.NET.sln Admin.NET/HD.ReportCenter.Tests Admin.NET/HD.ReportCenter.ReportEngine/CoreValidation
 git commit -m "feat: add fixed report validation catalog"
 ```
 
@@ -146,7 +166,7 @@ git commit -m "feat: add fixed report validation catalog"
 
 - Modify: `Admin.NET/HD.ReportCenter.ReportEngine/HD.ReportCenter.ReportEngine.csproj`
 - Create: `Admin.NET/HD.ReportCenter.ReportEngine/CoreValidation/PocExcelExporter.cs`
-- Create: `Admin.NET/Admin.NET.Test/ReportCenter/PocExcelExporterTests.cs`
+- Create: `Admin.NET/HD.ReportCenter.Tests/PocExcelExporterTests.cs`
 
 - [ ] **Step 1: Add Open XML SDK**
 
@@ -168,7 +188,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using Xunit;
 
-namespace Admin.NET.Test.ReportCenter;
+namespace HD.ReportCenter.Tests;
 
 public sealed class PocExcelExporterTests
 {
@@ -196,7 +216,7 @@ public sealed class PocExcelExporterTests
 Run:
 
 ```powershell
-dotnet test Admin.NET/Admin.NET.Test/Admin.NET.Test.csproj -c Release --filter PocExcelExporterTests --nologo
+dotnet test Admin.NET/HD.ReportCenter.Tests/HD.ReportCenter.Tests.csproj -c Release --filter PocExcelExporterTests --nologo
 ```
 
 Expected: compilation fails because `PocExcelExporter` does not exist.
@@ -222,7 +242,7 @@ Expected: all export tests pass.
 - [ ] **Step 6: Commit export engine**
 
 ```powershell
-git add Admin.NET/HD.ReportCenter.ReportEngine Admin.NET/Admin.NET.Test/ReportCenter/PocExcelExporterTests.cs
+git add Admin.NET/HD.ReportCenter.ReportEngine Admin.NET/HD.ReportCenter.Tests/PocExcelExporterTests.cs
 git commit -m "feat: stream formula-preserving Excel exports"
 ```
 
@@ -489,7 +509,7 @@ Record cached definition latency, execute latency, browser render/formula time, 
 - [ ] **Step 6: Run final automated verification**
 
 ```powershell
-dotnet test Admin.NET/Admin.NET.Test/Admin.NET.Test.csproj -c Release --no-restore --filter ReportCenter --nologo
+dotnet test Admin.NET/HD.ReportCenter.Tests/HD.ReportCenter.Tests.csproj -c Release --no-restore --nologo
 dotnet build Admin.NET/HD.ReportCenter.Application/HD.ReportCenter.Application.csproj -c Release --no-restore --nologo
 pnpm --dir ReportWeb test
 pnpm --dir ReportWeb build
