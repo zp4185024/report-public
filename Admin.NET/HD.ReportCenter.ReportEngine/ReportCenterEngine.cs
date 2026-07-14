@@ -9,7 +9,10 @@ public static class ReportCenterEngine
         "query-form",
         "formula-cell",
         "excel-export",
-        "html-print"
+        "paged-preview",
+        "univer-worker",
+        "formula-preserving-export",
+        "streaming-export"
     ];
 
     public static ReportCenterEngineInfo GetInfo()

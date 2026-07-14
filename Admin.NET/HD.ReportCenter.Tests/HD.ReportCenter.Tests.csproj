@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HD.ReportCenter.Application\HD.ReportCenter.Application.csproj" />
     <ProjectReference Include="..\HD.ReportCenter.ReportEngine\HD.ReportCenter.ReportEngine.csproj" />
   </ItemGroup>
 
