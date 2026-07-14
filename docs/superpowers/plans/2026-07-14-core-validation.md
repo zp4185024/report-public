@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the proof isolated from production persistence. `HD.ReportCenter.ReportEngine` owns deterministic report data, paging, formula-copy metadata, and Open XML generation; `HD.ReportCenter.Application` exposes anonymous POC endpoints and an in-memory large-export job store; a standalone `ReportWeb` React/Vite app renders the report with Univer 0.25.1. The POC deliberately does not implement report CRUD, SQL execution, template import, or durable `RcExportJob` persistence.
 
-**Tech Stack:** .NET 8, Admin.NET/Furion dynamic APIs, DocumentFormat.OpenXml 3.3.0, xUnit, React 19, Vite 8, TypeScript 6, Univer OSS 0.25.1, Web Worker, Playwright.
+**Tech Stack:** .NET 8, Admin.NET/Furion dynamic APIs, DocumentFormat.OpenXml 3.1.1, xUnit, React 19, Vite 8, TypeScript 7, Univer OSS 0.25.1, Web Worker, Playwright.
 
 ---
 
@@ -174,7 +174,7 @@ Add:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
+  <PackageReference Include="DocumentFormat.OpenXml" Version="3.1.1" />
 </ItemGroup>
 ```
 
