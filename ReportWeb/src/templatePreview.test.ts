@@ -6,6 +6,8 @@ import {
 } from './templatePreview';
 import type { ExecuteResult, TemplateBinding, WorkloadRowFieldCode } from './types';
 
+const maxTemplateCoordinate = 2_147_483_647;
+
 function workbookWithSheets(sheets: IWorkbookData['sheets']): IWorkbookData {
   return {
     id: 'template-workbook',
@@ -103,6 +105,82 @@ function expectPreviewError(
 }
 
 describe('createTemplatePreviewPlan', () => {
+  it.each([
+    {
+      name: 'null snapshot without bindings',
+      snapshot: null,
+      binding: { version: 1, parameterBindings: [], detailBinding: null },
+    },
+    {
+      name: 'null snapshot with a parameter binding',
+      snapshot: null,
+      binding: {
+        version: 1,
+        parameterBindings: [
+          { code: 'hospitalId', sheetId: 'sheet-1', row: 0, column: 0 },
+        ],
+        detailBinding: null,
+      },
+    },
+    {
+      name: 'primitive sheets without bindings',
+      snapshot: { ...workbook({}), sheets: 42 },
+      binding: { version: 1, parameterBindings: [], detailBinding: null },
+    },
+  ])('rejects an invalid snapshot at the entry point: $name', ({ snapshot, binding }) => {
+    expectPreviewError(
+      () => createTemplatePreviewPlan(
+        snapshot as unknown as IWorkbookData,
+        binding as TemplateBinding,
+        executeResult(),
+      ),
+      {},
+    );
+  });
+
+  it('rejects a binding coordinate above the template coordinate limit', () => {
+    const row = maxTemplateCoordinate + 1;
+    const snapshot = workbook({
+      [row]: { 0: { v: '{{params.hospitalId}}' } },
+    });
+    const binding = {
+      version: 1,
+      parameterBindings: [
+        { code: 'hospitalId', sheetId: 'sheet-1', row, column: 0 },
+      ],
+      detailBinding: null,
+    } as TemplateBinding;
+
+    expectPreviewError(
+      () => createTemplatePreviewPlan(snapshot, binding, executeResult()),
+      { sheetId: 'sheet-1', row, column: 0, cellAddress: undefined },
+    );
+  });
+
+  it('rejects detail output whose last target row exceeds the coordinate limit', () => {
+    const snapshot = workbook({
+      [maxTemplateCoordinate]: { 0: { v: '{{detail.sequence}}' } },
+    });
+    const binding = detailBinding({
+      templateRow: maxTemplateCoordinate,
+      fields: [{ code: 'sequence', column: 0 }],
+    });
+
+    expectPreviewError(
+      () => createTemplatePreviewPlan(
+        snapshot,
+        binding,
+        executeResult({ rows: workloadRows(2) }),
+      ),
+      {
+        sheetId: 'sheet-1',
+        row: maxTemplateCoordinate + 1,
+        column: 0,
+        cellAddress: undefined,
+      },
+    );
+  });
+
   it.each([
     {
       name: 'null binding',
@@ -298,6 +376,22 @@ describe('createTemplatePreviewPlan', () => {
       insertCount: 0,
       rows: [{ row: 7, values: [{ column: 0, value: 1 }] }],
     });
+  });
+
+  it('allows a detail token cell whose formula value is null', () => {
+    const plan = createTemplatePreviewPlan(
+      workbook({
+        7: {
+          0: { v: '{{detail.sequence}}', f: null } as never,
+        },
+      }),
+      detailBinding({ fields: [{ code: 'sequence', column: 0 }] }),
+      executeResult({ rows: workloadRows(1) }),
+    );
+
+    expect(plan.detail?.rows).toEqual([
+      { row: 7, values: [{ column: 0, value: 1 }] },
+    ]);
   });
 
   it('clears every detail placeholder with null when there are no result rows', () => {
@@ -564,6 +658,28 @@ describe('createTemplatePreviewPlan', () => {
     ['different parameter code', '{{params.deptId}}'],
     ['malformed extra braces', '{{{params.hospitalId}}}'],
   ])('rejects a parameter binding without its exact token: %s', (_name, value) => {
+    const snapshot = workbook({
+      3: { 1: { v: value } },
+    });
+    const binding: TemplateBinding = {
+      version: 1,
+      parameterBindings: [
+        { code: 'hospitalId', sheetId: 'sheet-1', row: 3, column: 1 },
+      ],
+      detailBinding: null,
+    };
+
+    expectPreviewError(
+      () => createTemplatePreviewPlan(snapshot, binding, executeResult()),
+      { sheetId: 'sheet-1', row: 3, column: 1, cellAddress: 'B4' },
+    );
+  });
+
+  it.each([
+    ['unbound parameter token', '{{params.hospitalId}} / {{params.deptId}}'],
+    ['detail token', '{{params.hospitalId}} {{detail.sequence}}'],
+    ['malformed residual token', '{{params.hospitalId}} {{{params.deptId}}}'],
+  ])('rejects extra token content in a parameter cell: %s', (_name, value) => {
     const snapshot = workbook({
       3: { 1: { v: value } },
     });

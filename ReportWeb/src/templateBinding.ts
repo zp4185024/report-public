@@ -10,7 +10,7 @@ import type {
 } from './types';
 
 const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}/g;
-const maximumCoordinate = 2_147_483_647;
+export const MAX_TEMPLATE_COORDINATE = 2_147_483_647;
 const workloadRowFieldCodeSet: ReadonlySet<string> = new Set(workloadRowFieldCodes);
 
 interface ErrorLocation {
@@ -282,7 +282,7 @@ function isCoordinate(value: unknown): value is number {
   return typeof value === 'number' &&
     Number.isInteger(value) &&
     value >= 0 &&
-    value <= maximumCoordinate;
+    value <= MAX_TEMPLATE_COORDINATE;
 }
 
 function isJsonObject(value: unknown): value is JsonObject {

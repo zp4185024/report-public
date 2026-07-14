@@ -1,4 +1,5 @@
 import type { IWorkbookData } from '@univerjs/presets';
+import { MAX_TEMPLATE_COORDINATE } from './templateBinding';
 import { workloadRowFieldCodes } from './types';
 import type {
   ExecuteResult,
@@ -64,6 +65,10 @@ interface ValidatedExecuteResult {
   rows: unknown[];
 }
 
+interface ValidatedSnapshot {
+  sheets: JsonObject;
+}
+
 export interface CellWrite {
   sheetId: string;
   row: number;
@@ -116,17 +121,18 @@ export function createTemplatePreviewPlan(
   binding: TemplateBinding,
   result: ExecuteResult,
 ): TemplatePreviewPlan {
+  const validatedSnapshot = validateSnapshot(snapshot as unknown);
   const validatedBinding = validateTemplateBinding(binding as unknown);
   const validatedResult = validateExecuteResult(result as unknown);
 
   return {
-    parameterWrites: createParameterWrites(snapshot, validatedBinding, validatedResult),
-    detail: createDetailPlan(snapshot, validatedBinding, validatedResult),
+    parameterWrites: createParameterWrites(validatedSnapshot, validatedBinding, validatedResult),
+    detail: createDetailPlan(validatedSnapshot, validatedBinding, validatedResult),
   };
 }
 
 function createParameterWrites(
-  snapshot: IWorkbookData,
+  snapshot: ValidatedSnapshot,
   binding: ValidatedTemplateBinding,
   result: ValidatedExecuteResult,
 ): CellWrite[] {
@@ -164,37 +170,7 @@ function createParameterWrites(
     .sort(compareParameterCells)
     .map((group) => {
       const originalValue = getParameterCellValue(snapshot, group);
-      const matchedCodes = new Set<keyof ResolvedParameters>();
-      const value = originalValue.replace(
-        tokenRegex,
-        (
-          token,
-          scope: string,
-          code: string,
-          offset: number,
-          source: string,
-        ) => {
-          const typedCode = code as keyof ResolvedParameters;
-          const hasInvalidBraceBoundary = source[offset - 1] === '{' ||
-            source[offset + token.length] === '}';
-          if (
-            hasInvalidBraceBoundary ||
-            scope !== 'params' ||
-            !group.codes.has(typedCode)
-          ) {
-            return token;
-          }
-          matchedCodes.add(typedCode);
-          return result.parameters[typedCode];
-        },
-      );
-      const missingCode = Array.from(group.codes).find((code) => !matchedCodes.has(code));
-      if (missingCode !== undefined) {
-        throw new TemplatePreviewError(
-          `参数绑定单元格缺少 params token '${missingCode}'。`,
-          { sheetId: group.sheetId, row: group.row, column: group.column },
-        );
-      }
+      const value = replaceParameterTokens(originalValue, group, result.parameters);
 
       return {
         sheetId: group.sheetId,
@@ -205,8 +181,56 @@ function createParameterWrites(
     });
 }
 
+function replaceParameterTokens(
+  originalValue: string,
+  group: ParameterCellGroup,
+  parameters: ResolvedParameters,
+): string {
+  const location = {
+    sheetId: group.sheetId,
+    row: group.row,
+    column: group.column,
+  };
+  const matchedCodes = new Set<keyof ResolvedParameters>();
+
+  for (const match of originalValue.matchAll(tokenRegex)) {
+    const matchIndex = match.index;
+    const matchEnd = matchIndex + match[0].length;
+    if (originalValue[matchIndex - 1] === '{' || originalValue[matchEnd] === '}') {
+      throw new TemplatePreviewError('参数绑定单元格包含格式错误的 token。', location);
+    }
+
+    const scope = match[1];
+    const typedCode = match[2] as keyof ResolvedParameters;
+    if (scope !== 'params') {
+      throw new TemplatePreviewError('参数绑定单元格不能包含 detail token。', location);
+    }
+    if (!group.codes.has(typedCode)) {
+      throw new TemplatePreviewError(`参数 token '${match[2]}' 缺少对应绑定。`, location);
+    }
+    matchedCodes.add(typedCode);
+  }
+
+  const missingCode = Array.from(group.codes).find((code) => !matchedCodes.has(code));
+  if (missingCode !== undefined) {
+    throw new TemplatePreviewError(
+      `参数绑定单元格缺少 params token '${missingCode}'。`,
+      location,
+    );
+  }
+
+  const value = originalValue.replace(
+    tokenRegex,
+    (_token, _scope: string, code: string) => parameters[code as keyof ResolvedParameters],
+  );
+  if (value.includes('{{') || value.includes('}}')) {
+    throw new TemplatePreviewError('参数绑定单元格替换后仍包含残留 token。', location);
+  }
+  return value;
+}
+
 function createDetailPlan(
-  snapshot: IWorkbookData,
+  snapshot: ValidatedSnapshot,
   binding: ValidatedTemplateBinding,
   result: ValidatedExecuteResult,
 ): TemplatePreviewPlan['detail'] {
@@ -242,6 +266,13 @@ function createDetailPlan(
   }).sort(
     (left, right) => left.column - right.column || compareOrdinal(left.code, right.code),
   );
+
+  const lastTargetRow = templateRow + Math.max(0, result.rows.length - 1);
+  ensureCoordinate(lastTargetRow, '明细结果最后目标行坐标无效。', {
+    sheetId,
+    row: lastTargetRow,
+    column: fields[0]?.column ?? 0,
+  });
 
   const rows = createDetailRows(sheetId, templateRow, fields, result.rows);
 
@@ -355,6 +386,16 @@ function validateTemplateBinding(value: unknown): ValidatedTemplateBinding {
   };
 }
 
+function validateSnapshot(value: unknown): ValidatedSnapshot {
+  if (!isPlainObject(value)) {
+    throw new TemplatePreviewError('模板快照必须是普通对象。');
+  }
+  if (!isPlainObject(value.sheets)) {
+    throw new TemplatePreviewError('模板快照 sheets 必须是普通对象。');
+  }
+  return { sheets: value.sheets };
+}
+
 function validateDetailBinding(value: unknown): ValidatedDetailBinding | null {
   if (value === null) {
     return null;
@@ -452,7 +493,7 @@ function ensureParameterCode(
 }
 
 function getParameterCellValue(
-  snapshot: IWorkbookData,
+  snapshot: ValidatedSnapshot,
   group: ParameterCellGroup,
 ): string {
   const location = {
@@ -479,7 +520,7 @@ function getParameterCellValue(
 }
 
 function ensureDetailTemplateCell(
-  snapshot: IWorkbookData,
+  snapshot: ValidatedSnapshot,
   sheetId: string,
   rowIndex: number,
   column: number,
@@ -502,7 +543,7 @@ function ensureDetailTemplateCell(
   if (!isJsonObject(cell)) {
     throw new TemplatePreviewError('明细绑定指向的单元格不存在。', location);
   }
-  if (Object.prototype.hasOwnProperty.call(cell, 'f')) {
+  if (typeof cell.f === 'string' && cell.f.length > 0) {
     throw new TemplatePreviewError('明细绑定不能指向公式单元格。', location);
   }
   if (typeof cell.v !== 'string') {
@@ -516,7 +557,7 @@ function ensureDetailTemplateCell(
 }
 
 function ensureSheetExists(
-  snapshot: IWorkbookData,
+  snapshot: ValidatedSnapshot,
   sheetId: string,
   location: ErrorLocation,
 ): void {
@@ -524,11 +565,11 @@ function ensureSheetExists(
 }
 
 function getSheet(
-  snapshot: IWorkbookData,
+  snapshot: ValidatedSnapshot,
   sheetId: string,
   location: ErrorLocation,
 ): JsonObject {
-  const sheets: unknown = snapshot.sheets;
+  const sheets = snapshot.sheets;
   if (
     !isJsonObject(sheets) ||
     !Object.prototype.hasOwnProperty.call(sheets, sheetId) ||
@@ -565,7 +606,8 @@ function ensureCoordinate(
 function isCoordinate(value: unknown): value is number {
   return typeof value === 'number' &&
     Number.isSafeInteger(value) &&
-    value >= 0;
+    value >= 0 &&
+    value <= MAX_TEMPLATE_COORDINATE;
 }
 
 function runtimeLocation(
