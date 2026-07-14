@@ -1,3 +1,6 @@
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.Sqlite;
+
 namespace HD.ReportCenter.Application.CoreValidation;
 
 public sealed record PocStoredTemplate(
@@ -50,7 +53,6 @@ public sealed class PocTemplateStore : ITransient
         {
             var entity = new PocReportTemplate
             {
-                Id = CreateId(),
                 ReportCode = reportCode,
                 SnapshotJson = snapshotJson,
                 BindingJson = bindingJson,
@@ -94,24 +96,46 @@ public sealed class PocTemplateStore : ITransient
     private static PocStoredTemplate ToStoredTemplate(PocReportTemplate entity) =>
         new(entity.ReportCode, entity.SnapshotJson, entity.BindingJson, entity.Revision);
 
-    private static long CreateId()
-    {
-        var id = BitConverter.ToInt64(Guid.NewGuid().ToByteArray()) & long.MaxValue;
-        return id == 0 ? 1 : id;
-    }
-
     private static bool IsReportCodeDuplicate(Exception exception)
     {
+        var hasKnownProviderException = false;
         for (var current = exception; current is not null; current = current.InnerException)
         {
-            var message = current.Message;
-            var isDuplicate =
-                message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase) ||
-                message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) ||
-                message.Contains("duplicate entry", StringComparison.OrdinalIgnoreCase);
-            if (isDuplicate &&
-                (message.Contains("ReportCode", StringComparison.OrdinalIgnoreCase) ||
-                 message.Contains("uk_RcPocReportTemplate_ReportCode", StringComparison.OrdinalIgnoreCase)))
+            if (current is SqlException sqlException)
+            {
+                hasKnownProviderException = true;
+                if (sqlException.Number is 2601 or 2627 &&
+                    IsReportCodeConstraint(sqlException.Message))
+                {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if (current is SqliteException sqliteException)
+            {
+                hasKnownProviderException = true;
+                if (sqliteException.SqliteErrorCode == 19 &&
+                    sqliteException.SqliteExtendedErrorCode is 19 or 1555 or 2067 &&
+                    IsReportCodeConstraint(sqliteException.Message))
+                {
+                    return true;
+                }
+            }
+        }
+
+        if (hasKnownProviderException)
+        {
+            return false;
+        }
+
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (IsReportCodeConstraint(current.Message) &&
+                (current.Message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase) ||
+                 current.Message.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) ||
+                 current.Message.Contains("duplicate entry", StringComparison.OrdinalIgnoreCase)))
             {
                 return true;
             }
@@ -119,4 +143,9 @@ public sealed class PocTemplateStore : ITransient
 
         return false;
     }
+
+    private static bool IsReportCodeConstraint(string message) =>
+        message.Contains("uk_RcPocReportTemplate_ReportCode", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("RcPocReportTemplate.ReportCode", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("ReportCode", StringComparison.OrdinalIgnoreCase);
 }

@@ -131,6 +131,10 @@ public sealed class PocReportApi : IDynamicApiController
         {
             throw Oops.Oh("TEMPLATE_REVISION_CONFLICT").StatusCode(409);
         }
+        catch (PocStoredTemplateCorruptedException)
+        {
+            throw Oops.Oh(PocStoredTemplateCorruptedException.ErrorCode).StatusCode(500);
+        }
         catch (PocTemplateBindingMismatchException)
         {
             throw Oops.Oh(PocTemplateBindingMismatchException.ErrorCode).StatusCode(400);

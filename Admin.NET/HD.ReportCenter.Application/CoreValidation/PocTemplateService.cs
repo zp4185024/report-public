@@ -32,6 +32,18 @@ public sealed class PocTemplateBindingMismatchException : Exception
     public string Code => ErrorCode;
 }
 
+public sealed class PocStoredTemplateCorruptedException : Exception
+{
+    public const string ErrorCode = "TEMPLATE_STORED_DATA_INVALID";
+
+    public PocStoredTemplateCorruptedException(string reportCode, Exception innerException)
+        : base($"Stored template '{reportCode}' is invalid.", innerException)
+    {
+    }
+
+    public string Code => ErrorCode;
+}
+
 public sealed class PocTemplateService : ITransient
 {
     private const string SeedResourceName =
@@ -49,15 +61,30 @@ public sealed class PocTemplateService : ITransient
         var stored = await _store.GetAsync(reportCode);
         if (stored is null)
         {
-            var seedJson = LoadSeedJson();
-            return CreateDocument(reportCode, seedJson, null, 0);
+            try
+            {
+                var seedJson = LoadSeedJson();
+                return CreateDocument(reportCode, seedJson, null, 0);
+            }
+            catch (Exception exception) when (
+                exception is InvalidOperationException || IsTemplateDataException(exception))
+            {
+                throw new PocStoredTemplateCorruptedException(reportCode, exception);
+            }
         }
 
-        return CreateDocument(
-            stored.ReportCode,
-            stored.SnapshotJson,
-            stored.BindingJson,
-            stored.Revision);
+        try
+        {
+            return CreateDocument(
+                stored.ReportCode,
+                stored.SnapshotJson,
+                stored.BindingJson,
+                stored.Revision);
+        }
+        catch (Exception exception) when (IsTemplateDataException(exception))
+        {
+            throw new PocStoredTemplateCorruptedException(reportCode, exception);
+        }
     }
 
     public async Task<PocTemplateDocument> SaveAsync(
@@ -128,6 +155,11 @@ public sealed class PocTemplateService : ITransient
 
     private static string SerializeBinding(PocTemplateBinding binding) =>
         JsonConvert.SerializeObject(binding, Formatting.None);
+
+    private static bool IsTemplateDataException(Exception exception) =>
+        exception is JsonException or
+            PocTemplateValidationException or
+            PocTemplateBindingMismatchException;
 
     private static string LoadSeedJson()
     {

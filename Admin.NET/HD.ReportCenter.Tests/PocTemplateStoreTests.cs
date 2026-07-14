@@ -1,5 +1,6 @@
 using HD.ReportCenter.Application.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation;
+using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Reflection;
@@ -9,6 +10,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocTemplateStoreTests : IDisposable
 {
+    private long _nextId = 1000;
     private readonly SqlSugarClient _database;
     private readonly PocTemplateStore _store;
 
@@ -31,6 +33,21 @@ public sealed class PocTemplateStoreTests : IDisposable
                 }
             }
         });
+        _database.Aop.DataExecuting = (_, entityInfo) =>
+        {
+            if (entityInfo.OperationType != DataFilterType.InsertByObject ||
+                !entityInfo.EntityColumnInfo.IsPrimarykey ||
+                entityInfo.EntityColumnInfo.PropertyInfo.PropertyType != typeof(long))
+            {
+                return;
+            }
+
+            var id = (long)entityInfo.EntityColumnInfo.PropertyInfo.GetValue(entityInfo.EntityValue)!;
+            if (id == 0)
+            {
+                entityInfo.SetValue(Interlocked.Increment(ref _nextId));
+            }
+        };
         _database.Ado.Open();
         _database.CodeFirst.InitTables<PocReportTemplate>();
         _store = new PocTemplateStore(_database);
@@ -40,8 +57,35 @@ public sealed class PocTemplateStoreTests : IDisposable
     public async Task First_save_creates_revision_one()
     {
         var saved = await _store.SaveAsync("dept-workload", "{\"rev\":1}", "{\"version\":1}", 0);
+        var entity = await _database.Queryable<PocReportTemplate>()
+            .SingleAsync(x => x.ReportCode == "dept-workload");
 
         Assert.Equal(1, saved.Revision);
+        Assert.Equal(1001, entity.Id);
+    }
+
+    [Fact]
+    public async Task Repeating_a_first_save_translates_the_sqlite_unique_error_to_a_conflict()
+    {
+        await _store.SaveAsync("dept-workload", "{\"rev\":1}", "{\"version\":1}", 0);
+        _database.Aop.OnError = _ =>
+            throw new SqliteException("RcPocReportTemplate.ReportCode 违反唯一约束", 19, 2067);
+
+        await Assert.ThrowsAsync<PocTemplateRevisionConflictException>(
+            () => _store.SaveAsync("dept-workload", "{\"rev\":2}", "{\"version\":1}", 0));
+    }
+
+    [Fact]
+    public async Task A_non_report_code_constraint_is_not_translated_to_a_revision_conflict()
+    {
+        await _store.SaveAsync("dept-workload", "{\"rev\":1}", "{\"version\":1}", 0);
+        _database.Aop.OnError = _ =>
+            throw new InvalidOperationException(
+                "duplicate key while inserting ReportCode",
+                new SqliteException("RcPocReportTemplate.Id 违反唯一约束", 19, 1555));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _store.SaveAsync("dept-workload", "{\"rev\":2}", "{\"version\":1}", 0));
     }
 
     [Fact]
@@ -133,16 +177,52 @@ public sealed class PocTemplateStoreTests : IDisposable
         var service = new PocTemplateService(_store);
         var seed = await service.GetAsync(PocReportCatalog.ReportCode);
         var mismatched = seed.Binding with { Version = seed.Binding.Version + 1 };
-        await _store.SaveAsync(
-            PocReportCatalog.ReportCode,
+        await InsertStoredTemplateAsync(
             seed.Snapshot.ToString(Formatting.None),
-            JsonConvert.SerializeObject(mismatched, Formatting.None),
-            0);
+            JsonConvert.SerializeObject(mismatched, Formatting.None));
 
-        var exception = await Assert.ThrowsAsync<PocTemplateBindingMismatchException>(
+        var exception = await Assert.ThrowsAsync<PocStoredTemplateCorruptedException>(
             () => service.GetAsync(PocReportCatalog.ReportCode));
 
-        Assert.Equal("TEMPLATE_BINDING_MISMATCH", exception.Code);
+        Assert.Equal("TEMPLATE_STORED_DATA_INVALID", exception.Code);
+    }
+
+    [Fact]
+    public async Task Service_wraps_invalid_stored_snapshot_json_as_corruption()
+    {
+        var service = new PocTemplateService(_store);
+        await InsertStoredTemplateAsync("{not-json", "{}");
+
+        var exception = await Assert.ThrowsAsync<PocStoredTemplateCorruptedException>(
+            () => service.GetAsync(PocReportCatalog.ReportCode));
+
+        Assert.Equal("TEMPLATE_STORED_DATA_INVALID", exception.Code);
+    }
+
+    [Fact]
+    public async Task Service_wraps_stored_snapshot_validation_failure_as_corruption()
+    {
+        var service = new PocTemplateService(_store);
+        var snapshot = new JObject
+        {
+            ["sheets"] = new JObject
+            {
+                ["report-sheet"] = new JObject
+                {
+                    ["cellData"] = new JObject
+                    {
+                        ["0"] = new JObject
+                        {
+                            ["0"] = new JObject { ["v"] = "{{params.unknown}}" }
+                        }
+                    }
+                }
+            }
+        };
+        await InsertStoredTemplateAsync(snapshot.ToString(Formatting.None), "{}");
+
+        await Assert.ThrowsAsync<PocStoredTemplateCorruptedException>(
+            () => service.GetAsync(PocReportCatalog.ReportCode));
     }
 
     [Fact]
@@ -171,5 +251,19 @@ public sealed class PocTemplateStoreTests : IDisposable
     public void Dispose()
     {
         _database.Dispose();
+    }
+
+    private Task<int> InsertStoredTemplateAsync(string snapshotJson, string bindingJson)
+    {
+        var now = DateTime.Now;
+        return _database.Insertable(new PocReportTemplate
+        {
+            ReportCode = PocReportCatalog.ReportCode,
+            SnapshotJson = snapshotJson,
+            BindingJson = bindingJson,
+            Revision = 1,
+            CreateTime = now,
+            UpdateTime = now
+        }).ExecuteCommandAsync();
     }
 }
