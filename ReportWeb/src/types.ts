@@ -1,3 +1,5 @@
+import type { IWorkbookData } from '@univerjs/presets';
+
 export type PreviewMode = 'Full' | 'Paged';
 
 export interface PreviewSettings {
@@ -54,6 +56,44 @@ export interface WorkloadRow {
   departmentName: string;
   outpatientCount: number;
   dischargeCount: number;
+}
+
+export interface ParameterBinding {
+  code: string;
+  sheetId: string;
+  row: number;
+  column: number;
+}
+
+export interface DetailFieldBinding {
+  code: keyof WorkloadRow;
+  column: number;
+}
+
+export interface DetailBinding {
+  datasetCode: 'detail';
+  sheetId: string;
+  templateRow: number;
+  fields: DetailFieldBinding[];
+}
+
+export interface TemplateBinding {
+  version: 1;
+  parameterBindings: ParameterBinding[];
+  detailBinding: DetailBinding | null;
+}
+
+export interface TemplateDocument {
+  reportCode: string;
+  snapshot: IWorkbookData;
+  binding: TemplateBinding;
+  revision: number;
+}
+
+export interface SaveTemplateRequest {
+  snapshot: IWorkbookData;
+  binding: TemplateBinding;
+  revision: number;
 }
 
 export interface ExecuteResult {

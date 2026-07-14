@@ -1,4 +1,11 @@
-import type { ExecuteRequest, ExecuteResult, ExportJob, ReportDefinition } from './types';
+import type {
+  ExecuteRequest,
+  ExecuteResult,
+  ExportJob,
+  ReportDefinition,
+  SaveTemplateRequest,
+  TemplateDocument,
+} from './types';
 
 const reportCode = 'dept-workload';
 const basePath = `/api/report-center/poc/${reportCode}`;
@@ -53,6 +60,15 @@ async function requestDownload(path: string, request?: ExecuteRequest): Promise<
 
 export const reportApi = {
   definition: () => requestJson<ReportDefinition>(`${basePath}/definition`),
+
+  template: () => requestJson<TemplateDocument>(`${basePath}/template`),
+
+  saveTemplate: (request: SaveTemplateRequest) =>
+    requestJson<TemplateDocument>(`${basePath}/template`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
 
   execute: (request: ExecuteRequest) =>
     requestJson<ExecuteResult>(`${basePath}/execute`, {
