@@ -20,6 +20,21 @@ public sealed record PocExchangeRuleSet(
     int MappingVersion,
     IReadOnlyList<PocExchangeRule> Rules);
 
+/// <summary>映射缺失、快照损坏或文件内容不受支持时使用的稳定领域异常。</summary>
+public sealed class PocExchangeConversionException : Exception
+{
+    public PocExchangeConversionException(string code, string message, string? ruleCode = null)
+        : base(message)
+    {
+        Code = code;
+        RuleCode = ruleCode;
+    }
+
+    public string Code { get; }
+
+    public string? RuleCode { get; }
+}
+
 public static class PocExchangeDirections
 {
     public const string ExcelToUniver = "ExcelToUniver";
