@@ -128,6 +128,24 @@ export interface SaveTemplateRequest {
   revision: number;
 }
 
+/** XLSX 转换提示。ruleCode 可直接定位数据库中的 RcPocExchangeMapping 记录。 */
+export interface TemplateExchangeDiagnostic {
+  ruleCode: string;
+  message: string;
+  sheetName: string | null;
+  cellAddress: string | null;
+}
+
+/** 后台完成 XLSX 转换和 token 校验后返回的可编辑草稿。 */
+export interface TemplateXlsxImportResult {
+  snapshot: IWorkbookData;
+  binding: TemplateBinding;
+  univerVersion: string;
+  mappingVersion: number;
+  usedCellCount: number;
+  warnings: TemplateExchangeDiagnostic[];
+}
+
 /** 一页后台结果。hasMore 允许不查询精确总数也能驱动下一页按钮。 */
 export interface ExecuteResult {
   page: number;

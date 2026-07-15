@@ -3,6 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type ChangeEvent,
   type FormEvent,
 } from 'react';
 import type { IWorkbookData } from '@univerjs/presets';
@@ -10,6 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  FileDown,
+  FileUp,
   LoaderCircle,
   Pencil,
   Save,
@@ -45,6 +48,12 @@ const backendErrorMessages: Readonly<Record<string, string>> = {
   REPORT_TEMPLATE_NOT_FOUND: '找不到报表模板',
   TEMPLATE_BINDING_INVALID: '模板字段绑定校验失败',
   TEMPLATE_SNAPSHOT_INVALID: '模板内容校验失败',
+  TEMPLATE_XLSX_EXTENSION_REQUIRED: '只支持导入 XLSX 模板',
+  TEMPLATE_XLSX_FILE_REQUIRED: '请选择要导入的 XLSX 模板',
+  TEMPLATE_XLSX_FILE_TOO_LARGE: '模板文件超过 10 MiB 限制',
+  TEMPLATE_XLSX_INVALID: 'XLSX 模板无法读取或文件已损坏',
+  TEMPLATE_XLSX_TOO_MANY_SHEETS: 'XLSX 工作表数量超过限制',
+  TEMPLATE_XLSX_TOO_MANY_CELLS: 'XLSX 已用单元格数量超过限制',
 };
 
 /** 创建第一页查询；日期先留空，等待后台 definition 返回已解析的默认函数值。 */
@@ -90,14 +99,18 @@ export default function App() {
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exchangeStatus, setExchangeStatus] = useState<string | null>(null);
   const [queryDuration, setQueryDuration] = useState(0);
   const [renderDuration, setRenderDuration] = useState(0);
 
   // editorRef 是页面调用 Univer 的窄接口；draftSnapshotRef 保存“最后设计草稿”的同步事实来源。
   // 同一快照另存 state 是为了触发 React 生命周期；异步回调使用 ref 可避免读到闭包中的旧值。
   const editorRef = useRef<UniverTemplateHandle>(null);
+  const templateFileInputRef = useRef<HTMLInputElement>(null);
   const draftSnapshotRef = useRef<IWorkbookData | null>(null);
   // 保存、预览、翻页和返回设计共享一个互斥标记，防止两个异步工作簿替换流程交叉执行。
   const operationRef = useRef(false);
@@ -164,6 +177,7 @@ export default function App() {
 
   const handleEditorChanged = useCallback(() => {
     setDirty(true);
+    setExchangeStatus(null);
   }, []);
 
   const handleEditorRendered = useCallback((duration: number) => {
@@ -307,6 +321,90 @@ export default function App() {
     }
   }, [definition, mode, templateDocument]);
 
+  const chooseTemplateFile = useCallback(() => {
+    if (operationRef.current || mode !== 'design' || !initialized) {
+      return;
+    }
+    if (dirty && !window.confirm('导入会替换当前未保存的模板草稿，是否继续？')) {
+      return;
+    }
+    templateFileInputRef.current?.click();
+  }, [dirty, initialized, mode]);
+
+  const importTemplate = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    // 立即清空 input，保证连续选择同一个文件也会再次触发 change。
+    input.value = '';
+    if (file === undefined || operationRef.current || mode !== 'design') {
+      return;
+    }
+
+    operationRef.current = true;
+    setImporting(true);
+    setError(null);
+    setExchangeStatus(null);
+    try {
+      const imported = await reportApi.importTemplate(file);
+      const editor = editorRef.current;
+      if (editor === null) {
+        throw new Error('模板编辑器尚未准备完成。');
+      }
+
+      // 后台已经完成转换和 token 校验；此处只替换设计草稿，保留原 revision 直到用户主动保存。
+      editor.loadDesign(imported.snapshot);
+      draftSnapshotRef.current = imported.snapshot;
+      setDraftSnapshot(imported.snapshot);
+      setResult(null);
+      setDirty(true);
+      const warningText = imported.warnings.length > 0
+        ? `，有 ${imported.warnings.length} 条兼容提示`
+        : '';
+      setExchangeStatus(
+        `已导入 ${imported.usedCellCount} 个单元格（映射版本 ${imported.mappingVersion}）${warningText}，尚未保存`,
+      );
+    } catch (exception) {
+      setError(errorMessage(exception, '模板导入失败'));
+    } finally {
+      operationRef.current = false;
+      setImporting(false);
+    }
+  }, [mode]);
+
+  const exportTemplate = useCallback(async () => {
+    if (
+      operationRef.current ||
+      mode !== 'design' ||
+      definition === null ||
+      !initialized
+    ) {
+      return;
+    }
+
+    operationRef.current = true;
+    setExporting(true);
+    setError(null);
+    setExchangeStatus(null);
+    try {
+      const editor = editorRef.current;
+      if (editor === null) {
+        throw new Error('模板编辑器尚未准备完成。');
+      }
+      const snapshot = editor.saveDraft();
+      // 先在浏览器扫描一次以便立即展示坐标错误；后台仍会独立复查，不能信任这一结果。
+      scanTemplateBindings(snapshot, definition);
+      draftSnapshotRef.current = snapshot;
+      setDraftSnapshot(snapshot);
+      await reportApi.exportTemplate(snapshot);
+      setExchangeStatus('当前模板草稿已导出为 XLSX');
+    } catch (exception) {
+      setError(errorMessage(exception, '模板导出失败'));
+    } finally {
+      operationRef.current = false;
+      setExporting(false);
+    }
+  }, [definition, initialized, mode]);
+
   const insertBinding = useCallback((token: string, kind: 'parameter' | 'detail') => {
     try {
       // 字段面板只产生 token，具体的活动单元格检查、追加/替换规则由 Univer 宿主统一执行。
@@ -334,7 +432,7 @@ export default function App() {
   }, [enterPreview]);
 
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
-  const busy = loading || saving || previewing;
+  const busy = loading || saving || importing || exporting || previewing;
   const revision = templateDocument?.revision;
 
   return (
@@ -378,16 +476,46 @@ export default function App() {
 
         <div className="command-actions">
           {mode === 'design' && (
-            <button
-              className="button save-button"
-              type="button"
-              title="保存当前模板草稿"
-              disabled={busy || !initialized}
-              onClick={() => void saveTemplate()}
-            >
-              {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
-              保存模板
-            </button>
+            <>
+              <input
+                ref={templateFileInputRef}
+                className="visually-hidden"
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                tabIndex={-1}
+                onChange={(event) => void importTemplate(event)}
+              />
+              <button
+                className="button exchange-button"
+                type="button"
+                title="导入 XLSX 作为当前模板草稿"
+                disabled={busy || !initialized}
+                onClick={chooseTemplateFile}
+              >
+                {importing ? <LoaderCircle className="spin" size={16} /> : <FileUp size={16} />}
+                导入模板
+              </button>
+              <button
+                className="button exchange-button"
+                type="button"
+                title="把当前模板草稿导出为 XLSX"
+                disabled={busy || !initialized}
+                onClick={() => void exportTemplate()}
+              >
+                {exporting ? <LoaderCircle className="spin" size={16} /> : <FileDown size={16} />}
+                导出模板
+              </button>
+              <button
+                className="button save-button"
+                type="button"
+                title="保存当前模板草稿"
+                disabled={busy || !initialized}
+                onClick={() => void saveTemplate()}
+              >
+                {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
+                保存模板
+              </button>
+            </>
           )}
           <div className="template-state" title={dirty ? '模板有未保存修改' : '模板已保存'}>
             <span>{revision === undefined ? 'revision --' : `revision ${revision}`}</span>
@@ -462,6 +590,7 @@ export default function App() {
       </form>
 
       {error && <div className="error-strip" role="alert">{error}</div>}
+      {exchangeStatus && <div className="success-strip" role="status">{exchangeStatus}</div>}
 
       <section className="report-workspace">
         <div className="report-toolbar">
