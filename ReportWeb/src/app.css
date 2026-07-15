@@ -272,6 +272,28 @@ h1 {
   width: 106px;
 }
 
+.data-export-button,
+.cancel-export-button {
+  width: 106px;
+}
+
+.data-export-button {
+  border-color: #4b7b66;
+  color: #1f5a44;
+  background: #f4faf7;
+}
+
+.data-export-button:hover:not(:disabled) {
+  border-color: #2f6d53;
+  background: #e8f5ee;
+}
+
+.cancel-export-button {
+  border-color: #d6a3a3;
+  color: #9b2c2c;
+  background: #fff8f8;
+}
+
 .query-button {
   width: 88px;
 }

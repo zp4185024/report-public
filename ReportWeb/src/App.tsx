@@ -12,13 +12,21 @@ import {
   ChevronRight,
   Eye,
   FileDown,
+  FileSpreadsheet,
   FileUp,
   LoaderCircle,
   Pencil,
   Save,
   Search,
+  X,
 } from 'lucide-react';
 import { reportApi } from './api';
+import {
+  prepareSavedRevisionForExport,
+  saveBeforeDataExportMessage,
+  selectSnapshotForSave,
+  waitForLargeExportJob,
+} from './dataExportFlow';
 import { scanTemplateBindings } from './templateBinding';
 import { createTemplatePreviewPlan } from './templatePreview';
 import { TemplateFieldPanel } from './TemplateFieldPanel';
@@ -30,6 +38,7 @@ import {
 import type {
   ExecuteRequest,
   ExecuteResult,
+  ExportJob,
   ReportDefinition,
   TemplateDocument,
 } from './types';
@@ -54,6 +63,11 @@ const backendErrorMessages: Readonly<Record<string, string>> = {
   TEMPLATE_XLSX_INVALID: 'XLSX 模板无法读取或文件已损坏',
   TEMPLATE_XLSX_TOO_MANY_SHEETS: 'XLSX 工作表数量超过限制',
   TEMPLATE_XLSX_TOO_MANY_CELLS: 'XLSX 已用单元格数量超过限制',
+  TEMPLATE_SAVE_REQUIRED: '请先保存模板再导出数据',
+  TEMPLATE_REVISION_CHANGED: '模板版本已变化，请刷新后重新导出',
+  NORMAL_EXPORT_ROW_LIMIT_EXCEEDED: '数据行数超过普通导出限制，请使用大文件导出',
+  NORMAL_EXPORT_CELL_LIMIT_EXCEEDED: '数据单元格超过普通导出限制，请使用大文件导出',
+  NORMAL_EXPORT_TIMEOUT: '普通导出超时，请使用大文件导出',
 };
 
 /** 创建第一页查询；日期先留空，等待后台 definition 返回已解析的默认函数值。 */
@@ -100,7 +114,10 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [exportingTemplate, setExportingTemplate] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
+  const [cancellingExport, setCancellingExport] = useState(false);
+  const [exportJob, setExportJob] = useState<ExportJob | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exchangeStatus, setExchangeStatus] = useState<string | null>(null);
@@ -281,13 +298,40 @@ export default function App() {
     }
   }, [mode]);
 
+  const persistTemplate = useCallback(async (): Promise<TemplateDocument> => {
+    if (definition === null || templateDocument === null) {
+      throw new Error('模板文档尚未加载完成。');
+    }
+
+    // 设计态读取活动编辑器；预览态必须使用进入预览前保留的设计草稿，不能保存已展开数据副本。
+    const snapshot = selectSnapshotForSave(
+      mode,
+      () => {
+        const editor = editorRef.current;
+        if (editor === null) {
+          throw new Error('模板编辑器尚未准备完成。');
+        }
+        return editor.saveDraft();
+      },
+      draftSnapshotRef.current,
+    );
+    const binding = scanTemplateBindings(snapshot, definition);
+    const savedDocument = await reportApi.saveTemplate({
+      snapshot,
+      binding,
+      revision: templateDocument.revision,
+    });
+
+    // 使用服务器回包作为新的设计基线；预览工作簿保持只读，不在这里重新加载。
+    draftSnapshotRef.current = savedDocument.snapshot;
+    setTemplateDocument(savedDocument);
+    setDraftSnapshot(savedDocument.snapshot);
+    setDirty(false);
+    return savedDocument;
+  }, [definition, mode, templateDocument]);
+
   const saveTemplate = useCallback(async () => {
-    if (
-      operationRef.current ||
-      mode !== 'design' ||
-      definition === null ||
-      templateDocument === null
-    ) {
+    if (operationRef.current || mode !== 'design') {
       return;
     }
 
@@ -295,31 +339,15 @@ export default function App() {
     setSaving(true);
     setError(null);
     try {
-      const editor = editorRef.current;
-      if (editor === null) {
-        throw new Error('模板编辑器尚未准备完成。');
-      }
-      // 保存前重新读取工作簿并扫描绑定，确保数据库快照和绑定描述来自同一时刻。
-      const snapshot = editor.saveDraft();
-      const binding = scanTemplateBindings(snapshot, definition);
-      const savedDocument = await reportApi.saveTemplate({
-        snapshot,
-        binding,
-        revision: templateDocument.revision,
-      });
-
-      // 使用服务器回包作为新的基线；其中包含后台确认的 revision 和规范绑定对应的快照。
-      draftSnapshotRef.current = savedDocument.snapshot;
-      setTemplateDocument(savedDocument);
-      setDraftSnapshot(savedDocument.snapshot);
-      setDirty(false);
+      await persistTemplate();
+      setExchangeStatus('模板已保存');
     } catch (exception) {
       setError(errorMessage(exception, '模板保存失败'));
     } finally {
       operationRef.current = false;
       setSaving(false);
     }
-  }, [definition, mode, templateDocument]);
+  }, [mode, persistTemplate]);
 
   const chooseTemplateFile = useCallback(() => {
     if (operationRef.current || mode !== 'design' || !initialized) {
@@ -382,7 +410,7 @@ export default function App() {
     }
 
     operationRef.current = true;
-    setExporting(true);
+    setExportingTemplate(true);
     setError(null);
     setExchangeStatus(null);
     try {
@@ -401,9 +429,96 @@ export default function App() {
       setError(errorMessage(exception, '模板导出失败'));
     } finally {
       operationRef.current = false;
-      setExporting(false);
+      setExportingTemplate(false);
     }
   }, [definition, initialized, mode]);
+
+  const exportData = useCallback(async () => {
+    if (
+      operationRef.current ||
+      definition === null ||
+      templateDocument === null ||
+      !initialized
+    ) {
+      return;
+    }
+
+    operationRef.current = true;
+    setExportingData(true);
+    setError(null);
+    setExchangeStatus(null);
+    setExportJob(null);
+    try {
+      const savedRevision = await prepareSavedRevisionForExport({
+        revision: templateDocument.revision,
+        dirty,
+        confirmSave: () => window.confirm(saveBeforeDataExportMessage),
+        save: async () => {
+          setSaving(true);
+          try {
+            return (await persistTemplate()).revision;
+          } finally {
+            setSaving(false);
+          }
+        },
+      });
+      if (savedRevision === null) {
+        return;
+      }
+
+      const exportQuery = { ...request, page: 1 };
+      if (definition.export.defaultMode === 'Large') {
+        const started = await reportApi.startLargeDataExport(savedRevision, exportQuery);
+        const completed = await waitForLargeExportJob(
+          started,
+          reportApi.getJob,
+          undefined,
+          (job) => {
+            setExportJob(job);
+            const total = job.totalRows > 0 ? ` / ${job.totalRows}` : '';
+            setExchangeStatus(`大文件导出：${job.writtenRows}${total} 行`);
+          },
+        );
+        await reportApi.downloadJob(completed.jobNo);
+        setExchangeStatus(`完整数据已导出，共 ${completed.writtenRows} 行`);
+      } else {
+        await reportApi.downloadNormalData(savedRevision, exportQuery);
+        setExchangeStatus('完整数据已按保存模板导出');
+      }
+    } catch (exception) {
+      const message = errorMessage(exception, '数据导出失败');
+      if (message.includes('大文件导出已取消')) {
+        setExchangeStatus('大文件导出已取消');
+      } else {
+        setError(message);
+      }
+    } finally {
+      operationRef.current = false;
+      setSaving(false);
+      setExportingData(false);
+    }
+  }, [definition, dirty, initialized, persistTemplate, request, templateDocument]);
+
+  const cancelDataExport = useCallback(async () => {
+    if (
+      cancellingExport ||
+      exportJob === null ||
+      (exportJob.status !== 'Pending' && exportJob.status !== 'Running')
+    ) {
+      return;
+    }
+
+    setCancellingExport(true);
+    try {
+      const next = await reportApi.cancelJob(exportJob.jobNo);
+      setExportJob(next);
+      setExchangeStatus('正在取消大文件导出');
+    } catch (exception) {
+      setError(errorMessage(exception, '取消大文件导出失败'));
+    } finally {
+      setCancellingExport(false);
+    }
+  }, [cancellingExport, exportJob]);
 
   const insertBinding = useCallback((token: string, kind: 'parameter' | 'detail') => {
     try {
@@ -432,7 +547,7 @@ export default function App() {
   }, [enterPreview]);
 
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
-  const busy = loading || saving || importing || exporting || previewing;
+  const busy = loading || saving || importing || exportingTemplate || exportingData || previewing;
   const revision = templateDocument?.revision;
 
   return (
@@ -502,9 +617,39 @@ export default function App() {
                 disabled={busy || !initialized}
                 onClick={() => void exportTemplate()}
               >
-                {exporting ? <LoaderCircle className="spin" size={16} /> : <FileDown size={16} />}
+                {exportingTemplate ? <LoaderCircle className="spin" size={16} /> : <FileDown size={16} />}
                 导出模板
               </button>
+            </>
+          )}
+          <button
+            className="button data-export-button"
+            type="button"
+            title="使用已保存模板导出全部查询数据"
+            disabled={busy || !initialized}
+            onClick={() => void exportData()}
+          >
+            {exportingData
+              ? <LoaderCircle className="spin" size={16} />
+              : <FileSpreadsheet size={16} />}
+            导出数据
+          </button>
+          {exportJob !== null &&
+            (exportJob.status === 'Pending' || exportJob.status === 'Running') && (
+              <button
+                className="button cancel-export-button"
+                type="button"
+                title="取消正在生成的大文件"
+                disabled={cancellingExport}
+                onClick={() => void cancelDataExport()}
+              >
+                {cancellingExport
+                  ? <LoaderCircle className="spin" size={16} />
+                  : <X size={16} />}
+                取消导出
+              </button>
+            )}
+          {mode === 'design' && (
               <button
                 className="button save-button"
                 type="button"
@@ -515,7 +660,6 @@ export default function App() {
                 {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
                 保存模板
               </button>
-            </>
           )}
           <div className="template-state" title={dirty ? '模板有未保存修改' : '模板已保存'}>
             <span>{revision === undefined ? 'revision --' : `revision ${revision}`}</span>
