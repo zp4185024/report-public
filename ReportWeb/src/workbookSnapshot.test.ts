@@ -36,6 +36,49 @@ function workbookWithRuntimeMergeCoordinates(): IWorkbookData {
   } as unknown as IWorkbookData;
 }
 
+function workbookWithRuntimeLayoutNumbers(): IWorkbookData {
+  return {
+    id: 'runtime-layout-workbook',
+    rev: '2',
+    name: '运行时布局模板',
+    sheetOrder: ['report-sheet'],
+    sheets: {
+      'report-sheet': {
+        id: 'report-sheet',
+        name: '报表',
+        hidden: '0',
+        rowCount: '50',
+        columnCount: '12',
+        zoomRatio: '1',
+        scrollTop: '0',
+        scrollLeft: '0',
+        defaultColumnWidth: '100',
+        defaultRowHeight: '26',
+        freeze: {
+          xSplit: '0',
+          ySplit: '5',
+          startRow: '5',
+          startColumn: '0',
+        },
+        rowData: {
+          0: { h: '42', ah: '42', ia: '1', hd: '0' },
+        },
+        columnData: {
+          0: { w: '70', hd: '0' },
+        },
+        rowHeader: { width: '46', hidden: '0' },
+        columnHeader: { height: '24', hidden: '0' },
+        showGridlines: '1',
+        rightToLeft: '0',
+        cellData: {
+          0: { 0: { v: '001' } },
+        },
+        mergeData: [],
+      },
+    },
+  } as unknown as IWorkbookData;
+}
+
 describe('normalizeWorkbookSnapshot', () => {
   it('converts Univer runtime merge coordinates to numbers without mutating the saved snapshot', () => {
     const snapshot = workbookWithRuntimeMergeCoordinates();
@@ -55,5 +98,34 @@ describe('normalizeWorkbookSnapshot', () => {
     expect(normalizeUniverRuntimeNumber(12.5, '明细模板行高度')).toBe(12.5);
     expect(() => normalizeUniverRuntimeNumber('', '明细模板行高度'))
       .toThrow('明细模板行高度');
+  });
+
+  it('normalizes worksheet layout numbers without converting numeric-looking cell text', () => {
+    const snapshot = workbookWithRuntimeLayoutNumbers();
+
+    const normalized = normalizeWorkbookSnapshot(snapshot);
+    const sheet = normalized.sheets['report-sheet'];
+
+    expect(normalized.rev).toBe(2);
+    expect(sheet).toMatchObject({
+      hidden: 0,
+      rowCount: 50,
+      columnCount: 12,
+      zoomRatio: 1,
+      scrollTop: 0,
+      scrollLeft: 0,
+      defaultColumnWidth: 100,
+      defaultRowHeight: 26,
+      freeze: { xSplit: 0, ySplit: 5, startRow: 5, startColumn: 0 },
+      rowData: { 0: { h: 42, ah: 42, ia: 1, hd: 0 } },
+      columnData: { 0: { w: 70, hd: 0 } },
+      rowHeader: { width: 46, hidden: 0 },
+      columnHeader: { height: 24, hidden: 0 },
+      showGridlines: 1,
+      rightToLeft: 0,
+    });
+    expect(sheet?.cellData?.[0]?.[0]?.v).toBe('001');
+    expect((snapshot.sheets['report-sheet']?.freeze as unknown as { ySplit: unknown }).ySplit)
+      .toBe('5');
   });
 });

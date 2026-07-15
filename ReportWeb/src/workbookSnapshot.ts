@@ -3,7 +3,7 @@ import { MAX_TEMPLATE_COORDINATE } from './templateBinding';
 
 /**
  * Univer 0.25.1 的部分 facade 方法在运行时会返回数字字符串，和 TypeScript 声明不一致。
- * 所有快照离开 Univer 边界前在这里归一化，避免前端扫描器和 .NET 后端拒绝本应合法的模板。
+ * 所有快照进入或离开 Univer 边界时都在这里归一化，避免布局损坏或后端拒绝本应合法的模板。
  */
 const mergeCoordinateFields = [
   'startRow',
@@ -12,37 +12,78 @@ const mergeCoordinateFields = [
   'endColumn',
 ] as const;
 
+const worksheetNumberRules = {
+  hidden: 'booleanNumber',
+  rowCount: 'positiveInteger',
+  columnCount: 'positiveInteger',
+  zoomRatio: 'positiveNumber',
+  scrollTop: 'nonNegativeNumber',
+  scrollLeft: 'nonNegativeNumber',
+  defaultColumnWidth: 'nonNegativeNumber',
+  defaultRowHeight: 'nonNegativeNumber',
+  showGridlines: 'booleanNumber',
+  rightToLeft: 'booleanNumber',
+} as const;
+
+const freezeNumberRules = {
+  xSplit: 'coordinate',
+  ySplit: 'coordinate',
+  startRow: 'coordinate',
+  startColumn: 'coordinate',
+} as const;
+
+const rowNumberRules = {
+  h: 'nonNegativeNumber',
+  ah: 'nonNegativeNumber',
+  ia: 'booleanNumber',
+  hd: 'booleanNumber',
+} as const;
+
+const columnNumberRules = {
+  w: 'nonNegativeNumber',
+  hd: 'booleanNumber',
+} as const;
+
+const rowHeaderNumberRules = {
+  width: 'nonNegativeNumber',
+  hidden: 'booleanNumber',
+} as const;
+
+const columnHeaderNumberRules = {
+  height: 'nonNegativeNumber',
+  hidden: 'booleanNumber',
+} as const;
+
 type MergeCoordinateField = typeof mergeCoordinateFields[number];
 type JsonObject = Record<string, unknown>;
+type NumberRule =
+  | 'booleanNumber'
+  | 'coordinate'
+  | 'nonNegativeInteger'
+  | 'positiveInteger'
+  | 'nonNegativeNumber'
+  | 'positiveNumber';
+type NumberRules = Readonly<Record<string, NumberRule>>;
 
 export function normalizeWorkbookSnapshot(snapshot: IWorkbookData): IWorkbookData {
-  // 仅复制 sheets/含 mergeData 的工作表/合并范围，保留其它大块快照对象引用，避免一次无必要的深拷贝。
+  const source = snapshot as unknown as JsonObject;
+  const rev = source.rev === undefined
+    ? undefined
+    : normalizeNumber(source.rev, '工作簿修订号 rev', 'nonNegativeInteger');
+
+  // 仅复制包含布局数值的对象；cellData 等业务数据保持原引用，宿主随后 structuredClone 时再完整隔离。
   const sheets = Object.fromEntries(
-    Object.entries(snapshot.sheets).map(([sheetId, sheet]) => {
-      if (!Array.isArray(sheet.mergeData)) {
-        return [sheetId, sheet];
-      }
-
-      const mergeData = sheet.mergeData.map((range, index) => {
-        if (!isJsonObject(range)) {
-          throw new Error(`工作表 '${sheetId}' 的第 ${index + 1} 个合并区域无效。`);
-        }
-
-        return Object.fromEntries(
-          Object.entries(range).map(([key, value]) => {
-            if (!isMergeCoordinateField(key)) {
-              return [key, value];
-            }
-            return [key, normalizeCoordinate(value, sheetId, index, key)];
-          }),
-        );
-      });
-
-      return [sheetId, { ...sheet, mergeData }];
-    }),
+    Object.entries(snapshot.sheets).map(([sheetId, sheet]) => [
+      sheetId,
+      normalizeWorksheet(sheet as unknown as JsonObject, sheetId),
+    ]),
   );
 
-  return { ...snapshot, sheets };
+  return {
+    ...snapshot,
+    ...(rev === undefined ? {} : { rev }),
+    sheets,
+  } as IWorkbookData;
 }
 
 /** 把 facade 返回的普通数字或数字字符串统一为有限 number；错误信息由调用方提供业务位置。 */
@@ -53,6 +94,135 @@ export function normalizeUniverRuntimeNumber(value: unknown, label: string): num
   if (typeof normalized !== 'number' || !Number.isFinite(normalized)) {
     throw new Error(`${label}不是有效数值。`);
   }
+  return normalized;
+}
+
+function normalizeWorksheet(sheet: JsonObject, sheetId: string): JsonObject {
+  const normalized = normalizeNumericFields(
+    sheet,
+    `工作表 '${sheetId}'`,
+    worksheetNumberRules,
+  );
+
+  if (sheet.freeze !== undefined) {
+    normalized.freeze = normalizeObjectNumericFields(
+      sheet.freeze,
+      `工作表 '${sheetId}' 的冻结设置`,
+      freezeNumberRules,
+    );
+  }
+  if (sheet.rowData !== undefined) {
+    normalized.rowData = normalizeIndexedNumericFields(
+      sheet.rowData,
+      `工作表 '${sheetId}' 的行数据`,
+      rowNumberRules,
+    );
+  }
+  if (sheet.columnData !== undefined) {
+    normalized.columnData = normalizeIndexedNumericFields(
+      sheet.columnData,
+      `工作表 '${sheetId}' 的列数据`,
+      columnNumberRules,
+    );
+  }
+  if (sheet.rowHeader !== undefined) {
+    normalized.rowHeader = normalizeObjectNumericFields(
+      sheet.rowHeader,
+      `工作表 '${sheetId}' 的行表头`,
+      rowHeaderNumberRules,
+    );
+  }
+  if (sheet.columnHeader !== undefined) {
+    normalized.columnHeader = normalizeObjectNumericFields(
+      sheet.columnHeader,
+      `工作表 '${sheetId}' 的列表头`,
+      columnHeaderNumberRules,
+    );
+  }
+  if (Array.isArray(sheet.mergeData)) {
+    normalized.mergeData = sheet.mergeData.map((range, index) => {
+      if (!isJsonObject(range)) {
+        throw new Error(`工作表 '${sheetId}' 的第 ${index + 1} 个合并区域无效。`);
+      }
+
+      return Object.fromEntries(
+        Object.entries(range).map(([key, value]) => {
+          if (!isMergeCoordinateField(key)) {
+            return [key, value];
+          }
+          return [key, normalizeCoordinate(value, sheetId, index, key)];
+        }),
+      );
+    });
+  }
+
+  return normalized;
+}
+
+function normalizeObjectNumericFields(
+  value: unknown,
+  label: string,
+  rules: NumberRules,
+): JsonObject {
+  if (!isJsonObject(value)) {
+    throw new Error(`${label}必须是对象。`);
+  }
+  return normalizeNumericFields(value, label, rules);
+}
+
+function normalizeIndexedNumericFields(
+  value: unknown,
+  label: string,
+  rules: NumberRules,
+): JsonObject {
+  if (!isJsonObject(value)) {
+    throw new Error(`${label}必须是对象。`);
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([index, item]) => [
+      index,
+      normalizeObjectNumericFields(item, `${label}[${index}]`, rules),
+    ]),
+  );
+}
+
+function normalizeNumericFields(
+  source: JsonObject,
+  label: string,
+  rules: NumberRules,
+): JsonObject {
+  const normalized = { ...source };
+  for (const [field, rule] of Object.entries(rules)) {
+    if (source[field] !== undefined) {
+      normalized[field] = normalizeNumber(source[field], `${label}.${field}`, rule);
+    }
+  }
+  return normalized;
+}
+
+function normalizeNumber(value: unknown, label: string, rule: NumberRule): number {
+  const normalized = normalizeUniverRuntimeNumber(value, label);
+
+  if (rule === 'booleanNumber' && normalized !== 0 && normalized !== 1) {
+    throw new Error(`${label}必须是 0 或 1。`);
+  }
+  if (
+    (rule === 'coordinate' || rule === 'nonNegativeInteger') &&
+    (!Number.isSafeInteger(normalized) || normalized < 0 || normalized > MAX_TEMPLATE_COORDINATE)
+  ) {
+    throw new Error(`${label}必须是有效的非负整数。`);
+  }
+  if (rule === 'positiveInteger' && (!Number.isSafeInteger(normalized) || normalized < 1)) {
+    throw new Error(`${label}必须是正整数。`);
+  }
+  if (rule === 'nonNegativeNumber' && normalized < 0) {
+    throw new Error(`${label}不能小于 0。`);
+  }
+  if (rule === 'positiveNumber' && normalized <= 0) {
+    throw new Error(`${label}必须大于 0。`);
+  }
+
   return normalized;
 }
 

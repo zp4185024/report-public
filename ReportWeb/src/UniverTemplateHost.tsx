@@ -281,9 +281,16 @@ export const UniverTemplateHost = forwardRef<
     }
 
     // createWorkbook 可能规范化或持有传入对象，必须克隆以保护 App 保存的设计草稿不被第三方运行时修改。
+    let normalizedSnapshot: IWorkbookData;
+    try {
+      normalizedSnapshot = normalizeWorkbookSnapshot(snapshot);
+    } catch (error) {
+      throw operationError('Univer 归一化目标工作簿快照失败', error);
+    }
+
     let clonedSnapshot: IWorkbookData;
     try {
-      clonedSnapshot = structuredClone(snapshot);
+      clonedSnapshot = structuredClone(normalizedSnapshot);
     } catch (error) {
       throw operationError('Univer 克隆目标工作簿快照失败', error);
     }
@@ -310,7 +317,7 @@ export const UniverTemplateHost = forwardRef<
         throw new Error('Univer 无法确认当前工作簿的编辑状态，已取消切换。');
       }
       try {
-        previousSnapshot = previousWorkbook.save();
+        previousSnapshot = normalizeWorkbookSnapshot(previousWorkbook.save());
       } catch (error) {
         throw operationError('Univer 保存旧工作簿恢复快照失败', error);
       }
