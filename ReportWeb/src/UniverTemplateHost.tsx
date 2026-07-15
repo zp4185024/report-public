@@ -20,6 +20,7 @@ import {
   normalizeWorkbookSnapshot,
 } from './workbookSnapshot';
 import { isTemplateChangeCommand } from './templateChangeCommand';
+import { recalculateFormulas } from './formulaCalculation';
 import UniverWorker from './univer.worker?worker';
 
 /**
@@ -958,6 +959,20 @@ export const UniverTemplateHost = forwardRef<
             }
           }
         }
+
+        // 设计态公式携带 XLSX 缓存值以避免 token 被提前求值；参数和明细全部替换为真实数据后，
+        // 再显式要求 Worker 重算并等待结果回填，确保预览不会继续显示导入时的缓存占位值。
+        assertCurrentGeneration(operation.generation);
+        const runtime = runtimeRef.current;
+        if (runtime === null) {
+          throw new Error('Univer 编辑器已释放，无法重算预览公式。');
+        }
+        try {
+          await recalculateFormulas(runtime.univerAPI.getFormula());
+        } catch (error) {
+          throw operationError('Univer 重算预览公式失败', error);
+        }
+        assertCurrentGeneration(operation.generation);
 
         // 所有写入完成后才切只读；任何失败路径也尽量切只读，避免用户误编辑半完成的预览副本。
         assertCurrentGeneration(operation.generation);

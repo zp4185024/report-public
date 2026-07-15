@@ -107,20 +107,16 @@ git commit -m "fix: preserve imported formula cache"
 ```ts
 it('starts calculation and resolves after result is applied', async () => {
   const calls: string[] = [];
-  let applied: (() => void) | undefined;
   const formula = {
     executeCalculation: () => calls.push('execute'),
-    onCalculationResultApplied: (callback: () => void) => {
-      applied = callback;
-      return { dispose: () => calls.push('dispose') };
-    },
+    onCalculationResultApplied: async (timeout?: number) =>
+      calls.push(`wait:${timeout}`),
   };
 
   const pending = recalculateFormulas(formula, 100);
-  applied?.();
   await pending;
 
-  expect(calls).toEqual(['execute', 'dispose']);
+  expect(calls).toEqual(['execute', 'wait:100']);
 });
 ```
 
@@ -138,12 +134,12 @@ Expected: 模块不存在或导出函数不存在。
 
 **Step 3: 实现并接入预览渲染**
 
-实现以下最小接口；先订阅结果事件，再执行计算，成功或超时均释放监听器：
+实现以下最小接口。Univer 0.25.1 的等待方法直接返回 Promise 并跟踪最新计算会话，因此先执行计算，再等待结果应用；超时由第三方 API 自身处理：
 
 ```ts
 export interface FormulaCalculationController {
   executeCalculation(): void;
-  onCalculationResultApplied(callback: () => void): { dispose(): void };
+  onCalculationResultApplied(timeout?: number): Promise<void>;
 }
 
 export function recalculateFormulas(
