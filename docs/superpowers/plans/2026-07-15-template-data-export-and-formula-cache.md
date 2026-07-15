@@ -461,7 +461,7 @@ public async Task WriteNormalAsync(
 }
 ```
 
-`ExpandDetailRows` 在复制前捕获模板行公式及源坐标，复制行样式、边框、行高和合并关系；字段单元格写入业务值，公式单元格调用 `MoveFormula`。插入明细行后，整体统计行由 ClosedXML 的插行语义扩展引用范围；增加测试锁定该行为。超过 `NormalMaxRows`、`NormalMaxCells` 或超时后抛出明确异常，提示改用大文件导出。
+`ExpandDetailRows` 在复制前捕获模板行公式及源坐标，复制行样式、边框、行高和合并关系；字段单元格写入业务值，公式单元格调用 `MoveFormula`。验证发现 ClosedXML 会移动插入点下方的统计行，但不会把 `SUM(E6:E6)` 自动扩展到新增明细，因此所有工作表公式还要调用解析器驱动的 `InsertRows` 变换，按 Excel 插行语义扩展目标工作表引用范围。超过 `NormalMaxRows`、`NormalMaxCells` 或超时后抛出明确异常，提示改用大文件导出。
 
 **Step 4: 验证并提交**
 

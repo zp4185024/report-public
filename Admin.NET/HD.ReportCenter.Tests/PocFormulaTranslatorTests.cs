@@ -26,4 +26,32 @@ public sealed class PocFormulaTranslatorTests
 
         Assert.Equal(expected, moved);
     }
+
+    [Theory]
+    [InlineData("=SUM(E6:E6)", "科室工作量", 7, 5, "科室工作量", 6, 136, "=SUM(E6:E142)")]
+    [InlineData("=E6", "科室工作量", 7, 5, "科室工作量", 6, 136, "=E6")]
+    [InlineData("=E7", "科室工作量", 10, 5, "科室工作量", 6, 136, "=E143")]
+    [InlineData("='科室工作量'!$E$6:$E$6", "统计", 2, 1, "科室工作量", 6, 136, "=科室工作量!$E$6:$E$142")]
+    [InlineData("='其它表'!E6:E6", "统计", 2, 1, "科室工作量", 6, 136, "=其它表!E6")]
+    public void InsertRows_AdjustsOnlyReferencesToTheInsertedSheet(
+        string formula,
+        string formulaSheet,
+        int formulaRow,
+        int formulaColumn,
+        string insertedSheet,
+        int insertAfterRow,
+        int insertedRowCount,
+        string expected)
+    {
+        var adjusted = PocFormulaTranslator.InsertRows(
+            formula,
+            formulaSheet,
+            formulaRow,
+            formulaColumn,
+            insertedSheet,
+            insertAfterRow,
+            insertedRowCount);
+
+        Assert.Equal(expected, adjusted);
+    }
 }
