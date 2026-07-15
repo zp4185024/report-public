@@ -1,6 +1,7 @@
 using Furion.FriendlyException;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation.Exchange;
+using HD.ReportCenter.ReportEngine.CoreValidation.Export;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -26,13 +27,17 @@ public sealed class PocReportApi : IDynamicApiController
 
     private readonly PocTemplateService _templateService;
     private readonly PocTemplateExchangeService _templateExchangeService;
+    private readonly PocTemplateDataExportService _templateDataExportService;
+    private readonly PocTemplateDataExporter _templateDataExporter = new();
 
     public PocReportApi(
         PocTemplateService templateService,
-        PocTemplateExchangeService templateExchangeService)
+        PocTemplateExchangeService templateExchangeService,
+        PocTemplateDataExportService templateDataExportService)
     {
         _templateService = templateService;
         _templateExchangeService = templateExchangeService;
+        _templateDataExportService = templateDataExportService;
     }
 
     /// <summary>读取数据库模板；未保存过时由服务层返回 revision 0 的种子模板。</summary>
@@ -111,23 +116,44 @@ public sealed class PocReportApi : IDynamicApiController
         return PocReportCatalog.Execute(request);
     }
 
-    /// <summary>同步生成普通体量 Excel；公式写入文件，由 Excel/WPS 打开时计算。</summary>
+    /// <summary>使用数据库中指定 revision 的模板生成普通体量全量数据 Excel。</summary>
     [HttpPost("/api/report-center/poc/{reportCode}/exports/normal")]
-    public FileStreamResult NormalExport(
+    public async Task<FileStreamResult> NormalExport(
         [FromRoute] string reportCode,
-        [FromBody] PocExecuteRequest request)
+        [FromBody] PocDataExportRequest request,
+        CancellationToken cancellationToken)
     {
         EnsureReportExists(reportCode);
         var stream = new MemoryStream();
-        PocExcelExporter.Write(
-            stream,
-            PocReportCatalog.EnumerateRows(PocReportCatalog.PreviewRowCount, request.DeptId));
-        stream.Position = 0;
-
-        return new FileStreamResult(stream, ExcelContentType)
+        try
         {
-            FileDownloadName = $"科室工作量_{DateTimeOffset.Now:yyyyMMddHHmmss}.xlsx"
-        };
+            var plan = await HandleDataExportOperation(
+                () => _templateDataExportService.CreatePlanAsync(
+                    PocReportCatalog.ReportCode,
+                    request,
+                    cancellationToken));
+            await HandleDataExportOperation(async () =>
+            {
+                await _templateDataExporter.WriteNormalAsync(
+                    stream,
+                    plan,
+                    PocReportCatalog.ReadExportPages(request.Query, cancellationToken),
+                    cancellationToken);
+                return true;
+            });
+            stream.Position = 0;
+
+            var parameters = PocReportCatalog.Execute(request.Query with { Page = 1 }).Parameters;
+            return new FileStreamResult(stream, ExcelContentType)
+            {
+                FileDownloadName = $"科室工作量_{parameters.StartDate.Replace("-", string.Empty)}_{parameters.EndDate.Replace("-", string.Empty)}.xlsx"
+            };
+        }
+        catch
+        {
+            await stream.DisposeAsync();
+            throw;
+        }
     }
 
     /// <summary>创建十万行异步导出任务，立即返回可轮询的任务快照。</summary>
@@ -216,6 +242,22 @@ public sealed class PocReportApi : IDynamicApiController
         catch (JsonException)
         {
             throw Oops.Oh("TEMPLATE_SNAPSHOT_INVALID").StatusCode(400);
+        }
+    }
+
+    private static async Task<T> HandleDataExportOperation<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (PocDataExportConflictException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(409);
+        }
+        catch (PocNormalExportLimitException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(413);
         }
     }
 }

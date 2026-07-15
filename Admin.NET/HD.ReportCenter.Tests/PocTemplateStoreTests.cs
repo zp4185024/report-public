@@ -1,6 +1,7 @@
 using HD.ReportCenter.Application.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation.Exchange;
+using ClosedXML.Excel;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -14,7 +15,9 @@ public sealed class PocTemplateStoreTests : IDisposable
     private long _nextId = 1000;
     private readonly SqlSugarClient _database;
     private readonly PocTemplateStore _store;
+    private readonly PocTemplateService _templateService;
     private readonly PocTemplateExchangeService _exchangeService;
+    private readonly PocTemplateDataExportService _dataExportService;
 
     public PocTemplateStoreTests()
     {
@@ -53,9 +56,12 @@ public sealed class PocTemplateStoreTests : IDisposable
         _database.Ado.Open();
         _database.CodeFirst.InitTables<PocReportTemplate, PocExchangeMapping>();
         _store = new PocTemplateStore(_database);
+        _templateService = new PocTemplateService(_store);
+        var mappingStore = new PocExchangeMappingStore(_database);
         _exchangeService = new PocTemplateExchangeService(
-            new PocExchangeMappingStore(_database),
+            mappingStore,
             new PocXlsxExchangeConverter());
+        _dataExportService = new PocTemplateDataExportService(_templateService, mappingStore);
     }
 
     [Fact]
@@ -233,7 +239,7 @@ public sealed class PocTemplateStoreTests : IDisposable
     [Fact]
     public async Task Api_get_template_returns_the_seed_document()
     {
-        var api = new PocReportApi(new PocTemplateService(_store), _exchangeService);
+        var api = new PocReportApi(_templateService, _exchangeService, _dataExportService);
 
         var document = await api.GetTemplate(PocReportCatalog.ReportCode.ToUpperInvariant());
 
@@ -244,13 +250,41 @@ public sealed class PocTemplateStoreTests : IDisposable
     [Fact]
     public async Task Api_put_template_saves_the_document()
     {
-        var api = new PocReportApi(new PocTemplateService(_store), _exchangeService);
+        var api = new PocReportApi(_templateService, _exchangeService, _dataExportService);
         var seed = await api.GetTemplate(PocReportCatalog.ReportCode);
         var request = new PocSaveTemplateRequest(seed.Snapshot, seed.Binding, seed.Revision);
 
         var saved = await api.SaveTemplate(PocReportCatalog.ReportCode, request);
 
         Assert.Equal(1, saved.Revision);
+    }
+
+    [Fact]
+    public async Task Api_normal_export_uses_the_saved_template_and_all_query_rows()
+    {
+        var seed = await _templateService.GetAsync(PocReportCatalog.ReportCode);
+        var saved = await _templateService.SaveAsync(
+            PocReportCatalog.ReportCode,
+            new PocSaveTemplateRequest(seed.Snapshot, seed.Binding, seed.Revision));
+        var api = new PocReportApi(_templateService, _exchangeService, _dataExportService);
+        var query = new PocExecuteRequest(
+            3,
+            "H01",
+            "D02",
+            "P03",
+            "2026-07-01",
+            "2026-07-14");
+
+        var file = await api.NormalExport(
+            PocReportCatalog.ReportCode,
+            new PocDataExportRequest(saved.Revision, query),
+            CancellationToken.None);
+
+        using var workbook = new XLWorkbook(file.FileStream);
+        var sheet = workbook.Worksheet("科室工作量");
+        Assert.Equal(137d, sheet.Cell("A142").GetDouble());
+        Assert.Equal("C142+D142", sheet.Cell("E142").FormulaA1);
+        Assert.Equal("科室工作量_20260701_20260714.xlsx", file.FileDownloadName);
     }
 
     public void Dispose()
