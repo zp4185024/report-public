@@ -156,14 +156,20 @@ public sealed class PocReportApi : IDynamicApiController
         }
     }
 
-    /// <summary>创建十万行异步导出任务，立即返回可轮询的任务快照。</summary>
+    /// <summary>校验并冻结已保存模板后创建异步流式导出任务，立即返回可轮询快照。</summary>
     [HttpPost("/api/report-center/poc/{reportCode}/exports/large")]
-    public PocExportJobSnapshot StartLargeExport(
+    public async Task<PocExportJobSnapshot> StartLargeExport(
         [FromRoute] string reportCode,
-        [FromBody] PocExecuteRequest request)
+        [FromBody] PocDataExportRequest request,
+        CancellationToken cancellationToken)
     {
         EnsureReportExists(reportCode);
-        return LargeExportJobs.Start(request);
+        var plan = await HandleDataExportOperation(
+            () => _templateDataExportService.CreatePlanAsync(
+                PocReportCatalog.ReportCode,
+                request,
+                cancellationToken));
+        return LargeExportJobs.Start(plan);
     }
 
     /// <summary>读取异步导出任务的当前状态和已写行数。</summary>

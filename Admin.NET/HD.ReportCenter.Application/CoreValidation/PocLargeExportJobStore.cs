@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using HD.ReportCenter.ReportEngine.CoreValidation;
+using HD.ReportCenter.ReportEngine.CoreValidation.Export;
+using System.Runtime.CompilerServices;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
@@ -38,38 +40,50 @@ public sealed class PocLargeExportJobStore
 
     private readonly ConcurrentDictionary<string, JobState> _jobs = new(StringComparer.Ordinal);
     private readonly string _outputDirectory;
-    private readonly int _rowCount;
+    private readonly int? _validationRowCount;
+    private readonly PocStreamingTemplateDataExporter _exporter = new();
 
     public PocLargeExportJobStore()
-        : this(Path.Combine(Path.GetTempPath(), "hd-report-center-poc"), ValidationRowCount)
+        : this(Path.Combine(Path.GetTempPath(), "hd-report-center-poc"), null, true)
     {
     }
 
     public PocLargeExportJobStore(string outputDirectory, int rowCount)
+        : this(outputDirectory, rowCount, true)
+    {
+    }
+
+    private PocLargeExportJobStore(string outputDirectory, int? validationRowCount, bool _)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rowCount);
+        if (validationRowCount is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(validationRowCount),
+                "大文件验证行数必须大于零。");
+        }
 
         _outputDirectory = Path.GetFullPath(outputDirectory);
-        _rowCount = rowCount;
+        _validationRowCount = validationRowCount;
         Directory.CreateDirectory(_outputDirectory);
     }
 
     /// <summary>登记任务后立即在后台线程执行，HTTP 请求无需等待整个文件生成。</summary>
-    public PocExportJobSnapshot Start(PocExecuteRequest request)
+    public PocExportJobSnapshot Start(PocTemplateDataExportPlan plan)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(plan);
 
         var jobNo = $"{DateTimeOffset.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
         var filePath = Path.Combine(_outputDirectory, $"{jobNo}.xlsx");
-        var state = new JobState(jobNo, filePath, _rowCount);
+        var totalRows = _validationRowCount ?? PocReportCatalog.PreviewRowCount;
+        var state = new JobState(jobNo, filePath, totalRows);
         if (!_jobs.TryAdd(jobNo, state))
         {
             throw new InvalidOperationException("EXPORT_JOB_CREATE_FAILED");
         }
 
         // JobState 先进入并发字典，再启动后台任务，保证客户端拿到 jobNo 后可以立即查询。
-        _ = Task.Run(() => Run(state, request));
+        _ = Task.Run(() => RunAsync(state, plan));
         return state.Snapshot();
     }
 
@@ -97,27 +111,35 @@ public sealed class PocLargeExportJobStore
         return state.FilePath;
     }
 
-    private void Run(JobState state, PocExecuteRequest request)
+    private async Task RunAsync(JobState state, PocTemplateDataExportPlan plan)
     {
         try
         {
             state.MarkRunning();
             // 顺序写、1 MiB 缓冲和流式 XML 组合，避免十万行数据先堆积为内存工作簿。
-            using (var stream = new FileStream(
-                       state.FilePath,
-                       FileMode.CreateNew,
-                       FileAccess.Write,
-                       FileShare.Read,
-                       1024 * 1024,
-                       FileOptions.SequentialScan))
+            await using (var stream = new FileStream(
+                             state.FilePath,
+                             FileMode.CreateNew,
+                             FileAccess.Write,
+                             FileShare.Read,
+                             1024 * 1024,
+                             FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
-                PocExcelExporter.Write(
+                var pages = _validationRowCount is { } rowCount
+                    ? ReadValidationPages(
+                        rowCount,
+                        plan.Query.DeptId,
+                        state.CancellationToken)
+                    : PocReportCatalog.ReadExportPages(plan.Query, state.CancellationToken);
+                await _exporter.WriteLargeAsync(
                     stream,
-                    PocReportCatalog.EnumerateRows(_rowCount, request.DeptId),
+                    plan,
+                    pages,
                     state.ReportProgress,
                     state.CancellationToken);
             }
 
+            // 文件流完全关闭后才发布 Completed，下载端不会看到尚未刷盘的 ZIP 中央目录。
             state.MarkCompleted();
         }
         catch (OperationCanceledException)
@@ -130,6 +152,30 @@ public sealed class PocLargeExportJobStore
         {
             TryDelete(state.FilePath);
             state.MarkFailed(exception.Message);
+        }
+    }
+
+    private static async IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> ReadValidationPages(
+        int rowCount,
+        string? deptId,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        const int pageSize = 1_000;
+        var page = new List<PocWorkloadRow>(pageSize);
+        foreach (var row in PocReportCatalog.EnumerateRows(rowCount, deptId))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            page.Add(row);
+            if (page.Count == pageSize)
+            {
+                yield return page.ToArray();
+                page.Clear();
+                await Task.Yield();
+            }
+        }
+        if (page.Count > 0)
+        {
+            yield return page.ToArray();
         }
     }
 
