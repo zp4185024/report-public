@@ -29,6 +29,7 @@ import {
 } from './dataExportFlow';
 import { scanTemplateBindings } from './templateBinding';
 import { createTemplatePreviewPlan } from './templatePreview';
+import { createPreviewToolbarPresentation } from './previewToolbar';
 import { TemplateFieldPanel } from './TemplateFieldPanel';
 import {
   UniverTemplateHost,
@@ -549,6 +550,10 @@ export default function App() {
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
   const busy = loading || saving || importing || exportingTemplate || exportingData || previewing;
   const revision = templateDocument?.revision;
+  const previewToolbar = createPreviewToolbarPresentation(
+    definition?.preview.mode ?? 'Full',
+    result,
+  );
 
   return (
     <main className="app-shell">
@@ -740,8 +745,7 @@ export default function App() {
         <div className="report-toolbar">
           {mode === 'preview' ? (
             <div className="report-stats">
-              <span>第 {result?.page ?? 1} 页</span>
-              <span>{result?.rows.length ?? 0} 行</span>
+              {previewToolbar.labels.map((label) => <span key={label}>{label}</span>)}
             </div>
           ) : (
             <div className="design-status">
@@ -750,7 +754,7 @@ export default function App() {
             </div>
           )}
 
-          {mode === 'preview' && (
+          {mode === 'preview' && previewToolbar.showPager && (
             <div className="pager">
               <button
                 className="icon-button"
