@@ -11,7 +11,7 @@ public static class PocReportCatalog
 {
     /// <summary>本轮所有 API 只接受这一报表编码。</summary>
     public const string ReportCode = "dept-workload";
-    /// <summary>模板定义的固定预览页大小。</summary>
+    /// <summary>报表明确启用 Paged 时使用的默认预览页大小。</summary>
     public const int PageSize = 20;
     /// <summary>验证数据总行数；选择非整页数字以覆盖最后一页逻辑。</summary>
     public const int PreviewRowCount = 137;
@@ -28,7 +28,7 @@ public static class PocReportCatalog
             ReportCode,
             "科室工作量统计",
             "科室工作量",
-            new PocPreviewSettings(PocPreviewMode.Paged, PageSize, false),
+            new PocPreviewSettings(PocPreviewMode.Full, PageSize, false),
             new PocExportSettings(
                 PocDataExportMode.Normal,
                 NormalMaxRows: 20_000,
@@ -55,14 +55,36 @@ public static class PocReportCatalog
             ]);
     }
 
-    /// <summary>执行一页固定数据，并把空参数解析为可直接写入模板的非空显示值。</summary>
+    /// <summary>按当前报表定义执行预览，并把空参数解析为可直接写入模板的非空显示值。</summary>
     public static PocExecuteResult Execute(PocExecuteRequest request, DateTimeOffset? now = null)
     {
         var definition = GetDefinition(now);
-        var page = Math.Max(1, request.Page);
-        var offset = (page - 1) * definition.Preview.PageSize;
-        // 不做精确总数查询的通用模拟：当前页最多 PageSize 行，超出固定数据集后返回空页。
-        var count = Math.Max(0, Math.Min(definition.Preview.PageSize, PreviewRowCount - offset));
+        return Execute(request, definition.Preview, definition);
+    }
+
+    /// <summary>
+    /// 按显式预览设置执行固定数据。正式迁移后，数据库报表定义可以直接把保存的设置传入此入口。
+    /// </summary>
+    public static PocExecuteResult Execute(
+        PocExecuteRequest request,
+        PocPreviewSettings preview,
+        DateTimeOffset? now = null)
+    {
+        return Execute(request, preview, GetDefinition(now));
+    }
+
+    private static PocExecuteResult Execute(
+        PocExecuteRequest request,
+        PocPreviewSettings preview,
+        PocReportDefinition definition)
+    {
+        var fullPreview = preview.Mode == PocPreviewMode.Full;
+        var page = fullPreview ? 1 : Math.Max(1, request.Page);
+        var offset = fullPreview ? 0 : (page - 1) * preview.PageSize;
+        // Full 一次返回完整结果；Paged 才按配置页大小截取当前批次。
+        var count = fullPreview
+            ? PreviewRowCount
+            : Math.Max(0, Math.Min(preview.PageSize, PreviewRowCount - offset));
         var rows = Enumerable.Range(offset + 1, count)
             .Select(sequence => CreateRow(sequence, request.DeptId))
             .ToArray();
@@ -76,8 +98,8 @@ public static class PocReportCatalog
 
         return new PocExecuteResult(
             page,
-            definition.Preview.PageSize,
-            offset + rows.Length < PreviewRowCount,
+            fullPreview ? rows.Length : preview.PageSize,
+            !fullPreview && offset + rows.Length < PreviewRowCount,
             parameters,
             rows);
     }
@@ -85,13 +107,21 @@ public static class PocReportCatalog
     /// <summary>
     /// 从第一批开始读取完整导出数据。Paged 只控制每批查询量，绝不把当前预览页当成导出范围。
     /// </summary>
+    public static IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> ReadExportPages(
+        PocExecuteRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return ReadExportPages(request, GetDefinition().Preview, cancellationToken);
+    }
+
+    /// <summary>按显式预览设置分批读取完整导出数据，最终行集不受 Full/Paged 选择影响。</summary>
     public static async IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> ReadExportPages(
         PocExecuteRequest request,
+        PocPreviewSettings preview,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var definition = GetDefinition();
-        if (definition.Preview.Mode == PocPreviewMode.Full)
+        if (preview.Mode == PocPreviewMode.Full)
         {
             cancellationToken.ThrowIfCancellationRequested();
             yield return EnumerateRows(PreviewRowCount, request.DeptId).ToArray();
@@ -102,7 +132,7 @@ public static class PocReportCatalog
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var result = Execute(request with { Page = page });
+            var result = Execute(request with { Page = page }, preview);
             if (result.Rows.Count > 0)
             {
                 yield return result.Rows;
