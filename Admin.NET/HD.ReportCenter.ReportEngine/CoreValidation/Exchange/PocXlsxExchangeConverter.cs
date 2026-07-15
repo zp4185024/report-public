@@ -1,6 +1,8 @@
 using ClosedXML.Excel;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace HD.ReportCenter.ReportEngine.CoreValidation.Exchange;
 
@@ -10,6 +12,85 @@ namespace HD.ReportCenter.ReportEngine.CoreValidation.Exchange;
 /// </summary>
 public sealed class PocXlsxExchangeConverter
 {
+    /// <summary>读取 XLSX，并构造当前 Univer 版本可直接加载的稀疏工作簿快照。</summary>
+    public PocXlsxImportResult Import(
+        Stream input,
+        PocExchangeRuleSet rules,
+        string workbookName,
+        PocXlsxExchangeLimits limits)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(limits);
+        if (!input.CanRead)
+        {
+            throw new ArgumentException("XLSX输入流必须可读。", nameof(input));
+        }
+        if (limits.MaxFileBytes <= 0 || limits.MaxWorksheets <= 0 || limits.MaxUsedCells <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(limits), "XLSX导入上限必须全部大于零。");
+        }
+        if (input.CanSeek && input.Length > limits.MaxFileBytes)
+        {
+            throw new PocExchangeConversionException(
+                "TEMPLATE_XLSX_FILE_TOO_LARGE",
+                $"XLSX文件超过 {limits.MaxFileBytes} 字节限制。");
+        }
+
+        var mapping = new RuleLookup(rules, PocExchangeDirections.ExcelToUniver);
+        mapping.Require(
+            "xlsx-to-univer-cell-value",
+            "xlsx-to-univer-cell-type",
+            "xlsx-to-univer-cell-formula",
+            "xlsx-to-univer-cell-style");
+
+        if (input.CanSeek)
+        {
+            input.Position = 0;
+        }
+        using var workbook = new XLWorkbook(input);
+        if (workbook.Worksheets.Count > limits.MaxWorksheets)
+        {
+            throw new PocExchangeConversionException(
+                "TEMPLATE_XLSX_TOO_MANY_SHEETS",
+                $"XLSX包含 {workbook.Worksheets.Count} 个工作表，超过 {limits.MaxWorksheets} 个限制。");
+        }
+
+        var warnings = new List<PocExchangeDiagnostic>();
+        var styles = new JObject();
+        var sheetOrder = new JArray();
+        var sheets = new JObject();
+        var usedCellCount = 0;
+        var sheetNumber = 0;
+
+        foreach (var sourceSheet in workbook.Worksheets)
+        {
+            var sheetId = $"xlsx-sheet-{++sheetNumber}";
+            sheetOrder.Add(sheetId);
+            sheets[sheetId] = ReadWorksheet(
+                sourceSheet,
+                sheetId,
+                styles,
+                mapping,
+                warnings,
+                limits,
+                ref usedCellCount);
+        }
+
+        var snapshot = new JObject
+        {
+            ["id"] = $"xlsx-{Guid.NewGuid():N}",
+            ["name"] = string.IsNullOrWhiteSpace(workbookName) ? "导入的Excel模板" : workbookName,
+            ["appVersion"] = rules.UniverVersion,
+            ["locale"] = "zhCN",
+            ["styles"] = styles,
+            ["sheetOrder"] = sheetOrder,
+            ["sheets"] = sheets
+        };
+
+        return new PocXlsxImportResult(snapshot, usedCellCount, warnings);
+    }
+
     /// <summary>把一个经过模板校验的 Univer 快照写成可由 Excel/WPS 打开的 XLSX。</summary>
     public void Export(JObject snapshot, PocExchangeRuleSet rules, Stream output)
     {
@@ -122,6 +203,359 @@ public sealed class PocXlsxExchangeConverter
         ApplyColumns(sheet, sheetData["columnData"] as JObject, mapping);
         ApplyFreeze(sheet, sheetData["freeze"] as JObject);
     }
+
+    private static JObject ReadWorksheet(
+        IXLWorksheet source,
+        string sheetId,
+        JObject workbookStyles,
+        RuleLookup mapping,
+        List<PocExchangeDiagnostic> warnings,
+        PocXlsxExchangeLimits limits,
+        ref int usedCellCount)
+    {
+        var cellData = new JObject();
+        var options = XLCellsUsedOptions.All;
+        var lastRow = source.LastRowUsed(options)?.RowNumber() ?? 0;
+        var lastColumn = source.LastColumnUsed(options)?.ColumnNumber() ?? 0;
+
+        foreach (var cell in source.CellsUsed(options))
+        {
+            usedCellCount++;
+            if (usedCellCount > limits.MaxUsedCells)
+            {
+                throw new PocExchangeConversionException(
+                    "TEMPLATE_XLSX_TOO_MANY_CELLS",
+                    $"XLSX有效单元格超过 {limits.MaxUsedCells} 个限制。");
+            }
+
+            var rowIndex = cell.Address.RowNumber - 1;
+            var columnIndex = cell.Address.ColumnNumber - 1;
+            var row = cellData[rowIndex.ToString(CultureInfo.InvariantCulture)] as JObject;
+            if (row is null)
+            {
+                row = new JObject();
+                cellData[rowIndex.ToString(CultureInfo.InvariantCulture)] = row;
+            }
+
+            var importedCell = ReadCell(cell, workbookStyles, mapping, warnings);
+            if (importedCell.HasValues)
+            {
+                row[columnIndex.ToString(CultureInfo.InvariantCulture)] = importedCell;
+            }
+        }
+
+        // 合并范围中的非左上单元格可能只有格式；删除转换后仍为空的稀疏行，保持快照紧凑。
+        foreach (var emptyRow in cellData.Properties().Where(property =>
+                     property.Value is JObject row && !row.HasValues).ToArray())
+        {
+            emptyRow.Remove();
+        }
+
+        var mergeData = new JArray(source.MergedRanges.Select(range => new JObject
+        {
+            ["startRow"] = range.RangeAddress.FirstAddress.RowNumber - 1,
+            ["endRow"] = range.RangeAddress.LastAddress.RowNumber - 1,
+            ["startColumn"] = range.RangeAddress.FirstAddress.ColumnNumber - 1,
+            ["endColumn"] = range.RangeAddress.LastAddress.ColumnNumber - 1
+        }));
+        var rowData = ReadRows(source, lastRow, mapping);
+        var columnData = ReadColumns(source, lastColumn, mapping);
+
+        var splitRows = Math.Max(0, source.SheetView.SplitRow);
+        var splitColumns = Math.Max(0, source.SheetView.SplitColumn);
+        return new JObject
+        {
+            ["id"] = sheetId,
+            ["name"] = source.Name,
+            ["tabColor"] = ToRgb(source.TabColor) ?? string.Empty,
+            ["hidden"] = source.Visibility == XLWorksheetVisibility.Visible ? 0 : 1,
+            ["freeze"] = new JObject
+            {
+                ["xSplit"] = splitColumns,
+                ["ySplit"] = splitRows,
+                ["startRow"] = splitRows,
+                ["startColumn"] = splitColumns
+            },
+            ["rowCount"] = Math.Max(50, lastRow + 20),
+            ["columnCount"] = Math.Max(12, lastColumn + 5),
+            ["zoomRatio"] = 1,
+            ["scrollTop"] = 0,
+            ["scrollLeft"] = 0,
+            ["defaultColumnWidth"] = ExcelColumnWidthToPixels(source.ColumnWidth),
+            ["defaultRowHeight"] = PointsToPixels(source.RowHeight, mapping),
+            ["mergeData"] = mergeData,
+            ["cellData"] = cellData,
+            ["rowData"] = rowData,
+            ["columnData"] = columnData,
+            ["rowHeader"] = new JObject { ["width"] = 46, ["hidden"] = 0 },
+            ["columnHeader"] = new JObject { ["height"] = 24, ["hidden"] = 0 },
+            ["showGridlines"] = source.ShowGridLines ? 1 : 0,
+            ["rightToLeft"] = source.RightToLeft ? 1 : 0
+        };
+    }
+
+    private static JObject ReadCell(
+        IXLCell source,
+        JObject workbookStyles,
+        RuleLookup mapping,
+        List<PocExchangeDiagnostic> warnings)
+    {
+        var result = new JObject();
+        if (source.HasFormula)
+        {
+            var formulaRule = mapping["xlsx-to-univer-cell-formula"];
+            var formula = source.FormulaA1;
+            SetToken(result, formulaRule.TargetPath, formula.StartsWith('=') ? formula : $"={formula}");
+        }
+        else if (!source.IsEmpty(XLCellsUsedOptions.Contents))
+        {
+            var valueRule = mapping["xlsx-to-univer-cell-value"];
+            var typeRule = mapping["xlsx-to-univer-cell-type"];
+            var (value, type) = ReadCellValue(source, warnings);
+            if (value is not null)
+            {
+                SetToken(result, valueRule.TargetPath, value);
+                SetToken(result, typeRule.TargetPath, type);
+            }
+        }
+
+        // ClosedXML 的 IXLCell 不暴露 HasStyle；所有已使用单元格都读取样式并通过哈希去重，
+        // 因此默认样式最多只会在工作簿 styles 中保存一次。
+        var style = ReadStyle(source.Style, mapping);
+        if (style.HasValues)
+        {
+            var styleId = StoreStyle(workbookStyles, style);
+            var styleRule = mapping["xlsx-to-univer-cell-style"];
+            SetToken(result, styleRule.TargetPath, styleId);
+        }
+
+        return result;
+    }
+
+    private static (JToken? Value, int Type) ReadCellValue(
+        IXLCell cell,
+        List<PocExchangeDiagnostic> warnings)
+    {
+        return cell.DataType switch
+        {
+            XLDataType.Text => (new JValue(cell.GetString()), 1),
+            XLDataType.Number => (new JValue(cell.GetDouble()), 2),
+            XLDataType.Boolean => (new JValue(cell.GetBoolean()), 3),
+            XLDataType.DateTime => (new JValue(cell.GetDateTime().ToOADate()), 2),
+            XLDataType.TimeSpan => (new JValue(cell.GetTimeSpan().TotalDays), 2),
+            XLDataType.Blank => (null, 1),
+            XLDataType.Error => ReadErrorCell(cell, warnings),
+            _ => (new JValue(cell.GetString()), 1)
+        };
+    }
+
+    private static (JToken Value, int Type) ReadErrorCell(
+        IXLCell cell,
+        List<PocExchangeDiagnostic> warnings)
+    {
+        warnings.Add(new PocExchangeDiagnostic(
+            "xlsx-to-univer-cell-value",
+            "Excel错误值按文本导入。",
+            cell.Worksheet.Name,
+            cell.Address.ToString()));
+        return (new JValue(cell.GetString()), 1);
+    }
+
+    private static JObject ReadStyle(IXLStyle source, RuleLookup mapping)
+    {
+        var style = new JObject();
+        SetMapped(style, mapping, "xlsx-to-univer-style-font-name", source.Font.FontName);
+        SetMapped(style, mapping, "xlsx-to-univer-style-font-size", source.Font.FontSize);
+        if (source.Font.Bold) SetMapped(style, mapping, "xlsx-to-univer-style-bold", 1);
+        if (source.Font.Italic) SetMapped(style, mapping, "xlsx-to-univer-style-italic", 1);
+        if (source.Font.Underline != XLFontUnderlineValues.None)
+            SetMapped(style, mapping, "xlsx-to-univer-style-underline", 1);
+        if (source.Font.Strikethrough) SetMapped(style, mapping, "xlsx-to-univer-style-strike", 1);
+
+        SetMapped(style, mapping, "xlsx-to-univer-style-font-color", ToRgb(source.Font.FontColor));
+        SetMapped(style, mapping, "xlsx-to-univer-style-background", ToRgb(source.Fill.BackgroundColor));
+        var numberFormat = source.NumberFormat.Format;
+        if (!string.IsNullOrWhiteSpace(numberFormat))
+            SetMapped(style, mapping, "xlsx-to-univer-style-number-format", numberFormat);
+
+        SetMapped(style, mapping, "xlsx-to-univer-style-horizontal", FromHorizontalAlignment(source.Alignment.Horizontal));
+        SetMapped(style, mapping, "xlsx-to-univer-style-vertical", FromVerticalAlignment(source.Alignment.Vertical));
+        if (source.Alignment.WrapText) SetMapped(style, mapping, "xlsx-to-univer-style-wrap", 3);
+        if (source.Alignment.TextRotation != 0)
+            SetMapped(style, mapping, "xlsx-to-univer-style-rotation", source.Alignment.TextRotation);
+
+        SetMapped(style, mapping, "xlsx-to-univer-border-top", ReadBorder(source.Border.TopBorder, source.Border.TopBorderColor));
+        SetMapped(style, mapping, "xlsx-to-univer-border-right", ReadBorder(source.Border.RightBorder, source.Border.RightBorderColor));
+        SetMapped(style, mapping, "xlsx-to-univer-border-bottom", ReadBorder(source.Border.BottomBorder, source.Border.BottomBorderColor));
+        SetMapped(style, mapping, "xlsx-to-univer-border-left", ReadBorder(source.Border.LeftBorder, source.Border.LeftBorderColor));
+        return style;
+    }
+
+    private static JObject ReadRows(IXLWorksheet sheet, int lastRow, RuleLookup mapping)
+    {
+        var result = new JObject();
+        var defaultHeight = sheet.RowHeight;
+        for (var rowNumber = 1; rowNumber <= lastRow; rowNumber++)
+        {
+            var row = sheet.Row(rowNumber);
+            if (!row.IsHidden && Math.Abs(row.Height - defaultHeight) < 0.01d)
+            {
+                continue;
+            }
+
+            var data = new JObject();
+            if (Math.Abs(row.Height - defaultHeight) >= 0.01d)
+                data["h"] = PointsToPixels(row.Height, mapping);
+            if (row.IsHidden) data["hd"] = 1;
+            result[(rowNumber - 1).ToString(CultureInfo.InvariantCulture)] = data;
+        }
+        return result;
+    }
+
+    private static JObject ReadColumns(IXLWorksheet sheet, int lastColumn, RuleLookup mapping)
+    {
+        var result = new JObject();
+        var defaultWidth = sheet.ColumnWidth;
+        for (var columnNumber = 1; columnNumber <= lastColumn; columnNumber++)
+        {
+            var column = sheet.Column(columnNumber);
+            if (!column.IsHidden && Math.Abs(column.Width - defaultWidth) < 0.01d)
+            {
+                continue;
+            }
+
+            var data = new JObject();
+            if (Math.Abs(column.Width - defaultWidth) >= 0.01d)
+                data["w"] = ExcelColumnWidthToPixels(column.Width);
+            if (column.IsHidden) data["hd"] = 1;
+            result[(columnNumber - 1).ToString(CultureInfo.InvariantCulture)] = data;
+        }
+        return result;
+    }
+
+    private static void SetMapped(
+        JObject target,
+        RuleLookup mapping,
+        string ruleCode,
+        object? value)
+    {
+        var rule = mapping.GetOptional(ruleCode);
+        if (rule is null || value is null)
+        {
+            return;
+        }
+        SetToken(target, rule.TargetPath, JToken.FromObject(value));
+    }
+
+    private static void SetToken(JObject target, string relativePath, object value)
+    {
+        var segments = relativePath.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length == 0)
+        {
+            throw InvalidSnapshot("映射目标路径不能为空。");
+        }
+
+        var current = target;
+        for (var index = 0; index < segments.Length - 1; index++)
+        {
+            if (current[segments[index]] is not JObject child)
+            {
+                child = new JObject();
+                current[segments[index]] = child;
+            }
+            current = child;
+        }
+        current[segments[^1]] = value is JToken token ? token : JToken.FromObject(value);
+    }
+
+    private static string StoreStyle(JObject workbookStyles, JObject style)
+    {
+        var normalized = style.ToString(Newtonsoft.Json.Formatting.None);
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))[..16]
+            .ToLowerInvariant();
+        var styleId = $"xlsx-{hash}";
+        workbookStyles[styleId] ??= style;
+        return styleId;
+    }
+
+    private static JObject? ReadBorder(XLBorderStyleValues style, XLColor color)
+    {
+        var univerStyle = FromBorderStyle(style);
+        if (univerStyle == 0)
+        {
+            return null;
+        }
+
+        return new JObject
+        {
+            ["s"] = univerStyle,
+            ["cl"] = new JObject { ["rgb"] = ToRgb(color) ?? "#000000" }
+        };
+    }
+
+    private static string? ToRgb(XLColor? color)
+    {
+        if (color is null || color.Equals(XLColor.NoColor))
+        {
+            return null;
+        }
+
+        try
+        {
+            var value = color.Color;
+            return $"#{value.R:X2}{value.G:X2}{value.B:X2}";
+        }
+        catch (InvalidOperationException)
+        {
+            // 主题色和索引色没有稳定 RGB 时跳过；后续可通过数据库规则选择专用颜色算法。
+            return null;
+        }
+    }
+
+    private static int FromHorizontalAlignment(XLAlignmentHorizontalValues value) => value switch
+    {
+        XLAlignmentHorizontalValues.Left => 1,
+        XLAlignmentHorizontalValues.Center => 2,
+        XLAlignmentHorizontalValues.Right => 3,
+        XLAlignmentHorizontalValues.Justify => 4,
+        XLAlignmentHorizontalValues.Distributed => 6,
+        _ => 0
+    };
+
+    private static int FromVerticalAlignment(XLAlignmentVerticalValues value) => value switch
+    {
+        XLAlignmentVerticalValues.Top => 1,
+        XLAlignmentVerticalValues.Center => 2,
+        XLAlignmentVerticalValues.Bottom => 3,
+        _ => 0
+    };
+
+    private static int FromBorderStyle(XLBorderStyleValues value) => value switch
+    {
+        XLBorderStyleValues.Thin => 1,
+        XLBorderStyleValues.Hair => 2,
+        XLBorderStyleValues.Dotted => 3,
+        XLBorderStyleValues.Dashed => 4,
+        XLBorderStyleValues.DashDot => 5,
+        XLBorderStyleValues.DashDotDot => 6,
+        XLBorderStyleValues.Double => 7,
+        XLBorderStyleValues.Medium => 8,
+        XLBorderStyleValues.MediumDashed => 9,
+        XLBorderStyleValues.MediumDashDot => 10,
+        XLBorderStyleValues.MediumDashDotDot => 11,
+        XLBorderStyleValues.SlantDashDot => 12,
+        XLBorderStyleValues.Thick => 13,
+        _ => 0
+    };
+
+    private static double PointsToPixels(double points, RuleLookup mapping)
+    {
+        var factor = (double)(mapping.GetOptional("xlsx-to-univer-row-height")?.Factor ?? 1.33333333m);
+        return Math.Round(points * factor, 4, MidpointRounding.AwayFromZero);
+    }
+
+    private static double ExcelColumnWidthToPixels(double width) =>
+        Math.Round(width <= 1d ? width * 12d : width * 7d + 5d, 4, MidpointRounding.AwayFromZero);
 
     private static void WriteCell(
         IXLCell cell,

@@ -20,6 +20,25 @@ public sealed record PocExchangeRuleSet(
     int MappingVersion,
     IReadOnlyList<PocExchangeRule> Rules);
 
+/// <summary>POC 导入上限，阻止异常工作簿在内存中无限展开。</summary>
+public sealed record PocXlsxExchangeLimits(
+    long MaxFileBytes,
+    int MaxWorksheets,
+    int MaxUsedCells);
+
+/// <summary>非阻断兼容性提示；RuleCode 可以直接定位数据库中的映射记录。</summary>
+public sealed record PocExchangeDiagnostic(
+    string RuleCode,
+    string Message,
+    string? SheetName = null,
+    string? CellAddress = null);
+
+/// <summary>XLSX 导入产生的 Univer 快照和可观测信息。</summary>
+public sealed record PocXlsxImportResult(
+    Newtonsoft.Json.Linq.JObject Snapshot,
+    int UsedCellCount,
+    IReadOnlyList<PocExchangeDiagnostic> Warnings);
+
 /// <summary>映射缺失、快照损坏或文件内容不受支持时使用的稳定领域异常。</summary>
 public sealed class PocExchangeConversionException : Exception
 {
