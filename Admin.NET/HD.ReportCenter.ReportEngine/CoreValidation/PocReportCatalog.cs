@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace HD.ReportCenter.ReportEngine.CoreValidation;
 
@@ -28,6 +29,14 @@ public static class PocReportCatalog
             "科室工作量统计",
             "科室工作量",
             new PocPreviewSettings(PocPreviewMode.Paged, PageSize, false),
+            new PocExportSettings(
+                PocDataExportMode.Normal,
+                NormalMaxRows: 20_000,
+                NormalMaxCells: 500_000,
+                NormalTimeoutSeconds: 60,
+                LargeExportEnabled: true,
+                RowsPerSheet: 1_000_000,
+                FileRetentionHours: 24),
             [
                 new("hospitalId", "医院", "text", "url", null, true),
                 new("deptId", "科室", "text", "url", null, true),
@@ -71,6 +80,42 @@ public static class PocReportCatalog
             offset + rows.Length < PreviewRowCount,
             parameters,
             rows);
+    }
+
+    /// <summary>
+    /// 从第一批开始读取完整导出数据。Paged 只控制每批查询量，绝不把当前预览页当成导出范围。
+    /// </summary>
+    public static async IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> ReadExportPages(
+        PocExecuteRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var definition = GetDefinition();
+        if (definition.Preview.Mode == PocPreviewMode.Full)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return EnumerateRows(PreviewRowCount, request.DeptId).ToArray();
+            yield break;
+        }
+
+        var page = 1;
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = Execute(request with { Page = page });
+            if (result.Rows.Count > 0)
+            {
+                yield return result.Rows;
+            }
+            if (!result.HasMore)
+            {
+                yield break;
+            }
+
+            page += 1;
+            // 正式数据源会在这里执行异步 SQL；POC 主动让出线程以保持同一异步消费契约。
+            await Task.Yield();
+        }
     }
 
     /// <summary>

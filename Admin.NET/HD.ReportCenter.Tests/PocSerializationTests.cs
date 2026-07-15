@@ -10,6 +10,7 @@ public sealed class PocSerializationTests
     public void Enums_AreSerializedAsStableStringsByHostSerializer()
     {
         Assert.Equal("\"Paged\"", JsonConvert.SerializeObject(PocPreviewMode.Paged));
+        Assert.Equal("\"Normal\"", JsonConvert.SerializeObject(PocDataExportMode.Normal));
         Assert.Equal("\"Pending\"", JsonConvert.SerializeObject(PocExportJobStatus.Pending));
     }
 }

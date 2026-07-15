@@ -21,6 +21,27 @@ public sealed record PocPreviewSettings(
     int PageSize,
     bool ShowExactTotal);
 
+/// <summary>模板定义的数据导出方式。Normal 直接响应文件，Large 通过后台任务生成。</summary>
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+[Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+public enum PocDataExportMode
+{
+    Normal,
+    Large
+}
+
+/// <summary>
+/// 模板拥有的数据导出限制。预览分页与导出方式是两个维度：Paged 报表也可以选择 Normal 导出。
+/// </summary>
+public sealed record PocExportSettings(
+    PocDataExportMode DefaultMode,
+    int NormalMaxRows,
+    int NormalMaxCells,
+    int NormalTimeoutSeconds,
+    bool LargeExportEnabled,
+    int RowsPerSheet,
+    int FileRetentionHours);
+
 /// <summary>
 /// 查询参数元数据。前端根据该契约生成查询控件，并区分 URL 参数与后台默认函数。
 /// DefaultValue 是后台解析后的稳定值，不要求前端再次实现日期等默认值算法。
@@ -52,6 +73,7 @@ public sealed record PocReportDefinition(
     string Name,
     string SheetName,
     PocPreviewSettings Preview,
+    PocExportSettings Export,
     IReadOnlyList<PocParameterDefinition> Parameters,
     IReadOnlyList<PocColumnDefinition> Columns);
 
@@ -65,6 +87,13 @@ public sealed record PocExecuteRequest(
     string? PersonId,
     string? StartDate,
     string? EndDate);
+
+/// <summary>
+/// 数据导出必须绑定一个已经保存的模板修订号。Query 只描述查询条件，不接受浏览器传入的模板快照。
+/// </summary>
+public sealed record PocDataExportRequest(
+    int TemplateRevision,
+    PocExecuteRequest Query);
 
 /// <summary>
 /// 后台解析后的查询参数。返回给前端后可直接替换模板中的 params token，字段不会再出现 null。

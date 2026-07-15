@@ -8,6 +8,15 @@ const definition: ReportDefinition = {
   name: '科室工作量统计',
   sheetName: '科室工作量',
   preview: { mode: 'Paged', pageSize: 20, showExactTotal: false },
+  export: {
+    defaultMode: 'Normal',
+    normalMaxRows: 20_000,
+    normalMaxCells: 500_000,
+    normalTimeoutSeconds: 60,
+    largeExportEnabled: true,
+    rowsPerSheet: 1_000_000,
+    fileRetentionHours: 24,
+  },
   parameters: [
     { code: 'hospitalId', displayName: '医院', controlType: 'text', sourceType: 'url', defaultValue: null, visible: true },
     { code: 'deptId', displayName: '科室', controlType: 'text', sourceType: 'url', defaultValue: null, visible: true },

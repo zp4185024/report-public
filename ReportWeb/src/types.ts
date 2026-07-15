@@ -15,6 +15,20 @@ export interface PreviewSettings {
   showExactTotal: boolean;
 }
 
+/** 普通导出直接返回文件；大文件导出通过后台任务生成并轮询进度。 */
+export type DataExportMode = 'Normal' | 'Large';
+
+/** 模板拥有的导出阈值和默认策略，与预览是否分页相互独立。 */
+export interface ExportSettings {
+  defaultMode: DataExportMode;
+  normalMaxRows: number;
+  normalMaxCells: number;
+  normalTimeoutSeconds: number;
+  largeExportEnabled: boolean;
+  rowsPerSheet: number;
+  fileRetentionHours: number;
+}
+
 /** 后台参数定义；defaultValue 已由后台默认函数解析，浏览器不重复计算日期规则。 */
 export interface ParameterDefinition {
   code: string;
@@ -40,6 +54,7 @@ export interface ReportDefinition {
   name: string;
   sheetName: string;
   preview: PreviewSettings;
+  export: ExportSettings;
   parameters: ParameterDefinition[];
   columns: ColumnDefinition[];
 }
@@ -52,6 +67,12 @@ export interface ExecuteRequest {
   personId: string | null;
   startDate: string | null;
   endDate: string | null;
+}
+
+/** 数据导出只引用数据库中的已保存模板，不能携带浏览器中的未保存快照。 */
+export interface DataExportRequest {
+  templateRevision: number;
+  query: ExecuteRequest;
 }
 
 /** 后台解析完成的非空参数，值可直接替换工作簿中的 params token。 */
