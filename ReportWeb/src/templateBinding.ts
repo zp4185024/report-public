@@ -26,6 +26,7 @@ interface ErrorLocation {
 
 interface DetailLocation {
   sheetId: string;
+  sheetName: string;
   row: number;
 }
 
@@ -91,6 +92,9 @@ export function scanTemplateBindings(
     if (!isJsonObject(sheetValue)) {
       throw new TemplateBindingError('工作表节点必须是对象。', { sheetId });
     }
+    const sheetName = typeof sheetValue.name === 'string' && sheetValue.name.trim().length > 0
+      ? sheetValue.name.trim()
+      : sheetId;
 
     const cellData = sheetValue.cellData;
     if (cellData === undefined || cellData === null) {
@@ -151,10 +155,17 @@ export function scanTemplateBindings(
             detailLocation !== null &&
             (detailLocation.sheetId !== sheetId || detailLocation.row !== row)
           ) {
-            throw new TemplateBindingError('所有明细 token 必须位于同一个工作表行。', location);
+            throw new TemplateBindingError(
+              `已有明细区域：工作表 ${formatSheetLabel(detailLocation.sheetName, detailLocation.sheetId)}` +
+              `第 ${detailLocation.row + 1} 行。` +
+              `当前冲突工作表：${formatSheetLabel(sheetName, sheetId)}。` +
+              '所有明细 token 必须位于同一个工作表行；如需重新建立明细区域，' +
+              '请先删除旧区域中的明细 token。',
+              location,
+            );
           }
 
-          detailLocation ??= { sheetId, row };
+          detailLocation ??= { sheetId, sheetName, row };
           detailFields.push({ code, column });
         }
 
@@ -214,6 +225,13 @@ function compareOrdinal(left: string, right: string): number {
 
 function trimAsciiWhitespace(value: string): string {
   return value.replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, '');
+}
+
+/** 错误提示优先使用可见页签名称，同时保留稳定 sheetId 供日志和快照定位。 */
+function formatSheetLabel(sheetName: string, sheetId: string): string {
+  return sheetName === sheetId
+    ? `'${sheetId}'`
+    : `'${sheetName}'（ID: ${sheetId}）`;
 }
 
 function isWorkloadRowFieldCode(code: string): code is WorkloadRowFieldCode {

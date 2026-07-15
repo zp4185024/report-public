@@ -268,13 +268,25 @@ describe('scanTemplateBindings', () => {
       { sheetId: 'sheet-1', row: 3, column: 1, cellAddress: 'B4' },
     );
 
-    expectBindingError(
+    const crossSheetError = expectBindingError(
       workbook({
-        'sheet-1': { cellData: { 2: { 0: { v: '{{detail.sequence}}' } } } },
-        'sheet-2': { cellData: { 2: { 1: { v: '{{detail.departmentName}}' } } } },
+        'sheet-1': {
+          id: 'sheet-1',
+          name: '原模板',
+          cellData: { 2: { 0: { v: '{{detail.sequence}}' } } },
+        },
+        'sheet-2': {
+          id: 'sheet-2',
+          name: '新模板',
+          cellData: { 2: { 1: { v: '{{detail.departmentName}}' } } },
+        },
       }),
       { sheetId: 'sheet-2', row: 2, column: 1, cellAddress: 'B3' },
     );
+
+    expect(crossSheetError.message).toContain("已有明细区域：工作表 '原模板'（ID: sheet-1）第 3 行");
+    expect(crossSheetError.message).toContain("当前冲突工作表：'新模板'（ID: sheet-2）");
+    expect(crossSheetError.message).toContain('请先删除旧区域中的明细 token');
   });
 
   it('rejects any merge range touching the detail row', () => {

@@ -38,6 +38,7 @@ public static partial class PocTemplateValidator
         var parameterBindings = new List<PocParameterBinding>();
         var detailFields = new List<PocDetailFieldBinding>();
         string? detailSheetId = null;
+        string? detailSheetName = null;
         var detailRow = -1;
 
         // Univer 的 cellData 使用“工作表 -> 行字符串键 -> 列字符串键 -> 单元格对象”的稀疏结构。
@@ -57,6 +58,7 @@ public static partial class PocTemplateValidator
                     throw new PocTemplateValidationException(
                         $"Sheet '{sheetProperty.Name}' must be an object.");
                 }
+                var sheetName = GetSheetDisplayName(sheet, sheetProperty.Name);
 
                 var cellDataToken = sheet["cellData"];
                 if (cellDataToken is null || cellDataToken.Type == JTokenType.Null)
@@ -132,11 +134,16 @@ public static partial class PocTemplateValidator
                                      detailRow != row))
                                 {
                                     throw new PocTemplateValidationException(
-                                        $"Detail tokens must use one template row; conflict at sheet '{sheetProperty.Name}', " +
-                                        $"cell {GetCellAddress(row, column)}.");
+                                        $"已有明细区域：工作表 {FormatSheetLabel(detailSheetName!, detailSheetId)}" +
+                                        $"第 {detailRow + 1} 行。" +
+                                        $"当前冲突工作表：{FormatSheetLabel(sheetName, sheetProperty.Name)}。" +
+                                        "所有明细 token 必须位于同一个工作表行；如需重新建立明细区域，" +
+                                        "请先删除旧区域中的明细 token。" +
+                                        $"冲突位置：工作表 '{sheetProperty.Name}'，单元格 {GetCellAddress(row, column)}。");
                                 }
 
                                 detailSheetId ??= sheetProperty.Name;
+                                detailSheetName ??= sheetName;
                                 if (detailRow < 0)
                                 {
                                     detailRow = row;
@@ -259,6 +266,19 @@ public static partial class PocTemplateValidator
                 $"Unknown {scope} code '{code}' at sheet '{sheetId}', cell {GetCellAddress(row, column)}.");
         }
     }
+
+    private static string GetSheetDisplayName(JObject sheet, string sheetId)
+    {
+        // name 对应用户看到的页签；缺失或空白时退回稳定的内部 ID。
+        var name = sheet.Value<string>("name");
+        return string.IsNullOrWhiteSpace(name) ? sheetId : name.Trim();
+    }
+
+    // 同时展示名称和 ID，既方便设计人员定位页签，也保留服务端排查所需的快照标识。
+    private static string FormatSheetLabel(string sheetName, string sheetId) =>
+        string.Equals(sheetName, sheetId, StringComparison.Ordinal)
+            ? $"'{sheetId}'"
+            : $"'{sheetName}'（ID: {sheetId}）";
 
     private static string GetCellAddress(int row, int column)
     {

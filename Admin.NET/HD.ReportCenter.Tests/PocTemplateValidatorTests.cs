@@ -228,6 +228,32 @@ public sealed class PocTemplateValidatorTests
     }
 
     [Fact]
+    public void Scan_ReportsExistingDetailRegionWhenAnotherSheetContainsDetailTokens()
+    {
+        var snapshot = CreateSnapshot();
+        ((JObject)snapshot["sheets"]!)["new-sheet"] = new JObject
+        {
+            ["name"] = "新模板",
+            ["cellData"] = new JObject
+            {
+                ["0"] = new JObject
+                {
+                    ["0"] = new JObject { ["v"] = "{{detail.sequence}}" }
+                }
+            }
+        };
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains("已有明细区域：工作表 '科室工作量'（ID: report-sheet）第 6 行", exception.Message);
+        Assert.Contains("当前冲突工作表：'新模板'（ID: new-sheet）", exception.Message);
+        Assert.Contains("请先删除旧区域中的明细 token", exception.Message);
+        Assert.Contains("new-sheet", exception.Message);
+        Assert.Contains("A1", exception.Message);
+    }
+
+    [Fact]
     public void Scan_RejectsMergeThatTouchesDetailTemplateRow()
     {
         var snapshot = CreateSnapshot();
@@ -428,6 +454,7 @@ public sealed class PocTemplateValidatorTests
             {
                 ["report-sheet"] = new JObject
                 {
+                    ["name"] = "科室工作量",
                     ["cellData"] = new JObject
                     {
                         ["1"] = new JObject
