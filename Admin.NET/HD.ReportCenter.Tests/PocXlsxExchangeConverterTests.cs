@@ -66,6 +66,10 @@ public sealed class PocXlsxExchangeConverterTests
         Assert.Equal("{{params.hospitalId}}", firstSheet["cellData"]!["1"]!["0"]!["v"]!.Value<string>());
         Assert.Equal(12d, firstSheet["cellData"]!["3"]!["2"]!["v"]!.Value<double>());
         Assert.Equal("=C4+D4", firstSheet["cellData"]!["3"]!["4"]!["f"]!.Value<string>());
+        // Univer 的 WHEN_EMPTY 初始计算模式会重算没有缓存值的公式。设计态仍是 token，
+        // 因此导入公式必须携带数值缓存，避免一打开模板就把 token 计算成 #VALUE!。
+        Assert.Equal(0d, firstSheet["cellData"]!["3"]!["4"]!["v"]!.Value<double>());
+        Assert.Equal(2, firstSheet["cellData"]!["3"]!["4"]!["t"]!.Value<int>());
         Assert.Null(firstSheet["cellData"]!["20"]);
         Assert.Single(firstSheet["mergeData"]!);
         Assert.Equal(3, firstSheet["freeze"]!["ySplit"]!.Value<int>());

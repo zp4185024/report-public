@@ -304,8 +304,16 @@ public sealed class PocXlsxExchangeConverter
         if (source.HasFormula)
         {
             var formulaRule = mapping["xlsx-to-univer-cell-formula"];
+            var valueRule = mapping["xlsx-to-univer-cell-value"];
+            var typeRule = mapping["xlsx-to-univer-cell-type"];
             var formula = source.FormulaA1;
+            var (cachedValue, cachedType) = ReadFormulaCachedValue(source.CachedValue);
             SetToken(result, formulaRule.TargetPath, formula.StartsWith('=') ? formula : $"={formula}");
+            // Univer 0.25.1 默认会计算没有 v 的公式。模板设计态的引用单元格仍是
+            // {{detail.*}} token，因此必须同时写入 XLSX 的缓存结果；没有缓存时用数值 0
+            // 占位，真正进入数据预览后再由 Univer 对已填充的数据显式重算。
+            SetToken(result, valueRule.TargetPath, cachedValue);
+            SetToken(result, typeRule.TargetPath, cachedType);
         }
         else if (!source.IsEmpty(XLCellsUsedOptions.Contents))
         {
@@ -330,6 +338,20 @@ public sealed class PocXlsxExchangeConverter
         }
 
         return result;
+    }
+
+    private static (JToken Value, int Type) ReadFormulaCachedValue(XLCellValue cachedValue)
+    {
+        return cachedValue.Type switch
+        {
+            XLDataType.Text when !string.IsNullOrEmpty(cachedValue.GetText()) =>
+                (new JValue(cachedValue.GetText()), 1),
+            XLDataType.Number => (new JValue(cachedValue.GetNumber()), 2),
+            XLDataType.Boolean => (new JValue(cachedValue.GetBoolean()), 3),
+            XLDataType.DateTime => (new JValue(cachedValue.GetDateTime().ToOADate()), 2),
+            XLDataType.TimeSpan => (new JValue(cachedValue.GetTimeSpan().TotalDays), 2),
+            _ => (new JValue(0d), 2)
+        };
     }
 
     private static (JToken? Value, int Type) ReadCellValue(
