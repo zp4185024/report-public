@@ -235,7 +235,7 @@ public sealed record PocExportSettings(
     int FileRetentionHours);
 
 public sealed record PocDataExportRequest(
-    long TemplateRevision,
+    int TemplateRevision,
     PocExecuteRequest Query);
 ```
 
@@ -371,7 +371,7 @@ Expected: 服务和计划类型不存在。
 ```csharp
 public sealed record PocTemplateDataExportPlan(
     string ReportCode,
-    long TemplateRevision,
+    int TemplateRevision,
     JObject Snapshot,
     PocTemplateBinding Binding,
     PocExecuteRequest Query,
