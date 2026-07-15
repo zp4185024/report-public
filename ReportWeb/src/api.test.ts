@@ -2,6 +2,8 @@ import { LocaleType, type IWorkbookData } from '@univerjs/presets';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reportApi } from './api';
 import type {
+  ExecuteRequest,
+  ExportJob,
   SaveTemplateRequest,
   TemplateBinding,
   TemplateDocument,
@@ -29,6 +31,15 @@ const document: TemplateDocument = {
   snapshot,
   binding,
   revision: 3,
+};
+
+const executeRequest: ExecuteRequest = {
+  page: 3,
+  hospitalId: 'H01',
+  deptId: 'D02',
+  personId: 'P03',
+  startDate: '2026-07-01',
+  endDate: '2026-07-14',
 };
 
 const fetchMock = vi.fn();
@@ -149,5 +160,49 @@ describe('reportApi template endpoints', () => {
     expect(anchor.download).toBe('科室工作量统计.xlsx');
     expect(click).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:template');
+  });
+
+  it('sends the saved revision and query when downloading report data', async () => {
+    const anchor = { href: '', download: '', click: vi.fn() };
+    vi.stubGlobal('document', { createElement: vi.fn().mockReturnValue(anchor) });
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn().mockReturnValue('blob:data'),
+      revokeObjectURL: vi.fn(),
+    });
+    fetchMock.mockResolvedValue(downloadResponse('科室工作量_数据.xlsx'));
+
+    await reportApi.downloadNormalData(3, executeRequest);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/dept-workload/exports/normal');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      templateRevision: 3,
+      query: executeRequest,
+    });
+    expect(anchor.download).toBe('科室工作量_数据.xlsx');
+  });
+
+  it('sends the saved revision and query when starting a large data export', async () => {
+    const job: ExportJob = {
+      jobNo: 'job-1',
+      status: 'Pending',
+      totalRows: 137,
+      writtenRows: 0,
+      error: null,
+      createdAt: '2026-07-15T10:00:00+08:00',
+      completedAt: null,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: job }));
+
+    await expect(reportApi.startLargeDataExport(3, executeRequest)).resolves.toEqual(job);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/dept-workload/exports/large');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({
+      templateRevision: 3,
+      query: executeRequest,
+    });
   });
 });

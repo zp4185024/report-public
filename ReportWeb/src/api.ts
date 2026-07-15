@@ -67,7 +67,7 @@ async function requestDownload(
   URL.revokeObjectURL(url);
 }
 
-/** 固定报表的全部接口。保留导出方法供原核心验证使用，模板编辑页当前不展示导出入口。 */
+/** 固定报表的全部接口。模板交换和数据导出使用不同方法，避免调用方混淆两个文件语义。 */
 export const reportApi = {
   definition: () => requestJson<ReportDefinition>(`${basePath}/definition`),
 
@@ -109,18 +109,20 @@ export const reportApi = {
       body: JSON.stringify(request),
     }),
 
-  downloadNormal: (request: ExecuteRequest) =>
+  /** 使用数据库中已保存的模板修订号直接下载完整查询数据。 */
+  downloadNormalData: (templateRevision: number, query: ExecuteRequest) =>
     requestDownload(`${basePath}/exports/normal`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
+      body: JSON.stringify({ templateRevision, query }),
     }),
 
-  startLarge: (request: ExecuteRequest) =>
+  /** 使用数据库中已保存的模板修订号创建后台流式导出任务。 */
+  startLargeDataExport: (templateRevision: number, query: ExecuteRequest) =>
     requestJson<ExportJob>(`${basePath}/exports/large`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
+      body: JSON.stringify({ templateRevision, query }),
     }),
 
   getJob: (jobNo: string) =>
