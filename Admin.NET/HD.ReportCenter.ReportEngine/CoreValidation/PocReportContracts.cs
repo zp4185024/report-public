@@ -1,5 +1,9 @@
 namespace HD.ReportCenter.ReportEngine.CoreValidation;
 
+/// <summary>
+/// 报表预览的数据装载方式。Full 表示一次返回全部数据，Paged 表示按模板配置分页。
+/// 当前 POC 固定使用 Paged，用于验证大数据量下浏览器只渲染当前页的技术路线。
+/// </summary>
 [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
 public enum PocPreviewMode
@@ -8,11 +12,19 @@ public enum PocPreviewMode
     Paged
 }
 
+/// <summary>
+/// 模板设计人员为当前报表选择的预览策略。
+/// PageSize 控制一次查询和一次前端渲染的行数；ShowExactTotal 用于决定是否执行可能昂贵的总数查询。
+/// </summary>
 public sealed record PocPreviewSettings(
     PocPreviewMode Mode,
     int PageSize,
     bool ShowExactTotal);
 
+/// <summary>
+/// 查询参数元数据。前端根据该契约生成查询控件，并区分 URL 参数与后台默认函数。
+/// DefaultValue 是后台解析后的稳定值，不要求前端再次实现日期等默认值算法。
+/// </summary>
 public sealed record PocParameterDefinition(
     string Code,
     string DisplayName,
@@ -21,6 +33,9 @@ public sealed record PocParameterDefinition(
     string? DefaultValue,
     bool Visible);
 
+/// <summary>
+/// 明细数据集的列定义。FormulaTemplate 只描述公式列模板，普通数据列由后台结果直接提供。
+/// </summary>
 public sealed record PocColumnDefinition(
     string Code,
     string Header,
@@ -28,6 +43,10 @@ public sealed record PocColumnDefinition(
     int Width,
     string? FormulaTemplate = null);
 
+/// <summary>
+/// 一个可执行报表的完整元数据，包括查询参数、分页方式和数据集字段。
+/// 模板绑定校验和前端字段面板都以此定义作为允许字段的唯一来源。
+/// </summary>
 public sealed record PocReportDefinition(
     string Code,
     string Name,
@@ -36,6 +55,9 @@ public sealed record PocReportDefinition(
     IReadOnlyList<PocParameterDefinition> Parameters,
     IReadOnlyList<PocColumnDefinition> Columns);
 
+/// <summary>
+/// 浏览器提交的预览/导出查询条件。可空字符串由报表目录统一解析为业务默认值。
+/// </summary>
 public sealed record PocExecuteRequest(
     int Page,
     string? HospitalId,
@@ -44,6 +66,9 @@ public sealed record PocExecuteRequest(
     string? StartDate,
     string? EndDate);
 
+/// <summary>
+/// 后台解析后的查询参数。返回给前端后可直接替换模板中的 params token，字段不会再出现 null。
+/// </summary>
 public sealed record PocResolvedParameters(
     string HospitalId,
     string DeptId,
@@ -51,12 +76,18 @@ public sealed record PocResolvedParameters(
     string StartDate,
     string EndDate);
 
+/// <summary>
+/// 科室工作量明细数据集的一行。公式列不在这里计算，而是在 Univer 或导出的 Excel/WPS 中计算。
+/// </summary>
 public sealed record PocWorkloadRow(
     int Sequence,
     string DepartmentName,
     int OutpatientCount,
     int DischargeCount);
 
+/// <summary>
+/// 单页执行结果。HasMore 让前端在不查询精确总数的情况下控制“下一页”按钮。
+/// </summary>
 public sealed record PocExecuteResult(
     int Page,
     int PageSize,

@@ -31,8 +31,15 @@ import type {
   TemplateDocument,
 } from './types';
 
+/**
+ * 可编辑模板验证页的状态编排层。
+ * 它负责 HTTP、设计/预览模式和保存并发；所有具体工作簿副作用封装在 UniverTemplateHost 中。
+ */
+
+// URL 参数在应用启动时读取一次。它们是初始查询条件，之后输入框状态由 React 管理。
 const urlParameters = new URLSearchParams(window.location.search);
 
+// 把稳定的后台错误码翻译为设计人员可理解的提示，同时保留原始 code 便于日志定位。
 const backendErrorMessages: Readonly<Record<string, string>> = {
   REPORT_DEFINITION_NOT_FOUND: '找不到报表定义',
   REPORT_TEMPLATE_NOT_FOUND: '找不到报表模板',
@@ -40,6 +47,7 @@ const backendErrorMessages: Readonly<Record<string, string>> = {
   TEMPLATE_SNAPSHOT_INVALID: '模板内容校验失败',
 };
 
+/** 创建第一页查询；日期先留空，等待后台 definition 返回已解析的默认函数值。 */
 function createInitialRequest(): ExecuteRequest {
   return {
     page: 1,
@@ -51,6 +59,7 @@ function createInitialRequest(): ExecuteRequest {
   };
 }
 
+/** 统一处理领域冲突、后台错误码和未知异常，避免每个事件处理器重复拼接提示。 */
 function errorMessage(error: unknown, fallback: string): string {
   const detail = error instanceof Error
     ? error.message
@@ -70,6 +79,7 @@ function errorMessage(error: unknown, fallback: string): string {
 }
 
 export default function App() {
+  // 后台持久状态和查询结果使用 React state，负责界面渲染。
   const [definition, setDefinition] = useState<ReportDefinition | null>(null);
   const [templateDocument, setTemplateDocument] = useState<TemplateDocument | null>(null);
   const [request, setRequest] = useState<ExecuteRequest>(createInitialRequest);
@@ -85,11 +95,16 @@ export default function App() {
   const [queryDuration, setQueryDuration] = useState(0);
   const [renderDuration, setRenderDuration] = useState(0);
 
+  // editorRef 是页面调用 Univer 的窄接口；draftSnapshotRef 保存“最后设计草稿”的同步事实来源。
+  // 同一快照另存 state 是为了触发 React 生命周期；异步回调使用 ref 可避免读到闭包中的旧值。
   const editorRef = useRef<UniverTemplateHandle>(null);
   const draftSnapshotRef = useRef<IWorkbookData | null>(null);
+  // 保存、预览、翻页和返回设计共享一个互斥标记，防止两个异步工作簿替换流程交叉执行。
   const operationRef = useRef(false);
 
   useEffect(() => {
+    // 报表定义和模板互不依赖，并行加载可缩短首次可编辑时间。
+    // active 标记阻止组件卸载后继续 setState，不试图取消已经发出的普通 GET 请求。
     let active = true;
 
     const initialize = async () => {
@@ -104,6 +119,7 @@ export default function App() {
           return;
         }
 
+        // URL 提供业务对象参数，日期默认值以后端函数计算结果为准，浏览器不复制月份边界规则。
         const nextRequest: ExecuteRequest = {
           ...createInitialRequest(),
           startDate: nextDefinition.parameters.find((item) => item.code === 'startDate')?.defaultValue ?? null,
@@ -137,6 +153,7 @@ export default function App() {
       return;
     }
 
+    // 只有真正的用户命令把 dirty 置为 true；Univer 初始化 mutation 已在宿主中过滤。
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
@@ -166,11 +183,13 @@ export default function App() {
     setLoading(true);
     setPreviewing(true);
     setError(null);
+    // designSnapshot 只用于本次失败回滚；draftSnapshotRef 保存跨页预览都应复用的原始设计草稿。
     let designSnapshot: IWorkbookData | null = null;
     let renderAttempted = false;
     try {
       let snapshot: IWorkbookData;
       if (mode === 'design') {
+        // 从设计进入预览时先抓取当前未保存草稿，保证预览看到用户刚刚修改的内容。
         const editor = editorRef.current;
         if (editor === null) {
           throw new Error('模板编辑器尚未准备完成。');
@@ -180,6 +199,7 @@ export default function App() {
         draftSnapshotRef.current = snapshot;
         setDraftSnapshot(snapshot);
       } else {
+        // 预览翻页不能从当前预览工作簿取快照，否则已经替换的参数和展开行会污染下一页模板。
         const savedDraft = draftSnapshotRef.current;
         if (savedDraft === null) {
           throw new Error('没有可用于数据预览的模板草稿。');
@@ -187,12 +207,14 @@ export default function App() {
         snapshot = savedDraft;
       }
 
+      // 先扫描草稿，再请求数据；无效 token 不应浪费后台查询，也不能进入具有副作用的渲染阶段。
       const binding = scanTemplateBindings(snapshot, definition);
       const nextRequest = { ...request, page };
       const queryStartedAt = performance.now();
       const nextResult = await reportApi.execute(nextRequest);
       setQueryDuration(performance.now() - queryStartedAt);
 
+      // 纯函数计划先完成数据/坐标校验，随后才让 Univer 插行和写单元格。
       const plan = createTemplatePreviewPlan(snapshot, binding, nextResult);
       const editor = editorRef.current;
       if (editor === null) {
@@ -207,6 +229,7 @@ export default function App() {
     } catch (exception) {
       let message = errorMessage(exception, '数据预览失败');
       if (mode === 'design' && renderAttempted && designSnapshot !== null) {
+        // 渲染可能已替换工作簿或插入部分行；失败时必须恢复设计快照，避免用户继续编辑半成品预览。
         try {
           editorRef.current?.loadDesign(designSnapshot);
         } catch (restoreError) {
@@ -229,6 +252,7 @@ export default function App() {
     operationRef.current = true;
     setError(null);
     try {
+      // 永远恢复进入预览前保存的草稿，不从只读预览反向提取任何数据或公式缓存值。
       const snapshot = draftSnapshotRef.current;
       const editor = editorRef.current;
       if (snapshot === null || editor === null) {
@@ -261,6 +285,7 @@ export default function App() {
       if (editor === null) {
         throw new Error('模板编辑器尚未准备完成。');
       }
+      // 保存前重新读取工作簿并扫描绑定，确保数据库快照和绑定描述来自同一时刻。
       const snapshot = editor.saveDraft();
       const binding = scanTemplateBindings(snapshot, definition);
       const savedDocument = await reportApi.saveTemplate({
@@ -269,6 +294,7 @@ export default function App() {
         revision: templateDocument.revision,
       });
 
+      // 使用服务器回包作为新的基线；其中包含后台确认的 revision 和规范绑定对应的快照。
       draftSnapshotRef.current = savedDocument.snapshot;
       setTemplateDocument(savedDocument);
       setDraftSnapshot(savedDocument.snapshot);
@@ -283,6 +309,7 @@ export default function App() {
 
   const insertBinding = useCallback((token: string, kind: 'parameter' | 'detail') => {
     try {
+      // 字段面板只产生 token，具体的活动单元格检查、追加/替换规则由 Univer 宿主统一执行。
       const editor = editorRef.current;
       if (editor === null) {
         throw new Error('模板编辑器尚未准备完成。');
@@ -306,6 +333,7 @@ export default function App() {
     void enterPreview(1);
   }, [enterPreview]);
 
+  // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
   const busy = loading || saving || previewing;
   const revision = templateDocument?.revision;
 

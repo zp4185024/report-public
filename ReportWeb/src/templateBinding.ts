@@ -9,7 +9,12 @@ import type {
   WorkloadRowFieldCode,
 } from './types';
 
+/**
+ * 浏览器端模板绑定扫描器。
+ * 作用是让设计人员在预览/保存前立即看到精确到单元格的错误；它不是安全边界，后端保存时会独立复扫。
+ */
 const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}/g;
+/** 与后端 Int32 坐标范围保持一致，避免浏览器接受后台无法保存的坐标。 */
 export const MAX_TEMPLATE_COORDINATE = 2_147_483_647;
 const workloadRowFieldCodeSet: ReadonlySet<string> = new Set(workloadRowFieldCodes);
 
@@ -51,6 +56,10 @@ export class TemplateBindingError extends Error {
   }
 }
 
+/**
+ * 扫描 Univer 稀疏 cellData，返回稳定排序的规范绑定。
+ * 参数 token 可以嵌入文字且同格多个；明细 token 必须独占单元格并集中在同一模板行。
+ */
 export function scanTemplateBindings(
   snapshot: IWorkbookData,
   definition: ReportDefinition,
@@ -77,6 +86,7 @@ export function scanTemplateBindings(
     throw new TemplateBindingError('工作表集合 sheets 必须是对象。');
   }
 
+  // cellData 只保存非空单元格，按对象实际键遍历比按 rowCount/columnCount 扫描整个网格更快。
   for (const [sheetId, sheetValue] of Object.entries(sheets)) {
     if (!isJsonObject(sheetValue)) {
       throw new TemplateBindingError('工作表节点必须是对象。', { sheetId });
@@ -115,6 +125,7 @@ export function scanTemplateBindings(
             throw new TemplateBindingError('无法定位模板 token。', location);
           }
           const matchEnd = matchIndex + match[0].length;
+          // 防止正则把三重花括号中间部分误认为合法 token。
           if (value[matchIndex - 1] === '{' || value[matchEnd] === '}') {
             throw new TemplateBindingError('模板 token 格式错误。', location);
           }
@@ -127,6 +138,7 @@ export function scanTemplateBindings(
             continue;
           }
 
+          // 明细写入必须保留数字类型，禁止把 detail token 与固定文字拼成字符串。
           if (trimAsciiWhitespace(value) !== match[0]) {
             throw new TemplateBindingError('明细 token 必须独占整个单元格。', location);
           }
@@ -134,6 +146,7 @@ export function scanTemplateBindings(
           if (!isWorkloadRowFieldCode(code)) {
             throw new TemplateBindingError(`未知的 detail code '${code}'。`, location);
           }
+          // 当前预览执行器通过复制一条模板行展开，所以所有明细字段必须共用工作表和行。
           if (
             detailLocation !== null &&
             (detailLocation.sheetId !== sheetId || detailLocation.row !== row)
@@ -145,6 +158,7 @@ export function scanTemplateBindings(
           detailFields.push({ code, column });
         }
 
+        // 去掉合法 token 后仍有花括号，说明存在拼写错误或未支持的 token 形式。
         const remainingValue = value.replace(tokenRegex, '');
         if (remainingValue.includes('{{') || remainingValue.includes('}}')) {
           throw new TemplateBindingError('模板 token 格式错误。', location);
@@ -153,6 +167,7 @@ export function scanTemplateBindings(
     }
   }
 
+  // 确定性排序使前端与后端生成的 Binding JSON 可以稳定比较，不受对象插入顺序影响。
   parameterBindings.sort(
     (left, right) =>
       compareOrdinal(left.sheetId, right.sheetId) ||
@@ -239,6 +254,7 @@ function ensureDetailRowIsNotMerged(
     throw new TemplateBindingError('mergeData 必须是数组。', errorLocation);
   }
 
+  // 复制/插入明细行时，任何触碰模板行的合并区域都可能改变坐标或让 Univer 拒绝操作。
   for (const merge of mergeData) {
     if (!isJsonObject(merge)) {
       throw new TemplateBindingError('mergeData 范围必须是对象。', errorLocation);
@@ -290,6 +306,7 @@ function isJsonObject(value: unknown): value is JsonObject {
 }
 
 function toCellAddress(row: number, column: number): string {
+  // 内部保持零基坐标，错误消息转成设计人员熟悉的 A1 地址。
   let columnNumber = column + 1;
   let letters = '';
   while (columnNumber > 0) {

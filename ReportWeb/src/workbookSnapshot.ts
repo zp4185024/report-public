@@ -1,6 +1,10 @@
 import type { IWorkbookData } from '@univerjs/presets';
 import { MAX_TEMPLATE_COORDINATE } from './templateBinding';
 
+/**
+ * Univer 0.25.1 的部分 facade 方法在运行时会返回数字字符串，和 TypeScript 声明不一致。
+ * 所有快照离开 Univer 边界前在这里归一化，避免前端扫描器和 .NET 后端拒绝本应合法的模板。
+ */
 const mergeCoordinateFields = [
   'startRow',
   'endRow',
@@ -12,6 +16,7 @@ type MergeCoordinateField = typeof mergeCoordinateFields[number];
 type JsonObject = Record<string, unknown>;
 
 export function normalizeWorkbookSnapshot(snapshot: IWorkbookData): IWorkbookData {
+  // 仅复制 sheets/含 mergeData 的工作表/合并范围，保留其它大块快照对象引用，避免一次无必要的深拷贝。
   const sheets = Object.fromEntries(
     Object.entries(snapshot.sheets).map(([sheetId, sheet]) => {
       if (!Array.isArray(sheet.mergeData)) {
@@ -40,6 +45,7 @@ export function normalizeWorkbookSnapshot(snapshot: IWorkbookData): IWorkbookDat
   return { ...snapshot, sheets };
 }
 
+/** 把 facade 返回的普通数字或数字字符串统一为有限 number；错误信息由调用方提供业务位置。 */
 export function normalizeUniverRuntimeNumber(value: unknown, label: string): number {
   const normalized = typeof value === 'string' && value.length > 0
     ? Number(value)
@@ -56,6 +62,7 @@ function normalizeCoordinate(
   mergeIndex: number,
   field: MergeCoordinateField,
 ): number {
+  // 坐标只接受非负整数字符串；小数、符号和空字符串不能被 Number() 宽松转换后混入快照。
   const coordinate = typeof value === 'string' && /^\d+$/.test(value)
     ? Number(value)
     : value;

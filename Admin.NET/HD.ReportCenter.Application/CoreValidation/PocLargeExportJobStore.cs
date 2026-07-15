@@ -3,6 +3,7 @@ using HD.ReportCenter.ReportEngine.CoreValidation;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
+/// <summary>异步大文件导出任务的生命周期状态。</summary>
 [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
 public enum PocExportJobStatus
@@ -14,6 +15,9 @@ public enum PocExportJobStatus
     Cancelled
 }
 
+/// <summary>
+/// 返回给轮询接口的不可变任务快照。调用方永远拿不到可修改的内部 JobState。
+/// </summary>
 public sealed record PocExportJobSnapshot(
     string JobNo,
     PocExportJobStatus Status,
@@ -23,8 +27,13 @@ public sealed record PocExportJobSnapshot(
     DateTimeOffset CreatedAt,
     DateTimeOffset? CompletedAt);
 
+/// <summary>
+/// 单进程大文件导出任务表，用于验证“创建任务、轮询、取消、下载”的完整链路。
+/// 当前实现不跨进程持久化，也不负责过期文件清理，生产版本应由数据库任务表和后台调度器替换。
+/// </summary>
 public sealed class PocLargeExportJobStore
 {
+    /// <summary>技术验证固定生成十万行，用于观察导出耗时和内存，而不是业务行数上限。</summary>
     public const int ValidationRowCount = 100_000;
 
     private readonly ConcurrentDictionary<string, JobState> _jobs = new(StringComparer.Ordinal);
@@ -46,6 +55,7 @@ public sealed class PocLargeExportJobStore
         Directory.CreateDirectory(_outputDirectory);
     }
 
+    /// <summary>登记任务后立即在后台线程执行，HTTP 请求无需等待整个文件生成。</summary>
     public PocExportJobSnapshot Start(PocExecuteRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -58,12 +68,15 @@ public sealed class PocLargeExportJobStore
             throw new InvalidOperationException("EXPORT_JOB_CREATE_FAILED");
         }
 
+        // JobState 先进入并发字典，再启动后台任务，保证客户端拿到 jobNo 后可以立即查询。
         _ = Task.Run(() => Run(state, request));
         return state.Snapshot();
     }
 
+    /// <summary>读取指定任务的线程安全快照。</summary>
     public PocExportJobSnapshot Get(string jobNo) => Find(jobNo).Snapshot();
 
+    /// <summary>对 Pending/Running 任务发出协作式取消请求；已结束任务保持原状态。</summary>
     public PocExportJobSnapshot Cancel(string jobNo)
     {
         var state = Find(jobNo);
@@ -71,6 +84,7 @@ public sealed class PocLargeExportJobStore
         return state.Snapshot();
     }
 
+    /// <summary>仅在任务完成且文件仍存在时返回下载路径，避免客户端下载半成品。</summary>
     public string GetDownloadPath(string jobNo)
     {
         var state = Find(jobNo);
@@ -88,6 +102,7 @@ public sealed class PocLargeExportJobStore
         try
         {
             state.MarkRunning();
+            // 顺序写、1 MiB 缓冲和流式 XML 组合，避免十万行数据先堆积为内存工作簿。
             using (var stream = new FileStream(
                        state.FilePath,
                        FileMode.CreateNew,
@@ -107,6 +122,7 @@ public sealed class PocLargeExportJobStore
         }
         catch (OperationCanceledException)
         {
+            // 取消和失败都删除半成品；任务状态变化不能早于清理尝试，否则下载接口可能短暂看到残缺文件。
             TryDelete(state.FilePath);
             state.MarkCancelled();
         }
@@ -144,6 +160,7 @@ public sealed class PocLargeExportJobStore
 
     private sealed class JobState(string jobNo, string filePath, int totalRows)
     {
+        // 进度、状态和完成时间必须在同一把锁下更新/读取，确保每个 Snapshot 内部自洽。
         private readonly object _sync = new();
         private readonly CancellationTokenSource _cancellation = new();
         private PocExportJobStatus _status = PocExportJobStatus.Pending;
@@ -182,6 +199,7 @@ public sealed class PocLargeExportJobStore
         {
             lock (_sync)
             {
+                // CancellationTokenSource.Cancel 可重复调用，但只在活跃状态触发更准确地表达任务语义。
                 if (_status is PocExportJobStatus.Pending or PocExportJobStatus.Running)
                 {
                     _cancellation.Cancel();

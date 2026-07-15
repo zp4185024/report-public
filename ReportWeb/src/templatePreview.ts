@@ -8,7 +8,12 @@ import type {
   WorkloadRowFieldCode,
 } from './types';
 
+/**
+ * 纯函数预览规划器：把“模板快照 + 规范绑定 + 后台数据”转换为显式单元格写入计划。
+ * 本模块不依赖 Univer facade，因此所有坐标、字段和运行时对象都在进入工作簿副作用层前完成校验。
+ */
 const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}/g;
+// 参数允许嵌入固定文字；明细必须独占单元格，所以使用独立的整串正则再次确认。
 const detailTokenRegex = /^\{\{[ \t\r\n\f\v]*detail\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}$/;
 const resolvedParameterCodes = [
   'hospitalId',
@@ -35,6 +40,7 @@ interface ParameterCellGroup {
   codes: Set<keyof ResolvedParameters>;
 }
 
+/** 经过运行时防御性校验的内部绑定形态，避免对 TypeScript 类型断言产生错误信任。 */
 interface ValidatedParameterBinding {
   code: string;
   sheetId: string;
@@ -69,6 +75,7 @@ interface ValidatedSnapshot {
   sheets: JsonObject;
 }
 
+/** 一个最终单元格写入动作，坐标全部为零基。 */
 export interface CellWrite {
   sheetId: string;
   row: number;
@@ -76,11 +83,16 @@ export interface CellWrite {
   value: string | number | boolean | null;
 }
 
+/** 一条展开后明细行及其后台字段写入；模板公式列不在 values 中，会由整行复制保留。 */
 export interface DetailRowPlan {
   row: number;
   values: Array<{ column: number; value: string | number | null }>;
 }
 
+/**
+ * Univer 副作用层消费的完整计划。
+ * insertCount 只包含需要新增的行数，第一条数据复用原始模板行。
+ */
 export interface TemplatePreviewPlan {
   parameterWrites: CellWrite[];
   detail: null | {
@@ -91,6 +103,7 @@ export interface TemplatePreviewPlan {
   };
 }
 
+/** 带工作表和 A1 地址上下文的预览错误，页面可直接展示给模板设计人员。 */
 export class TemplatePreviewError extends Error {
   sheetId?: string;
   row?: number;
@@ -116,6 +129,10 @@ export class TemplatePreviewError extends Error {
   }
 }
 
+/**
+ * 创建预览计划的唯一入口。
+ * 即使调用方在编译期持有强类型，也重新校验运行时值，因为数据实际来自 HTTP 和数据库 JSON。
+ */
 export function createTemplatePreviewPlan(
   snapshot: IWorkbookData,
   binding: TemplateBinding,
@@ -136,6 +153,7 @@ function createParameterWrites(
   binding: ValidatedTemplateBinding,
   result: ValidatedExecuteResult,
 ): CellWrite[] {
+  // 一个参数单元格可能同时包含开始/结束日期等多个 token，先按坐标分组再一次性替换，避免后写覆盖前写。
   const groups = new Map<string, ParameterCellGroup>();
 
   for (const parameterBinding of binding.parameterBindings) {
@@ -147,6 +165,7 @@ function createParameterWrites(
     ensureCoordinate(parameterBinding.row, '参数绑定行坐标无效。', location);
     ensureCoordinate(parameterBinding.column, '参数绑定列坐标无效。', location);
     const code = ensureParameterCode(parameterBinding.code, result.parameters, location);
+    // JSON 数组键没有分隔符碰撞问题，比手工拼接 "sheet-row-column" 更可靠。
     const groupKey = JSON.stringify([
       parameterBinding.sheetId,
       parameterBinding.row,
@@ -193,6 +212,7 @@ function replaceParameterTokens(
   };
   const matchedCodes = new Set<keyof ResolvedParameters>();
 
+  // 同时校验“绑定指向 token”和“token 拥有绑定”，防止过期 Binding 与当前草稿错位。
   for (const match of originalValue.matchAll(tokenRegex)) {
     const matchIndex = match.index;
     const matchEnd = matchIndex + match[0].length;
@@ -219,6 +239,7 @@ function replaceParameterTokens(
     );
   }
 
+  // ResolvedParameters 已由后台填充默认值，因此替换结果不会因 null 产生 "undefined" 文本。
   const value = originalValue.replace(
     tokenRegex,
     (_token, _scope: string, code: string) => parameters[code as keyof ResolvedParameters],
@@ -236,6 +257,7 @@ function createDetailPlan(
 ): TemplatePreviewPlan['detail'] {
   const detailBinding = binding.detailBinding;
   if (detailBinding === null) {
+    // 没有明细 token 的统计表仍可只替换参数并完成预览。
     return null;
   }
 
@@ -247,6 +269,7 @@ function createDetailPlan(
     column: 0,
   });
 
+  // 逐字段回查模板单元格，不能只信任 Binding 中记录的 code/column。
   const fields = detailBinding.fields.map((field): { code: WorkloadRowFieldCode; column: number } => {
     const column = field.column;
     const location = {
@@ -267,6 +290,7 @@ function createDetailPlan(
     (left, right) => left.column - right.column || compareOrdinal(left.code, right.code),
   );
 
+  // 在调用 Univer 插行前先验证最后目标行，避免坐标溢出时留下只完成一半的预览工作簿。
   const lastTargetRow = templateRow + Math.max(0, result.rows.length - 1);
   ensureCoordinate(lastTargetRow, '明细结果最后目标行坐标无效。', {
     sheetId,
@@ -291,12 +315,14 @@ function createDetailRows(
   resultRows: unknown[],
 ): DetailRowPlan[] {
   if (resultRows.length === 0) {
+    // 零数据也保留一条模板行并清空绑定单元格，这样表头/边框/公式结构仍可预览且不会显示 token。
     return [{
       row: templateRow,
       values: fields.map(({ column }) => ({ column, value: null })),
     }];
   }
 
+  // 第一条结果写入模板行，后续结果写入即将由 Univer 插入并复制出的行。
   return resultRows.map((resultRow, index) => {
     const targetRow = templateRow + index;
     const rowLocation = {
@@ -328,6 +354,7 @@ function getDetailFieldValue(
   code: WorkloadRowFieldCode,
   location: ErrorLocation,
 ): string | number {
+  // 显式区分文本和数值，防止 "123" 字符串进入数字单元格后让模板公式产生隐式转换。
   if (!Object.prototype.hasOwnProperty.call(resultRow, code)) {
     throw new TemplatePreviewError(`明细结果行缺少字段 '${code}'。`, location);
   }
@@ -346,6 +373,7 @@ function getDetailFieldValue(
 }
 
 function validateTemplateBinding(value: unknown): ValidatedTemplateBinding {
+  // 本函数刻意不直接返回传入对象；重建最小内部结构可以丢弃原型、访问器和未声明属性。
   if (!isJsonObject(value)) {
     throw new TemplatePreviewError('模板绑定必须是对象。');
   }
@@ -387,6 +415,7 @@ function validateTemplateBinding(value: unknown): ValidatedTemplateBinding {
 }
 
 function validateSnapshot(value: unknown): ValidatedSnapshot {
+  // 快照可能来自 structured clone、HTTP 或测试伪造，只接受普通对象以避免访问器执行副作用。
   if (!isPlainObject(value)) {
     throw new TemplatePreviewError('模板快照必须是普通对象。');
   }
@@ -452,6 +481,7 @@ function validateDetailBinding(value: unknown): ValidatedDetailBinding | null {
 }
 
 function validateExecuteResult(value: unknown): ValidatedExecuteResult {
+  // ExecuteResult 是 HTTP 数据，在真正写入工作簿之前再次检查所有必需参数和 rows 数组。
   if (!isJsonObject(value)) {
     throw new TemplatePreviewError('执行结果必须是对象。');
   }
@@ -496,6 +526,7 @@ function getParameterCellValue(
   snapshot: ValidatedSnapshot,
   group: ParameterCellGroup,
 ): string {
+  // Binding 不是值缓存，必须回到当前 snapshot 取原文本，才能支持未保存草稿中的即时编辑。
   const location = {
     sheetId: group.sheetId,
     row: group.row,
@@ -543,6 +574,7 @@ function ensureDetailTemplateCell(
   if (!isJsonObject(cell)) {
     throw new TemplatePreviewError('明细绑定指向的单元格不存在。', location);
   }
+  // 数据绑定单元格不能同时承担公式；公式应放在同一模板行的其它列并由整行复制自动偏移。
   if (typeof cell.f === 'string' && cell.f.length > 0) {
     throw new TemplatePreviewError('明细绑定不能指向公式单元格。', location);
   }
@@ -581,6 +613,7 @@ function getSheet(
 }
 
 function compareParameterCells(left: ParameterCellGroup, right: ParameterCellGroup): number {
+  // 稳定排序让计划可测试、可比较，也使错误和写入顺序不受对象枚举顺序影响。
   return compareOrdinal(left.sheetId, right.sheetId) ||
     left.row - right.row ||
     left.column - right.column;
@@ -616,6 +649,7 @@ function runtimeLocation(
   defaultSheetId?: string,
   defaultRow?: number,
 ): ErrorLocation {
+  // 校验失败时尽可能从未验证对象提取位置；只读取类型正确的原始字段，其余使用调用方默认值。
   return {
     sheetId: typeof value.sheetId === 'string' ? value.sheetId : defaultSheetId,
     row: typeof value.row === 'number'
@@ -644,6 +678,7 @@ function trimAsciiWhitespace(value: string): string {
 }
 
 function toCellAddress(row: number, column: number): string {
+  // 预览计划内部使用零基坐标，面向用户的错误统一转换为电子表格常用 A1 地址。
   let columnNumber = column + 1;
   let letters = '';
   while (columnNumber > 0) {

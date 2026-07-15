@@ -4,6 +4,10 @@ using Newtonsoft.Json;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
+/// <summary>
+/// 报表中心核心验证 API。
+/// 控制器只负责 HTTP 契约和错误映射，模板可信校验、查询构造和导出逻辑分别下沉到服务/引擎层。
+/// </summary>
 [AllowAnonymous]
 [ApiDescriptionSettings("报表中心验证", Name = "ReportCenterPoc", Order = 901)]
 public sealed class PocReportApi : IDynamicApiController
@@ -11,6 +15,7 @@ public sealed class PocReportApi : IDynamicApiController
     private const string ExcelContentType =
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
+    // POC 使用进程内任务表验证异步大文件流程；生产化时应替换为持久化任务表和独立后台执行器。
     private static readonly PocLargeExportJobStore LargeExportJobs = new();
 
     private readonly PocTemplateService _templateService;
@@ -20,6 +25,7 @@ public sealed class PocReportApi : IDynamicApiController
         _templateService = templateService;
     }
 
+    /// <summary>读取数据库模板；未保存过时由服务层返回 revision 0 的种子模板。</summary>
     [HttpGet("/api/report-center/poc/{reportCode}/template")]
     public async Task<PocTemplateDocument> GetTemplate([FromRoute] string reportCode)
     {
@@ -28,6 +34,7 @@ public sealed class PocReportApi : IDynamicApiController
             () => _templateService.GetAsync(PocReportCatalog.ReportCode));
     }
 
+    /// <summary>保存工作簿快照和绑定，使用请求中的 revision 做乐观并发检查。</summary>
     [HttpPut("/api/report-center/poc/{reportCode}/template")]
     public async Task<PocTemplateDocument> SaveTemplate(
         [FromRoute] string reportCode,
@@ -38,6 +45,7 @@ public sealed class PocReportApi : IDynamicApiController
             () => _templateService.SaveAsync(PocReportCatalog.ReportCode, request));
     }
 
+    /// <summary>返回参数、分页和数据集字段定义，供查询区、字段面板和绑定校验共同使用。</summary>
     [HttpGet("/api/report-center/poc/{reportCode}/definition")]
     public PocReportDefinition Definition([FromRoute] string reportCode)
     {
@@ -45,6 +53,7 @@ public sealed class PocReportApi : IDynamicApiController
         return PocReportCatalog.GetDefinition();
     }
 
+    /// <summary>按当前查询参数执行一页预览数据，不在后台计算模板公式。</summary>
     [HttpPost("/api/report-center/poc/{reportCode}/execute")]
     public PocExecuteResult Execute(
         [FromRoute] string reportCode,
@@ -54,6 +63,7 @@ public sealed class PocReportApi : IDynamicApiController
         return PocReportCatalog.Execute(request);
     }
 
+    /// <summary>同步生成普通体量 Excel；公式写入文件，由 Excel/WPS 打开时计算。</summary>
     [HttpPost("/api/report-center/poc/{reportCode}/exports/normal")]
     public FileStreamResult NormalExport(
         [FromRoute] string reportCode,
@@ -72,6 +82,7 @@ public sealed class PocReportApi : IDynamicApiController
         };
     }
 
+    /// <summary>创建十万行异步导出任务，立即返回可轮询的任务快照。</summary>
     [HttpPost("/api/report-center/poc/{reportCode}/exports/large")]
     public PocExportJobSnapshot StartLargeExport(
         [FromRoute] string reportCode,
@@ -81,14 +92,17 @@ public sealed class PocReportApi : IDynamicApiController
         return LargeExportJobs.Start(request);
     }
 
+    /// <summary>读取异步导出任务的当前状态和已写行数。</summary>
     [HttpGet("/api/report-center/poc/export-jobs/{jobNo}")]
     public PocExportJobSnapshot ExportJob([FromRoute] string jobNo) =>
         HandleJobOperation(() => LargeExportJobs.Get(jobNo));
 
+    /// <summary>请求取消尚未结束的导出任务。取消是协作式的，由写行循环观察 CancellationToken。</summary>
     [HttpPost("/api/report-center/poc/export-jobs/{jobNo}/cancel")]
     public PocExportJobSnapshot CancelExportJob([FromRoute] string jobNo) =>
         HandleJobOperation(() => LargeExportJobs.Cancel(jobNo));
 
+    /// <summary>以顺序读取方式下载已完成的大文件；任务未完成时返回稳定的业务错误码。</summary>
     [HttpGet("/api/report-center/poc/export-jobs/{jobNo}/download")]
     public FileStreamResult DownloadExportJob([FromRoute] string jobNo)
     {
@@ -123,6 +137,7 @@ public sealed class PocReportApi : IDynamicApiController
 
     private static async Task<T> HandleTemplateOperation<T>(Func<Task<T>> operation)
     {
+        // 在一个入口集中转换领域异常，确保前端不依赖数据库/JSON 库的具体异常文本。
         try
         {
             return await operation();

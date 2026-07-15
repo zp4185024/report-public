@@ -7,6 +7,10 @@ import type {
   TemplateDocument,
 } from './types';
 
+/**
+ * 报表中心 POC 的浏览器 API 适配层。
+ * 页面只处理业务对象和 Error，不直接依赖 Furion 的统一响应包结构。
+ */
 const reportCode = 'dept-workload';
 const basePath = `/api/report-center/poc/${reportCode}`;
 
@@ -16,6 +20,7 @@ interface ApiEnvelope<T> {
   result: T;
 }
 
+/** 解包 Furion 统一响应；HTTP 失败和业务 code 失败都转换为同一种 Error。 */
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
   const body = (await response.json()) as ApiEnvelope<T>;
@@ -26,6 +31,10 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return body.result;
 }
 
+/**
+ * 下载接口直接消费 Blob，并优先使用 Content-Disposition 中的 UTF-8 文件名。
+ * Object URL 只在本次点击期间存在，触发下载后立即释放，避免反复导出积累浏览器内存。
+ */
 async function requestDownload(path: string, request?: ExecuteRequest): Promise<void> {
   const response = await fetch(path, request
     ? {
@@ -58,6 +67,7 @@ async function requestDownload(path: string, request?: ExecuteRequest): Promise<
   URL.revokeObjectURL(url);
 }
 
+/** 固定报表的全部接口。保留导出方法供原核心验证使用，模板编辑页当前不展示导出入口。 */
 export const reportApi = {
   definition: () => requestJson<ReportDefinition>(`${basePath}/definition`),
 

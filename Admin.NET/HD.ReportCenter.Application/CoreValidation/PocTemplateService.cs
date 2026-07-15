@@ -4,17 +4,23 @@ using Newtonsoft.Json.Linq;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
+/// <summary>返回给编辑器的模板文档：工作簿快照、从快照推导出的绑定以及当前修订号。</summary>
 public sealed record PocTemplateDocument(
     string ReportCode,
     JObject Snapshot,
     PocTemplateBinding Binding,
     int Revision);
 
+/// <summary>保存模板请求。Revision 是浏览器加载模板时拿到的旧修订号。</summary>
 public sealed record PocSaveTemplateRequest(
     JObject Snapshot,
     PocTemplateBinding Binding,
     int Revision);
 
+/// <summary>
+/// 请求或数据库中的 Binding 与后台从 Snapshot 重新扫描的结果不一致。
+/// 该检查防止旧前端、损坏数据或手工请求让绑定与实际工作簿脱节。
+/// </summary>
 public sealed class PocTemplateBindingMismatchException : Exception
 {
     public const string ErrorCode = "TEMPLATE_BINDING_MISMATCH";
@@ -32,6 +38,10 @@ public sealed class PocTemplateBindingMismatchException : Exception
     public string Code => ErrorCode;
 }
 
+/// <summary>
+/// 数据库模板或内嵌种子模板无法解析、校验或复算绑定。
+/// 与用户编辑错误区分开，API 会将其作为服务端数据损坏返回。
+/// </summary>
 public sealed class PocStoredTemplateCorruptedException : Exception
 {
     public const string ErrorCode = "TEMPLATE_STORED_DATA_INVALID";
@@ -44,6 +54,9 @@ public sealed class PocStoredTemplateCorruptedException : Exception
     public string Code => ErrorCode;
 }
 
+/// <summary>
+/// 模板应用服务，负责种子回退、绑定可信边界、数据规范化和存储层异常语义。
+/// </summary>
 public sealed class PocTemplateService : ITransient
 {
     private const string SeedResourceName =
@@ -56,11 +69,15 @@ public sealed class PocTemplateService : ITransient
         _store = store;
     }
 
+    /// <summary>
+    /// 读取模板。数据库没有记录时返回 revision 0 的内嵌种子；已有记录时校验快照和绑定后再返回。
+    /// </summary>
     public async Task<PocTemplateDocument> GetAsync(string reportCode)
     {
         var stored = await _store.GetAsync(reportCode);
         if (stored is null)
         {
+            // 种子只负责“第一次打开即可编辑”，不会自动写库；用户明确保存后才产生 revision 1。
             try
             {
                 var seedJson = LoadSeedJson();
@@ -75,6 +92,7 @@ public sealed class PocTemplateService : ITransient
 
         try
         {
+            // 已存模板每次读取都重新扫描，尽早发现数据库中的快照/绑定不一致，而不是到预览时才失败。
             return CreateDocument(
                 stored.ReportCode,
                 stored.SnapshotJson,
@@ -87,11 +105,15 @@ public sealed class PocTemplateService : ITransient
         }
     }
 
+    /// <summary>
+    /// 保存浏览器草稿。后台始终从 Snapshot 重新扫描绑定，前端提交的 Binding 仅用于一致性检查。
+    /// </summary>
     public async Task<PocTemplateDocument> SaveAsync(
         string reportCode,
         PocSaveTemplateRequest request)
     {
         var snapshotJson = request.Snapshot.ToString(Formatting.None);
+        // 浏览器不是信任边界：真正入库的绑定必须由后台校验器根据工作簿快照重新生成。
         var canonicalBinding = PocTemplateValidator.Scan(snapshotJson);
         var canonicalBindingJson = SerializeBinding(canonicalBinding);
         if (!string.Equals(
@@ -125,6 +147,7 @@ public sealed class PocTemplateService : ITransient
         var canonicalBinding = PocTemplateValidator.Scan(snapshot.ToString(Formatting.None));
         if (storedBindingJson is not null)
         {
+            // 先反序列化再重新序列化，消除 JSON 空白和属性格式差异，只比较绑定的规范形态。
             string normalizedStoredBinding;
             try
             {
@@ -146,6 +169,7 @@ public sealed class PocTemplateService : ITransient
                     SerializeBinding(canonicalBinding),
                     StringComparison.Ordinal))
             {
+                // 快照是事实来源。只要持久化绑定与重新扫描结果不同，就拒绝返回可能错误的数据映射。
                 throw new PocTemplateBindingMismatchException();
             }
         }
@@ -163,6 +187,7 @@ public sealed class PocTemplateService : ITransient
 
     private static string LoadSeedJson()
     {
+        // 作为嵌入资源发布可避免部署时漏拷贝种子文件，也让测试和运行时使用同一份初始模板。
         var assembly = typeof(PocTemplateService).Assembly;
         using var stream = assembly.GetManifestResourceStream(SeedResourceName)
             ?? throw new InvalidOperationException(

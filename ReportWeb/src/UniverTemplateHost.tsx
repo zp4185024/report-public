@@ -22,15 +22,25 @@ import {
 import { isTemplateChangeCommand } from './templateChangeCommand';
 import UniverWorker from './univer.worker?worker';
 
+/**
+ * React 与 Univer facade 的隔离层。
+ * 组件只暴露保存草稿、恢复设计、插入绑定和渲染预览四个业务动作，并在内部管理 Worker、工作簿和订阅生命周期。
+ */
 export type TemplateEditorMode = 'design' | 'preview';
 
+/** 页面编排层可以调用的最小命令面，避免 App 直接依赖复杂且版本敏感的 Univer facade。 */
 export interface UniverTemplateHandle {
+  /** 序列化当前设计工作簿，并修正 Univer 运行时与类型声明不一致的字段。 */
   saveDraft(): IWorkbookData;
+  /** 用保留 token 的草稿替换当前工作簿并恢复可编辑状态。 */
   loadDesign(snapshot: IWorkbookData): void;
+  /** 向当前活动单元格插入参数或明细 token。 */
   insertBinding(token: string, kind: 'parameter' | 'detail'): void;
+  /** 基于草稿副本执行预览计划，完成后把工作簿切换为只读。 */
   renderPreview(snapshot: IWorkbookData, plan: TemplatePreviewPlan): Promise<number>;
 }
 
+/** 宿主通过回调上报用户修改、渲染耗时和已经补充业务上下文的错误。 */
 export interface UniverTemplateHostProps {
   initialSnapshot: IWorkbookData;
   mode: TemplateEditorMode;
@@ -46,7 +56,9 @@ type UniverRange = ReturnType<UniverWorksheet['getRange']>;
 type CommandSubscription = ReturnType<UniverWorkbook['onCommandExecuted']>;
 
 interface TemplateOperation {
+  /** 单调递增代次；异步步骤恢复后用它判断本操作是否已被后来的工作簿切换取代。 */
   generation: number;
+  /** 结束内部操作抑制，确保程序写入不会被命令订阅误报为用户编辑。 */
   releaseInternal: () => void;
 }
 
@@ -77,6 +89,7 @@ function requireWorksheet(
   sheetId: string,
   purpose: string,
 ): UniverWorksheet {
+  // facade 的类型在部分版本中不能完整表达 null/抛错行为，这里统一转成带业务用途的错误。
   let worksheet: UniverWorksheet | null;
   try {
     worksheet = workbook.getSheetBySheetId(sheetId);
@@ -119,10 +132,12 @@ function setRangeValue(
   range: UniverRange,
   value: string | number | boolean | null,
 ): void {
+  // Univer 对“清空单元格”要求显式 cell object；普通标量则可直接写入并保留正确数据类型。
   range.setValue(value === null ? { v: null } : value);
 }
 
 function waitForTwoAnimationFrames(): Promise<void> {
+  // 第一个动画帧让 Univer 提交内部布局，第二个帧再计时/切换状态，得到用户实际可见的渲染完成点。
   return new Promise((resolve) => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => resolve());
@@ -137,14 +152,18 @@ export const UniverTemplateHost = forwardRef<
   { initialSnapshot, mode, onChanged, onRendered, onError },
   ref,
 ) {
+  // 生命周期资源：DOM 容器、Univer 运行时、公式 Worker 和活动工作簿命令订阅必须成组创建/释放。
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<UniverRuntime | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const commandSubscriptionRef = useRef<CommandSubscription | null>(null);
   const currentWorkbookEditableRef = useRef<boolean | null>(null);
+  // 深度计数支持嵌套程序操作；大于 0 时命令订阅不得把初始化、预览写入等标成用户修改。
   const internalOperationDepthRef = useRef(0);
+  // generation 解决异步 autoFill/动画帧返回乱序问题，新操作开始后旧操作只能取消，不能继续提交状态。
   const operationGenerationRef = useRef(0);
   const activeTemplateOperationRef = useRef<TemplateOperation | null>(null);
+  // Univer 运行时只初始化一次，使用 ref 读取最新模式/回调可避免 effect 因函数身份变化而销毁整个编辑器。
   const initialSnapshotRef = useRef(initialSnapshot);
   const modeRef = useRef(mode);
   const onChangedRef = useRef(onChanged);
@@ -157,13 +176,14 @@ export const UniverTemplateHost = forwardRef<
   onErrorRef.current = onError;
 
   const safeNotifyError = useCallback((error: Error) => {
+    // 第三方运行时回调边界绝不能让页面回调异常重新逃回 Univer，避免破坏其命令队列。
     try {
       onErrorRef.current(error);
     } catch (callbackError) {
       try {
         console.error('页面错误回调失败。', callbackError);
       } catch {
-        // Logging must not let a consumer callback escape into Univer or React.
+        // 即使控制台被宿主环境重写并抛错，也不能让错误继续逃入 Univer 或 React。
       }
     }
   }, []);
@@ -185,6 +205,7 @@ export const UniverTemplateHost = forwardRef<
   }, [safeNotifyError]);
 
   const acquireInternalOperation = useCallback(() => {
+    // 返回幂等 release，保证 catch/finally 多路径清理不会把深度减成负数。
     internalOperationDepthRef.current += 1;
     let released = false;
     return () => {
@@ -197,6 +218,7 @@ export const UniverTemplateHost = forwardRef<
   }, []);
 
   const beginTemplateOperation = useCallback((): TemplateOperation => {
+    // 新的模板级操作会使前一个代次失效，并释放它可能仍持有的内部操作抑制。
     activeTemplateOperationRef.current?.releaseInternal();
     const operation: TemplateOperation = {
       generation: operationGenerationRef.current + 1,
@@ -231,6 +253,7 @@ export const UniverTemplateHost = forwardRef<
   ): CommandSubscription => {
     try {
       return workbook.onCommandExecuted((commandInfo) => {
+        // 只接受设计模式下的顶层用户 COMMAND。选区/滚动 OPERATION 和公式回填 MUTATION 不代表草稿变更。
         if (
           modeRef.current === 'design' &&
           internalOperationDepthRef.current === 0 &&
@@ -249,12 +272,15 @@ export const UniverTemplateHost = forwardRef<
     editable: boolean,
     generation: number,
   ) => {
+    // Univer 没有“用快照原子替换当前工作簿”的单一 API，本函数把释放旧工作簿、创建新工作簿和失败回滚
+    // 组合成事务式流程。任何中间步骤失败都尝试恢复旧快照、编辑状态和命令订阅。
     assertCurrentGeneration(generation);
     const runtime = runtimeRef.current;
     if (runtime === null) {
       throw new Error('Univer 编辑器尚未初始化，无法切换工作簿。');
     }
 
+    // createWorkbook 可能规范化或持有传入对象，必须克隆以保护 App 保存的设计草稿不被第三方运行时修改。
     let clonedSnapshot: IWorkbookData;
     try {
       clonedSnapshot = structuredClone(snapshot);
@@ -269,6 +295,7 @@ export const UniverTemplateHost = forwardRef<
       throw operationError('Univer 读取当前工作簿失败', error);
     }
 
+    // 在释放旧 unit 前保存完整恢复材料；不能只保留 facade 对象，因为 disposeUnit 后该对象已经失效。
     let previousWorkbookId: string | null = null;
     let previousSnapshot: IWorkbookData | null = null;
     let previousEditable: boolean | null = null;
@@ -325,6 +352,7 @@ export const UniverTemplateHost = forwardRef<
         return;
       }
 
+      // 回滚尽量完成全部清理并聚合错误，单个 dispose 失败不能阻止后续恢复尝试。
       const rollbackErrors: Error[] = [];
       if (newSubscription !== null) {
         try {
@@ -352,6 +380,7 @@ export const UniverTemplateHost = forwardRef<
         }
 
         if (!previousUnitDisposed && activeWorkbook === previousWorkbook) {
+          // 新工作簿创建前失败时旧 unit 仍有效，可以直接恢复订阅和 editable，避免不必要重建。
           restoredWorkbook = previousWorkbook;
         } else {
           if (activeWorkbook !== null) {
@@ -391,6 +420,7 @@ export const UniverTemplateHost = forwardRef<
     };
 
     try {
+      // 先停订阅再 dispose，避免释放过程中产生的内部命令被误当作用户修改。
       currentWorkbookEditableRef.current = null;
       try {
         previousSubscription?.dispose();
@@ -442,18 +472,19 @@ export const UniverTemplateHost = forwardRef<
 
       const loadError = operationError('Univer 加载新工作簿失败', error);
       if (previousWorkbook === null || previousSnapshot === null) {
+        // 首次初始化没有旧工作簿可回滚；这里只清理局部资源，外层 effect 负责释放整个 runtime/worker。
         if (newSubscription !== null) {
           try {
             newSubscription.dispose();
           } catch {
-            // Initialization cleanup owns the runtime when no previous workbook exists.
+            // 没有旧工作簿时由初始化 effect 统一释放运行时资源。
           }
         }
         if (newWorkbook !== null) {
           try {
             disposeWorkbook(newWorkbook, 'Univer 清理加载失败的新工作簿');
           } catch {
-            // Initialization cleanup owns the runtime when no previous workbook exists.
+            // 没有旧工作簿时由初始化 effect 统一释放运行时资源。
           }
         }
         throw loadError;
@@ -475,6 +506,7 @@ export const UniverTemplateHost = forwardRef<
   ]);
 
   useEffect(() => {
+    // Univer 是命令式且重量级的运行时，只在组件挂载时创建一次；模式切换通过替换工作簿完成。
     const container = containerRef.current;
     if (container === null) {
       return;
@@ -487,6 +519,7 @@ export const UniverTemplateHost = forwardRef<
     let mutationObserver: MutationObserver | null = null;
     let resizeFrame: number | null = null;
     const syncWorkbenchHeight = () => {
+      // Univer 内层 workbench 使用自己的高度；观察容器和子节点可处理侧栏/工具栏挂载导致的尺寸变化。
       const workbench = container.firstElementChild as HTMLElement | null;
       if (workbench !== null) {
         workbench.style.height = `${container.clientHeight}px`;
@@ -494,6 +527,7 @@ export const UniverTemplateHost = forwardRef<
     };
 
     try {
+      // 主线程 preset 渲染 UI，显式 workerURL 把公式引擎连接到独立 Worker 入口。
       worker = new UniverWorker();
       runtime = createUniver({
         locale: LocaleType.ZH_CN,
@@ -521,6 +555,7 @@ export const UniverTemplateHost = forwardRef<
 
       workerRef.current = worker;
       runtimeRef.current = runtime;
+      // 初始工作簿加载也视为内部模板操作，屏蔽 createWorkbook 触发的初始化 mutation。
       initializationOperation = beginTemplateOperation();
       replaceWorkbook(
         initialSnapshotRef.current,
@@ -543,24 +578,24 @@ export const UniverTemplateHost = forwardRef<
       try {
         resizeObserver?.disconnect();
       } catch {
-        // Initialization reports one normalized error below.
+        // 初始化最终只上报一个聚合后的主错误，清理错误不覆盖根因。
       }
       try {
         mutationObserver?.disconnect();
       } catch {
-        // Initialization reports one normalized error below.
+        // 初始化最终只上报一个聚合后的主错误，清理错误不覆盖根因。
       }
       if (resizeFrame !== null) {
         try {
           cancelAnimationFrame(resizeFrame);
         } catch {
-          // Initialization reports one normalized error below.
+          // 初始化最终只上报一个聚合后的主错误，清理错误不覆盖根因。
         }
       }
       try {
         commandSubscriptionRef.current?.dispose();
       } catch {
-        // Initialization reports one normalized error below.
+        // 初始化最终只上报一个聚合后的主错误，清理错误不覆盖根因。
       }
       commandSubscriptionRef.current = null;
       currentWorkbookEditableRef.current = null;
@@ -569,18 +604,19 @@ export const UniverTemplateHost = forwardRef<
       try {
         runtime?.univer.dispose();
       } catch {
-        // Initialization reports one normalized error below.
+        // 初始化最终只上报一个聚合后的主错误，清理错误不覆盖根因。
       }
       try {
         worker?.terminate();
       } catch {
-        // Initialization reports one normalized error below.
+        // 初始化最终只上报一个聚合后的主错误，清理错误不覆盖根因。
       }
       safeNotifyError(operationError('Univer 初始化失败', error));
       return;
     }
 
     return () => {
+      // 先增加代次让所有挂起异步步骤失效，再按观察器 -> 订阅 -> runtime -> worker 的顺序释放。
       operationGenerationRef.current += 1;
       activeTemplateOperationRef.current?.releaseInternal();
       activeTemplateOperationRef.current = null;
@@ -631,6 +667,7 @@ export const UniverTemplateHost = forwardRef<
 
   useImperativeHandle(ref, () => ({
     saveDraft() {
+      // saveDraft 只序列化活动工作簿，不改变模式；归一化后快照才能进入扫描器和 .NET 后端。
       try {
         let workbook: UniverWorkbook | null | undefined;
         try {
@@ -654,6 +691,7 @@ export const UniverTemplateHost = forwardRef<
     },
 
     loadDesign(snapshot) {
+      // 设计模式永远从保留 token 的 draftSnapshot 创建新工作簿，不复用已经写入后台数据的预览对象。
       const startedAt = performance.now();
       const operation = beginTemplateOperation();
       try {
@@ -679,6 +717,7 @@ export const UniverTemplateHost = forwardRef<
 
     insertBinding(token, kind) {
       try {
+        // 先检查模板级操作和 editable 状态，避免在预览切换/异步复制期间写进即将被释放的工作簿。
         if (token.trim().length === 0) {
           throw new Error('绑定 token 不能为空。');
         }
@@ -725,6 +764,7 @@ export const UniverTemplateHost = forwardRef<
           throw new Error('不能在公式单元格中插入绑定 token。');
         }
 
+        // 参数 token 可追加到普通文本中；明细 token 必须独占单元格，因此直接替换当前值。
         let nextValue = token;
         if (kind === 'parameter') {
           let currentValue: ReturnType<typeof activeCell.getValue>;
@@ -739,6 +779,7 @@ export const UniverTemplateHost = forwardRef<
           nextValue = `${currentValue ?? ''}${token}`;
         }
 
+        // setValue 会触发 Univer 命令；内部深度先屏蔽订阅，再手工发送一次 changed，保证 dirty 只变化一次。
         const releaseInternal = acquireInternalOperation();
         try {
           try {
@@ -758,6 +799,7 @@ export const UniverTemplateHost = forwardRef<
     },
 
     async renderPreview(snapshot, plan) {
+      // 预览始终基于草稿克隆：先替换参数，再展开/复制明细模板行，最后覆盖绑定字段并切只读。
       const startedAt = performance.now();
       const operation = beginTemplateOperation();
       let previewWorkbook: UniverWorkbook | null = null;
@@ -793,6 +835,7 @@ export const UniverTemplateHost = forwardRef<
             throw new Error('明细预览计划至少需要一行目标数据。');
           }
 
+          // 插行前读取源行高度；0.25.1 在部分环境返回 "026" 字符串，必须通过边界归一化。
           let sourceRowHeight: number;
           try {
             sourceRowHeight = normalizeUniverRuntimeNumber(
@@ -811,6 +854,7 @@ export const UniverTemplateHost = forwardRef<
             );
           }
 
+          // 第一条数据复用模板行，所以只为剩余数据插入 result.rows.length - 1 行。
           if (detail.insertCount > 0) {
             let insertResult: UniverWorksheet;
             try {
@@ -841,6 +885,7 @@ export const UniverTemplateHost = forwardRef<
             throw new Error(`Univer 返回了无效的明细模板列数（工作表 '${detail.sheetId}'）。`);
           }
 
+          // 复制整行而非逐格复制，才能同时保留样式、数字格式、边框和未绑定的公式列。
           const sourceRange = requireRange(
             worksheet,
             detail.sheetId,
@@ -863,6 +908,7 @@ export const UniverTemplateHost = forwardRef<
             let filled: boolean;
             assertCurrentGeneration(operation.generation);
             try {
+              // COPY 让相对公式随目标行偏移，例如 E6=C6+D6 会在下一行变成 E7=C7+D7。
               filled = await sourceRange.autoFill(targetRange, AUTO_FILL_APPLY_TYPE.COPY);
             } catch (error) {
               throw operationError('Univer 复制明细模板行失败', error);
@@ -882,6 +928,7 @@ export const UniverTemplateHost = forwardRef<
             );
           }
 
+          // 先复制模板再写后台字段：数据单元格覆盖 token，公式单元格不在计划中，因此保持 autoFill 结果。
           for (const row of detail.rows) {
             for (const value of row.values) {
               const range = requireRange(
@@ -905,6 +952,7 @@ export const UniverTemplateHost = forwardRef<
           }
         }
 
+        // 所有写入完成后才切只读；任何失败路径也尽量切只读，避免用户误编辑半完成的预览副本。
         assertCurrentGeneration(operation.generation);
         try {
           previewWorkbook.setEditable(false);

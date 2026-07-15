@@ -3,12 +3,19 @@ using Microsoft.Data.Sqlite;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
+/// <summary>
+/// 存储层返回的模板数据，不携带 ORM 实体的审计字段，避免上层依赖数据库模型。
+/// </summary>
 public sealed record PocStoredTemplate(
     string ReportCode,
     string SnapshotJson,
     string BindingJson,
     int Revision);
 
+/// <summary>
+/// 保存时的期望修订号与数据库实际状态不一致。
+/// 这是正常的并发冲突，不应重试为无条件覆盖。
+/// </summary>
 public sealed class PocTemplateRevisionConflictException : Exception
 {
     public PocTemplateRevisionConflictException(string reportCode, int expectedRevision)
@@ -25,6 +32,9 @@ public sealed class PocTemplateRevisionConflictException : Exception
     }
 }
 
+/// <summary>
+/// 模板数据库访问层。使用 SqlSugar 承接现有 Admin.NET 数据库配置，同时通过条件更新实现乐观并发。
+/// </summary>
 public sealed class PocTemplateStore : ITransient
 {
     private readonly ISqlSugarClient _database;
@@ -34,6 +44,7 @@ public sealed class PocTemplateStore : ITransient
         _database = database;
     }
 
+    /// <summary>按报表编码读取唯一模板；尚未保存过时返回 null，由服务层提供种子模板。</summary>
     public async Task<PocStoredTemplate?> GetAsync(string reportCode)
     {
         var entity = await _database.Queryable<PocReportTemplate>()
@@ -43,6 +54,9 @@ public sealed class PocTemplateStore : ITransient
         return entity is null ? null : ToStoredTemplate(entity);
     }
 
+    /// <summary>
+    /// 保存模板并返回新的修订号。expectedRevision 为 0 表示首次落库，否则只更新匹配旧修订号的记录。
+    /// </summary>
     public async Task<PocStoredTemplate> SaveAsync(
         string reportCode,
         string snapshotJson,
@@ -51,6 +65,7 @@ public sealed class PocTemplateStore : ITransient
     {
         if (expectedRevision == 0)
         {
+            // 首次保存使用插入。ReportCode 唯一索引负责处理两个 revision 0 页面同时保存的竞争。
             var entity = new PocReportTemplate
             {
                 ReportCode = reportCode,
@@ -73,6 +88,8 @@ public sealed class PocTemplateStore : ITransient
             return ToStoredTemplate(entity);
         }
 
+        // 修订号放进 WHERE 条件，使“检查版本 + 更新内容”成为一个原子数据库操作。
+        // affected 不为 1 时，记录已被别人更新或删除，当前页面必须刷新，不能静默覆盖。
         var revision = expectedRevision + 1;
         var affected = await _database.Updateable<PocReportTemplate>()
             .SetColumns(x => new PocReportTemplate
@@ -98,6 +115,8 @@ public sealed class PocTemplateStore : ITransient
 
     private static bool IsReportCodeDuplicate(Exception exception)
     {
+        // SQL Server 与 SQLite 的唯一键异常编码不同；POC 同时支持生产型数据库和本地验证数据库。
+        // 优先识别提供程序的结构化错误码，避免把其它约束或普通 SQL 错误误判为并发冲突。
         var hasKnownProviderException = false;
         for (var current = exception; current is not null; current = current.InnerException)
         {
@@ -130,6 +149,7 @@ public sealed class PocTemplateStore : ITransient
             return false;
         }
 
+        // 未暴露具体提供程序异常的驱动只能退回消息匹配，并且必须同时命中约束名与重复键关键词。
         for (var current = exception; current is not null; current = current.InnerException)
         {
             if (IsReportCodeConstraint(current.Message) &&

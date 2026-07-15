@@ -5,6 +5,10 @@ using System.Xml;
 
 namespace HD.ReportCenter.ReportEngine.CoreValidation;
 
+/// <summary>
+/// 低内存 Excel 导出器。直接用 ZipArchive + XmlWriter 写最小 Open XML 包，避免 DOM/工作簿对象缓存全部行。
+/// 该实现服务于技术验证，样式、图片和复杂模板将在后续统一模板导出阶段补齐。
+/// </summary>
 public static class PocExcelExporter
 {
     private const string SpreadsheetNamespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
@@ -22,6 +26,13 @@ public static class PocExcelExporter
         "平均值"
     ];
 
+    /// <summary>
+    /// 将明细序列流式写入 xlsx。rows 只枚举一次；progress 按批报告；取消在每行开始前检查。
+    /// </summary>
+    /// <param name="output">可写输出流。可定位流会先清空，调用方仍拥有该流。</param>
+    /// <param name="rows">惰性明细序列，允许十万行以上数据按需产生。</param>
+    /// <param name="progress">已完成数据行数回调，不包含标题和表头。</param>
+    /// <param name="cancellationToken">协作式取消标记。</param>
     public static void Write(
         Stream output,
         IEnumerable<PocWorkloadRow> rows,
@@ -42,6 +53,7 @@ public static class PocExcelExporter
             output.SetLength(0);
         }
 
+        // xlsx 本质是具有固定部件关系的 ZIP 包。这里只创建 Excel 打开文件所需的最小部件集合。
         using var archive = new ZipArchive(output, ZipArchiveMode.Create, true, Encoding.UTF8);
         WriteEntry(archive, "[Content_Types].xml", WriteContentTypes);
         WriteEntry(archive, "_rels/.rels", WritePackageRelationships);
@@ -94,11 +106,13 @@ public static class PocExcelExporter
             WriteTextCell(writer, $"B{sheetRow}", row.DepartmentName);
             WriteNumberCell(writer, $"C{sheetRow}", row.OutpatientCount);
             WriteNumberCell(writer, $"D{sheetRow}", row.DischargeCount);
+            // 只写公式表达式，不在服务器计算或写缓存结果；Excel/WPS 打开时根据 workbook calcPr 完成计算。
             WriteFormulaCell(writer, $"E{sheetRow}", $"C{sheetRow}+D{sheetRow}");
             WriteFormulaCell(writer, $"F{sheetRow}", $"AVERAGE(C{sheetRow}:D{sheetRow})");
             writer.WriteEndElement();
 
             written++;
+            // 每千行报告一次，避免高频回调和锁竞争影响纯写入吞吐。
             if (written % 1_000 == 0)
             {
                 progress?.Invoke(written);
@@ -187,6 +201,7 @@ public static class PocExcelExporter
         writer.WriteAttributeString("r", "id", OfficeRelationshipsNamespace, "rId1");
         writer.WriteEndElement();
         writer.WriteEndElement();
+        // 强制桌面表格软件打开文件时完整重算，因为流式导出刻意没有在服务端生成公式缓存值。
         writer.WriteStartElement("calcPr", SpreadsheetNamespace);
         writer.WriteAttributeString("calcMode", "auto");
         writer.WriteAttributeString("fullCalcOnLoad", "1");
@@ -221,6 +236,7 @@ public static class PocExcelExporter
 
     private static void WriteTextCell(XmlWriter writer, string reference, string value)
     {
+        // 使用 inlineStr 可省去 sharedStrings.xml 及其全量去重缓存，更符合大文件流式目标。
         writer.WriteStartElement("c", SpreadsheetNamespace);
         writer.WriteAttributeString("r", reference);
         writer.WriteAttributeString("t", "inlineStr");
@@ -248,6 +264,7 @@ public static class PocExcelExporter
 
     private static void WriteEntry(ZipArchive archive, string path, Action<XmlWriter> write)
     {
+        // Fastest 用较低 CPU 换取足够的压缩率；XmlWriter 禁止缩进，减少临时字节和最终文件体积。
         var entry = archive.CreateEntry(path, CompressionLevel.Fastest);
         using var stream = entry.Open();
         using var writer = XmlWriter.Create(
@@ -264,6 +281,7 @@ public static class PocExcelExporter
 
     private static string ColumnName(int number)
     {
+        // Open XML 单元格地址使用 A..Z、AA..ZZ 的 26 进制字母列名；stackalloc 避免逐行小数组分配。
         Span<char> buffer = stackalloc char[3];
         var index = buffer.Length;
         while (number > 0)
