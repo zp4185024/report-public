@@ -15,6 +15,11 @@ import '@univerjs/preset-sheets-core/lib/index.css';
 import { createUniver, LocaleType, mergeLocales } from '@univerjs/presets';
 import type { IWorkbookData } from '@univerjs/presets';
 import type { TemplatePreviewPlan } from './templatePreview';
+import {
+  normalizeUniverRuntimeNumber,
+  normalizeWorkbookSnapshot,
+} from './workbookSnapshot';
+import { isTemplateChangeCommand } from './templateChangeCommand';
 import UniverWorker from './univer.worker?worker';
 
 export type TemplateEditorMode = 'design' | 'preview';
@@ -225,8 +230,12 @@ export const UniverTemplateHost = forwardRef<
     errorContext: string,
   ): CommandSubscription => {
     try {
-      return workbook.onCommandExecuted(() => {
-        if (modeRef.current === 'design' && internalOperationDepthRef.current === 0) {
+      return workbook.onCommandExecuted((commandInfo) => {
+        if (
+          modeRef.current === 'design' &&
+          internalOperationDepthRef.current === 0 &&
+          isTemplateChangeCommand(commandInfo)
+        ) {
           safeNotifyChanged();
         }
       });
@@ -633,7 +642,7 @@ export const UniverTemplateHost = forwardRef<
           throw new Error('Univer 当前没有可保存的工作簿。');
         }
         try {
-          return workbook.save();
+          return normalizeWorkbookSnapshot(workbook.save());
         } catch (error) {
           throw operationError('Univer 序列化模板草稿失败', error);
         }
@@ -786,7 +795,10 @@ export const UniverTemplateHost = forwardRef<
 
           let sourceRowHeight: number;
           try {
-            sourceRowHeight = worksheet.getRowHeight(detail.templateRow);
+            sourceRowHeight = normalizeUniverRuntimeNumber(
+              worksheet.getRowHeight(detail.templateRow),
+              `工作表 '${detail.sheetId}' 第 ${detail.templateRow + 1} 行的高度`,
+            );
           } catch (error) {
             throw operationError(
               `Univer 无法读取明细模板行高度（工作表 '${detail.sheetId}'，行 ${detail.templateRow + 1}）`,
@@ -818,7 +830,10 @@ export const UniverTemplateHost = forwardRef<
 
           let maxColumns: number;
           try {
-            maxColumns = worksheet.getMaxColumns();
+            maxColumns = normalizeUniverRuntimeNumber(
+              worksheet.getMaxColumns(),
+              `工作表 '${detail.sheetId}' 的列数`,
+            );
           } catch (error) {
             throw operationError(`Univer 无法读取明细模板列数（工作表 '${detail.sheetId}'）`, error);
           }
