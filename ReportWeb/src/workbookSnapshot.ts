@@ -12,6 +12,27 @@ const mergeCoordinateFields = [
   'endColumn',
 ] as const;
 
+// Univer 会把设计态占位符参与计算后的 Excel 错误写进公式缓存；模板保存时只保留公式正文，
+// 错误缓存重置为数值 0，预览阶段填入真实数据后再显式计算。
+const excelFormulaErrors = new Set([
+  '#NULL!',
+  '#DIV/0!',
+  '#VALUE!',
+  '#REF!',
+  '#NAME?',
+  '#NUM!',
+  '#N/A',
+  '#GETTING_DATA',
+  '#SPILL!',
+  '#CALC!',
+  '#FIELD!',
+  '#BLOCKED!',
+  '#UNKNOWN!',
+  '#CONNECT!',
+  '#BUSY!',
+  '#PYTHON!',
+]);
+
 const worksheetNumberRules = {
   hidden: 'booleanNumber',
   rowCount: 'positiveInteger',
@@ -139,6 +160,9 @@ function normalizeWorksheet(sheet: JsonObject, sheetId: string): JsonObject {
       columnHeaderNumberRules,
     );
   }
+  if (sheet.cellData !== undefined) {
+    normalized.cellData = normalizeFormulaCaches(sheet.cellData);
+  }
   if (Array.isArray(sheet.mergeData)) {
     normalized.mergeData = sheet.mergeData.map((range, index) => {
       if (!isJsonObject(range)) {
@@ -157,6 +181,34 @@ function normalizeWorksheet(sheet: JsonObject, sheetId: string): JsonObject {
   }
 
   return normalized;
+}
+
+function normalizeFormulaCaches(value: unknown): unknown {
+  if (!isJsonObject(value)) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([row, rowData]) => {
+      if (!isJsonObject(rowData)) {
+        return [row, rowData];
+      }
+
+      return [row, Object.fromEntries(
+        Object.entries(rowData).map(([column, cell]) => {
+          if (
+            isJsonObject(cell) &&
+            typeof cell.f === 'string' &&
+            typeof cell.v === 'string' &&
+            excelFormulaErrors.has(cell.v.toUpperCase())
+          ) {
+            return [column, { ...cell, v: 0, t: 2 }];
+          }
+          return [column, cell];
+        }),
+      )];
+    }),
+  );
 }
 
 function normalizeObjectNumericFields(

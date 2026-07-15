@@ -102,6 +102,10 @@ public sealed class PocXlsxExchangeConverterTests
         var sheet = (JObject)imported["sheets"]![sheetId]!;
         Assert.Equal("=C6+D6", sheet["cellData"]!["5"]!["4"]!["f"]!.Value<string>());
         Assert.Equal("=AVERAGE(C6:D6)", sheet["cellData"]!["5"]!["5"]!["f"]!.Value<string>());
+        Assert.Equal(0d, sheet["cellData"]!["5"]!["4"]!["v"]!.Value<double>());
+        Assert.Equal(2, sheet["cellData"]!["5"]!["4"]!["t"]!.Value<int>());
+        Assert.Equal(0d, sheet["cellData"]!["5"]!["5"]!["v"]!.Value<double>());
+        Assert.Equal(2, sheet["cellData"]!["5"]!["5"]!["t"]!.Value<int>());
         Assert.Equal(5, sheet["mergeData"]!.Count());
         Assert.InRange(sheet["rowData"]!["0"]!["h"]!.Value<double>(), 41.9d, 42.1d);
         Assert.InRange(sheet["columnData"]!["0"]!["w"]!.Value<double>(), 69d, 71d);

@@ -9,6 +9,7 @@ import type { CSSProperties } from 'react';
 import UniverPresetSheetsCoreZhCN from '@univerjs/preset-sheets-core/locales/zh-CN';
 import {
   AUTO_FILL_APPLY_TYPE,
+  CalculationMode,
   UniverSheetsCorePreset,
 } from '@univerjs/preset-sheets-core';
 import '@univerjs/preset-sheets-core/lib/index.css';
@@ -555,6 +556,11 @@ export const UniverTemplateHost = forwardRef<
               zoomSlider: true,
             },
             formulaBar: true,
+            // 设计模板包含 {{detail.*}} 占位符，初始化时不能把它们当普通文本参与公式计算。
+            // 预览写入真实数据后会通过 recalculateFormulas() 显式执行完整计算。
+            formula: {
+              initialFormulaComputing: CalculationMode.NO_CALCULATION,
+            },
             contextMenu: true,
             disableAutoFocus: true,
           }),

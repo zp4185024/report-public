@@ -128,4 +128,24 @@ describe('normalizeWorkbookSnapshot', () => {
     expect((snapshot.sheets['report-sheet']?.freeze as unknown as { ySplit: unknown }).ySplit)
       .toBe('5');
   });
+
+  it('clears formula error caches without changing formulas or valid cached values', () => {
+    const snapshot = workbookWithRuntimeLayoutNumbers();
+    const sheet = snapshot.sheets['report-sheet'];
+    sheet.cellData = {
+      5: {
+        4: { f: '=C6+D6', v: '#VALUE!', t: 1 },
+        5: { f: '=AVERAGE(C6:D6)', v: '#DIV/0!', t: 1 },
+        6: { f: '="正常"', v: '正常', t: 1 },
+      },
+    };
+
+    const normalized = normalizeWorkbookSnapshot(snapshot);
+    const cells = normalized.sheets['report-sheet']?.cellData?.[5];
+
+    expect(cells?.[4]).toMatchObject({ f: '=C6+D6', v: 0, t: 2 });
+    expect(cells?.[5]).toMatchObject({ f: '=AVERAGE(C6:D6)', v: 0, t: 2 });
+    expect(cells?.[6]).toMatchObject({ f: '="正常"', v: '正常', t: 1 });
+    expect(sheet.cellData?.[5]?.[4]?.v).toBe('#VALUE!');
+  });
 });
