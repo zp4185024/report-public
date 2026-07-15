@@ -1,8 +1,14 @@
 using Furion.FriendlyException;
 using HD.ReportCenter.ReportEngine.CoreValidation;
+using HD.ReportCenter.ReportEngine.CoreValidation.Exchange;
+using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HD.ReportCenter.Application.CoreValidation;
+
+/// <summary>导出当前编辑器快照的请求；导出不会隐式保存模板。</summary>
+public sealed record PocTemplateXlsxExportRequest(JObject Snapshot);
 
 /// <summary>
 /// 报表中心核心验证 API。
@@ -19,10 +25,14 @@ public sealed class PocReportApi : IDynamicApiController
     private static readonly PocLargeExportJobStore LargeExportJobs = new();
 
     private readonly PocTemplateService _templateService;
+    private readonly PocTemplateExchangeService _templateExchangeService;
 
-    public PocReportApi(PocTemplateService templateService)
+    public PocReportApi(
+        PocTemplateService templateService,
+        PocTemplateExchangeService templateExchangeService)
     {
         _templateService = templateService;
+        _templateExchangeService = templateExchangeService;
     }
 
     /// <summary>读取数据库模板；未保存过时由服务层返回 revision 0 的种子模板。</summary>
@@ -43,6 +53,44 @@ public sealed class PocReportApi : IDynamicApiController
         EnsureReportExists(reportCode);
         return await HandleTemplateOperation(
             () => _templateService.SaveAsync(PocReportCatalog.ReportCode, request));
+    }
+
+    /// <summary>
+    /// 把 XLSX 解析为经过后台校验的 Univer 草稿。
+    /// 导入成功不会直接写数据库，设计人员仍需通过“保存模板”确认落库。
+    /// </summary>
+    [HttpPost("/api/report-center/poc/{reportCode}/template/import-xlsx")]
+    public async Task<PocTemplateXlsxImportResult> ImportTemplateXlsx(
+        [FromRoute] string reportCode,
+        [FromForm] IFormFile file)
+    {
+        EnsureReportExists(reportCode);
+        if (file is null || file.Length == 0)
+        {
+            throw Oops.Oh("TEMPLATE_XLSX_FILE_REQUIRED").StatusCode(400);
+        }
+
+        await using var stream = file.OpenReadStream();
+        return await HandleTemplateOperation(
+            () => _templateExchangeService.ImportAsync(stream, file.FileName));
+    }
+
+    /// <summary>把页面当前快照导出为 XLSX；无需先保存，不会改动数据库模板。</summary>
+    [HttpPost("/api/report-center/poc/{reportCode}/template/export-xlsx")]
+    public async Task<FileStreamResult> ExportTemplateXlsx(
+        [FromRoute] string reportCode,
+        [FromBody] PocTemplateXlsxExportRequest request)
+    {
+        EnsureReportExists(reportCode);
+        var exchange = await HandleTemplateOperation(
+            () => _templateExchangeService.ExportAsync(
+                request.Snapshot,
+                PocReportCatalog.GetDefinition().Name));
+
+        return new FileStreamResult(exchange.Content, ExcelContentType)
+        {
+            FileDownloadName = exchange.FileName
+        };
     }
 
     /// <summary>返回参数、分页和数据集字段定义，供查询区、字段面板和绑定校验共同使用。</summary>
@@ -157,6 +205,13 @@ public sealed class PocReportApi : IDynamicApiController
         catch (PocTemplateValidationException exception)
         {
             throw Oops.Oh("TEMPLATE_VALIDATION_FAILED: {0}", exception.Message).StatusCode(400);
+        }
+        catch (PocExchangeConversionException exception)
+        {
+            var error = string.IsNullOrWhiteSpace(exception.RuleCode)
+                ? exception.Code
+                : $"{exception.Code}: {exception.RuleCode}";
+            throw Oops.Oh(error).StatusCode(400);
         }
         catch (JsonException)
         {
