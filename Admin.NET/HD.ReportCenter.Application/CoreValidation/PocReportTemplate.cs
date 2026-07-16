@@ -4,8 +4,8 @@ namespace HD.ReportCenter.Application.CoreValidation;
 /// 报表模板的数据库实体。
 /// 快照与绑定分列保存：快照用于完整恢复 Univer，绑定用于快速审计和执行前一致性校验。
 /// </summary>
-[SugarTable("RcPocReportTemplate", "报表中心模板核心验证表")]
-[SugarIndex("uk_RcPocReportTemplate_ReportCode", nameof(ReportCode), OrderByType.Asc, IsUnique = true)]
+[SugarTable("RcReportTemplate", "报表中心模板表")]
+[SugarIndex("uk_RcReportTemplate_ReportCode", nameof(ReportCode), OrderByType.Asc, IsUnique = true)]
 [SysTable]
 public sealed class PocReportTemplate : EntityBase
 {

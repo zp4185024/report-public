@@ -65,6 +65,15 @@ public sealed class PocTemplateStoreTests : IDisposable
     }
 
     [Fact]
+    public void Report_entities_use_production_table_names()
+    {
+        Assert.True(_database.DbMaintenance.IsAnyTable("RcReportTemplate", false));
+        Assert.True(_database.DbMaintenance.IsAnyTable("RcExchangeMapping", false));
+        Assert.False(_database.DbMaintenance.IsAnyTable("RcPocReportTemplate", false));
+        Assert.False(_database.DbMaintenance.IsAnyTable("RcPocExchangeMapping", false));
+    }
+
+    [Fact]
     public async Task First_save_creates_revision_one()
     {
         var saved = await _store.SaveAsync("dept-workload", "{\"rev\":1}", "{\"version\":1}", 0);
@@ -80,7 +89,7 @@ public sealed class PocTemplateStoreTests : IDisposable
     {
         await _store.SaveAsync("dept-workload", "{\"rev\":1}", "{\"version\":1}", 0);
         _database.Aop.OnError = _ =>
-            throw new SqliteException("RcPocReportTemplate.ReportCode 违反唯一约束", 19, 2067);
+            throw new SqliteException("RcReportTemplate.ReportCode 违反唯一约束", 19, 2067);
 
         await Assert.ThrowsAsync<PocTemplateRevisionConflictException>(
             () => _store.SaveAsync("dept-workload", "{\"rev\":2}", "{\"version\":1}", 0));
@@ -93,7 +102,7 @@ public sealed class PocTemplateStoreTests : IDisposable
         _database.Aop.OnError = _ =>
             throw new InvalidOperationException(
                 "duplicate key while inserting ReportCode",
-                new SqliteException("RcPocReportTemplate.Id 违反唯一约束", 19, 1555));
+                new SqliteException("RcReportTemplate.Id 违反唯一约束", 19, 1555));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => _store.SaveAsync("dept-workload", "{\"rev\":2}", "{\"version\":1}", 0));

@@ -3,9 +3,9 @@ namespace HD.ReportCenter.Application.CoreValidation;
 /// <summary>
 /// Excel 与 Univer 的单项映射规则。规则逐条落库，便于在不重新编译的情况下修改、停用和排查。
 /// </summary>
-[SugarTable("RcPocExchangeMapping", "报表中心Excel与Univer映射验证表")]
+[SugarTable("RcExchangeMapping", "报表中心Excel与Univer映射表")]
 [SugarIndex(
-    "uk_RcPocExchangeMapping_Version_Rule",
+    "uk_RcExchangeMapping_Version_Rule",
     nameof(UniverVersion), OrderByType.Asc,
     nameof(MappingVersion), OrderByType.Asc,
     nameof(RuleCode), OrderByType.Asc,

@@ -165,7 +165,7 @@ public sealed class PocTemplateStore : ITransient
     }
 
     private static bool IsReportCodeConstraint(string message) =>
-        message.Contains("uk_RcPocReportTemplate_ReportCode", StringComparison.OrdinalIgnoreCase) ||
-        message.Contains("RcPocReportTemplate.ReportCode", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("uk_RcReportTemplate_ReportCode", StringComparison.OrdinalIgnoreCase) ||
+        message.Contains("RcReportTemplate.ReportCode", StringComparison.OrdinalIgnoreCase) ||
         message.Contains("ReportCode", StringComparison.OrdinalIgnoreCase);
 }
