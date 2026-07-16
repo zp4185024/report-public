@@ -45,8 +45,8 @@ class SourceTemplate:
     snapshot_json: str
     binding_json: str
     revision: int
-    create_time: str | None
-    update_time: str | None
+    create_time: datetime | None
+    update_time: datetime | None
     create_user_id: int | None
     create_user_name: str | None
     update_user_id: int | None
@@ -84,6 +84,22 @@ def validate_target_database(database: str) -> None:
 
     if database != EXPECTED_TARGET_DATABASE:
         raise MigrationError(f"目标数据库必须是 {EXPECTED_TARGET_DATABASE}。")
+
+
+def _parse_sqlite_datetime(value: object, column_name: str) -> datetime | None:
+    """将 SQLite 的 ISO 时间文本转为 DB-API 可结构化传输的 datetime 参数。"""
+
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+
+    try:
+        # fromisoformat 会将 SQLite/.NET 输出的第 7 位小数截到 Python 的微秒精度。
+        # SQL Server datetime 本身只保留毫秒级精度，由驱动在写入时完成最终舍入。
+        return datetime.fromisoformat(str(value))
+    except ValueError as exception:
+        raise MigrationError(f"源模板的 {column_name} 不是有效时间：{value!r}") from exception
 
 
 def load_source_template(source_sqlite: Path, report_code: str) -> SourceTemplate:
@@ -125,8 +141,8 @@ def load_source_template(source_sqlite: Path, report_code: str) -> SourceTemplat
         snapshot_json=str(row["SnapshotJson"]),
         binding_json=str(row["BindingJson"]),
         revision=int(row["Revision"]),
-        create_time=row["CreateTime"],
-        update_time=row["UpdateTime"],
+        create_time=_parse_sqlite_datetime(row["CreateTime"], "CreateTime"),
+        update_time=_parse_sqlite_datetime(row["UpdateTime"], "UpdateTime"),
         create_user_id=row["CreateUserId"],
         create_user_name=row["CreateUserName"],
         update_user_id=row["UpdateUserId"],

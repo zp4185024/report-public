@@ -3,6 +3,7 @@ import sqlite3
 import tempfile
 import unittest
 from contextlib import closing
+from datetime import datetime
 from pathlib import Path
 
 from scripts.database.migrate_report_template import (
@@ -93,6 +94,8 @@ class ReportTemplateMigrationTests(unittest.TestCase):
         self.assertEqual('{"id":"workbook"}', row.snapshot_json)
         self.assertEqual('{"version":1}', row.binding_json)
         self.assertEqual(1000, row.id)
+        self.assertEqual(datetime(2026, 7, 15, 8, 40, 26, 74557), row.create_time)
+        self.assertEqual(datetime(2026, 7, 15, 16, 23, 57, 746993), row.update_time)
 
     def test_load_source_template_rejects_a_missing_row(self) -> None:
         self._create_source([])
