@@ -10,8 +10,8 @@
       {
         //"ConfigId": "1300000000001", // 默认库标识-禁止修改
         "DbType": "SqlServer", // MySql、SqlServer、Sqlite、Oracle、PostgreSQL、Dm、Kdbndp、Oscar、MySqlConnector、Access、OpenGauss、QuestDB、HG、ClickHouse、GBase、Odbc、Custom
-        "DbNickName": "系统库",
-        "ConnectionString": "Server=192.168.2.5;Database=lis_admin;User Id=hdhis;Password=CHANGE_ME;Encrypt=True;TrustServerCertificate=True;", // SqlServer，实际密码用环境变量覆盖
+        "DbNickName": "报表中心库",
+        "ConnectionString": "Server=192.168.2.5;Database=hd_report_center;User Id=hdhis;Password=CHANGE_ME;Encrypt=False;TrustServerCertificate=True;", // SqlServer，实际密码用环境变量覆盖
         //"ConnectionString": "DataSource=./Admin.NET.db", // Sqlite
         //"ConnectionString": "PORT=5432;DATABASE=xxx;HOST=localhost;PASSWORD=xxx;USER ID=xxx", // PostgreSQL
         //"ConnectionString": "Server=localhost;Database=xxx;Uid=xxx;Pwd=xxx;SslMode=None;AllowLoadLocalInfile=true;AllowUserVariables=true;", // MySql,
