@@ -33,6 +33,14 @@ pwsh -File scripts/database/Initialize-ReportCenterSqlServer.ps1
 4. 只有 `SysUser`、`RcReportTemplate`、`RcExchangeMapping` 存在、系统用户种子已写入且应用完成启动时才判定成功。
 5. 如果建表或种子失败，保留新库供人工排查，不会继续迁移模板。
 
+如果首次运行只完成了建库、库中仍为 0 张表，可以在排除问题后续跑：
+
+```powershell
+pwsh -File scripts/database/Initialize-ReportCenterSqlServer.ps1 -ResumeEmptyDatabase
+```
+
+`ResumeEmptyDatabase` 会先查询 `sys.tables`，只要存在任何用户表就拒绝执行，因此不能用它覆盖或升级现有库。
+
 ## 正常启动
 
 正常启动只需在启动后端的同一进程环境中提供密码：

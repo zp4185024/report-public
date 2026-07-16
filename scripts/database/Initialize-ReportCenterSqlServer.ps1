@@ -7,6 +7,7 @@ param(
     [string]$User = 'hdhis',
     [string]$Collation = 'Chinese_PRC_CI_AS',
     [string]$AppDllPath = (Join-Path $PSScriptRoot '..\..\Admin.NET\Admin.NET.Web.Entry\bin\Release\net8.0\Admin.NET.Web.Entry.dll'),
+    [switch]$ResumeEmptyDatabase,
     [ValidateRange(30, 1800)]
     [int]$InitializationTimeoutSeconds = 300
 )
@@ -137,13 +138,26 @@ $existingDatabaseId = Invoke-SqlScalar `
     -CommandText 'SELECT DB_ID(@DatabaseName);' `
     -Parameters @{ '@DatabaseName' = $Database }
 if ($null -ne $existingDatabaseId) {
-    throw "目标数据库 $Database 已存在，为避免覆盖数据已拒绝继续。"
-}
+    if (-not $ResumeEmptyDatabase) {
+        throw "目标数据库 $Database 已存在，为避免覆盖数据已拒绝继续。"
+    }
 
-Write-Host "正在创建数据库 $Database（$Collation）..."
-Invoke-SqlNonQuery `
-    -ConnectionString $masterConnectionString `
-    -CommandText "CREATE DATABASE [$Database] COLLATE $Collation;"
+    # 续跑只用于“建库成功、建表未开始”的恢复场景；任何用户表都会使续跑失败。
+    $existingTableCount = Invoke-SqlScalar `
+        -ConnectionString $targetConnectionString `
+        -CommandText 'SELECT COUNT_BIG(1) FROM sys.tables;'
+    if ([int64]$existingTableCount -ne 0) {
+        throw "目标数据库 $Database 已有 $existingTableCount 张表，拒绝使用 ResumeEmptyDatabase。"
+    }
+
+    Write-Host "目标库已存在且为空库，将续跑 Admin.NET 建表和种子初始化。"
+}
+else {
+    Write-Host "正在创建数据库 $Database（$Collation）..."
+    Invoke-SqlNonQuery `
+        -ConnectionString $masterConnectionString `
+        -CommandText "CREATE DATABASE [$Database] COLLATE $Collation;"
+}
 
 $actualCollation = Invoke-SqlScalar `
     -ConnectionString $masterConnectionString `
@@ -155,9 +169,7 @@ if ($actualCollation -ne $Collation) {
 
 $environmentKeys = @(
     'HD_REPORT_CENTER_DB_CONNECTION_STRING',
-    'DbConnection__ConnectionConfigs__0__DbSettings__EnableInitDb',
-    'DbConnection__ConnectionConfigs__0__TableSettings__EnableInitTable',
-    'DbConnection__ConnectionConfigs__0__SeedSettings__EnableInitSeed'
+    'HD_REPORT_CENTER_DB_INITIALIZE'
 )
 $previousEnvironment = @{}
 foreach ($key in $environmentKeys) {
@@ -171,9 +183,7 @@ $initializationProcess = $null
 try {
     # 仅临时子进程开启建表和种子。正常运行配置始终保持三个开关为 false。
     $env:HD_REPORT_CENTER_DB_CONNECTION_STRING = $targetConnectionString
-    $env:DbConnection__ConnectionConfigs__0__DbSettings__EnableInitDb = 'false'
-    $env:DbConnection__ConnectionConfigs__0__TableSettings__EnableInitTable = 'true'
-    $env:DbConnection__ConnectionConfigs__0__SeedSettings__EnableInitSeed = 'true'
+    $env:HD_REPORT_CENTER_DB_INITIALIZE = 'true'
 
     $workingDirectory = Split-Path -Parent $resolvedAppDllPath
     $arguments = "`"$resolvedAppDllPath`" --urls http://127.0.0.1:0"

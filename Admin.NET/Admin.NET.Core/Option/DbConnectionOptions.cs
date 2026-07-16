@@ -29,6 +29,7 @@ public sealed class DbConnectionOptions : IConfigurableOptions<DbConnectionOptio
     public void PostConfigure(DbConnectionOptions options, IConfiguration configuration)
     {
         ApplyReportCenterDatabaseSecret(options);
+        ApplyReportCenterOneTimeInitialization(options);
 
         foreach (var dbConfig in options.ConnectionConfigs)
         {
@@ -64,6 +65,29 @@ public sealed class DbConnectionOptions : IConfigurableOptions<DbConnectionOptio
         };
         connectionStringBuilder["Password"] = password;
         mainConfig.ConnectionString = connectionStringBuilder.ConnectionString;
+    }
+
+    /// <summary>
+    /// 在一次性建库工具启动的子进程中开启建表和种子初始化。
+    /// 不开启建库：数据库由外层脚本以指定排序规则创建，并负责已存在保护。
+    /// </summary>
+    private static void ApplyReportCenterOneTimeInitialization(DbConnectionOptions options)
+    {
+        var initialize = Environment.GetEnvironmentVariable("HD_REPORT_CENTER_DB_INITIALIZE");
+        if (!bool.TryParse(initialize, out var shouldInitialize) || !shouldInitialize)
+        {
+            return;
+        }
+
+        var mainConfig = options.ConnectionConfigs?.FirstOrDefault();
+        if (mainConfig == null)
+        {
+            return;
+        }
+
+        mainConfig.DbSettings.EnableInitDb = false;
+        mainConfig.TableSettings.EnableInitTable = true;
+        mainConfig.SeedSettings.EnableInitSeed = true;
     }
 }
 
