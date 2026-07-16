@@ -217,8 +217,12 @@ try {
                 -CommandText 'SELECT COUNT_BIG(1) FROM dbo.SysUser;'
         }
 
-        # Kestrel 开始监听说明应用启动管线已完成，不会在其它种子仍写入时提前停进程。
-        $applicationStarted = Select-String -LiteralPath $stdoutPath -Pattern 'Now listening on' -Quiet -ErrorAction SilentlyContinue
+        # 项目会过滤 Microsoft.Hosting 日志，不能依赖“Now listening”文本。
+        # 直接检查子进程的 TCP 监听端口，可以确认 Kestrel 启动管线已完成。
+        $applicationStarted = [bool](Get-NetTCPConnection `
+            -State Listen `
+            -OwningProcess $initializationProcess.Id `
+            -ErrorAction SilentlyContinue)
         if ([int64]$requiredTableCount -eq 3 -and [int64]$sysUserCount -gt 0 -and $applicationStarted) {
             $isReady = $true
             break
