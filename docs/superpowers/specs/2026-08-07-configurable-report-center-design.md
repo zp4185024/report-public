@@ -30,7 +30,7 @@
 - 报表布局/单元格的在线可视化设计器（类 Excel 拖拽排版）。
 - 图表/交叉表/分组聚合等高级报表能力。
 - Word/PPT 报表。
-- 多租户租户级数据源隔离的运营化管理界面（实体预留 TenantId，但不做管理 UI）。
+- 多租户隔离（报表中心不内置多租户，数据归属由外部传参决定，详见 2.2）。
 
 ## 二、架构与模块边界
 
@@ -64,7 +64,8 @@ HD.ReportCenter.Application/
 
 ### 2.2 选型理由
 
-- **实体与服务放在 Application 层**：Application 已引用 `Admin.NET.Core`（含 SqlSugar、`EntityBase`、`UserManager`、租户过滤器），实体可直接继承 `EntityBaseTenant` 获得审计字段与多租户过滤，CRUD 服务可复用 `SqlSugarRepository<T>` 与 `OrderBuilder`/`WhereIF`/`ToPagedListAsync` 等既有模式。
+- **实体与服务放在 Application 层**：Application 已引用 `Admin.NET.Core`（含 SqlSugar、`EntityBase`、`UserManager`），实体可直接继承 `EntityBase` 获得审计字段，CRUD 服务可复用 `SqlSugarRepository<T>` 与 `OrderBuilder`/`WhereIF`/`ToPagedListAsync` 等既有模式。
+- **不启用多租户**：报表中心遵循"可复制原则"，不内置多租户隔离。数据归属（哪个医院/机构）由外部调用方通过上下文参数（如 `hospitalId`、`deptId`、`userId`）传入决定，实体不带 `TenantId`。这样报表中心可被任意系统复制部署并嵌入，不与具体租户体系耦合。
 - **ReportEngine 保持不变**：现有的 `PocExcelExporter`（流式导出）与 `PocReportCatalog`（Mock 执行）不动，配置驱动执行引擎作为新链路并存，PoC 链路保留用于回归对照。
 - **执行引擎用 SqlSugar 动态连接**：`new SqlSugarClient(new ConnectionConfig{ DbType, ConnectionString, IsAutoCloseConnection=true })` 动态连接外部数据源，用 `Ado.GetDataTableAsync(sql, SugarParameter[])` 执行参数化 SQL。SqlSugar 的 `DbType` 枚举原生覆盖 SqlServer/MySQL/Oracle/PostgreSQL/达梦/人大金仓/SQLite 等，无需自建驱动抽象。
 
@@ -79,22 +80,21 @@ HD.ReportCenter.Application/
 
 ## 三、数据模型
 
-6 张实体表，全部继承 `EntityBaseTenant`（含 Id/CreateTime/UpdateTime/CreateUserId/CreateUserName/UpdateUserId/UpdateUserName/TenantId），获得审计字段与多租户过滤。子表（参数/列）用 `EntityBase`（不含租户，随父表过滤）。
+6 张实体表，全部继承 `EntityBase`（含 Id/CreateTime/UpdateTime/CreateUserId/CreateUserName/UpdateUserId/UpdateUserName），获得审计字段。**不启用多租户**，实体不带 TenantId（详见 2.2 可复制原则）。
 
 ### 3.1 ReportDataSource（数据源）
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | Id | long | 雪花主键 |
-| Code | string(64) | 数据源编码，租户内唯一，如 `his-readonly` |
+| Code | string(64) | 数据源编码，全局唯一，如 `his-readonly` |
 | Name | string(128) | 显示名称，如 `HIS 只读库` |
 | DbType | SqlSugar.DbType | 数据库类型枚举（SqlServer/MySql/Oracle/PostgreSQL/Dm/KdGauss/SQLite...） |
-| ConnectionString | string(512) | 连接字符串，含只读账号密码 |
+| ConnectionString | string(512) | 连接字符串，含账号密码 |
 | Status | int | 0=禁用 1=启用 |
 | Remark | string?(256) | 备注 |
-| TenantId | long? | 租户（继承） |
 
-索引：`Code` 唯一（租户内）、`Name` 普通索引。
+索引：`Code` 唯一、`Name` 普通索引。
 
 ### 3.2 ReportDataset（数据集）
 
@@ -102,14 +102,13 @@ HD.ReportCenter.Application/
 |---|---|---|
 | Id | long | 主键 |
 | DataSourceId | long | 所属数据源（FK → ReportDataSource） |
-| Code | string(64) | 数据集编码，租户内唯一 |
+| Code | string(64) | 数据集编码，全局唯一 |
 | Name | string(128) | 显示名称 |
 | SqlText | string(Text) | 参数化 SQL，参数用 `@name` 占位，如 `WHERE dept_id = @deptId` |
 | Status | int | 0=禁用 1=启用 |
 | Remark | string?(256) | 备注 |
-| TenantId | long? | 租户（继承） |
 
-约束：`SqlText` 必须为 SELECT 语句（执行前校验，拒绝 INSERT/UPDATE/DELETE/DROP）。索引：`Code` 唯一（租户内）、`DataSourceId` 索引。
+约束：`SqlText` 必须为 SELECT 语句。索引：`Code` 唯一、`DataSourceId` 索引。
 
 ### 3.3 ReportDatasetParameter（数据集 SQL 参数）
 
@@ -124,14 +123,14 @@ HD.ReportCenter.Application/
 | Sort | int | 排序 |
 | Remark | string?(128) | 备注 |
 
-索引：`(DatasetId, Name)` 唯一。继承 `EntityBase`（无租户字段，随父表）。
+索引：`(DatasetId, Name)` 唯一。
 
 ### 3.4 ReportDefinition（报表定义）
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | Id | long | 主键 |
-| Code | string(64) | 报表编码，租户内唯一，如 `dept-workload` |
+| Code | string(64) | 报表编码，全局唯一，如 `dept-workload` |
 | Name | string(128) | 报表名称 |
 | SheetName | string(64) | Sheet 页签名 |
 | DatasetId | long | 绑定的数据集 |
@@ -140,9 +139,8 @@ HD.ReportCenter.Application/
 | ShowExactTotal | bool | 是否显示精确总行数 |
 | Status | int | 0=禁用 1=已发布 |
 | Remark | string?(256) | 备注 |
-| TenantId | long? | 租户（继承） |
 
-索引：`Code` 唯一（租户内）。
+索引：`Code` 唯一。
 
 ### 3.5 ReportParameter（报表查询表单参数）
 
@@ -163,7 +161,7 @@ HD.ReportCenter.Application/
 | SqlForOptions | string?(Text) | SourceType=sql 时取下拉选项的 SQL（返回 value/label 两列） |
 | Sort | int | 排序 |
 
-继承 `EntityBase`。索引：`(ReportId, Code)` 唯一。
+索引：`(ReportId, Code)` 唯一。
 
 ### 3.6 ReportColumn（报表列定义）
 
@@ -181,7 +179,7 @@ HD.ReportCenter.Application/
 | BindField | string?(64) | 绑定数据集返回的字段名（formula 类型可空） |
 | Sort | int | 排序 |
 
-继承 `EntityBase`。索引：`(ReportId, Code)` 唯一。
+索引：`(ReportId, Code)` 唯一。
 
 ### 3.7 关系图
 
@@ -270,6 +268,29 @@ public ISqlSugarClient CreateClient(ReportDataSource dataSource)
 
 在执行前解析，注入到参数字典。
 
+### 4.5 上下文参数透传
+
+报表中心被外部系统（HIS/LIS 等）嵌入时，调用方通过 URL 查询参数或请求体传入上下文信息，这些参数原样透传到数据集 SQL：
+
+```
+外部系统 ──URL/请求体──> ExecuteRequest.Parameters ──BindDatasetParameter映射──> SQL @param
+```
+
+典型上下文参数：
+
+| 参数 | 来源 | 用途 |
+|---|---|---|
+| `hospitalId` | 外部系统 URL | 限定医院范围，透传到 SQL `WHERE hospital_id = @hospitalId` |
+| `deptId` | 外部系统 URL | 限定科室范围 |
+| `userId` | 外部系统 URL / 登录态 | 数据权限/操作人标识 |
+
+配置方式：
+1. 在报表的 `ReportParameter` 中定义该参数，`SourceType = url`，`Visible = true/false`（userId 等可不展示）。
+2. 在 `BindDatasetParameter` 填入数据集 SQL 中对应的 `@paramName`。
+3. 数据集 SQL 用 `@paramName` 占位，如 `SELECT * FROM workload WHERE hospital_id = @hospitalId AND dept_id = @deptId`。
+
+执行时引擎将 `ExecuteRequest.Parameters` 中的值按绑定关系注入 SQL 参数，未传值的参数使用数据集参数的 `DefaultValue`。**这些上下文参数同时也决定了"查询哪个医院/机构的数据"**，替代了多租户隔离的作用。
+
 ## 五、动态执行契约
 
 替代 `PocExecuteRequest`（固定 5 字段）与 `PocExecuteResult`（固定 WorkloadRow）。
@@ -346,13 +367,17 @@ public sealed record DynamicReportDefinition(
 
 导出复用 `PocExcelExporter` 的流式能力，但数据来源改为 `ReportExecutionEngine.EnumerateRows`（全量枚举）。
 
-## 七、安全考量
+## 七、安全策略（前期暂缓）
 
-1. **只读账号**：文档强制要求外部数据源连接使用只读账号，DDL/DML 在执行前被拒绝（SQL 文本校验：仅允许 SELECT；禁止 INSERT/UPDATE/DELETE/DROP/ALTER/TRUNCATE 关键字）。
-2. **SQL 注入防护**：数据集 SQL 一律用 `@param` 占位 + `SugarParameter` 绑定，禁止字符串拼接。用户编写 SQL 时由系统负责参数化，前端只传参数值。
-3. **连接字符串存储**：v1 明文存库（与 Admin.NET 现有 `DbConnectionConfig` 一致），生产环境通过环境变量 `HD_REPORT_CENTER_DB_PASSWORD` 覆盖主库密码。后续可启用 `EnableConnStringEncrypt`。
-4. **权限**：配置管理接口需登录鉴权（不加 `[AllowAnonymous]`，区别于 PoC）。运行时 definition/execute 接口可按嵌入场景决定是否允许匿名（v1 需登录）。
-5. **SQL 执行超时**：`CommandTimeOut` 设为 60 秒，防止恶意慢查询。
+前期为加快开发与调试速度，**暂不引入安全约束**，后续上线前再补齐：
+
+- 不做 SQL 关键字校验（允许任意 SQL，信任编写者）。
+- 不强制只读账号（由部署方自行决定账号权限）。
+- 不做 SQL 执行超时限制。
+- 连接字符串明文存库。
+- 参数化 SQL（`@param` + `SugarParameter`）仍作为**技术机制**保留（防语法错误、正确处理类型），但不作为安全防线宣传。
+
+上线前需补齐：只读账号强制、SQL 安全校验、连接串加密、执行超时、接口鉴权。
 
 ## 八、前端规划
 
@@ -405,7 +430,7 @@ public sealed record DynamicReportDefinition(
 
 - **单元测试**（`HD.ReportCenter.Tests`）：
   - `DataSourceConnectionFactory` 对各 DbType 创建 client。
-  - `ReportExecutionEngine` 参数值转换、默认值函数计算、SQL 安全校验。
+  - `ReportExecutionEngine` 参数值转换、默认值函数计算、上下文参数透传。
   - CRUD 服务的唯一性校验与引用校验。
 - **集成测试**：用 SQLite 内存库作为外部数据源，验证参数化 SQL 执行与分页。
 - **回归**：PoC 链路（`/poc/`）保持可用，作为对照基线。
@@ -415,7 +440,5 @@ public sealed record DynamicReportDefinition(
 | 风险 | 应对 |
 |---|---|
 | 客户端分页在大结果集下内存高 | v1 接受（预览仅分页，大导出走流式枚举）；v2 按 DbType 生成原生分页 SQL |
-| 用户在数据集 SQL 写危险语句 | 执行前关键字校验 + 只读账号双重防护 |
-| 连接字符串明文存储 | 文档要求只读账号；v2 启用 `EnableConnStringEncrypt` |
 | SqlSugar DbType 枚举与实际驱动可用性 | 测试连接方法在配置时即验证，失败不保存 |
-| 多租户数据源隔离 | 实体带 TenantId，租户过滤器自动隔离；跨租户查询需显式忽略 |
+| 前期无安全约束 | 上线前统一补齐（见第七章） |
