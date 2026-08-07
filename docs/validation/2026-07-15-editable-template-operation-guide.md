@@ -159,3 +159,40 @@ Excel 与 Univer 的字段路径、转换方式和尺寸系数保存在单表 `R
 普通导出和大文件导出均写入全部 137 条明细，工作表最后一行为 142，包含 274 个明细公式；最后两个公式为 `E142=C142+D142` 和 `F142=AVERAGE(C142:D142)`。大文件任务实际经历 `Pending -> Completed`，最终进度为 `137/137`。
 
 默认 Full 模式的真实浏览器验证显示“共 137 行”且没有翻页按钮；跳转到工作表第 142 行可见最后一条明细序号 137，公式结果为 `173.00/86.50`。
+
+## 12. SQL Server 验证环境
+
+2026-08-07 已将当前验证用的报表数据库从 SQLite 切换到 SQL Server：
+
+- 服务器：`192.168.2.5:1433`
+- 数据库：`hd_report_center`
+- 排序规则：`Chinese_PRC_CI_AS`
+- 应用账号：`hdhis`
+- 连接使用 `Encrypt=False` 和 `TrustServerCertificate=True`，仅用于本次内网验证环境。
+
+密码不写入 Git、配置文件或命令参数。启动应用前，从本机受控配置读取 `hdhis` 密码并只写入当前进程的 `HD_REPORT_CENTER_DB_PASSWORD` 环境变量。
+
+SQL Server 中的当前验证结果：
+
+- Admin.NET 系统表和插件表共 64 张用户表；
+- `SysUser` 已写入 6 条系统种子用户；
+- `RcReportTemplate` 有 1 条 `dept-workload` 模板，revision 为 8；
+- `RcExchangeMapping` 有 50 条映射规则，`0.25.1 / mappingVersion 1` 启用规则 50 条；
+- 只迁移当前模板，没有迁移旧的操作日志和历史记录。
+
+本次 SQL Server 迁移使用 SQLite 源数据库的 SHA-256 备份和事务写入，迁移后核对了模板 revision、快照长度、绑定长度及 JSON 内容。服务启动后，定义接口和模板接口均返回 HTTP 200，页面显示 `revision 8 / 已保存`。
+
+迁移后的导出验证分为两类：
+
+- 模板导出：生成 `sqlserver-template-export.xlsx`，保留模板 token、公式和样式；
+- 数据导出：按保存的 revision 和查询条件生成 `sqlserver-data-export.xlsx`，本次固定查询共 137 条明细，工作表使用范围为第 1 至 142 行，包含 274 个公式单元格。
+
+当前浏览器页面使用默认日期 `2026-08-01` 至 `2026-08-07` 查询，实际显示 `共 137 行`，符合默认 `Full` 模式：没有分页按钮，编辑器选区范围为 `A6:L142`。固定导出也核对为 137 条明细；两者使用不同日期条件时，应以页面显示的查询条件为准。
+
+### 启动顺序
+
+1. 确认 SQL Server 的 `hd_report_center` 已建库、建表并完成模板迁移。
+2. 当前 PowerShell 进程设置 `HD_REPORT_CENTER_DB_PASSWORD`。
+3. 在 `Admin.NET/Admin.NET.Web.Entry/bin/Release/net8.0` 目录启动后端，监听 `http://127.0.0.1:5007`。
+4. 在 `ReportWeb` 目录启动前端，监听 `http://localhost:5175`。
+5. 打开本说明开头的页面地址，先观察 revision 和保存状态，再点击“数据预览”确认行数。
