@@ -41,13 +41,14 @@
 ```
 HD.ReportCenter.Application/
 ├── Configuration/
-│   ├── Entities/              # 6 个 SqlSugar 实体
+│   ├── Entities/              # 7 个 SqlSugar 实体
 │   │   ├── ReportDataSource.cs
 │   │   ├── ReportDataset.cs
 │   │   ├── ReportDatasetParameter.cs
 │   │   ├── ReportDefinition.cs
 │   │   ├── ReportParameter.cs
-│   │   └── ReportColumn.cs
+│   │   ├── ReportColumn.cs
+│   │   └── ReportPublishedVersion.cs
 │   ├── Dto/                   # 输入/输出 DTO
 │   ├── Services/              # CRUD 服务（IDynamicApiController）
 │   │   ├── ReportDataSourceService.cs
@@ -55,7 +56,8 @@ HD.ReportCenter.Application/
 │   │   └── ReportDesignService.cs
 │   ├── Engine/                # 配置驱动执行引擎
 │   │   ├── ReportExecutionEngine.cs
-│   │   └── DataSourceConnectionFactory.cs
+│   │   ├── DataSourceConnectionFactory.cs
+│   │   └── ReportSnapshotSerializer.cs   # 草稿 <-> 快照 JSON 序列化
 │   └── Contracts/             # 动态执行契约（替代 PocReportContracts）
 │       └── DynamicReportContracts.cs
 ├── CoreValidation/            # 现有 PoC，保留不动
@@ -80,7 +82,7 @@ HD.ReportCenter.Application/
 
 ## 三、数据模型
 
-6 张实体表，全部继承 `EntityBase`（含 Id/CreateTime/UpdateTime/CreateUserId/CreateUserName/UpdateUserId/UpdateUserName），获得审计字段。**不启用多租户**，实体不带 TenantId（详见 2.2 可复制原则）。
+7 张实体表（6 张配置草稿表 + 1 张已发布快照表），全部继承 `EntityBase`（含 Id/CreateTime/UpdateTime/CreateUserId/CreateUserName/UpdateUserId/UpdateUserName），获得审计字段；快照表 `ReportPublishedVersion` 继承 `EntityBaseId`（不可变）。**不启用多租户**，实体不带 TenantId（详见 2.2 可复制原则）。
 
 ### 3.1 ReportDataSource（数据源）
 
@@ -137,10 +139,13 @@ HD.ReportCenter.Application/
 | PreviewMode | string(16) | `Full` / `Paged` |
 | PageSize | int | 分页大小（PreviewMode=Paged 时生效） |
 | ShowExactTotal | bool | 是否显示精确总行数 |
-| Status | int | 0=禁用 1=已发布 |
+| Status | int | 0=禁用 1=启用（控制报表是否可用，与发布版本独立） |
+| PublishedVersion | int | 当前已发布版本号，0=未发布（运行时按此版本读取快照） |
 | Remark | string?(256) | 备注 |
 
 索引：`Code` 唯一。
+
+> 说明：`ReportDefinition` 及其子表（`ReportParameter`/`ReportColumn`）和关联的 `ReportDataset`/`ReportDatasetParameter` 始终代表**草稿/工作副本**，编辑调试直接改这些表。发布时将完整配置序列化为快照写入 `ReportPublishedVersion`，运行时只读快照，编辑不影响已发布版本。
 
 ### 3.5 ReportParameter（报表查询表单参数）
 
@@ -181,7 +186,43 @@ HD.ReportCenter.Application/
 
 索引：`(ReportId, Code)` 唯一。
 
-### 3.7 关系图
+### 3.7 ReportPublishedVersion（已发布版本快照）
+
+存储发布时的完整报表配置快照（不可变），运行时从此表读取。
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| Id | long | 主键 |
+| ReportId | long | 所属报表 |
+| Version | int | 版本号，从 1 递增 |
+| Snapshot | string(Text) | 完整配置的 JSON 快照（含数据源连接信息、数据集 SQL、参数、列定义） |
+| PublishedTime | DateTime | 发布时间 |
+| PublishedUserId | long? | 发布人 Id |
+| PublishedUserName | string?(64) | 发布人姓名 |
+| Remark | string?(256) | 发布备注 |
+
+索引：`(ReportId, Version)` 唯一、`ReportId` 索引。继承 `EntityBaseId`（快照不可变，无需审计更新字段）。
+
+快照 JSON 结构：
+
+```json
+{
+  "reportCode": "dept-workload",
+  "reportName": "科室工作量统计",
+  "sheetName": "科室工作量",
+  "previewMode": "Paged",
+  "pageSize": 20,
+  "showExactTotal": false,
+  "dataSource": { "code": "his-readonly", "dbType": "SqlServer", "connectionString": "..." },
+  "dataset": { "code": "...", "sqlText": "SELECT ... WHERE dept_id = @deptId", "parameters": [...] },
+  "reportParameters": [...],
+  "columns": [...]
+}
+```
+
+> 快照内联了数据源连接信息，使已发布版本完全自包含、不可变。即便草稿修改了数据源连接，已发布版本仍用发布时的连接执行。
+
+### 3.8 关系图
 
 ```
 ReportDataSource 1 ──── N ReportDataset 1 ──── N ReportDatasetParameter
@@ -192,7 +233,9 @@ ReportDefinition  N ──── 1 ReportDataset             │
        │ 1                                          │
        ├── N ReportParameter ──── BindDatasetParameter ┘
        │
-       └── N ReportColumn
+       ├── N ReportColumn
+       │
+       └── N ReportPublishedVersion（快照，运行时只读最新版本）
 ```
 
 ## 四、执行引擎
@@ -231,14 +274,17 @@ public ISqlSugarClient CreateClient(ReportDataSource dataSource)
 
 **GetFieldSchema(datasetId)**：执行 `WHERE 1=0` 形式的 SQL（或 limit 1）获取列元数据（列名、类型）。
 
-**Execute(reportCode, DynamicExecuteRequest)**：
-1. 按 reportCode 加载 `ReportDefinition` + 数据集 + 数据集参数 + 报表参数 + 列定义。
-2. 将 `request.Parameters`（前端传入的 name→value 字典）按 `ReportParameter.BindDatasetParameter` 映射到数据集 SQL 参数。
-3. 应用各参数默认值（SourceType=default-function 的计算 `month-start`/`today` 等）。
-4. 构建参数化 SQL 的分页：v1 采用**客户端分页**（执行全量后内存分页），规避不同数据库分页语法差异；大文件导出走流式枚举全量。
-5. 构建 `SugarParameter[]`，执行 SQL 得到 `DataTable`。
-6. 按 `ReportColumn.BindField` 将每行映射为 `Dictionary<string, object?>`。
-7. 返回 `DynamicExecuteResult`（含 page/pageSize/hasMore/parameters/rows）。
+**Execute(reportCode, DynamicExecuteRequest)**（运行时，读已发布快照）：
+1. 按 reportCode 查 `ReportDefinition.PublishedVersion`，从 `ReportPublishedVersion` 加载该版本快照并反序列化。
+2. 若 PublishedVersion=0（未发布），抛出"报表未发布"异常。
+3. 将 `request.Parameters`（前端传入的 name->value 字典）按快照内 `reportParameters.BindDatasetParameter` 映射到数据集 SQL 参数。
+4. 应用各参数默认值（SourceType=default-function 的计算 `month-start`/`today` 等）。
+5. 构建参数化 SQL 的分页：v1 采用**客户端分页**（执行全量后内存分页），规避不同数据库分页语法差异；大文件导出走流式枚举全量。
+6. 用快照内的数据源连接信息创建 `ISqlSugarClient`，构建 `SugarParameter[]`，执行 SQL 得到 `DataTable`。
+7. 按快照内 `columns.BindField` 将每行映射为 `Dictionary<string, object?>`。
+8. 返回 `DynamicExecuteResult`（含 page/pageSize/hasMore/parameters/rows）。
+
+> 运行时（definition/execute/export）一律读已发布快照，与草稿表完全隔离。管理端预览（PreviewDataset/PreviewReport）读草稿表，供编辑调试用。
 
 ### 4.3 参数值转换
 
@@ -290,6 +336,36 @@ public ISqlSugarClient CreateClient(ReportDataSource dataSource)
 3. 数据集 SQL 用 `@paramName` 占位，如 `SELECT * FROM workload WHERE hospital_id = @hospitalId AND dept_id = @deptId`。
 
 执行时引擎将 `ExecuteRequest.Parameters` 中的值按绑定关系注入 SQL 参数，未传值的参数使用数据集参数的 `DefaultValue`。**这些上下文参数同时也决定了"查询哪个医院/机构的数据"**，替代了多租户隔离的作用。
+
+### 4.6 草稿与发布版本机制
+
+解决"调试期间不能耽误线上使用"的核心需求：编辑调试改草稿，线上运行读已发布快照，两者完全隔离。
+
+**两套数据源**：
+
+| 用途 | 数据来源 | 操作 |
+|---|---|---|
+| 管理端编辑/预览/调试 | 草稿表（ReportDefinition/ReportParameter/ReportColumn/ReportDataset/ReportDatasetParameter） | 直接增删改查 |
+| 运行时 definition/execute/export | ReportPublishedVersion 快照（只读最新已发布版本） | 不可变 |
+
+**发布流程（Publish）**：
+1. 读取当前草稿的完整配置：报表定义 + 数据集（含 SQL、参数）+ 报表参数 + 列定义 + 数据源连接信息。
+2. 序列化为 JSON 快照。
+3. 写入 `ReportPublishedVersion`，Version = 当前最大版本 + 1。
+4. 更新 `ReportDefinition.PublishedVersion` 指向新版本。
+5. 原快照保留，可回滚。
+
+**回滚（Rollback）**：将 `ReportDefinition.PublishedVersion` 设为历史版本号，运行时立即切换到该版本，无需改草稿。
+
+**版本历史（GetVersions）**：返回某报表的全部已发布版本列表（版本号、发布时间、发布人、备注），供回滚选择。
+
+**草稿预览（PreviewReport）**：管理端用草稿配置执行预览（不走快照），用于发布前验证。这与 `PreviewDataset`（数据集级预览）互补，`PreviewReport` 是报表级预览（含参数表单 + 列渲染）。
+
+**典型场景**：
+- 报表 A 已发布 v3，线上正常运行。
+- 发现 SQL 有问题，在草稿修改 SQL 并用 PreviewReport 调试验证（线上仍跑 v3，不受影响）。
+- 验证通过后 Publish 生成 v4，线上切换到 v4。
+- 若 v4 有问题，Rollback 回 v3，秒级恢复。
 
 ## 五、动态执行契约
 
@@ -350,22 +426,27 @@ public sealed record DynamicReportDefinition(
 |---|---|
 | Page | 分页查询 |
 | Add/Update/Delete | CRUD |
-| Detail | 详情含参数+列定义（管理端用） |
+| Detail | 详情含参数+列定义（管理端用，读草稿） |
 | SaveParameters | 批量保存报表查询参数 |
 | SaveColumns | 批量保存列定义 |
-| Publish | 设为已发布（Status=1） |
+| PreviewReport | 草稿预览执行（读草稿表，不走快照，用于发布前验证） |
+| Publish | 发布：将当前草稿序列化为快照写入 ReportPublishedVersion，更新 PublishedVersion |
+| GetVersions | 版本历史列表（版本号/发布时间/发布人/备注） |
+| Rollback | 回滚到指定历史版本（仅更新 PublishedVersion 指向，不改草稿） |
 
 ### 6.4 配置驱动执行 `ReportExecutionApi`
 
 | 路由 | 说明 |
 |---|---|
-| GET `/api/report-center/reports/{reportCode}/definition` | 返回 DynamicReportDefinition |
-| POST `/api/report-center/reports/{reportCode}/execute` | 执行查询 |
-| POST `/api/report-center/reports/{reportCode}/exports/normal` | 普通导出 |
-| POST `/api/report-center/reports/{reportCode}/exports/large` | 大文件导出任务 |
+| GET `/api/report-center/reports/{reportCode}/definition` | 返回 DynamicReportDefinition（读已发布快照） |
+| POST `/api/report-center/reports/{reportCode}/execute` | 执行查询（读已发布快照） |
+| POST `/api/report-center/reports/{reportCode}/exports/normal` | 普通导出（读已发布快照） |
+| POST `/api/report-center/reports/{reportCode}/exports/large` | 大文件导出任务（读已发布快照） |
 | GET/POST `/api/report-center/export-jobs/{jobNo}...` | 复用现有 PoC 任务管理 |
 
-导出复用 `PocExcelExporter` 的流式能力，但数据来源改为 `ReportExecutionEngine.EnumerateRows`（全量枚举）。
+> 所有运行时接口均读 `ReportPublishedVersion` 快照，与草稿表隔离。未发布的报表（PublishedVersion=0）返回"报表未发布"。
+
+导出复用 `PocExcelExporter` 的流式能力，但数据来源改为 `ReportExecutionEngine.EnumerateRows`（从快照全量枚举）。
 
 ## 七、安全策略（前期暂缓）
 
@@ -406,9 +487,10 @@ public sealed record DynamicReportDefinition(
 
 1. **数据源**：种子 `lis_admin`（Admin.NET 主库），供数据集查询。
 2. **数据集**：种子 `dept-workload-dataset`，SQL 暂用一段返回 Mock 行的 SQL（或查真实表，待业务确认）。参数：`hospitalId/deptId/personId/startDate/endDate`。
-3. **报表定义**：种子 `dept-workload`，PreviewMode=Paged, PageSize=20。
+3. **报表定义**：种子 `dept-workload`，PreviewMode=Paged, PageSize=20, PublishedVersion=1。
 4. **报表参数**：种子 5 个参数（与现有 `GetDefinition()` 一致）。
 5. **列定义**：种子 6 列（含公式模板）。
+6. **已发布快照**：种子一条 `ReportPublishedVersion`（Version=1），序列化上述完整配置，使运行时立即可用。
 
 种子数据通过 SqlSugar 的 `SeedData` 机制或初始化 SQL 提供。
 
@@ -418,21 +500,23 @@ public sealed record DynamicReportDefinition(
 |---|---|---|
 | 1 | 数据源管理：实体 + CRUD + 测试连接 | 可配置/测试数据库连接 |
 | 2 | 数据集管理：实体 + CRUD + 参数 + 预览 + 字段结构 | 可编写/预览参数化 SQL |
-| 3 | 报表定义管理：实体 + CRUD + 参数绑定 + 列绑定 | 可定义报表结构与查询表单 |
-| 4 | 配置驱动执行引擎：definition/execute/export | 配置驱动的查询/导出链路 |
-| 5 | 种子数据迁移 dept-workload | 配置链路复现 PoC |
-| 6 | 前端管理页面（Vue）：数据源/数据集/报表设计 | 可视化配置 |
-| 7 | ReportWeb 运行时切换到配置链路 | 端到端验证 |
+| 3 | 报表定义管理：实体 + CRUD + 参数绑定 + 列绑定 + 草稿预览 | 可定义报表结构与查询表单 |
+| 4 | 发布版本机制：ReportPublishedVersion + Publish/Rollback/GetVersions + 快照序列化 | 草稿/发布隔离，可回滚 |
+| 5 | 配置驱动执行引擎：definition/execute/export（读已发布快照） | 配置驱动的查询/导出链路 |
+| 6 | 种子数据迁移 dept-workload（含初始发布快照） | 配置链路复现 PoC |
+| 7 | 前端管理页面（Vue）：数据源/数据集/报表设计/版本管理 | 可视化配置 |
+| 8 | ReportWeb 运行时切换到配置链路 | 端到端验证 |
 
-阶段 1-4 为后端核心，阶段 5 验证，阶段 6-7 为前端。各阶段可独立提交、独立测试。
+阶段 1-5 为后端核心，阶段 6 验证，阶段 7-8 为前端。各阶段可独立提交、独立测试。
 
 ## 十一、测试策略
 
 - **单元测试**（`HD.ReportCenter.Tests`）：
   - `DataSourceConnectionFactory` 对各 DbType 创建 client。
   - `ReportExecutionEngine` 参数值转换、默认值函数计算、上下文参数透传。
+  - 发布快照序列化/反序列化一致性（草稿 -> 快照 -> 反序列化 -> 与草稿字段一致）。
   - CRUD 服务的唯一性校验与引用校验。
-- **集成测试**：用 SQLite 内存库作为外部数据源，验证参数化 SQL 执行与分页。
+- **集成测试**：用 SQLite 内存库作为外部数据源，验证参数化 SQL 执行与分页；验证发布后编辑草稿不影响运行时读快照。
 - **回归**：PoC 链路（`/poc/`）保持可用，作为对照基线。
 
 ## 十二、风险与取舍
