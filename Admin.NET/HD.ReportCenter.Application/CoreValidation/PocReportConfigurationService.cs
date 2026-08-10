@@ -1,5 +1,4 @@
 using HD.ReportCenter.ReportEngine.CoreValidation;
-using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
 
 namespace HD.ReportCenter.Application.CoreValidation;
@@ -15,7 +14,8 @@ public sealed record PocDataSourceDocument(
     bool PasswordConfigured,
     int TimeoutSeconds,
     int MaxRows,
-    bool Enabled);
+    bool Enabled,
+    int Revision);
 
 public sealed record PocDataSourceInput(
     string Code,
@@ -28,15 +28,27 @@ public sealed record PocDataSourceInput(
     string? Password,
     int TimeoutSeconds,
     int MaxRows,
-    bool Enabled);
+    bool Enabled,
+    int Revision);
 
 public sealed record PocDatasetDocument(
     string Code,
     string Name,
     string DataSourceCode,
     string QueryText,
+    IReadOnlyList<string> ParameterCodes,
+    IReadOnlyList<PocColumnDefinition> Columns,
     int TimeoutSeconds,
     int MaxRows,
+    bool Enabled,
+    int Revision);
+
+public sealed record PocDatasetOption(
+    string Code,
+    string Name,
+    string DataSourceCode,
+    IReadOnlyList<string> ParameterCodes,
+    IReadOnlyList<PocColumnDefinition> Columns,
     bool Enabled);
 
 public sealed record PocReportConfigurationDocument(
@@ -45,8 +57,8 @@ public sealed record PocReportConfigurationDocument(
     string SheetName,
     PocPreviewSettings Preview,
     PocExportSettings Export,
-    PocDataSourceDocument DataSource,
-    PocDatasetDocument Dataset,
+    string DatasetCode,
+    IReadOnlyList<PocDatasetOption> Datasets,
     IReadOnlyList<PocParameterDefinition> Parameters,
     IReadOnlyList<PocColumnDefinition> Columns,
     int Revision);
@@ -56,10 +68,8 @@ public sealed record PocSaveReportConfigurationRequest(
     string SheetName,
     PocPreviewSettings Preview,
     PocExportSettings Export,
-    PocDataSourceInput DataSource,
-    PocDatasetDocument Dataset,
+    string DatasetCode,
     IReadOnlyList<PocParameterDefinition> Parameters,
-    IReadOnlyList<PocColumnDefinition> Columns,
     int Revision);
 
 public sealed record PocDataSourceTestResult(
@@ -91,18 +101,17 @@ public sealed class PocReportConfigurationService : ITransient
     private static readonly HashSet<string> ParameterControlTypes = new(
         ["text", "number", "date", "checkbox", "hidden"],
         StringComparer.OrdinalIgnoreCase);
-    private static readonly HashSet<string> ColumnDataTypes = new(
-        ["string", "text", "number", "int", "long", "decimal", "date", "datetime", "bool", "boolean", "formula"],
-        StringComparer.OrdinalIgnoreCase);
-
     private readonly PocReportConfigurationStore _store;
+    private readonly PocDataAssetStore _dataAssets;
     private readonly ISqlSugarClient _database;
 
     public PocReportConfigurationService(
         PocReportConfigurationStore store,
+        PocDataAssetStore dataAssets,
         ISqlSugarClient database)
     {
         _store = store;
+        _dataAssets = dataAssets;
         _database = database;
     }
 
@@ -112,9 +121,10 @@ public sealed class PocReportConfigurationService : ITransient
     {
         EnsureReportCode(reportCode);
         var stored = await _store.GetAsync(PocReportCatalog.ReportCode);
+        var datasets = await _dataAssets.ListDatasetsAsync();
         return stored is null
-            ? CreateFallbackDocument(now)
-            : CreateDocument(stored, now);
+            ? CreateFallbackDocument(now, datasets)
+            : CreateDocument(stored, datasets, now);
     }
 
     public async Task<PocReportDefinition> GetDefinitionAsync(
@@ -144,7 +154,13 @@ public sealed class PocReportConfigurationService : ITransient
                 true);
         }
 
-        var document = CreateDocument(stored, now);
+        if (!stored.Dataset.IsEnabled || !stored.DataSource.IsEnabled)
+        {
+            throw new PocDatasetConfigurationException(
+                "DATA_ASSET_DISABLED",
+                "报表引用的数据集或数据源已停用。");
+        }
+        var document = CreateDocument(stored, [stored.Dataset], now);
         return new PocRuntimeReportConfiguration(
             ToDefinition(document),
             stored.DataSource.Code,
@@ -164,10 +180,22 @@ public sealed class PocReportConfigurationService : ITransient
         EnsureReportCode(reportCode);
         ValidateRequest(request);
 
-        var stored = await _store.GetAsync(PocReportCatalog.ReportCode);
-        var connectionString = BuildConnectionString(request.DataSource, stored?.DataSource);
+        var dataset = await _dataAssets.GetDatasetAsync(request.DatasetCode.Trim())
+            ?? throw new PocDatasetConfigurationException(
+                "DATASET_NOT_FOUND",
+                $"不存在数据集 '{request.DatasetCode}'。");
+        var dataSource = await _dataAssets.GetDataSourceAsync(dataset.DataSourceCode)
+            ?? throw new PocDatasetConfigurationException(
+                "DATA_SOURCE_NOT_FOUND",
+                $"数据集引用的数据源 '{dataset.DataSourceCode}' 不存在。");
+        if (!dataset.IsEnabled || !dataSource.IsEnabled)
+        {
+            throw new PocDatasetConfigurationException(
+                "DATA_ASSET_DISABLED",
+                "只能选择已启用且数据源可用的数据集。");
+        }
         _ = PocReadOnlySqlValidator.Validate(
-            request.Dataset.QueryText,
+            dataset.QueryText,
             request.Parameters.Select(item => item.Code),
             request.Preview.Mode);
 
@@ -195,75 +223,47 @@ public sealed class PocReportConfigurationService : ITransient
             request.SheetName.Trim(),
             JsonConvert.SerializeObject(request.Preview, Formatting.None),
             JsonConvert.SerializeObject(request.Export, Formatting.None),
-            request.DataSource.Code.Trim(),
-            request.DataSource.Name.Trim(),
-            "SqlServer",
-            connectionString,
-            request.DataSource.TimeoutSeconds,
-            request.DataSource.MaxRows,
-            request.Dataset.Code.Trim(),
-            request.Dataset.Name.Trim(),
-            request.Dataset.QueryText.Trim(),
-            JsonConvert.SerializeObject(request.Columns, Formatting.None),
-            request.Dataset.TimeoutSeconds,
-            request.Dataset.MaxRows,
+            dataset.Code,
             parameterEntities,
             request.Revision));
 
         return await GetDocumentAsync(reportCode);
     }
 
-    public async Task<PocDataSourceTestResult> TestDataSourceAsync(
-        string reportCode,
-        PocDataSourceInput input,
-        CancellationToken cancellationToken = default)
-    {
-        EnsureReportCode(reportCode);
-        ValidateDataSource(input);
-        var stored = await _store.GetAsync(PocReportCatalog.ReportCode);
-        var connectionString = BuildConnectionString(input, stored?.DataSource);
-        var started = System.Diagnostics.Stopwatch.StartNew();
-        await using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync(cancellationToken);
-        started.Stop();
-        return new PocDataSourceTestResult(
-            true,
-            started.ElapsedMilliseconds,
-            connection.ServerVersion);
-    }
-
-    private PocReportConfigurationDocument CreateFallbackDocument(DateTimeOffset? now)
+    private PocReportConfigurationDocument CreateFallbackDocument(
+        DateTimeOffset? now,
+        IReadOnlyList<PocReportDataset> storedDatasets)
     {
         var definition = PocReportCatalog.GetDefinition(now);
-        var builder = ParseConnectionString(_database.CurrentConnectionConfig.ConnectionString);
+        var options = storedDatasets.Count == 0
+            ? [new PocDatasetOption(
+                DefaultDatasetCode,
+                "科室工作量明细",
+                DefaultDataSourceCode,
+                ["deptId"],
+                definition.Columns,
+                true)]
+            : storedDatasets.Select(ToDatasetOption).ToArray();
+        var selected = options.FirstOrDefault(item =>
+                item.Code.Equals(DefaultDatasetCode, StringComparison.OrdinalIgnoreCase))
+            ?? options.FirstOrDefault(item => item.Enabled)
+            ?? options[0];
         return new PocReportConfigurationDocument(
             definition.Code,
             definition.Name,
             definition.SheetName,
             definition.Preview,
             definition.Export,
-            ToDataSourceDocument(
-                DefaultDataSourceCode,
-                "报表中心 SQL Server",
-                builder,
-                30,
-                20_000,
-                true),
-            new PocDatasetDocument(
-                DefaultDatasetCode,
-                "科室工作量明细",
-                DefaultDataSourceCode,
-                FallbackQueryText,
-                30,
-                20_000,
-                true),
+            selected.Code,
+            options,
             definition.Parameters,
-            definition.Columns,
+            selected.Columns,
             0);
     }
 
     private static PocReportConfigurationDocument CreateDocument(
         PocStoredReportConfiguration stored,
+        IReadOnlyList<PocReportDataset> datasets,
         DateTimeOffset? now)
     {
         var preview = Deserialize<PocPreviewSettings>(stored.Report.PreviewSettingsJson);
@@ -290,29 +290,14 @@ public sealed class PocReportConfigurationService : ITransient
                 parameter.AllowUrlPrefill,
                 parameter.UrlKey);
         }).ToArray();
-        var builder = ParseConnectionString(stored.DataSource.ConnectionString);
-
         return new PocReportConfigurationDocument(
             stored.Report.Code,
             stored.Report.Name,
             stored.Report.SheetName,
             preview,
             export,
-            ToDataSourceDocument(
-                stored.DataSource.Code,
-                stored.DataSource.Name,
-                builder,
-                stored.DataSource.DefaultTimeoutSeconds,
-                stored.DataSource.DefaultMaxRows,
-                stored.DataSource.IsEnabled),
-            new PocDatasetDocument(
-                stored.Dataset.Code,
-                stored.Dataset.Name,
-                stored.Dataset.DataSourceCode,
-                stored.Dataset.QueryText,
-                stored.Dataset.TimeoutSeconds,
-                stored.Dataset.MaxRows,
-                stored.Dataset.IsEnabled),
+            stored.Report.DatasetCode,
+            datasets.Select(ToDatasetOption).ToArray(),
             parameters,
             columns,
             stored.Report.Revision);
@@ -328,68 +313,14 @@ public sealed class PocReportConfigurationService : ITransient
             document.Parameters,
             document.Columns);
 
-    private string BuildConnectionString(PocDataSourceInput input, PocDataSource? stored)
-    {
-        var baseConnectionString = stored is not null &&
-            stored.Code.Equals(input.Code, StringComparison.OrdinalIgnoreCase)
-                ? stored.ConnectionString
-                : _database.CurrentConnectionConfig.ConnectionString;
-        var existing = ParseConnectionString(baseConnectionString);
-        var password = NullIfWhiteSpace(input.Password);
-        if (password is null)
-        {
-            var existingEndpoint = ParseDataSource(existing.DataSource);
-            var canReusePassword =
-                existingEndpoint.Server.Equals(input.Server.Trim(), StringComparison.OrdinalIgnoreCase) &&
-                existingEndpoint.Port == input.Port &&
-                existing.InitialCatalog.Equals(input.Database, StringComparison.OrdinalIgnoreCase) &&
-                existing.UserID.Equals(input.UserName, StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(existing.Password);
-            if (!canReusePassword)
-            {
-                throw new PocDatasetConfigurationException(
-                    "DATA_SOURCE_PASSWORD_REQUIRED",
-                    "新数据源或连接信息变化时必须提供密码。");
-            }
-            password = existing.Password;
-        }
-
-        var builder = new SqlConnectionStringBuilder
-        {
-            DataSource = FormatDataSource(input.Server.Trim(), input.Port),
-            InitialCatalog = input.Database.Trim(),
-            UserID = input.UserName.Trim(),
-            Password = password,
-            Encrypt = false,
-            TrustServerCertificate = true,
-            ConnectTimeout = Math.Clamp(input.TimeoutSeconds, 1, 120),
-            ApplicationName = "hd-report-center-runtime"
-        };
-        return builder.ConnectionString;
-    }
-
-    private static PocDataSourceDocument ToDataSourceDocument(
-        string code,
-        string name,
-        SqlConnectionStringBuilder builder,
-        int timeoutSeconds,
-        int maxRows,
-        bool enabled)
-    {
-        var (server, port) = ParseDataSource(builder.DataSource);
-        return new PocDataSourceDocument(
-            code,
-            name,
-            "SqlServer",
-            server,
-            port,
-            builder.InitialCatalog,
-            builder.UserID,
-            !string.IsNullOrWhiteSpace(builder.Password),
-            timeoutSeconds,
-            maxRows,
-            enabled);
-    }
+    private static PocDatasetOption ToDatasetOption(PocReportDataset dataset) =>
+        new(
+            dataset.Code,
+            dataset.Name,
+            dataset.DataSourceCode,
+            PocDataAssetService.ExtractParameterCodes(dataset.QueryText),
+            Deserialize<PocColumnDefinition[]>(dataset.FieldSchemaJson),
+            dataset.IsEnabled);
 
     private static void ValidateRequest(PocSaveReportConfigurationRequest request)
     {
@@ -403,10 +334,9 @@ public sealed class PocReportConfigurationService : ITransient
         }
         if (!Enum.IsDefined(request.Preview.Mode) ||
             request.Preview.PageSize is < 1 or > 10_000 ||
-            request.Parameters.Count > 100 ||
-            request.Columns.Count is 0 or > 256)
+            request.Parameters.Count > 100)
         {
-            throw new PocDatasetConfigurationException("REPORT_DEFINITION_INVALID", "预览页大小或字段定义无效。");
+            throw new PocDatasetConfigurationException("REPORT_DEFINITION_INVALID", "预览页大小无效。");
         }
         if (!Enum.IsDefined(request.Export.DefaultMode) ||
             request.Export.NormalMaxRows is < 1 or > 1_000_000 ||
@@ -418,18 +348,7 @@ public sealed class PocReportConfigurationService : ITransient
         {
             throw new PocDatasetConfigurationException("REPORT_DEFINITION_INVALID", "导出设置无效。");
         }
-        ValidateDataSource(request.DataSource);
-        ValidateCode(request.Dataset.Code, "DATASET_DEFINITION_INVALID");
-        if (!request.Dataset.DataSourceCode.Equals(request.DataSource.Code, StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(request.Dataset.Name) ||
-            request.Dataset.Name.Length > 128 ||
-            string.IsNullOrWhiteSpace(request.Dataset.QueryText) ||
-            request.Dataset.QueryText.Length > 200_000 ||
-            request.Dataset.TimeoutSeconds is < 1 or > 600 ||
-            request.Dataset.MaxRows is < 1 or > 1_000_000)
-        {
-            throw new PocDatasetConfigurationException("DATASET_DEFINITION_INVALID", "主数据集配置无效。");
-        }
+        ValidateCode(request.DatasetCode, "DATASET_DEFINITION_INVALID");
 
         var parameterCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var parameter in request.Parameters)
@@ -460,55 +379,6 @@ public sealed class PocReportConfigurationService : ITransient
             _ = PocDefaultExpressionEvaluator.Evaluate(parameter.DefaultExpression, parameter.DataType);
         }
 
-        var columnCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var column in request.Columns)
-        {
-            ValidateCode(column.Code, "DATASET_FIELD_INVALID");
-            if (!columnCodes.Add(column.Code))
-            {
-                throw new PocDatasetConfigurationException("DATASET_FIELD_INVALID", $"字段编码 '{column.Code}' 重复。");
-            }
-            var isFormula = column.DataType.Equals("formula", StringComparison.OrdinalIgnoreCase);
-            if (string.IsNullOrWhiteSpace(column.Header) ||
-                column.Header.Length > 128 ||
-                !ColumnDataTypes.Contains(column.DataType) ||
-                column.Width is < 40 or > 500 ||
-                (isFormula &&
-                 (string.IsNullOrWhiteSpace(column.FormulaTemplate) ||
-                  column.FormulaTemplate.Length > 1_024 ||
-                  !column.FormulaTemplate.TrimStart().StartsWith('=') )) ||
-                (!isFormula && !string.IsNullOrWhiteSpace(column.FormulaTemplate)))
-            {
-                throw new PocDatasetConfigurationException("DATASET_FIELD_INVALID", $"字段 '{column.Code}' 的定义无效。");
-            }
-        }
-        if (request.Columns.All(column =>
-                column.DataType.Equals("formula", StringComparison.OrdinalIgnoreCase)))
-        {
-            throw new PocDatasetConfigurationException("DATASET_FIELD_INVALID", "至少需要一个来自数据集的普通字段。");
-        }
-    }
-
-    private static void ValidateDataSource(PocDataSourceInput input)
-    {
-        ArgumentNullException.ThrowIfNull(input);
-        ValidateCode(input.Code, "DATA_SOURCE_INVALID");
-        if (!input.DbType.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(input.Name) ||
-            input.Name.Length > 128 ||
-            string.IsNullOrWhiteSpace(input.Server) ||
-            input.Server.Length > 256 ||
-            string.IsNullOrWhiteSpace(input.Database) ||
-            input.Database.Length > 128 ||
-            string.IsNullOrWhiteSpace(input.UserName) ||
-            input.UserName.Length > 128 ||
-            (input.Password?.Length ?? 0) > 1_024 ||
-            input.Port is < 1 or > 65_535 ||
-            input.TimeoutSeconds is < 1 or > 600 ||
-            input.MaxRows is < 1 or > 1_000_000)
-        {
-            throw new PocDatasetConfigurationException("DATA_SOURCE_INVALID", "SQL Server 数据源配置无效。");
-        }
     }
 
     private static void ValidateCode(string code, string errorCode)
@@ -526,28 +396,6 @@ public sealed class PocReportConfigurationService : ITransient
     private static T Deserialize<T>(string json) =>
         JsonConvert.DeserializeObject<T>(json)
         ?? throw new InvalidDataException($"Stored configuration JSON '{typeof(T).Name}' is null.");
-
-    private static SqlConnectionStringBuilder ParseConnectionString(string connectionString)
-    {
-        try
-        {
-            return new SqlConnectionStringBuilder(connectionString);
-        }
-        catch (ArgumentException exception)
-        {
-            throw new PocDatasetConfigurationException("DATA_SOURCE_INVALID", exception.Message);
-        }
-    }
-
-    private static (string Server, int Port) ParseDataSource(string dataSource)
-    {
-        var parts = dataSource.Split(',', 2, StringSplitOptions.TrimEntries);
-        return (
-            parts[0],
-            parts.Length == 2 && int.TryParse(parts[1], out var port) ? port : 1433);
-    }
-
-    private static string FormatDataSource(string server, int port) => $"{server.Trim()},{port}";
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

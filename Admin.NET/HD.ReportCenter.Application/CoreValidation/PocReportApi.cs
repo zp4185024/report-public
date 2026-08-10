@@ -30,6 +30,7 @@ public sealed class PocReportApi : IDynamicApiController
     private readonly PocTemplateExchangeService _templateExchangeService;
     private readonly PocTemplateDataExportService _templateDataExportService;
     private readonly PocReportConfigurationService? _configurationService;
+    private readonly PocDataAssetService? _dataAssetService;
     private readonly PocSqlDatasetExecutor? _datasetExecutor;
     private readonly PocTemplateDataExporter _templateDataExporter = new();
 
@@ -38,13 +39,15 @@ public sealed class PocReportApi : IDynamicApiController
         PocTemplateExchangeService templateExchangeService,
         PocTemplateDataExportService templateDataExportService,
         PocReportConfigurationService? configurationService = null,
-        PocSqlDatasetExecutor? datasetExecutor = null)
+        PocSqlDatasetExecutor? datasetExecutor = null,
+        PocDataAssetService? dataAssetService = null)
     {
         _templateService = templateService;
         _templateExchangeService = templateExchangeService;
         _templateDataExportService = templateDataExportService;
         _configurationService = configurationService;
         _datasetExecutor = datasetExecutor;
+        _dataAssetService = dataAssetService;
     }
 
     /// <summary>读取数据库模板；未保存过时由服务层返回 revision 0 的种子模板。</summary>
@@ -133,7 +136,7 @@ public sealed class PocReportApi : IDynamicApiController
             () => _datasetExecutor.ExecuteAsync(reportCode, request, cancellationToken));
     }
 
-    /// <summary>读取可编辑的参数、主数据集和脱敏数据源配置。</summary>
+    /// <summary>读取报表自身配置和可选择的全局数据集。</summary>
     [SuppressMonitor]
     [HttpGet("/api/report-center/poc/{reportCode}/configuration")]
     public async Task<PocReportConfigurationDocument> Configuration(
@@ -143,7 +146,7 @@ public sealed class PocReportApi : IDynamicApiController
         return await RequireConfigurationService().GetDocumentAsync(reportCode);
     }
 
-    /// <summary>原子保存报表定义、数据源、主数据集和参数配置。</summary>
+    /// <summary>原子保存报表定义、数据集引用和报表参数。</summary>
     [SuppressMonitor]
     [HttpPut("/api/report-center/poc/{reportCode}/configuration")]
     public async Task<PocReportConfigurationDocument> SaveConfiguration(
@@ -155,21 +158,44 @@ public sealed class PocReportApi : IDynamicApiController
             () => RequireConfigurationService().SaveAsync(reportCode, request));
     }
 
+    /// <summary>读取全部脱敏数据源。</summary>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/data-sources")]
+    public async Task<IReadOnlyList<PocDataSourceDocument>> DataSources() =>
+        await RequireDataAssetService().ListDataSourcesAsync();
+
+    /// <summary>新增或更新一个全局数据源。</summary>
+    [SuppressMonitor]
+    [HttpPut("/api/report-center/poc/data-sources/{code}")]
+    public async Task<PocDataSourceDocument> SaveDataSource(
+        [FromRoute] string code,
+        [FromBody] PocDataSourceInput request) =>
+        await HandleConfigurationOperation(
+            () => RequireDataAssetService().SaveDataSourceAsync(code, request));
+
     /// <summary>测试 SQL Server 连接；响应不包含连接串和密码。</summary>
     [SuppressMonitor]
-    [HttpPost("/api/report-center/poc/{reportCode}/configuration/test-data-source")]
+    [HttpPost("/api/report-center/poc/data-sources/test")]
     public async Task<PocDataSourceTestResult> TestDataSource(
-        [FromRoute] string reportCode,
         [FromBody] PocDataSourceInput request,
-        CancellationToken cancellationToken)
-    {
-        EnsureReportExists(reportCode);
-        return await HandleConfigurationOperation(
-            () => RequireConfigurationService().TestDataSourceAsync(
-                reportCode,
-                request,
-                cancellationToken));
-    }
+        CancellationToken cancellationToken) =>
+        await HandleConfigurationOperation(
+            () => RequireDataAssetService().TestDataSourceAsync(request, cancellationToken));
+
+    /// <summary>读取全部全局数据集及其字段契约。</summary>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/datasets")]
+    public async Task<IReadOnlyList<PocDatasetDocument>> Datasets() =>
+        await RequireDataAssetService().ListDatasetsAsync();
+
+    /// <summary>新增或更新一个全局数据集。</summary>
+    [SuppressMonitor]
+    [HttpPut("/api/report-center/poc/datasets/{code}")]
+    public async Task<PocDatasetDocument> SaveDataset(
+        [FromRoute] string code,
+        [FromBody] PocDatasetDocument request) =>
+        await HandleConfigurationOperation(
+            () => RequireDataAssetService().SaveDatasetAsync(code, request));
 
     /// <summary>使用数据库中指定 revision 的模板生成普通体量全量数据 Excel。</summary>
     [SuppressMonitor]
@@ -358,6 +384,10 @@ public sealed class PocReportApi : IDynamicApiController
         _configurationService
         ?? throw Oops.Oh("REPORT_CONFIGURATION_NOT_AVAILABLE").StatusCode(503);
 
+    private PocDataAssetService RequireDataAssetService() =>
+        _dataAssetService
+        ?? throw Oops.Oh("DATA_ASSET_SERVICE_NOT_AVAILABLE").StatusCode(503);
+
     private static async Task<T> HandleConfigurationOperation<T>(Func<Task<T>> operation)
     {
         try
@@ -367,6 +397,10 @@ public sealed class PocReportApi : IDynamicApiController
         catch (PocReportConfigurationRevisionConflictException)
         {
             throw Oops.Oh("REPORT_CONFIGURATION_REVISION_CONFLICT").StatusCode(409);
+        }
+        catch (PocDataAssetRevisionConflictException)
+        {
+            throw Oops.Oh("DATA_ASSET_REVISION_CONFLICT").StatusCode(409);
         }
         catch (PocDatasetConfigurationException exception)
         {

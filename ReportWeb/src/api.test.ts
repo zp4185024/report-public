@@ -1,8 +1,10 @@
 import { LocaleType, type IWorkbookData } from '@univerjs/presets';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { reportApi } from './api';
+import { dataAssetApi, reportApi } from './api';
 import type {
   DataSourceInput,
+  DataSourceDocument,
+  DatasetDocument,
   ExecuteRequest,
   ExportJob,
   ReportConfigurationDocument,
@@ -59,9 +61,40 @@ const dataSourceInput: DataSourceInput = {
   timeoutSeconds: 30,
   maxRows: 20_000,
   enabled: true,
+  revision: 1,
 };
-const { password: _password, ...maskedDataSource } = dataSourceInput;
-
+const dataSourceDocument: DataSourceDocument = {
+  code: dataSourceInput.code,
+  name: dataSourceInput.name,
+  dbType: dataSourceInput.dbType,
+  server: dataSourceInput.server,
+  port: dataSourceInput.port,
+  database: dataSourceInput.database,
+  userName: dataSourceInput.userName,
+  passwordConfigured: true,
+  timeoutSeconds: dataSourceInput.timeoutSeconds,
+  maxRows: dataSourceInput.maxRows,
+  enabled: dataSourceInput.enabled,
+  revision: dataSourceInput.revision,
+};
+const datasetDocument: DatasetDocument = {
+  code: 'detail',
+  name: '科室工作量明细',
+  dataSourceCode: 'report_center',
+  queryText: 'SELECT @deptId AS departmentName',
+  parameterCodes: ['deptId'],
+  columns: [{
+    code: 'departmentName',
+    header: '科室',
+    dataType: 'string',
+    width: 180,
+    formulaTemplate: null,
+  }],
+  timeoutSeconds: 30,
+  maxRows: 20_000,
+  enabled: true,
+  revision: 1,
+};
 const configuration: ReportConfigurationDocument = {
   reportCode: 'dept-workload',
   name: '科室工作量统计',
@@ -76,16 +109,21 @@ const configuration: ReportConfigurationDocument = {
     rowsPerSheet: 1_000_000,
     fileRetentionHours: 24,
   },
-  dataSource: { ...maskedDataSource, passwordConfigured: true },
-  dataset: {
+  datasetCode: 'detail',
+  datasets: [{
     code: 'detail',
     name: '科室工作量明细',
     dataSourceCode: 'report_center',
-    queryText: 'SELECT @deptId AS departmentName',
-    timeoutSeconds: 30,
-    maxRows: 20_000,
+    parameterCodes: ['deptId'],
+    columns: [{
+      code: 'departmentName',
+      header: '科室',
+      dataType: 'string',
+      width: 180,
+      formulaTemplate: null,
+    }],
     enabled: true,
-  },
+  }],
   parameters: [{
     code: 'deptId',
     displayName: '科室',
@@ -116,10 +154,8 @@ const saveConfigurationRequest: SaveReportConfigurationRequest = {
   sheetName: configuration.sheetName,
   preview: configuration.preview,
   export: configuration.export,
-  dataSource: dataSourceInput,
-  dataset: configuration.dataset,
+  datasetCode: configuration.datasetCode,
   parameters: configuration.parameters,
-  columns: configuration.columns,
   revision: configuration.revision,
 };
 
@@ -192,11 +228,29 @@ describe('reportApi template endpoints', () => {
     const result = { success: true, durationMilliseconds: 12, databaseVersion: '16.0' };
     fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
 
-    await expect(reportApi.testDataSource(dataSourceInput)).resolves.toEqual(result);
+    await expect(dataAssetApi.testDataSource(dataSourceInput)).resolves.toEqual(result);
 
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toBe('/api/report-center/poc/dept-workload/configuration/test-data-source');
+    expect(path).toBe('/api/report-center/poc/data-sources/test');
     expect(JSON.parse(init.body as string)).toEqual(dataSourceInput);
+  });
+
+  it('loads global data sources outside the report configuration path', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: [dataSourceDocument] }));
+
+    await expect(dataAssetApi.dataSources()).resolves.toEqual([dataSourceDocument]);
+    expect(fetchMock).toHaveBeenCalledWith('/api/report-center/poc/data-sources', undefined);
+  });
+
+  it('saves a reusable dataset by its global code', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: datasetDocument }));
+
+    await expect(dataAssetApi.saveDataset(datasetDocument)).resolves.toEqual(datasetDocument);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/datasets/detail');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual(datasetDocument);
   });
 
   it('saves only snapshot, binding and revision as JSON with PUT', async () => {

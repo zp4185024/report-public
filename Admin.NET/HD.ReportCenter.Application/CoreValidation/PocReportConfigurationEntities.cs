@@ -14,6 +14,9 @@ public sealed class PocReport : EntityBase
     [SugarColumn(ColumnDescription = "工作表名称", Length = 128)]
     public string SheetName { get; set; } = string.Empty;
 
+    [SugarColumn(ColumnDescription = "数据集编码", Length = 64)]
+    public string DatasetCode { get; set; } = string.Empty;
+
     [SugarColumn(ColumnDescription = "预览设置", ColumnDataType = StaticConfig.CodeFirst_BigString)]
     public string PreviewSettingsJson { get; set; } = string.Empty;
 
@@ -50,24 +53,18 @@ public sealed class PocDataSource : EntityBase
     [SugarColumn(ColumnDescription = "默认最大返回行数")]
     public int DefaultMaxRows { get; set; } = 20_000;
 
+    [SugarColumn(ColumnDescription = "配置修订号")]
+    public int Revision { get; set; }
+
     [SugarColumn(ColumnDescription = "是否启用")]
     public bool IsEnabled { get; set; } = true;
 }
 
 [SugarTable("RcDataset", "报表数据集表")]
-[SugarIndex(
-    "uk_RcDataset_ReportCode_Code",
-    nameof(ReportCode),
-    OrderByType.Asc,
-    nameof(Code),
-    OrderByType.Asc,
-    IsUnique = true)]
+[SugarIndex("uk_RcDataset_Code", nameof(Code), OrderByType.Asc, IsUnique = true)]
 [SysTable]
 public sealed class PocReportDataset : EntityBase
 {
-    [SugarColumn(ColumnDescription = "报表编码", Length = 64)]
-    public string ReportCode { get; set; } = string.Empty;
-
     [SugarColumn(ColumnDescription = "数据源编码", Length = 64)]
     public string DataSourceCode { get; set; } = string.Empty;
 
@@ -88,6 +85,9 @@ public sealed class PocReportDataset : EntityBase
 
     [SugarColumn(ColumnDescription = "最大返回行数")]
     public int MaxRows { get; set; } = 20_000;
+
+    [SugarColumn(ColumnDescription = "配置修订号")]
+    public int Revision { get; set; }
 
     [SugarColumn(ColumnDescription = "是否启用")]
     public bool IsEnabled { get; set; } = true;

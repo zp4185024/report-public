@@ -12,18 +12,7 @@ public sealed record PocReportConfigurationMutation(
     string SheetName,
     string PreviewSettingsJson,
     string ExportSettingsJson,
-    string DataSourceCode,
-    string DataSourceName,
-    string DbType,
-    string ConnectionString,
-    int DefaultTimeoutSeconds,
-    int DefaultMaxRows,
     string DatasetCode,
-    string DatasetName,
-    string QueryText,
-    string FieldSchemaJson,
-    int DatasetTimeoutSeconds,
-    int DatasetMaxRows,
     IReadOnlyList<PocReportParameter> Parameters,
     int ExpectedRevision);
 
@@ -35,7 +24,7 @@ public sealed class PocReportConfigurationRevisionConflictException : Exception
     }
 }
 
-/// <summary>报表、主数据集、数据源和参数的事务存储层。</summary>
+/// <summary>报表自身定义和参数的事务存储层；数据资源由 PocDataAssetStore 独立维护。</summary>
 public sealed class PocReportConfigurationStore : ITransient
 {
     private readonly ISqlSugarClient _database;
@@ -56,10 +45,10 @@ public sealed class PocReportConfigurationStore : ITransient
         }
 
         var dataset = await _database.Queryable<PocReportDataset>()
-            .Where(item => item.ReportCode == reportCode && item.IsEnabled)
-            .OrderBy(item => item.Id)
+            .Where(item => item.Code == report.DatasetCode)
             .FirstAsync()
-            ?? throw new InvalidDataException($"Report '{reportCode}' has no enabled dataset.");
+            ?? throw new InvalidDataException(
+                $"Report '{reportCode}' references missing dataset '{report.DatasetCode}'.");
         var dataSource = await _database.Queryable<PocDataSource>()
             .Where(item => item.Code == dataset.DataSourceCode)
             .FirstAsync()
@@ -100,6 +89,7 @@ public sealed class PocReportConfigurationStore : ITransient
                     Code = mutation.ReportCode,
                     Name = mutation.ReportName,
                     SheetName = mutation.SheetName,
+                    DatasetCode = mutation.DatasetCode,
                     PreviewSettingsJson = mutation.PreviewSettingsJson,
                     ExportSettingsJson = mutation.ExportSettingsJson,
                     Revision = revision,
@@ -115,6 +105,7 @@ public sealed class PocReportConfigurationStore : ITransient
                     {
                         Name = mutation.ReportName,
                         SheetName = mutation.SheetName,
+                        DatasetCode = mutation.DatasetCode,
                         PreviewSettingsJson = mutation.PreviewSettingsJson,
                         ExportSettingsJson = mutation.ExportSettingsJson,
                         Revision = revision,
@@ -131,81 +122,6 @@ public sealed class PocReportConfigurationStore : ITransient
                         mutation.ReportCode,
                         mutation.ExpectedRevision);
                 }
-            }
-
-            var existingDataSource = await _database.Queryable<PocDataSource>()
-                .Where(item => item.Code == mutation.DataSourceCode)
-                .FirstAsync();
-            if (existingDataSource is null)
-            {
-                await _database.Insertable(new PocDataSource
-                {
-                    Code = mutation.DataSourceCode,
-                    Name = mutation.DataSourceName,
-                    DbType = mutation.DbType,
-                    ConnectionString = mutation.ConnectionString,
-                    DefaultTimeoutSeconds = mutation.DefaultTimeoutSeconds,
-                    DefaultMaxRows = mutation.DefaultMaxRows,
-                    IsEnabled = true,
-                    CreateTime = now,
-                    UpdateTime = now
-                }).ExecuteCommandAsync();
-            }
-            else
-            {
-                await _database.Updateable<PocDataSource>()
-                    .SetColumns(item => new PocDataSource
-                    {
-                        Name = mutation.DataSourceName,
-                        DbType = mutation.DbType,
-                        ConnectionString = mutation.ConnectionString,
-                        DefaultTimeoutSeconds = mutation.DefaultTimeoutSeconds,
-                        DefaultMaxRows = mutation.DefaultMaxRows,
-                        IsEnabled = true,
-                        UpdateTime = now
-                    })
-                    .Where(item => item.Code == mutation.DataSourceCode)
-                    .ExecuteCommandAsync();
-            }
-
-            var existingDataset = await _database.Queryable<PocReportDataset>()
-                .Where(item => item.ReportCode == mutation.ReportCode)
-                .OrderBy(item => item.Id)
-                .FirstAsync();
-            if (existingDataset is null)
-            {
-                await _database.Insertable(new PocReportDataset
-                {
-                    ReportCode = mutation.ReportCode,
-                    DataSourceCode = mutation.DataSourceCode,
-                    Code = mutation.DatasetCode,
-                    Name = mutation.DatasetName,
-                    QueryText = mutation.QueryText,
-                    FieldSchemaJson = mutation.FieldSchemaJson,
-                    TimeoutSeconds = mutation.DatasetTimeoutSeconds,
-                    MaxRows = mutation.DatasetMaxRows,
-                    IsEnabled = true,
-                    CreateTime = now,
-                    UpdateTime = now
-                }).ExecuteCommandAsync();
-            }
-            else
-            {
-                await _database.Updateable<PocReportDataset>()
-                    .SetColumns(item => new PocReportDataset
-                    {
-                        DataSourceCode = mutation.DataSourceCode,
-                        Code = mutation.DatasetCode,
-                        Name = mutation.DatasetName,
-                        QueryText = mutation.QueryText,
-                        FieldSchemaJson = mutation.FieldSchemaJson,
-                        TimeoutSeconds = mutation.DatasetTimeoutSeconds,
-                        MaxRows = mutation.DatasetMaxRows,
-                        IsEnabled = true,
-                        UpdateTime = now
-                    })
-                    .Where(item => item.Id == existingDataset.Id)
-                    .ExecuteCommandAsync();
             }
 
             await _database.Deleteable<PocReportParameter>()

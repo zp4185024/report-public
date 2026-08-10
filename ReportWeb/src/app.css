@@ -278,7 +278,8 @@ h1 {
 
 .data-export-button,
 .cancel-export-button,
-.configuration-button {
+.configuration-button,
+.data-assets-button {
   width: 106px;
 }
 
@@ -286,6 +287,12 @@ h1 {
   border-color: #8d99a8;
   color: #263445;
   background: #f8fafb;
+}
+
+.data-assets-button {
+  border-color: #789487;
+  color: #24513f;
+  background: #f4f8f6;
 }
 
 .data-export-button {
@@ -894,6 +901,379 @@ h1 {
   gap: 8px;
 }
 
+.dataset-reference-fieldset {
+  display: grid;
+  gap: 10px;
+}
+
+.dataset-reference-row {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.dataset-reference-row label {
+  display: grid;
+  min-width: 240px;
+  flex: 1;
+  gap: 5px;
+  color: #4b5868;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.dataset-reference-row select {
+  width: 100%;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid #c6ced8;
+  border-radius: 4px;
+  color: #18212b;
+  background: #ffffff;
+}
+
+.dataset-reference-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 18px;
+  color: #667384;
+  font-size: 11px;
+}
+
+.inline-warning {
+  margin: 0;
+  color: #9a5b13;
+  font-size: 11px;
+}
+
+.toggle-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 7px 0 0;
+}
+
+.configuration-section-bar > span,
+.read-only-columns td {
+  color: #667384;
+  font-size: 11px;
+}
+
+.asset-page {
+  display: grid;
+  height: 100vh;
+  min-height: 100vh;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  overflow: hidden;
+  background: #eef1f4;
+}
+
+.asset-header,
+.asset-title-row,
+.asset-editor-header,
+.asset-editor-header > div:last-child,
+.asset-list-header,
+.dataset-columns-header,
+.dataset-columns-header > div {
+  display: flex;
+  align-items: center;
+}
+
+.asset-header {
+  min-height: 64px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 24px;
+  border-bottom: 1px solid #d8dee6;
+  background: #ffffff;
+}
+
+.asset-title-row {
+  min-width: 0;
+  gap: 11px;
+}
+
+.asset-tabs {
+  display: flex;
+  min-height: 46px;
+  align-items: end;
+  gap: 2px;
+  padding: 0 24px;
+  border-bottom: 1px solid #d8dee6;
+  background: #f8fafb;
+}
+
+.asset-tabs button {
+  display: inline-flex;
+  height: 45px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 18px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #566476;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.asset-tabs button.active {
+  border-bottom-color: #2463a6;
+  color: #174a80;
+  background: #ffffff;
+}
+
+.asset-tabs button span {
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #465467;
+  background: #e7ebf0;
+  font-size: 10px;
+}
+
+.asset-workspace {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: 300px minmax(0, 1fr);
+  background: #ffffff;
+}
+
+.asset-messages {
+  min-height: 0;
+}
+
+.asset-list {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  border-right: 1px solid #d8dee6;
+  background: #f8fafb;
+}
+
+.asset-list-header {
+  min-height: 54px;
+  justify-content: space-between;
+  padding: 8px 14px 8px 18px;
+  border-bottom: 1px solid #dfe4ea;
+  color: #334155;
+  font-size: 12px;
+}
+
+.asset-list-scroll {
+  min-height: 0;
+  overflow: auto;
+  padding: 7px 0;
+}
+
+.asset-list-item {
+  display: grid;
+  width: 100%;
+  min-height: 64px;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px 8px 17px;
+  border: 0;
+  border-left: 3px solid transparent;
+  color: #465467;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.asset-list-item:hover,
+.asset-list-item.active {
+  background: #eef3f7;
+}
+
+.asset-list-item.active {
+  border-left-color: #2463a6;
+  color: #174a80;
+}
+
+.asset-list-item span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.asset-list-item strong,
+.asset-list-item small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-list-item strong {
+  font-size: 12px;
+}
+
+.asset-list-item small {
+  color: #718096;
+  font-size: 10px;
+}
+
+.asset-list-item i {
+  padding: 2px 5px;
+  border: 1px solid #d6dce4;
+  border-radius: 3px;
+  color: #7b8795;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.asset-list-item i.enabled {
+  border-color: #b8d8c4;
+  color: #24613e;
+  background: #f1faf4;
+}
+
+.asset-editor {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: #ffffff;
+}
+
+.asset-editor-header {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  min-height: 66px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 22px;
+  border-bottom: 1px solid #d8dee6;
+  background: #ffffff;
+}
+
+.asset-editor-header h2 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+.asset-editor-header p {
+  margin: 3px 0 0;
+  color: #6b7787;
+  font-size: 10px;
+}
+
+.asset-editor-header > div:last-child {
+  gap: 8px;
+}
+
+.asset-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 14px;
+  padding: 20px 22px;
+}
+
+.asset-form-grid label,
+.asset-sql-field {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: #4b5868;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.asset-form-grid input,
+.asset-form-grid select,
+.asset-sql-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #c6ced8;
+  border-radius: 4px;
+  outline: none;
+  color: #18212b;
+  background: #ffffff;
+}
+
+.asset-form-grid input,
+.asset-form-grid select {
+  height: 34px;
+  padding: 0 9px;
+}
+
+.asset-form-grid input:disabled,
+.asset-form-grid select:disabled {
+  color: #748092;
+  background: #f0f2f5;
+}
+
+.asset-form-grid input:focus,
+.asset-form-grid select:focus,
+.asset-sql-field textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #dbeafe;
+}
+
+.asset-sql-field {
+  padding: 0 22px 14px;
+}
+
+.asset-sql-field textarea {
+  min-height: 190px;
+  resize: vertical;
+  padding: 10px;
+  font-family: Consolas, "Microsoft YaHei", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.dataset-parameter-line {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 22px;
+  border-block: 1px solid #e1e6ec;
+  color: #5d6978;
+  background: #f8fafb;
+  font-size: 11px;
+}
+
+.dataset-columns-header {
+  min-height: 56px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 22px;
+  border-bottom: 1px solid #e1e6ec;
+}
+
+.dataset-columns-header > div {
+  gap: 10px;
+  color: #334155;
+  font-size: 12px;
+}
+
+.dataset-columns-header span {
+  color: #718096;
+  font-size: 10px;
+}
+
+.asset-column-scroll {
+  min-height: 260px;
+}
+
+.asset-column-scroll .configuration-table {
+  min-width: 880px;
+}
+
+.asset-empty {
+  display: flex;
+  min-height: 120px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #718096;
+  font-size: 11px;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -911,6 +1291,10 @@ h1 {
 
   .duration-state {
     display: none;
+  }
+
+  .asset-form-grid {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
   }
 }
 
@@ -1039,6 +1423,33 @@ h1 {
   .configuration-form-grid.compact-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .asset-header {
+    padding: 8px 12px;
+  }
+
+  .asset-tabs {
+    padding: 0 10px;
+  }
+
+  .asset-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 190px minmax(0, 1fr);
+  }
+
+  .asset-list {
+    border-right: 0;
+    border-bottom: 1px solid #d8dee6;
+  }
+
+  .asset-editor-header,
+  .asset-form-grid,
+  .asset-sql-field,
+  .dataset-columns-header,
+  .dataset-parameter-line {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
 }
 
 @media (max-width: 430px) {
@@ -1080,6 +1491,20 @@ h1 {
 
   .configuration-form-grid,
   .configuration-form-grid.compact-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dataset-reference-row,
+  .asset-editor-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dataset-reference-row label {
+    min-width: 0;
+  }
+
+  .asset-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }

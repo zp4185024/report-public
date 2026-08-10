@@ -1,22 +1,20 @@
+import type { IWorkbookData } from '@univerjs/presets';
 import type {
-  ExecuteRequest,
-  ExecuteResult,
+  DataSourceDocument,
   DataSourceInput,
   DataSourceTestResult,
+  DatasetDocument,
+  ExecuteRequest,
+  ExecuteResult,
   ExportJob,
-  ReportDefinition,
   ReportConfigurationDocument,
+  ReportDefinition,
   SaveReportConfigurationRequest,
   SaveTemplateRequest,
   TemplateDocument,
   TemplateXlsxImportResult,
 } from './types';
-import type { IWorkbookData } from '@univerjs/presets';
 
-/**
- * 报表中心 POC 的浏览器 API 适配层。
- * 页面只处理业务对象和 Error，不直接依赖 Furion 的统一响应包结构。
- */
 const reportCode = 'dept-workload';
 const basePath = `/api/report-center/poc/${reportCode}`;
 
@@ -26,28 +24,21 @@ interface ApiEnvelope<T> {
   result: T;
 }
 
-/** 解包 Furion 统一响应；HTTP 失败和业务 code 失败都转换为同一种 Error。 */
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
   const body = (await response.json()) as ApiEnvelope<T>;
   if (!response.ok || body.code !== 200) {
     throw new Error(body.message || `请求失败（${body.code || response.status}）`);
   }
-
   return body.result;
 }
 
-/**
- * 下载接口直接消费 Blob，并优先使用 Content-Disposition 中的 UTF-8 文件名。
- * Object URL 只在本次点击期间存在，触发下载后立即释放，避免反复导出积累浏览器内存。
- */
 async function requestDownload(
   path: string,
   init?: RequestInit,
   fallbackFilename = '科室工作量.xlsx',
 ): Promise<void> {
   const response = await fetch(path, init);
-
   if (!response.ok) {
     let message = `下载失败（${response.status}）`;
     try {
@@ -71,7 +62,6 @@ async function requestDownload(
   URL.revokeObjectURL(url);
 }
 
-/** 固定报表的全部接口。模板交换和数据导出使用不同方法，避免调用方混淆两个文件语义。 */
 export const reportApi = {
   definition: () => requestJson<ReportDefinition>(`${basePath}/definition`),
 
@@ -85,13 +75,6 @@ export const reportApi = {
       body: JSON.stringify(request),
     }),
 
-  testDataSource: (request: DataSourceInput) =>
-    requestJson<DataSourceTestResult>(`${basePath}/configuration/test-data-source`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    }),
-
   template: () => requestJson<TemplateDocument>(`${basePath}/template`),
 
   saveTemplate: (request: SaveTemplateRequest) =>
@@ -101,7 +84,6 @@ export const reportApi = {
       body: JSON.stringify(request),
     }),
 
-  /** 导入只返回一个待确认草稿，不会直接覆盖数据库中的模板。 */
   importTemplate: (file: File) => {
     const form = new FormData();
     form.append('file', file);
@@ -111,7 +93,6 @@ export const reportApi = {
     });
   },
 
-  /** 导出当前编辑器快照，包含尚未保存的样式、公式和布局修改。 */
   exportTemplate: (snapshot: IWorkbookData) =>
     requestDownload(
       `${basePath}/template/export-xlsx`,
@@ -130,7 +111,6 @@ export const reportApi = {
       body: JSON.stringify(request),
     }),
 
-  /** 使用数据库中已保存的模板修订号直接下载完整查询数据。 */
   downloadNormalData: (templateRevision: number, query: ExecuteRequest) =>
     requestDownload(`${basePath}/exports/normal`, {
       method: 'POST',
@@ -138,7 +118,6 @@ export const reportApi = {
       body: JSON.stringify({ templateRevision, query }),
     }),
 
-  /** 使用数据库中已保存的模板修订号创建后台流式导出任务。 */
   startLargeDataExport: (templateRevision: number, query: ExecuteRequest) =>
     requestJson<ExportJob>(`${basePath}/exports/large`, {
       method: 'POST',
@@ -156,4 +135,38 @@ export const reportApi = {
 
   downloadJob: (jobNo: string) =>
     requestDownload(`/api/report-center/poc/export-jobs/${encodeURIComponent(jobNo)}/download`),
+};
+
+/** 数据源和数据集是跨报表复用的全局资源，使用独立 API 与报表配置解耦。 */
+export const dataAssetApi = {
+  dataSources: () => requestJson<DataSourceDocument[]>('/api/report-center/poc/data-sources'),
+
+  saveDataSource: (request: DataSourceInput) =>
+    requestJson<DataSourceDocument>(
+      `/api/report-center/poc/data-sources/${encodeURIComponent(request.code)}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+
+  testDataSource: (request: DataSourceInput) =>
+    requestJson<DataSourceTestResult>('/api/report-center/poc/data-sources/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+
+  datasets: () => requestJson<DatasetDocument[]>('/api/report-center/poc/datasets'),
+
+  saveDataset: (request: DatasetDocument) =>
+    requestJson<DatasetDocument>(
+      `/api/report-center/poc/datasets/${encodeURIComponent(request.code)}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
 };

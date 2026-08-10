@@ -10,6 +10,7 @@ import type { IWorkbookData } from '@univerjs/presets';
 import {
   ChevronLeft,
   ChevronRight,
+  Database,
   Eye,
   FileDown,
   FileSpreadsheet,
@@ -644,12 +645,22 @@ export default function App() {
               <button
                 className="button configuration-button"
                 type="button"
-                title="配置查询参数、数据源和结果字段"
+                title="配置报表使用的数据集和查询参数"
                 disabled={busy || !initialized}
                 onClick={() => void openConfiguration()}
               >
                 <Settings2 size={16} />
                 报表配置
+              </button>
+              <button
+                className="button data-assets-button"
+                type="button"
+                title="管理全局数据源和数据集"
+                disabled={busy}
+                onClick={() => window.location.assign(`/data-assets${window.location.search}`)}
+              >
+                <Database size={16} />
+                数据管理
               </button>
               <input
                 ref={templateFileInputRef}

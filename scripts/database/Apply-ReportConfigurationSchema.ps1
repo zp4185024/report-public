@@ -67,13 +67,13 @@ FROM sys.columns c
 INNER JOIN sys.tables t ON t.object_id = c.object_id
 WHERE t.schema_id = SCHEMA_ID(N'dbo')
   AND (
-       (t.name = N'RcReport' AND c.name IN (N'Id', N'Code', N'Name', N'SheetName', N'PreviewSettingsJson', N'ExportSettingsJson', N'Revision', N'IsEnabled', N'CreateTime', N'UpdateTime'))
-    OR (t.name = N'RcDataSource' AND c.name IN (N'Id', N'Code', N'Name', N'DbType', N'ConnectionString', N'DefaultTimeoutSeconds', N'DefaultMaxRows', N'IsEnabled', N'CreateTime', N'UpdateTime'))
-    OR (t.name = N'RcDataset' AND c.name IN (N'Id', N'ReportCode', N'DataSourceCode', N'Code', N'Name', N'QueryText', N'FieldSchemaJson', N'TimeoutSeconds', N'MaxRows', N'IsEnabled', N'CreateTime', N'UpdateTime'))
+       (t.name = N'RcReport' AND c.name IN (N'Id', N'Code', N'Name', N'SheetName', N'DatasetCode', N'PreviewSettingsJson', N'ExportSettingsJson', N'Revision', N'IsEnabled', N'CreateTime', N'UpdateTime'))
+    OR (t.name = N'RcDataSource' AND c.name IN (N'Id', N'Code', N'Name', N'DbType', N'ConnectionString', N'DefaultTimeoutSeconds', N'DefaultMaxRows', N'Revision', N'IsEnabled', N'CreateTime', N'UpdateTime'))
+    OR (t.name = N'RcDataset' AND c.name IN (N'Id', N'DataSourceCode', N'Code', N'Name', N'QueryText', N'FieldSchemaJson', N'TimeoutSeconds', N'MaxRows', N'Revision', N'IsEnabled', N'CreateTime', N'UpdateTime'))
     OR (t.name = N'RcReportParameter' AND c.name IN (N'Id', N'ReportCode', N'Code', N'DisplayName', N'DataType', N'ControlType', N'SourceType', N'UrlKey', N'DefaultExpression', N'FixedValue', N'IsVisible', N'IsReadOnly', N'IsRequired', N'AllowUrlPrefill', N'DisplayOrder', N'CreateTime', N'UpdateTime'))
   );
 '@
-        $requiredColumnCount = 49
+        $requiredColumnCount = 51
         $actualColumnCount = [int64]$schemaCheck.ExecuteScalar()
         if ($actualColumnCount -ne $requiredColumnCount) {
             throw "4 张配置表已存在，但必需列仅匹配 $actualColumnCount/$requiredColumnCount，拒绝继续。"
@@ -95,6 +95,7 @@ CREATE TABLE dbo.RcReport
     Code nvarchar(64) NOT NULL,
     Name nvarchar(128) NOT NULL,
     SheetName nvarchar(128) NOT NULL,
+    DatasetCode nvarchar(64) NOT NULL,
     PreviewSettingsJson nvarchar(max) NOT NULL,
     ExportSettingsJson nvarchar(max) NOT NULL,
     Revision int NOT NULL,
@@ -119,6 +120,7 @@ CREATE TABLE dbo.RcDataSource
     ConnectionString nvarchar(max) NOT NULL,
     DefaultTimeoutSeconds int NOT NULL,
     DefaultMaxRows int NOT NULL,
+    Revision int NOT NULL,
     IsEnabled bit NOT NULL,
     CreateTime datetime NULL,
     UpdateTime datetime NULL,
@@ -134,7 +136,6 @@ CREATE INDEX index_RcDataSource_CT ON dbo.RcDataSource(CreateTime);
 CREATE TABLE dbo.RcDataset
 (
     Id bigint NOT NULL,
-    ReportCode nvarchar(64) NOT NULL,
     DataSourceCode nvarchar(64) NOT NULL,
     Code nvarchar(64) NOT NULL,
     Name nvarchar(128) NOT NULL,
@@ -142,6 +143,7 @@ CREATE TABLE dbo.RcDataset
     FieldSchemaJson nvarchar(max) NOT NULL,
     TimeoutSeconds int NOT NULL,
     MaxRows int NOT NULL,
+    Revision int NOT NULL,
     IsEnabled bit NOT NULL,
     CreateTime datetime NULL,
     UpdateTime datetime NULL,
@@ -151,7 +153,7 @@ CREATE TABLE dbo.RcDataset
     UpdateUserName nvarchar(64) NULL,
     CONSTRAINT PK_RcDataset PRIMARY KEY (Id)
 );
-CREATE UNIQUE INDEX uk_RcDataset_ReportCode_Code ON dbo.RcDataset(ReportCode, Code);
+CREATE UNIQUE INDEX uk_RcDataset_Code ON dbo.RcDataset(Code);
 CREATE INDEX index_RcDataset_CT ON dbo.RcDataset(CreateTime);
 
 CREATE TABLE dbo.RcReportParameter

@@ -170,10 +170,12 @@ export interface DataSourceDocument {
   timeoutSeconds: number;
   maxRows: number;
   enabled: boolean;
+  revision: number;
 }
 
 export interface DataSourceInput extends Omit<DataSourceDocument, 'passwordConfigured'> {
   password: string | null;
+  passwordConfigured?: boolean;
 }
 
 export interface DatasetDocument {
@@ -181,8 +183,20 @@ export interface DatasetDocument {
   name: string;
   dataSourceCode: string;
   queryText: string;
+  parameterCodes: string[];
+  columns: ColumnDefinition[];
   timeoutSeconds: number;
   maxRows: number;
+  enabled: boolean;
+  revision: number;
+}
+
+export interface DatasetOption {
+  code: string;
+  name: string;
+  dataSourceCode: string;
+  parameterCodes: string[];
+  columns: ColumnDefinition[];
   enabled: boolean;
 }
 
@@ -192,8 +206,8 @@ export interface ReportConfigurationDocument {
   sheetName: string;
   preview: PreviewSettings;
   export: ExportSettings;
-  dataSource: DataSourceDocument;
-  dataset: DatasetDocument;
+  datasetCode: string;
+  datasets: DatasetOption[];
   parameters: ParameterDefinition[];
   columns: ColumnDefinition[];
   revision: number;
@@ -204,10 +218,8 @@ export interface SaveReportConfigurationRequest {
   sheetName: string;
   preview: PreviewSettings;
   export: ExportSettings;
-  dataSource: DataSourceInput;
-  dataset: DatasetDocument;
+  datasetCode: string;
   parameters: ParameterDefinition[];
-  columns: ColumnDefinition[];
   revision: number;
 }
 
