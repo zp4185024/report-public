@@ -51,3 +51,13 @@ dotnet Admin.NET/Admin.NET.Web.Entry/bin/Release/net8.0/Admin.NET.Web.Entry.dll 
 ```
 
 正常配置不会自动建库、改表或重放系统种子。
+
+## 报表配置表升级
+
+现有 `hd_report_center` 数据库启用自定义数据源、主数据集和查询参数时，只执行增量脚本：
+
+```powershell
+pwsh -File scripts/database/Apply-ReportConfigurationSchema.ps1
+```
+
+脚本只新增 `RcReport`、`RcDataSource`、`RcDataset`、`RcReportParameter`。4 张表全都存在时只校验必需列并跳过；只存在一部分或列结构不完整时拒绝继续，不会自动改列、删表或覆盖配置。

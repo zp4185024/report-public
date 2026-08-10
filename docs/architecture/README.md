@@ -18,7 +18,7 @@
 - `Admin.NET.Web.Core`：Admin.NET Web 核心配置，当前已引用报表中心应用层。
 - `HD.ReportCenter.Application`：报表中心 API、应用服务、权限接入和嵌入入口。
 - `HD.ReportCenter.ReportEngine`：报表模板、数据集、参数、公式、渲染和导出核心。
-- `Web`：Vue 3 前端，后续新增报表设计器、预览页和嵌入页。
+- `ReportWeb`：React 19 + Univer 的报表模板设计、预览和配置验证页。
 - `references/luck-report`：参考源码，不直接作为最终模块发布。
 
 ## 基础库
@@ -37,7 +37,9 @@ Server=192.168.2.5;Database=lis_admin;User Id=hdhis;Password=CHANGE_ME;Encrypt=T
 2. 数据集管理：SQL 查询、参数定义、字段预览和测试执行。
 3. 报表设计：表格布局、查询表单、统计单元格、常用公式。
 4. 报表预览：通过模板编码和 URL 参数打开可嵌入页面。
-5. 导出打印：优先 Excel 导出和 HTML 打印。
+5. 导出打印：普通 Excel 直接下载，大数据量由后台任务流式生成。
+
+当前第一阶段已经支持一个主数据集：设计人员可维护 SQL Server 只读连接、参数化 `SELECT/WITH` 查询、动态查询参数和返回字段。运行时会再次校验只读 SQL，并通过数据库参数对象绑定输入值；暂不支持多数据集、参数级联选项和配置发布审批。
 
 ## URL 嵌入约定
 
@@ -59,4 +61,4 @@ Server=192.168.2.5;Database=lis_admin;User Id=hdhis;Password=CHANGE_ME;Encrypt=T
 - Admin.NET 底座许可证为 MIT / Apache-2.0，需要保留原许可证和免责声明。
 - `luck-report` 作为参考源码保留，最终实现应按业务目标重写 .NET 8 后端逻辑和 Vue 3 前端集成。
 - 第一版不采用 iText 5 PDF 方案，先用 Excel 和浏览器打印满足快速上线。
-- 暂不引入 Univer 作为核心编辑器，避免商业授权边界影响发布。
+- 当前验证页使用 Univer 作为可编辑工作簿引擎；正式发布前仍需完成授权条款复核和版本锁定。
