@@ -13,6 +13,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
     private readonly PocReportConfigurationStore _store;
     private readonly PocDataAssetStore _dataAssetStore;
     private readonly PocDataAssetService _dataAssetService;
+    private readonly PocReportConfigurationService _configurationService;
 
     public PocReportConfigurationStoreTests()
     {
@@ -57,6 +58,10 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         _store = new PocReportConfigurationStore(_database);
         _dataAssetStore = new PocDataAssetStore(_database);
         _dataAssetService = new PocDataAssetService(_dataAssetStore, _database);
+        _configurationService = new PocReportConfigurationService(
+            _store,
+            _dataAssetStore,
+            _database);
         _database.Insertable(new PocDataSource
         {
             Code = "report-center",
@@ -213,11 +218,9 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
     public async Task Dataset_preview_requires_every_referenced_parameter()
     {
         var exception = await Assert.ThrowsAsync<PocDatasetConfigurationException>(() =>
-            _dataAssetService.PreviewDatasetAsync(new PocDatasetPreviewRequest(
-                "report_center",
-                "SELECT @deptId AS departmentName",
-                new Dictionary<string, string?>(),
-                30)));
+            _dataAssetService.PreviewDatasetAsync(
+                "detail",
+                new PocDatasetPreviewRequest(new Dictionary<string, string?>())));
 
         Assert.Equal("DATASET_PREVIEW_PARAMETER_REQUIRED", exception.Code);
     }
@@ -225,14 +228,64 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
     [Fact]
     public async Task Dataset_preview_rejects_mutating_sql_before_connecting()
     {
+        _database.Updateable<PocReportDataset>()
+            .SetColumns(dataset => dataset.QueryText == "DELETE FROM Workload")
+            .Where(dataset => dataset.Code == "detail")
+            .ExecuteCommand();
+
         var exception = await Assert.ThrowsAsync<PocDatasetConfigurationException>(() =>
-            _dataAssetService.PreviewDatasetAsync(new PocDatasetPreviewRequest(
-                "report_center",
-                "DELETE FROM Workload",
-                new Dictionary<string, string?>(),
-                30)));
+            _dataAssetService.PreviewDatasetAsync(
+                "detail",
+                new PocDatasetPreviewRequest(new Dictionary<string, string?>())));
 
         Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
+    }
+
+    [Fact]
+    public void Legacy_dataset_schema_infers_variables_and_drops_excel_formula_fields()
+    {
+        var dataset = new PocReportDataset
+        {
+            QueryText = "SELECT @hospitalId AS hospitalId",
+            FieldSchemaJson = """
+                [
+                  {"Code":"hospitalId","Header":"医院","DataType":"string","Width":180,"FormulaTemplate":null},
+                  {"Code":"displayValue","Header":"显示值","DataType":"formula","Width":120,"FormulaTemplate":"=A{row}"}
+                ]
+                """
+        };
+
+        var schema = PocDataAssetService.ReadSchema(dataset);
+
+        Assert.Equal("hospitalId", Assert.Single(schema.Variables).Code);
+        var field = Assert.Single(schema.Fields);
+        Assert.Equal("hospitalId", field.Code);
+        Assert.Equal("医院", field.DisplayName);
+    }
+
+    [Fact]
+    public async Task Report_configuration_requires_a_value_binding_for_each_dataset_variable()
+    {
+        var exception = await Assert.ThrowsAsync<PocDatasetConfigurationException>(() =>
+            _configurationService.SaveAsync(
+                "dept-workload",
+                new PocSaveReportConfigurationRequest(
+                    "科室工作量统计",
+                    "科室工作量",
+                    new PocPreviewSettings(PocPreviewMode.Full, 20, false),
+                    new PocExportSettings(
+                        PocDataExportMode.Normal,
+                        20_000,
+                        500_000,
+                        60,
+                        true,
+                        1_000_000,
+                        24),
+                    "detail",
+                    [],
+                    0)));
+
+        Assert.Equal("DATASET_PARAMETER_UNMAPPED", exception.Code);
     }
 
     public void Dispose()

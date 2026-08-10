@@ -116,17 +116,15 @@ public sealed class PocSqlDatasetExecutor : ITransient
             await using var reader = await command.ExecuteReaderAsync(
                 CommandBehavior.SequentialAccess | CommandBehavior.SingleResult,
                 cancellationToken);
-            var columns = definition.Columns
-                .Where(column => !column.DataType.Equals("formula", StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-            var ordinals = ResolveOrdinals(reader, columns);
+            var fields = definition.Fields.ToArray();
+            var ordinals = ResolveOrdinals(reader, fields);
             var rows = new List<PocDataRow>(Math.Min(take, 4096));
             while (rows.Count < take && await reader.ReadAsync(cancellationToken))
             {
                 var row = new PocDataRow();
-                foreach (var column in columns)
+                foreach (var field in fields)
                 {
-                    row[column.Code] = NormalizeValue(reader.GetValue(ordinals[column.Code]));
+                    row[field.Code] = NormalizeValue(reader.GetValue(ordinals[field.Code]));
                 }
                 rows.Add(row);
             }
@@ -201,25 +199,25 @@ public sealed class PocSqlDatasetExecutor : ITransient
 
     private static IReadOnlyDictionary<string, int> ResolveOrdinals(
         SqlDataReader reader,
-        IReadOnlyList<PocColumnDefinition> columns)
+        IReadOnlyList<PocDatasetFieldDefinition> fields)
     {
         var actual = Enumerable.Range(0, reader.FieldCount)
             .ToDictionary(reader.GetName, StringComparer.OrdinalIgnoreCase);
         var ordinals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (var column in columns)
+        foreach (var field in fields)
         {
-            if (!actual.TryGetValue(column.Code, out var ordinal))
+            if (!actual.TryGetValue(field.Code, out var ordinal))
             {
                 throw new PocDatasetExecutionException(
                     "DATASET_FIELD_MISSING",
-                    $"查询结果缺少字段 '{column.Code}'。" );
+                    $"查询结果缺少字段 '{field.Code}'。" );
             }
-            ordinals[column.Code] = ordinal;
+            ordinals[field.Code] = ordinal;
         }
         return ordinals;
     }
 
-    private static SqlParameter CreateParameter(string code, string dataType, object? value)
+    internal static SqlParameter CreateParameter(string code, string dataType, object? value)
     {
         var parameter = new SqlParameter($"@{code}", dataType.Trim().ToLowerInvariant() switch
         {

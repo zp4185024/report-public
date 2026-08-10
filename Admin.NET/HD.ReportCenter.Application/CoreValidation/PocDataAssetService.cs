@@ -2,23 +2,32 @@ using System.Text.RegularExpressions;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Data;
 using System.Globalization;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
 public sealed record PocDatasetPreviewRequest(
-    string DataSourceCode,
-    string QueryText,
-    IReadOnlyDictionary<string, string?> Parameters,
-    int TimeoutSeconds);
+    IReadOnlyDictionary<string, string?> Parameters);
 
 public sealed record PocDatasetPreviewResult(
-    IReadOnlyList<string> Columns,
+    IReadOnlyList<PocDatasetFieldDefinition> Fields,
     IReadOnlyList<IReadOnlyList<object?>> Rows,
     bool HasMore,
     int Limit,
     long DurationMilliseconds);
+
+public sealed record PocDatasetSchemaDocument(
+    IReadOnlyList<PocDatasetVariableDefinition> Variables,
+    IReadOnlyList<PocDatasetFieldDefinition> Fields);
+
+internal sealed record PocLegacyDatasetColumn(
+    string Code,
+    string Header,
+    string DataType,
+    int Width,
+    string? FormulaTemplate);
 
 /// <summary>全局数据源和数据集的应用服务，公开契约不返回连接字符串或密码。</summary>
 public sealed class PocDataAssetService : ITransient
@@ -31,8 +40,11 @@ public sealed class PocDataAssetService : ITransient
     private static readonly Regex SqlParameterRegex = new(
         "(?<!@)@(?<code>[A-Za-z][A-Za-z0-9_]{0,63})",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
-    private static readonly HashSet<string> ColumnDataTypes = new(
-        ["string", "text", "number", "int", "long", "decimal", "date", "datetime", "bool", "boolean", "formula"],
+    private static readonly HashSet<string> VariableDataTypes = new(
+        ["string", "int", "long", "decimal", "date", "datetime", "bool"],
+        StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> FieldDataTypes = new(
+        ["string", "number", "date", "datetime", "bool"],
         StringComparer.OrdinalIgnoreCase);
 
     private readonly PocDataAssetStore _store;
@@ -113,13 +125,14 @@ public sealed class PocDataAssetService : ITransient
                 "启用数据集前必须先启用其数据源。");
         }
 
-        _ = ExtractParameterCodes(input.QueryText);
         await _store.SaveDatasetAsync(new PocDatasetMutation(
             input.Code.Trim(),
             input.Name.Trim(),
             input.DataSourceCode.Trim(),
             input.QueryText.Trim(),
-            JsonConvert.SerializeObject(input.Columns, Formatting.None),
+            JsonConvert.SerializeObject(
+                new PocDatasetSchemaDocument(input.Variables, input.Fields),
+                Formatting.None),
             input.TimeoutSeconds,
             input.MaxRows,
             input.Enabled,
@@ -128,37 +141,59 @@ public sealed class PocDataAssetService : ITransient
     }
 
     public async Task<PocDatasetPreviewResult> PreviewDatasetAsync(
+        string code,
         PocDatasetPreviewRequest input,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
-        ValidateCode(input.DataSourceCode, "DATASET_PREVIEW_INVALID");
-        if (string.IsNullOrWhiteSpace(input.QueryText) ||
-            input.QueryText.Length > 200_000 ||
-            input.TimeoutSeconds is < 1 or > 600 ||
-            input.Parameters is null)
+        ValidateCode(code, "DATASET_PREVIEW_INVALID");
+        if (input.Parameters is null)
         {
             throw new PocDatasetConfigurationException(
                 "DATASET_PREVIEW_INVALID",
                 "数据集预览配置无效。");
         }
 
-        var parameterCodes = ExtractParameterCodes(input.QueryText);
-        foreach (var code in parameterCodes)
+        var dataset = await _store.GetDatasetAsync(code.Trim())
+            ?? throw new PocDatasetConfigurationException(
+                "DATASET_NOT_FOUND",
+                $"不存在数据集 '{code}'。");
+        if (!dataset.IsEnabled)
+        {
+            throw new PocDatasetConfigurationException(
+                "DATASET_DISABLED",
+                "预览数据前必须先启用数据集。");
+        }
+        var schema = ReadSchema(dataset);
+        ValidateDatasetSchema(dataset.QueryText, schema.Variables, schema.Fields);
+        var resolved = PocParameterResolver.Resolve(
+            schema.Variables.Select(variable => new PocParameterDefinition(
+                variable.Code,
+                variable.DisplayName,
+                "text",
+                "Form",
+                null,
+                true,
+                variable.DataType,
+                Required: variable.Required)).ToArray(),
+            input.Parameters);
+
+        var parameterCodes = ExtractParameterCodes(dataset.QueryText);
+        foreach (var parameterCode in parameterCodes)
         {
             if (!input.Parameters.Keys.Any(key =>
-                    key.Equals(code, StringComparison.OrdinalIgnoreCase)))
+                    key.Equals(parameterCode, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new PocDatasetConfigurationException(
                     "DATASET_PREVIEW_PARAMETER_REQUIRED",
-                    $"请填写预览参数 '@{code}'。");
+                    $"请填写预览参数 '@{parameterCode}'。");
             }
         }
 
-        var dataSource = await _store.GetDataSourceAsync(input.DataSourceCode.Trim())
+        var dataSource = await _store.GetDataSourceAsync(dataset.DataSourceCode)
             ?? throw new PocDatasetConfigurationException(
                 "DATA_SOURCE_NOT_FOUND",
-                $"不存在数据源 '{input.DataSourceCode}'。");
+                $"不存在数据源 '{dataset.DataSourceCode}'。");
         if (!dataSource.IsEnabled)
         {
             throw new PocDatasetConfigurationException(
@@ -172,21 +207,22 @@ public sealed class PocDataAssetService : ITransient
             await using var connection = new SqlConnection(dataSource.ConnectionString);
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = input.QueryText.Trim();
-            command.CommandTimeout = Math.Min(input.TimeoutSeconds, PreviewTimeoutLimitSeconds);
-            foreach (var code in parameterCodes)
+            command.CommandText = dataset.QueryText.Trim();
+            command.CommandTimeout = Math.Min(dataset.TimeoutSeconds, PreviewTimeoutLimitSeconds);
+            foreach (var parameterCode in parameterCodes)
             {
-                var value = input.Parameters.First(item =>
-                    item.Key.Equals(code, StringComparison.OrdinalIgnoreCase)).Value;
-                command.Parameters.Add(CreatePreviewParameter(code, value));
+                var variable = schema.Variables.Single(item =>
+                    item.Code.Equals(parameterCode, StringComparison.OrdinalIgnoreCase));
+                command.Parameters.Add(PocSqlDatasetExecutor.CreateParameter(
+                    parameterCode,
+                    variable.DataType,
+                    resolved.DatabaseValues[variable.Code]));
             }
 
             await using var reader = await command.ExecuteReaderAsync(
                 CommandBehavior.SequentialAccess | CommandBehavior.SingleResult,
                 cancellationToken);
-            var columns = Enumerable.Range(0, reader.FieldCount)
-                .Select(reader.GetName)
-                .ToArray();
+            var fields = ReadPreviewFields(reader);
             var rows = new List<IReadOnlyList<object?>>(PreviewRowLimit + 1);
             while (rows.Count <= PreviewRowLimit && await reader.ReadAsync(cancellationToken))
             {
@@ -205,7 +241,7 @@ public sealed class PocDataAssetService : ITransient
             }
             started.Stop();
             return new PocDatasetPreviewResult(
-                columns,
+                fields,
                 rows,
                 hasMore,
                 PreviewRowLimit,
@@ -247,22 +283,48 @@ public sealed class PocDataAssetService : ITransient
             PocPreviewMode.Full);
     }
 
-    private static PocDatasetDocument ToDatasetDocument(PocReportDataset dataset) =>
-        new(
+    private static PocDatasetDocument ToDatasetDocument(PocReportDataset dataset)
+    {
+        var schema = ReadSchema(dataset);
+        return new PocDatasetDocument(
             dataset.Code,
             dataset.Name,
             dataset.DataSourceCode,
             dataset.QueryText,
-            ExtractParameterCodes(dataset.QueryText),
-            DeserializeColumns(dataset.FieldSchemaJson),
+            schema.Variables,
+            schema.Fields,
             dataset.TimeoutSeconds,
             dataset.MaxRows,
             dataset.IsEnabled,
             dataset.Revision);
+    }
 
-    private static IReadOnlyList<PocColumnDefinition> DeserializeColumns(string json) =>
-        JsonConvert.DeserializeObject<PocColumnDefinition[]>(json)
-        ?? throw new InvalidDataException("Stored dataset field schema is null.");
+    public static PocDatasetSchemaDocument ReadSchema(PocReportDataset dataset)
+    {
+        ArgumentNullException.ThrowIfNull(dataset);
+        var token = JToken.Parse(dataset.FieldSchemaJson);
+        if (token.Type == JTokenType.Array)
+        {
+            var legacyColumns = token.ToObject<PocLegacyDatasetColumn[]>() ?? [];
+            return new PocDatasetSchemaDocument(
+                ExtractParameterCodes(dataset.QueryText)
+                    .Select(code => new PocDatasetVariableDefinition(code, code, "string", false))
+                    .ToArray(),
+                legacyColumns
+                    .Where(column => !column.DataType.Equals("formula", StringComparison.OrdinalIgnoreCase))
+                    .Select(column => new PocDatasetFieldDefinition(
+                        column.Code,
+                        column.Header,
+                        NormalizeFieldDataType(column.DataType)))
+                    .ToArray());
+        }
+
+        var schema = token.ToObject<PocDatasetSchemaDocument>()
+            ?? throw new InvalidDataException("Stored dataset schema is null.");
+        return new PocDatasetSchemaDocument(
+            schema.Variables ?? [],
+            schema.Fields ?? []);
+    }
 
     private static PocDataSourceDocument ToDataSourceDocument(PocDataSource dataSource)
     {
@@ -353,7 +415,10 @@ public sealed class PocDataAssetService : ITransient
             input.Name.Length > 128 ||
             string.IsNullOrWhiteSpace(input.QueryText) ||
             input.QueryText.Length > 200_000 ||
-            input.Columns.Count is 0 or > 256 ||
+            input.Variables is null ||
+            input.Fields is null ||
+            input.Variables.Count > 100 ||
+            input.Fields.Count > 256 ||
             input.TimeoutSeconds is < 1 or > 600 ||
             input.MaxRows is < 1 or > 1_000_000 ||
             input.Revision < 0)
@@ -363,39 +428,78 @@ public sealed class PocDataAssetService : ITransient
                 "数据集配置无效。");
         }
 
-        var columnCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var column in input.Columns)
+        ValidateDatasetSchema(input.QueryText, input.Variables, input.Fields);
+    }
+
+    private static void ValidateDatasetSchema(
+        string queryText,
+        IReadOnlyList<PocDatasetVariableDefinition> variables,
+        IReadOnlyList<PocDatasetFieldDefinition> fields)
+    {
+        var referencedCodes = ExtractParameterCodes(queryText);
+        var variableCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var variable in variables)
         {
-            ValidateCode(column.Code, "DATASET_FIELD_INVALID");
-            if (!columnCodes.Add(column.Code))
+            ValidateCode(variable.Code, "DATASET_VARIABLE_INVALID");
+            if (!variableCodes.Add(variable.Code) ||
+                string.IsNullOrWhiteSpace(variable.DisplayName) ||
+                variable.DisplayName.Length > 128 ||
+                !VariableDataTypes.Contains(variable.DataType))
             {
                 throw new PocDatasetConfigurationException(
-                    "DATASET_FIELD_INVALID",
-                    $"字段编码 '{column.Code}' 重复。");
-            }
-            var isFormula = column.DataType.Equals("formula", StringComparison.OrdinalIgnoreCase);
-            if (string.IsNullOrWhiteSpace(column.Header) ||
-                column.Header.Length > 128 ||
-                !ColumnDataTypes.Contains(column.DataType) ||
-                column.Width is < 40 or > 500 ||
-                (isFormula &&
-                 (string.IsNullOrWhiteSpace(column.FormulaTemplate) ||
-                  column.FormulaTemplate.Length > 1_024 ||
-                  !column.FormulaTemplate.TrimStart().StartsWith('='))) ||
-                (!isFormula && !string.IsNullOrWhiteSpace(column.FormulaTemplate)))
-            {
-                throw new PocDatasetConfigurationException(
-                    "DATASET_FIELD_INVALID",
-                    $"字段 '{column.Code}' 的定义无效。");
+                    "DATASET_VARIABLE_INVALID",
+                    $"变量 '@{variable.Code}' 的定义无效。");
             }
         }
-        if (input.Columns.All(column =>
-                column.DataType.Equals("formula", StringComparison.OrdinalIgnoreCase)))
+        if (referencedCodes.Count != variableCodes.Count ||
+            referencedCodes.Any(code => !variableCodes.Contains(code)))
         {
             throw new PocDatasetConfigurationException(
-                "DATASET_FIELD_INVALID",
-                "至少需要一个来自查询结果的普通字段。");
+                "DATASET_VARIABLE_MISMATCH",
+                "SQL 中的变量必须与数据集变量定义完全一致。");
         }
+
+        var fieldCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var field in fields)
+        {
+            ValidateCode(field.Code, "DATASET_FIELD_INVALID");
+            if (!fieldCodes.Add(field.Code))
+            {
+                throw new PocDatasetConfigurationException(
+                    "DATASET_FIELD_INVALID",
+                    $"返回字段编码 '{field.Code}' 重复。");
+            }
+            if (string.IsNullOrWhiteSpace(field.DisplayName) ||
+                field.DisplayName.Length > 128 ||
+                !FieldDataTypes.Contains(field.DataType))
+            {
+                throw new PocDatasetConfigurationException(
+                    "DATASET_FIELD_INVALID",
+                    $"返回字段 '{field.Code}' 的定义无效。");
+            }
+        }
+    }
+
+    private static IReadOnlyList<PocDatasetFieldDefinition> ReadPreviewFields(SqlDataReader reader)
+    {
+        var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var fields = new List<PocDatasetFieldDefinition>(reader.FieldCount);
+        for (var index = 0; index < reader.FieldCount; index++)
+        {
+            var code = reader.GetName(index);
+            ValidateCode(code, "DATASET_FIELD_INVALID");
+            if (!codes.Add(code))
+            {
+                throw new PocDatasetConfigurationException(
+                    "DATASET_FIELD_INVALID",
+                    $"查询返回了重复字段 '{code}'。");
+            }
+            fields.Add(new PocDatasetFieldDefinition(
+                code,
+                code,
+                ToFieldDataType(reader.GetFieldType(index))));
+        }
+        return fields;
     }
 
     private static void EnsureMatchingCode(string routeCode, string bodyCode, string errorCode)
@@ -437,10 +541,26 @@ public sealed class PocDataAssetService : ITransient
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static SqlParameter CreatePreviewParameter(string code, string? value) =>
-        new($"@{code}", SqlDbType.NVarChar, Math.Max(1, Math.Min(4000, value?.Length ?? 1)))
+    private static string ToFieldDataType(Type type) =>
+        type == typeof(bool) ? "bool" :
+        type == typeof(DateTimeOffset) ? "datetime" :
+        type == typeof(DateTime) ? "datetime" :
+        type == typeof(byte) || type == typeof(sbyte) ||
+        type == typeof(short) || type == typeof(ushort) ||
+        type == typeof(int) || type == typeof(uint) ||
+        type == typeof(long) || type == typeof(ulong) ||
+        type == typeof(float) || type == typeof(double) || type == typeof(decimal)
+            ? "number"
+            : "string";
+
+    private static string NormalizeFieldDataType(string dataType) =>
+        dataType.Trim().ToLowerInvariant() switch
         {
-            Value = value is null ? DBNull.Value : value
+            "bool" or "boolean" => "bool",
+            "date" => "date",
+            "datetime" => "datetime",
+            "number" or "int" or "long" or "decimal" => "number",
+            _ => "string"
         };
 
     private static object? NormalizePreviewValue(object value) => value switch

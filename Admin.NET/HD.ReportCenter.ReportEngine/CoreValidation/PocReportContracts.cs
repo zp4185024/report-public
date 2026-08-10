@@ -61,18 +61,21 @@ public sealed record PocParameterDefinition(
     bool AllowUrlPrefill = false,
     string? UrlKey = null);
 
-/// <summary>
-/// 明细数据集的列定义。FormulaTemplate 只描述公式列模板，普通数据列由后台结果直接提供。
-/// </summary>
-public sealed record PocColumnDefinition(
+/// <summary>数据集 SQL 输入变量；当前报表负责为它配置具体取值来源。</summary>
+public sealed record PocDatasetVariableDefinition(
     string Code,
-    string Header,
+    string DisplayName,
     string DataType,
-    int Width,
-    string? FormulaTemplate = null);
+    bool Required);
+
+/// <summary>数据集查询返回字段，只描述数据契约，不包含 Excel 表现属性。</summary>
+public sealed record PocDatasetFieldDefinition(
+    string Code,
+    string DisplayName,
+    string DataType);
 
 /// <summary>
-/// 一个可执行报表的完整元数据，包括查询参数、分页方式和数据集字段。
+/// 一个可执行报表的完整元数据，包括已具体化的查询参数、分页方式和数据集返回字段。
 /// 模板绑定校验和前端字段面板都以此定义作为允许字段的唯一来源。
 /// </summary>
 public sealed record PocReportDefinition(
@@ -82,7 +85,7 @@ public sealed record PocReportDefinition(
     PocPreviewSettings Preview,
     PocExportSettings Export,
     IReadOnlyList<PocParameterDefinition> Parameters,
-    IReadOnlyList<PocColumnDefinition> Columns);
+    IReadOnlyList<PocDatasetFieldDefinition> Fields);
 
 /// <summary>
 /// 浏览器提交的预览/导出查询条件。可空字符串由报表目录统一解析为业务默认值。

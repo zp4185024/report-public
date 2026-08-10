@@ -88,7 +88,7 @@ public sealed class PocTemplateDataExporter
         var rows = new List<PocDataRow>();
         var columnsPerRow = Math.Max(
             1,
-            (plan.Definition ?? PocReportCatalog.GetDefinition()).Columns.Count);
+            (plan.Definition ?? PocReportCatalog.GetDefinition()).Fields.Count);
         try
         {
             await foreach (var page in pages.WithCancellation(timeoutToken))

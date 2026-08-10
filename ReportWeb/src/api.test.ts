@@ -83,13 +83,16 @@ const datasetDocument: DatasetDocument = {
   name: '科室工作量明细',
   dataSourceCode: 'report_center',
   queryText: 'SELECT @deptId AS departmentName',
-  parameterCodes: ['deptId'],
-  columns: [{
-    code: 'departmentName',
-    header: '科室',
+  variables: [{
+    code: 'deptId',
+    displayName: '科室',
     dataType: 'string',
-    width: 180,
-    formulaTemplate: null,
+    required: false,
+  }],
+  fields: [{
+    code: 'departmentName',
+    displayName: '科室',
+    dataType: 'string',
   }],
   timeoutSeconds: 30,
   maxRows: 20_000,
@@ -115,13 +118,16 @@ const configuration: ReportConfigurationDocument = {
     code: 'detail',
     name: '科室工作量明细',
     dataSourceCode: 'report_center',
-    parameterCodes: ['deptId'],
-    columns: [{
-      code: 'departmentName',
-      header: '科室',
+    variables: [{
+      code: 'deptId',
+      displayName: '科室',
       dataType: 'string',
-      width: 180,
-      formulaTemplate: null,
+      required: false,
+    }],
+    fields: [{
+      code: 'departmentName',
+      displayName: '科室',
+      dataType: 'string',
     }],
     enabled: true,
   }],
@@ -140,12 +146,10 @@ const configuration: ReportConfigurationDocument = {
     allowUrlPrefill: true,
     urlKey: 'deptId',
   }],
-  columns: [{
+  fields: [{
     code: 'departmentName',
-    header: '科室',
+    displayName: '科室',
     dataType: 'string',
-    width: 180,
-    formulaTemplate: null,
   }],
   revision: 3,
 };
@@ -254,15 +258,12 @@ describe('reportApi template endpoints', () => {
     expect(JSON.parse(init.body as string)).toEqual(datasetDocument);
   });
 
-  it('previews the current dataset draft without saving it', async () => {
+  it('previews a saved reusable dataset by its global code', async () => {
     const request: DatasetPreviewRequest = {
-      dataSourceCode: 'report_center',
-      queryText: 'SELECT @deptId AS departmentName',
       parameters: { deptId: 'D02' },
-      timeoutSeconds: 30,
     };
     const result = {
-      columns: ['departmentName'],
+      fields: [{ code: 'departmentName', displayName: 'departmentName', dataType: 'string' }],
       rows: [['检验科']],
       hasMore: false,
       limit: 50,
@@ -270,10 +271,10 @@ describe('reportApi template endpoints', () => {
     };
     fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
 
-    await expect(dataAssetApi.previewDataset(request)).resolves.toEqual(result);
+    await expect(dataAssetApi.previewDataset('detail', request)).resolves.toEqual(result);
 
     const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(path).toBe('/api/report-center/poc/datasets/preview');
+    expect(path).toBe('/api/report-center/poc/datasets/detail/preview');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual(request);
   });

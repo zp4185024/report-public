@@ -29,13 +29,16 @@ interface ReportConfigurationDialogProps {
 }
 
 function toDraft(document: ReportConfigurationDocument): SaveReportConfigurationRequest {
+  const dataset = document.datasets.find((item) => item.code === document.datasetCode);
   return {
     name: document.name,
     sheetName: document.sheetName,
     preview: { ...document.preview },
     export: { ...document.export },
     datasetCode: document.datasetCode,
-    parameters: document.parameters.map((parameter) => ({ ...parameter })),
+    parameters: dataset === undefined
+      ? document.parameters.map((parameter) => ({ ...parameter }))
+      : alignDatasetVariables(document.parameters, dataset.variables),
     revision: document.revision,
   };
 }
@@ -56,6 +59,31 @@ function createParameter(index: number): ParameterDefinition {
     allowUrlPrefill: false,
     urlKey: null,
   };
+}
+
+function alignDatasetVariables(
+  parameters: readonly ParameterDefinition[],
+  variables: readonly { code: string; displayName: string; dataType: string; required: boolean }[],
+): ParameterDefinition[] {
+  const variableCodes = new Set(variables.map((variable) => variable.code.toLowerCase()));
+  const mapped = variables.map((variable, index) => {
+    const current = parameters.find(
+      (parameter) => parameter.code.toLowerCase() === variable.code.toLowerCase(),
+    );
+    return {
+      ...(current ?? createParameter(index)),
+      code: variable.code,
+      displayName: current?.displayName || variable.displayName,
+      dataType: variable.dataType,
+      required: variable.required || current?.required || false,
+    };
+  });
+  return [
+    ...mapped,
+    ...parameters
+      .filter((parameter) => !variableCodes.has(parameter.code.toLowerCase()))
+      .map((parameter) => ({ ...parameter })),
+  ];
 }
 
 function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1): T[] {
@@ -111,9 +139,22 @@ export function ReportConfigurationDialog({
     () => new Set(draft?.parameters.map((parameter) => parameter.code.toLowerCase()) ?? []),
     [draft?.parameters],
   );
-  const missingParameters = selectedDataset?.parameterCodes.filter(
-    (code) => !parameterCodes.has(code.toLowerCase()),
+  const missingParameters = selectedDataset?.variables.filter(
+    (variable) => !parameterCodes.has(variable.code.toLowerCase()),
   ) ?? [];
+  const mismatchedParameters = selectedDataset?.variables.filter((variable) => {
+    const parameter = draft?.parameters.find(
+      (item) => item.code.toLowerCase() === variable.code.toLowerCase(),
+    );
+    return parameter !== undefined && (
+      parameter.dataType !== variable.dataType ||
+      (variable.required && !parameter.required)
+    );
+  }) ?? [];
+  const datasetVariableCodes = useMemo(
+    () => new Set(selectedDataset?.variables.map((variable) => variable.code.toLowerCase()) ?? []),
+    [selectedDataset?.variables],
+  );
 
   if (!open) return null;
 
@@ -133,7 +174,10 @@ export function ReportConfigurationDialog({
     if (!selectedDataset.enabled) return '当前数据集已停用，不能用于报表。';
     if (parameterCodes.size !== draft.parameters.length) return '查询参数编码不能重复。';
     if (missingParameters.length > 0) {
-      return `数据集需要参数：${missingParameters.join('、')}。`;
+      return `尚未配置数据集变量：${missingParameters.map((item) => item.code).join('、')}。`;
+    }
+    if (mismatchedParameters.length > 0) {
+      return `变量类型与数据集不一致：${mismatchedParameters.map((item) => item.code).join('、')}。`;
     }
     return null;
   };
@@ -177,10 +221,10 @@ export function ReportConfigurationDialog({
             <Database size={16} />基础设置
           </button>
           <button type="button" className={tab === 'parameters' ? 'active' : ''} onClick={() => setTab('parameters')}>
-            <SlidersHorizontal size={16} />查询参数<span>{draft?.parameters.length ?? 0}</span>
+            <SlidersHorizontal size={16} />变量取值<span>{draft?.parameters.length ?? 0}</span>
           </button>
           <button type="button" className={tab === 'columns' ? 'active' : ''} onClick={() => setTab('columns')}>
-            <Columns3 size={16} />数据字段<span>{selectedDataset?.columns.length ?? 0}</span>
+            <Columns3 size={16} />返回字段<span>{selectedDataset?.fields.length ?? 0}</span>
           </button>
         </nav>
 
@@ -204,7 +248,16 @@ export function ReportConfigurationDialog({
                 <div className="dataset-reference-row">
                   <label>
                     <span>数据集</span>
-                    <select value={draft.datasetCode} onChange={(event) => setDraft({ ...draft, datasetCode: event.target.value })}>
+                    <select value={draft.datasetCode} onChange={(event) => {
+                      const nextDataset = document?.datasets.find((dataset) => dataset.code === event.target.value);
+                      setDraft({
+                        ...draft,
+                        datasetCode: event.target.value,
+                        parameters: nextDataset === undefined
+                          ? draft.parameters
+                          : alignDatasetVariables(draft.parameters, nextDataset.variables),
+                      });
+                    }}>
                       {document?.datasets.map((dataset) => (
                         <option key={dataset.code} value={dataset.code} disabled={!dataset.enabled}>
                           {dataset.name}（{dataset.code}）{dataset.enabled ? '' : ' · 已停用'}
@@ -219,11 +272,11 @@ export function ReportConfigurationDialog({
                 {selectedDataset !== null && (
                   <div className="dataset-reference-meta">
                     <span>数据源：{selectedDataset.dataSourceCode}</span>
-                    <span>字段：{selectedDataset.columns.length}</span>
-                    <span>SQL 参数：{selectedDataset.parameterCodes.length === 0 ? '无' : selectedDataset.parameterCodes.join('、')}</span>
+                    <span>返回字段：{selectedDataset.fields.length}</span>
+                    <span>输入变量：{selectedDataset.variables.length === 0 ? '无' : selectedDataset.variables.map((variable) => `@${variable.code}`).join('、')}</span>
                   </div>
                 )}
-                {missingParameters.length > 0 && <p className="inline-warning">尚未配置参数：{missingParameters.join('、')}</p>}
+                {missingParameters.length > 0 && <p className="inline-warning">尚未配置变量：{missingParameters.map((item) => item.code).join('、')}</p>}
               </fieldset>
 
               <fieldset>
@@ -239,7 +292,7 @@ export function ReportConfigurationDialog({
           ) : tab === 'parameters' ? (
             <div className="configuration-table-section">
               <div className="configuration-section-bar">
-                <button type="button" className="button" onClick={() => setDraft({ ...draft, parameters: [...draft.parameters, createParameter(draft.parameters.length)] })}><Plus size={16} />新增参数</button>
+                <button type="button" className="button" onClick={() => setDraft({ ...draft, parameters: [...draft.parameters, createParameter(draft.parameters.length)] })}><Plus size={16} />新增模板参数</button>
               </div>
               <div className="configuration-table-scroll">
                 <table className="configuration-table parameter-table">
@@ -248,14 +301,14 @@ export function ReportConfigurationDialog({
                     {draft.parameters.map((parameter, index) => (
                       <tr key={`${index}-${parameter.code}`}>
                         <td><div className="row-order"><button type="button" title="上移" aria-label="上移参数" disabled={index === 0} onClick={() => setDraft({ ...draft, parameters: moveItem(draft.parameters, index, -1) })}><ArrowUp size={14} /></button><button type="button" title="下移" aria-label="下移参数" disabled={index === draft.parameters.length - 1} onClick={() => setDraft({ ...draft, parameters: moveItem(draft.parameters, index, 1) })}><ArrowDown size={14} /></button></div></td>
-                        <td><input className="code-input" value={parameter.code} onChange={(event) => updateParameter(index, { code: event.target.value })} /></td>
+                        <td><input className="code-input" disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.code} onChange={(event) => updateParameter(index, { code: event.target.value })} /></td>
                         <td><input value={parameter.displayName} onChange={(event) => updateParameter(index, { displayName: event.target.value })} /></td>
-                        <td><select value={parameter.dataType} onChange={(event) => updateParameter(index, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td>
+                        <td><select disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.dataType} onChange={(event) => updateParameter(index, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td>
                         <td><select value={parameter.sourceType} onChange={(event) => updateParameter(index, { sourceType: event.target.value, readOnly: event.target.value !== 'Form' })}><option value="Form">查询表单</option><option value="System">系统默认</option><option value="Fixed">固定值</option></select></td>
                         <td><select value={parameter.controlType} onChange={(event) => updateParameter(index, { controlType: event.target.value })}><option value="text">文本框</option><option value="number">数字框</option><option value="date">日期框</option><option value="checkbox">是/否</option><option value="hidden">隐藏</option></select></td>
                         <td><input value={(parameter.sourceType === 'Fixed' ? parameter.fixedValue : parameter.defaultExpression) ?? ''} placeholder={parameter.sourceType === 'Fixed' ? '固定值' : '如 startOfMonth'} onChange={(event) => parameter.sourceType === 'Fixed' ? updateParameter(index, { fixedValue: event.target.value || null }) : updateParameter(index, { defaultExpression: event.target.value || null })} /></td>
-                        <td><div className="flag-list"><label><input type="checkbox" checked={parameter.required} onChange={(event) => updateParameter(index, { required: event.target.checked })} />必填</label><label><input type="checkbox" checked={parameter.visible} onChange={(event) => updateParameter(index, { visible: event.target.checked })} />显示</label><label><input type="checkbox" checked={parameter.allowUrlPrefill} onChange={(event) => updateParameter(index, { allowUrlPrefill: event.target.checked, urlKey: event.target.checked ? parameter.urlKey || parameter.code : null })} />URL 预填</label></div></td>
-                        <td><button type="button" className="table-icon danger" title="删除参数" aria-label={`删除参数 ${parameter.displayName}`} onClick={() => setDraft({ ...draft, parameters: draft.parameters.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 size={15} /></button></td>
+                        <td><div className="flag-list"><label><input type="checkbox" disabled={selectedDataset?.variables.some((variable) => variable.required && variable.code.toLowerCase() === parameter.code.toLowerCase())} checked={parameter.required} onChange={(event) => updateParameter(index, { required: event.target.checked })} />必填</label><label><input type="checkbox" checked={parameter.visible} onChange={(event) => updateParameter(index, { visible: event.target.checked })} />显示</label><label><input type="checkbox" checked={parameter.allowUrlPrefill} onChange={(event) => updateParameter(index, { allowUrlPrefill: event.target.checked, urlKey: event.target.checked ? parameter.urlKey || parameter.code : null })} />URL 预填</label></div></td>
+                        <td>{datasetVariableCodes.has(parameter.code.toLowerCase()) ? <span className="dataset-variable-badge">数据集</span> : <button type="button" className="table-icon danger" title="删除参数" aria-label={`删除参数 ${parameter.displayName}`} onClick={() => setDraft({ ...draft, parameters: draft.parameters.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 size={15} /></button>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -264,11 +317,10 @@ export function ReportConfigurationDialog({
             </div>
           ) : (
             <div className="configuration-table-section read-only-columns">
-              <div className="configuration-section-bar"><span>字段由数据集统一维护，报表中只读引用。</span></div>
               <div className="configuration-table-scroll">
                 <table className="configuration-table column-table">
-                  <thead><tr><th>顺序</th><th>字段编码</th><th>列标题</th><th>数据类型</th><th>列宽</th><th>公式模板</th></tr></thead>
-                  <tbody>{selectedDataset?.columns.map((column, index) => <tr key={column.code}><td>{index + 1}</td><td>{column.code}</td><td>{column.header}</td><td>{column.dataType}</td><td>{column.width}</td><td>{column.formulaTemplate ?? '—'}</td></tr>)}</tbody>
+                  <thead><tr><th>顺序</th><th>字段编码</th><th>业务名称</th><th>数据类型</th></tr></thead>
+                  <tbody>{selectedDataset?.fields.map((field, index) => <tr key={field.code}><td>{index + 1}</td><td>{field.code}</td><td>{field.displayName}</td><td>{field.dataType}</td></tr>)}</tbody>
                 </table>
               </div>
             </div>

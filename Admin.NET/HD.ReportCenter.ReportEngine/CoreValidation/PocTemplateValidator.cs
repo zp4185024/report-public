@@ -34,12 +34,11 @@ public static partial class PocTemplateValidator
         }
 
         var snapshot = JObject.Parse(snapshotJson);
-        // 允许字段完全来自报表定义；公式列不是后台数据字段，禁止被 detail token 直接绑定。
+        // 允许字段完全来自数据集返回契约；Excel 公式不属于数据集字段。
         var parameterCodes = definition.Parameters
             .Select(x => x.Code)
             .ToHashSet(StringComparer.Ordinal);
-        var detailCodes = definition.Columns
-            .Where(x => !string.Equals(x.DataType, "formula", StringComparison.Ordinal))
+        var detailCodes = definition.Fields
             .Select(x => x.Code)
             .ToHashSet(StringComparer.Ordinal);
         var parameterBindings = new List<PocParameterBinding>();

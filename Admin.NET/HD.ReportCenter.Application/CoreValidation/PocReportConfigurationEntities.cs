@@ -77,7 +77,7 @@ public sealed class PocReportDataset : EntityBase
     [SugarColumn(ColumnDescription = "只读参数化SQL", ColumnDataType = StaticConfig.CodeFirst_BigString)]
     public string QueryText { get; set; } = string.Empty;
 
-    [SugarColumn(ColumnDescription = "字段定义", ColumnDataType = StaticConfig.CodeFirst_BigString)]
+    [SugarColumn(ColumnDescription = "数据集输入变量和返回字段契约", ColumnDataType = StaticConfig.CodeFirst_BigString)]
     public string FieldSchemaJson { get; set; } = string.Empty;
 
     [SugarColumn(ColumnDescription = "查询超时秒数")]

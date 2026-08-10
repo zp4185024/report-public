@@ -23,12 +23,11 @@ const definition: ReportDefinition = {
     { code: 'startDate', displayName: '开始日期', controlType: 'date', sourceType: 'Form', defaultValue: null, visible: true, dataType: 'date', defaultExpression: 'startOfMonth', fixedValue: null, readOnly: false, required: false, allowUrlPrefill: false, urlKey: null },
     { code: 'endDate', displayName: '结束日期', controlType: 'date', sourceType: 'Form', defaultValue: null, visible: true, dataType: 'date', defaultExpression: 'endOfMonth', fixedValue: null, readOnly: false, required: false, allowUrlPrefill: false, urlKey: null },
   ],
-  columns: [
-    { code: 'sequence', header: '序号', dataType: 'number', width: 70, formulaTemplate: null },
-    { code: 'departmentName', header: '科室', dataType: 'text', width: 180, formulaTemplate: null },
-    { code: 'outpatientCount', header: '门诊人次', dataType: 'number', width: 110, formulaTemplate: null },
-    { code: 'dischargeCount', header: '出院人次', dataType: 'number', width: 110, formulaTemplate: null },
-    { code: 'totalWorkload', header: '合计', dataType: 'formula', width: 110, formulaTemplate: '=C{row}+D{row}' },
+  fields: [
+    { code: 'sequence', displayName: '序号', dataType: 'number' },
+    { code: 'departmentName', displayName: '科室', dataType: 'string' },
+    { code: 'outpatientCount', displayName: '门诊人次', dataType: 'number' },
+    { code: 'dischargeCount', displayName: '出院人次', dataType: 'number' },
   ],
 };
 
@@ -180,7 +179,7 @@ describe('scanTemplateBindings', () => {
     expect(error.message).toContain('unknownCode');
   });
 
-  it('rejects an unknown or formula detail field', () => {
+  it('rejects fields that are not declared by the dataset', () => {
     for (const code of ['missingField', 'totalWorkload']) {
       const error = expectBindingError(
         oneSheet({ 2: { 0: { v: `{{detail.${code}}}` } } }),

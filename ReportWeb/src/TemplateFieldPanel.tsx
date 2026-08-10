@@ -10,7 +10,7 @@ interface TemplateFieldPanelProps {
 
 /**
  * 根据后台报表定义生成可插入字段。
- * 公式列被排除在明细字段之外，因为公式应由设计人员写在模板行中并随行复制。
+ * 数据集只提供查询返回字段；公式由设计人员直接写在模板行中并随行复制。
  */
 export function TemplateFieldPanel({
   definition,
@@ -18,7 +18,7 @@ export function TemplateFieldPanel({
   onInsert,
 }: TemplateFieldPanelProps) {
   const parameters = definition.parameters.filter((parameter) => parameter.visible);
-  const detailFields = definition.columns.filter((column) => column.dataType !== 'formula');
+  const detailFields = definition.fields;
 
   return (
     <aside className="field-panel" aria-label="模板字段">
@@ -63,7 +63,7 @@ export function TemplateFieldPanel({
                 disabled={disabled}
                 onClick={() => onInsert(token, 'detail')}
               >
-                {field.header}
+                {field.displayName}
               </button>
             );
           })}

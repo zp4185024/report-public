@@ -63,11 +63,7 @@ export function scanTemplateBindings(
   definition: ReportDefinition,
 ): TemplateBinding {
   const parameterCodes = new Set(definition.parameters.map((parameter) => parameter.code));
-  const detailCodes = new Set(
-    definition.columns
-      .filter((column) => column.dataType !== 'formula')
-      .map((column) => column.code),
-  );
+  const detailCodes = new Set(definition.fields.map((field) => field.code));
   const parameterBindings: ParameterBinding[] = [];
   const detailFields: DetailFieldBinding[] = [];
   let detailLocation: DetailLocation | null = null;

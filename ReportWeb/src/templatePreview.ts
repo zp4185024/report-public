@@ -128,7 +128,7 @@ export function createTemplatePreviewPlan(
   snapshot: IWorkbookData,
   binding: TemplateBinding,
   result: ExecuteResult,
-  definition?: Pick<ReportDefinition, 'columns'>,
+  definition?: Pick<ReportDefinition, 'fields'>,
 ): TemplatePreviewPlan {
   const validatedSnapshot = validateSnapshot(snapshot as unknown);
   const validatedBinding = validateTemplateBinding(binding as unknown);
@@ -246,7 +246,7 @@ function createDetailPlan(
   snapshot: ValidatedSnapshot,
   binding: ValidatedTemplateBinding,
   result: ValidatedExecuteResult,
-  definition?: Pick<ReportDefinition, 'columns'>,
+  definition?: Pick<ReportDefinition, 'fields'>,
 ): TemplatePreviewPlan['detail'] {
   const detailBinding = binding.detailBinding;
   if (detailBinding === null) {
@@ -290,7 +290,7 @@ function createDetailPlan(
 
   const columnTypes = definition === undefined
     ? undefined
-    : new Map(definition.columns.map((column) => [column.code, column.dataType]));
+    : new Map(definition.fields.map((field) => [field.code, field.dataType]));
   const rows = createDetailRows(sheetId, templateRow, fields, result.rows, columnTypes);
 
   return {

@@ -172,10 +172,12 @@ export const dataAssetApi = {
       },
     ),
 
-  previewDataset: (request: DatasetPreviewRequest) =>
-    requestJson<DatasetPreviewResult>('/api/report-center/poc/datasets/preview', {
+  previewDataset: (code: string, request: DatasetPreviewRequest) =>
+    requestJson<DatasetPreviewResult>(
+      `/api/report-center/poc/datasets/${encodeURIComponent(code)}/preview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
-    }),
+      },
+    ),
 };

@@ -46,13 +46,19 @@ export interface ParameterDefinition {
   urlKey: string | null;
 }
 
-/** 报表数据集列；formulaTemplate 仅属于公式列，普通字段来自 ExecuteResult.rows。 */
-export interface ColumnDefinition {
+/** 数据集声明的 SQL 输入变量；具体值来源由每张报表配置。 */
+export interface DatasetVariableDefinition {
   code: string;
-  header: string;
+  displayName: string;
   dataType: string;
-  width: number;
-  formulaTemplate: string | null;
+  required: boolean;
+}
+
+/** 查询返回字段，只描述数据契约；表头、列宽和公式属于工作簿模板。 */
+export interface DatasetFieldDefinition {
+  code: string;
+  displayName: string;
+  dataType: string;
 }
 
 /** 字段面板、查询区和模板校验共同消费的报表元数据。 */
@@ -63,7 +69,7 @@ export interface ReportDefinition {
   preview: PreviewSettings;
   export: ExportSettings;
   parameters: ParameterDefinition[];
-  columns: ColumnDefinition[];
+  fields: DatasetFieldDefinition[];
 }
 
 /** 一次预览或导出的查询条件。page 始终使用一基页码，空输入转换为 null。 */
@@ -183,8 +189,8 @@ export interface DatasetDocument {
   name: string;
   dataSourceCode: string;
   queryText: string;
-  parameterCodes: string[];
-  columns: ColumnDefinition[];
+  variables: DatasetVariableDefinition[];
+  fields: DatasetFieldDefinition[];
   timeoutSeconds: number;
   maxRows: number;
   enabled: boolean;
@@ -192,14 +198,11 @@ export interface DatasetDocument {
 }
 
 export interface DatasetPreviewRequest {
-  dataSourceCode: string;
-  queryText: string;
   parameters: Record<string, string | null>;
-  timeoutSeconds: number;
 }
 
 export interface DatasetPreviewResult {
-  columns: string[];
+  fields: DatasetFieldDefinition[];
   rows: DataRowValue[][];
   hasMore: boolean;
   limit: number;
@@ -210,8 +213,8 @@ export interface DatasetOption {
   code: string;
   name: string;
   dataSourceCode: string;
-  parameterCodes: string[];
-  columns: ColumnDefinition[];
+  variables: DatasetVariableDefinition[];
+  fields: DatasetFieldDefinition[];
   enabled: boolean;
 }
 
@@ -224,7 +227,7 @@ export interface ReportConfigurationDocument {
   datasetCode: string;
   datasets: DatasetOption[];
   parameters: ParameterDefinition[];
-  columns: ColumnDefinition[];
+  fields: DatasetFieldDefinition[];
   revision: number;
 }
 

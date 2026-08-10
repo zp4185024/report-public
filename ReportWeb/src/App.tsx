@@ -99,7 +99,7 @@ function toReportDefinition(configuration: ReportConfigurationDocument): ReportD
     preview: configuration.preview,
     export: configuration.export,
     parameters: configuration.parameters,
-    columns: configuration.columns,
+    fields: configuration.fields,
   };
 }
 

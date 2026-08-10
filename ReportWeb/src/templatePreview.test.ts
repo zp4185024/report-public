@@ -9,11 +9,11 @@ import type { ExecuteResult, TemplateBinding, WorkloadRowFieldCode } from './typ
 const maxTemplateCoordinate = 2_147_483_647;
 
 const resultDefinition = {
-  columns: [
-    { code: 'sequence', header: '序号', dataType: 'number', width: 70, formulaTemplate: null },
-    { code: 'departmentName', header: '科室', dataType: 'string', width: 180, formulaTemplate: null },
-    { code: 'outpatientCount', header: '门诊人次', dataType: 'number', width: 110, formulaTemplate: null },
-    { code: 'dischargeCount', header: '出院人次', dataType: 'number', width: 110, formulaTemplate: null },
+  fields: [
+    { code: 'sequence', displayName: '序号', dataType: 'number' },
+    { code: 'departmentName', displayName: '科室', dataType: 'string' },
+    { code: 'outpatientCount', displayName: '门诊人次', dataType: 'number' },
+    { code: 'dischargeCount', displayName: '出院人次', dataType: 'number' },
   ],
 };
 

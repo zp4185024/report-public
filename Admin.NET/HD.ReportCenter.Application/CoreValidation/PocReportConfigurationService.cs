@@ -36,8 +36,8 @@ public sealed record PocDatasetDocument(
     string Name,
     string DataSourceCode,
     string QueryText,
-    IReadOnlyList<string> ParameterCodes,
-    IReadOnlyList<PocColumnDefinition> Columns,
+    IReadOnlyList<PocDatasetVariableDefinition> Variables,
+    IReadOnlyList<PocDatasetFieldDefinition> Fields,
     int TimeoutSeconds,
     int MaxRows,
     bool Enabled,
@@ -47,8 +47,8 @@ public sealed record PocDatasetOption(
     string Code,
     string Name,
     string DataSourceCode,
-    IReadOnlyList<string> ParameterCodes,
-    IReadOnlyList<PocColumnDefinition> Columns,
+    IReadOnlyList<PocDatasetVariableDefinition> Variables,
+    IReadOnlyList<PocDatasetFieldDefinition> Fields,
     bool Enabled);
 
 public sealed record PocReportConfigurationDocument(
@@ -60,7 +60,7 @@ public sealed record PocReportConfigurationDocument(
     string DatasetCode,
     IReadOnlyList<PocDatasetOption> Datasets,
     IReadOnlyList<PocParameterDefinition> Parameters,
-    IReadOnlyList<PocColumnDefinition> Columns,
+    IReadOnlyList<PocDatasetFieldDefinition> Fields,
     int Revision);
 
 public sealed record PocSaveReportConfigurationRequest(
@@ -194,9 +194,11 @@ public sealed class PocReportConfigurationService : ITransient
                 "DATA_ASSET_DISABLED",
                 "只能选择已启用且数据源可用的数据集。");
         }
+        var datasetSchema = PocDataAssetService.ReadSchema(dataset);
+        ValidateDatasetVariableBindings(datasetSchema.Variables, request.Parameters);
         _ = PocReadOnlySqlValidator.Validate(
             dataset.QueryText,
-            request.Parameters.Select(item => item.Code),
+            datasetSchema.Variables.Select(item => item.Code),
             request.Preview.Mode);
 
         var parameterEntities = request.Parameters.Select((parameter, index) =>
@@ -240,8 +242,8 @@ public sealed class PocReportConfigurationService : ITransient
                 DefaultDatasetCode,
                 "科室工作量明细",
                 DefaultDataSourceCode,
-                ["deptId"],
-                definition.Columns,
+                [new PocDatasetVariableDefinition("deptId", "科室", "string", false)],
+                definition.Fields,
                 true)]
             : storedDatasets.Select(ToDatasetOption).ToArray();
         var selected = options.FirstOrDefault(item =>
@@ -257,7 +259,7 @@ public sealed class PocReportConfigurationService : ITransient
             selected.Code,
             options,
             definition.Parameters,
-            selected.Columns,
+            selected.Fields,
             0);
     }
 
@@ -268,7 +270,7 @@ public sealed class PocReportConfigurationService : ITransient
     {
         var preview = Deserialize<PocPreviewSettings>(stored.Report.PreviewSettingsJson);
         var export = Deserialize<PocExportSettings>(stored.Report.ExportSettingsJson);
-        var columns = Deserialize<PocColumnDefinition[]>(stored.Dataset.FieldSchemaJson);
+        var datasetSchema = PocDataAssetService.ReadSchema(stored.Dataset);
         var parameters = stored.Parameters.Select(parameter =>
         {
             var defaultValue = PocDefaultExpressionEvaluator.Evaluate(
@@ -299,7 +301,7 @@ public sealed class PocReportConfigurationService : ITransient
             stored.Report.DatasetCode,
             datasets.Select(ToDatasetOption).ToArray(),
             parameters,
-            columns,
+            datasetSchema.Fields,
             stored.Report.Revision);
     }
 
@@ -311,16 +313,40 @@ public sealed class PocReportConfigurationService : ITransient
             document.Preview,
             document.Export,
             document.Parameters,
-            document.Columns);
+            document.Fields);
 
-    private static PocDatasetOption ToDatasetOption(PocReportDataset dataset) =>
-        new(
+    private static PocDatasetOption ToDatasetOption(PocReportDataset dataset)
+    {
+        var schema = PocDataAssetService.ReadSchema(dataset);
+        return new PocDatasetOption(
             dataset.Code,
             dataset.Name,
             dataset.DataSourceCode,
-            PocDataAssetService.ExtractParameterCodes(dataset.QueryText),
-            Deserialize<PocColumnDefinition[]>(dataset.FieldSchemaJson),
+            schema.Variables,
+            schema.Fields,
             dataset.IsEnabled);
+    }
+
+    private static void ValidateDatasetVariableBindings(
+        IReadOnlyList<PocDatasetVariableDefinition> variables,
+        IReadOnlyList<PocParameterDefinition> parameters)
+    {
+        foreach (var variable in variables)
+        {
+            var parameter = parameters.FirstOrDefault(item =>
+                item.Code.Equals(variable.Code, StringComparison.OrdinalIgnoreCase))
+                ?? throw new PocDatasetConfigurationException(
+                    "DATASET_PARAMETER_UNMAPPED",
+                    $"数据集变量 '@{variable.Code}' 尚未配置报表取值。");
+            if (!parameter.DataType.Equals(variable.DataType, StringComparison.OrdinalIgnoreCase) ||
+                (variable.Required && !parameter.Required))
+            {
+                throw new PocDatasetConfigurationException(
+                    "DATASET_PARAMETER_TYPE_MISMATCH",
+                    $"报表参数 '{parameter.Code}' 与数据集变量定义不一致。");
+            }
+        }
+    }
 
     private static void ValidateRequest(PocSaveReportConfigurationRequest request)
     {

@@ -63,12 +63,10 @@ public static class PocReportCatalog
                     AllowUrlPrefill: true)
             ],
             [
-                new("sequence", "序号", "number", 70),
-                new("departmentName", "科室", "text", 180),
-                new("outpatientCount", "门诊人次", "number", 110),
-                new("dischargeCount", "出院人次", "number", 110),
-                new("totalWorkload", "合计", "formula", 110, "=C{row}+D{row}"),
-                new("averageWorkload", "平均值", "formula", 110, "=AVERAGE(C{row}:D{row})")
+                new("sequence", "序号", "number"),
+                new("departmentName", "科室", "string"),
+                new("outpatientCount", "门诊人次", "number"),
+                new("dischargeCount", "出院人次", "number")
             ]);
     }
 
