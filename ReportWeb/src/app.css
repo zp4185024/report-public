@@ -40,19 +40,11 @@ button svg {
   background: #f3f5f7;
 }
 
-.app-header {
-  display: flex;
-  min-height: 62px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 9px 24px;
-  border-bottom: 1px solid #d8dee6;
-  background: #ffffff;
-}
-
 .report-heading {
+  width: min(34vw, 520px);
   min-width: 0;
+  justify-self: center;
+  text-align: center;
 }
 
 .app-kicker {
@@ -73,6 +65,12 @@ h1 {
   white-space: nowrap;
 }
 
+.report-heading h1 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
 .runtime-status,
 .command-actions,
 .template-state,
@@ -88,8 +86,11 @@ h1 {
 .runtime-status {
   flex: 0 0 auto;
   gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid #d5dbe3;
   color: #344054;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .status-dot,
@@ -103,10 +104,10 @@ h1 {
 }
 
 .command-bar {
-  display: flex;
+  display: grid;
   min-height: 46px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   padding: 6px 24px;
   border-bottom: 1px solid #d8dee6;
@@ -121,6 +122,7 @@ h1 {
   border: 1px solid #c8d0da;
   border-radius: 4px;
   background: #edf1f5;
+  justify-self: start;
 }
 
 .mode-button {
@@ -157,7 +159,9 @@ h1 {
 }
 
 .command-actions {
+  max-width: 100%;
   min-width: 0;
+  justify-self: end;
   justify-content: flex-end;
   gap: 12px;
 }
@@ -1491,6 +1495,34 @@ h1 {
   }
 }
 
+@media (max-width: 1700px) {
+  .command-bar.design-mode .command-actions {
+    gap: 8px;
+  }
+
+  .command-bar.design-mode .command-actions .button {
+    width: 34px;
+    min-width: 34px;
+    justify-content: center;
+    padding: 0;
+    font-size: 0;
+  }
+}
+
+@media (max-width: 1280px) {
+  .duration-state {
+    display: none;
+  }
+
+  .runtime-status {
+    padding-left: 8px;
+  }
+
+  .runtime-label {
+    display: none;
+  }
+}
+
 @media (max-width: 1120px) {
   .query-band {
     grid-template-columns: repeat(3, minmax(140px, 1fr));
@@ -1500,7 +1532,7 @@ h1 {
     grid-column: span 3;
   }
 
-  .duration-state {
+  .template-state > span:first-child {
     display: none;
   }
 
@@ -1513,12 +1545,44 @@ h1 {
   }
 }
 
-@media (max-width: 720px) {
-  .app-header {
-    min-height: 58px;
-    padding: 8px 14px;
+@media (max-width: 900px) {
+  .command-bar {
+    grid-template-areas:
+      "heading heading"
+      "mode actions";
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 7px 12px;
   }
 
+  .report-heading {
+    width: 100%;
+    max-width: none;
+    grid-area: heading;
+  }
+
+  .mode-switch {
+    grid-area: mode;
+  }
+
+  .command-actions {
+    width: 100%;
+    grid-area: actions;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .runtime-status {
+    display: none;
+  }
+
+  .template-state {
+    width: auto;
+    justify-content: flex-end;
+    padding-left: 8px;
+  }
+}
+
+@media (max-width: 720px) {
   h1 {
     font-size: 16px;
   }
@@ -1538,9 +1602,8 @@ h1 {
   }
 
   .template-state {
-    width: 100%;
+    width: auto;
     justify-content: flex-end;
-    border-left: 0;
   }
 
   .mode-button {
@@ -1689,7 +1752,11 @@ h1 {
   }
 
   .command-bar {
-    flex-direction: column;
+    grid-template-areas:
+      "heading"
+      "mode"
+      "actions";
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .mode-switch,
@@ -1759,7 +1826,19 @@ h1 {
 
 @media (min-width: 431px) and (max-width: 560px) {
   .command-bar {
-    flex-direction: column;
+    grid-template-areas:
+      "heading"
+      "mode"
+      "actions";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mode-switch {
+    width: 100%;
+  }
+
+  .mode-button {
+    width: 50%;
   }
 
   .command-actions {

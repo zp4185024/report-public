@@ -602,18 +602,7 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <header className="app-header">
-        <div className="report-heading">
-          <span className="app-kicker">报表模板</span>
-          <h1>{definition?.name ?? '科室工作量报表'}</h1>
-        </div>
-        <div className="runtime-status" title="公式由 Univer Web Worker 计算">
-          <span className="status-dot" />
-          Univer Worker
-        </div>
-      </header>
-
-      <div className="command-bar" aria-label="模板命令栏">
+      <header className={`command-bar ${mode}-mode`} aria-label="模板命令栏">
         <div className="mode-switch" aria-label="工作模式">
           <button
             type="button"
@@ -637,6 +626,10 @@ export default function App() {
             {previewing ? <LoaderCircle className="spin" size={15} /> : <Eye size={15} />}
             数据预览
           </button>
+        </div>
+
+        <div className="report-heading" title={definition?.name ?? '科室工作量报表'}>
+          <h1>{definition?.name ?? '科室工作量报表'}</h1>
         </div>
 
         <div className="command-actions">
@@ -742,8 +735,12 @@ export default function App() {
             <span>查询 {queryDuration.toFixed(0)} ms</span>
             <span>渲染 {renderDuration.toFixed(0)} ms</span>
           </div>
+          <div className="runtime-status" title="公式由 Univer Web Worker 计算">
+            <span className="status-dot" />
+            <span className="runtime-label">Univer Worker</span>
+          </div>
         </div>
-      </div>
+      </header>
 
       <form className="query-band" onSubmit={handleSubmit}>
         {definition?.parameters
