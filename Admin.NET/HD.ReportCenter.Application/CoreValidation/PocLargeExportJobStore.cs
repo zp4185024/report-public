@@ -155,17 +155,17 @@ public sealed class PocLargeExportJobStore
         }
     }
 
-    private static async IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> ReadValidationPages(
+    private static async IAsyncEnumerable<IReadOnlyList<PocDataRow>> ReadValidationPages(
         int rowCount,
         string? deptId,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         const int pageSize = 1_000;
-        var page = new List<PocWorkloadRow>(pageSize);
+        var page = new List<PocDataRow>(pageSize);
         foreach (var row in PocReportCatalog.EnumerateRows(rowCount, deptId))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            page.Add(row);
+            page.Add(PocDataRow.FromWorkload(row));
             if (page.Count == pageSize)
             {
                 yield return page.ToArray();

@@ -121,17 +121,17 @@ public sealed class PocStreamingTemplateDataExporterTests
         }
     }
 
-    private static async IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> ReadPages(
+    private static async IAsyncEnumerable<IReadOnlyList<PocDataRow>> ReadPages(
         int rowCount,
         int pageSize,
         string? deptId,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var page = new List<PocWorkloadRow>(pageSize);
+        var page = new List<PocDataRow>(pageSize);
         foreach (var row in PocReportCatalog.EnumerateRows(rowCount, deptId))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            page.Add(row);
+            page.Add(PocDataRow.FromWorkload(row));
             if (page.Count == pageSize)
             {
                 yield return page.ToArray();

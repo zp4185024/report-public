@@ -41,7 +41,7 @@ public sealed class PocStreamingTemplateDataExporter
     public async Task WriteLargeAsync(
         Stream destination,
         PocTemplateDataExportPlan plan,
-        IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> pages,
+        IAsyncEnumerable<IReadOnlyList<PocDataRow>> pages,
         Action<long>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -120,7 +120,7 @@ public sealed class PocStreamingTemplateDataExporter
         XDocument worksheet,
         IReadOnlyList<string> sharedStrings,
         PocTemplateDataExportPlan plan,
-        IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> pages,
+        IAsyncEnumerable<IReadOnlyList<PocDataRow>> pages,
         Action<long>? progress,
         CancellationToken cancellationToken)
     {
@@ -271,7 +271,7 @@ public sealed class PocStreamingTemplateDataExporter
         IReadOnlyDictionary<(int Row, int Column), PocParameterBinding[]> parameterBindings,
         IReadOnlyDictionary<string, string> parameterValues,
         IReadOnlyDictionary<int, string>? detailFields,
-        PocWorkloadRow? detailRow,
+        PocDataRow? detailRow,
         (string SheetName, int InsertAfterRow, int InsertedRowCount)? insertion)
     {
         var clone = new XElement(source);
@@ -336,34 +336,55 @@ public sealed class PocStreamingTemplateDataExporter
         return clone;
     }
 
-    private static void SetDetailValue(XElement cell, string code, PocWorkloadRow row)
+    private static void SetDetailValue(XElement cell, string code, PocDataRow row)
     {
-        switch (code)
+        if (!row.TryGetValue(code, out var value))
         {
-            case "sequence":
-                SetNumber(cell, row.Sequence);
+            throw new InvalidOperationException($"导出数据缺少明细字段 '{code}'。");
+        }
+
+        switch (value)
+        {
+            case null:
+            case DBNull:
+                ClearCellValue(cell);
                 break;
-            case "departmentName":
-                SetInlineText(cell, row.DepartmentName);
+            case string text:
+                SetInlineText(cell, text);
                 break;
-            case "outpatientCount":
-                SetNumber(cell, row.OutpatientCount);
+            case bool boolean:
+                SetBoolean(cell, boolean);
                 break;
-            case "dischargeCount":
-                SetNumber(cell, row.DischargeCount);
+            case DateTime dateTime:
+                SetNumber(cell, dateTime.ToOADate());
+                break;
+            case DateTimeOffset dateTimeOffset:
+                SetNumber(cell, dateTimeOffset.DateTime.ToOADate());
+                break;
+            case byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal:
+                SetNumber(cell, Convert.ToString(value, CultureInfo.InvariantCulture)!);
                 break;
             default:
-                throw new InvalidOperationException($"导出模板包含未知明细字段绑定 '{code}'。");
+                throw new InvalidOperationException(
+                    $"明细字段 '{code}' 的类型 '{value.GetType().Name}' 不能写入 Excel。");
         }
     }
 
-    private static void SetNumber(XElement cell, int value)
+    private static void SetNumber(XElement cell, double value) =>
+        SetNumber(cell, value.ToString("R", CultureInfo.InvariantCulture));
+
+    private static void SetNumber(XElement cell, string value)
     {
         cell.SetAttributeValue("t", null);
         cell.RemoveNodes();
-        cell.Add(new XElement(
-            SpreadsheetNamespace + "v",
-            value.ToString(CultureInfo.InvariantCulture)));
+        cell.Add(new XElement(SpreadsheetNamespace + "v", value));
+    }
+
+    private static void SetBoolean(XElement cell, bool value)
+    {
+        cell.SetAttributeValue("t", "b");
+        cell.RemoveNodes();
+        cell.Add(new XElement(SpreadsheetNamespace + "v", value ? "1" : "0"));
     }
 
     private static void SetInlineText(XElement cell, string value)

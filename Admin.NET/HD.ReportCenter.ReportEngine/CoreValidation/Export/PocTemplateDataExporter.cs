@@ -37,7 +37,7 @@ public sealed class PocTemplateDataExporter
     public async Task WriteNormalAsync(
         Stream destination,
         PocTemplateDataExportPlan plan,
-        IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> pages,
+        IAsyncEnumerable<IReadOnlyList<PocDataRow>> pages,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(destination);
@@ -79,13 +79,13 @@ public sealed class PocTemplateDataExporter
         }
     }
 
-    private static async Task<IReadOnlyList<PocWorkloadRow>> MaterializeRowsAsync(
+    private static async Task<IReadOnlyList<PocDataRow>> MaterializeRowsAsync(
         PocTemplateDataExportPlan plan,
-        IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> pages,
+        IAsyncEnumerable<IReadOnlyList<PocDataRow>> pages,
         CancellationToken timeoutToken,
         CancellationToken callerToken)
     {
-        var rows = new List<PocWorkloadRow>();
+        var rows = new List<PocDataRow>();
         var columnsPerRow = Math.Max(1, PocReportCatalog.GetDefinition().Columns.Count);
         try
         {
@@ -139,7 +139,7 @@ public sealed class PocTemplateDataExporter
     private static void ExpandDetailRows(
         XLWorkbook workbook,
         PocTemplateDataExportPlan plan,
-        IReadOnlyList<PocWorkloadRow> rows,
+        IReadOnlyList<PocDataRow> rows,
         CancellationToken cancellationToken)
     {
         var detail = plan.Binding.DetailBinding;
@@ -296,24 +296,67 @@ public sealed class PocTemplateDataExporter
         _ => throw new InvalidOperationException($"导出模板包含未知参数绑定 '{code}'。")
     };
 
-    private static void WriteDetailValue(IXLCell cell, string code, PocWorkloadRow row)
+    private static void WriteDetailValue(IXLCell cell, string code, PocDataRow row)
     {
-        switch (code)
+        if (!row.TryGetValue(code, out var value))
         {
-            case "sequence":
-                cell.Value = row.Sequence;
+            throw new InvalidOperationException($"导出数据缺少明细字段 '{code}'。");
+        }
+
+        switch (value)
+        {
+            case null:
+            case DBNull:
+                cell.Clear(XLClearOptions.Contents);
                 break;
-            case "departmentName":
-                cell.Value = row.DepartmentName;
+            case string text:
+                cell.Value = text;
                 break;
-            case "outpatientCount":
-                cell.Value = row.OutpatientCount;
+            case bool boolean:
+                cell.Value = boolean;
                 break;
-            case "dischargeCount":
-                cell.Value = row.DischargeCount;
+            case DateTime dateTime:
+                cell.Value = dateTime;
+                break;
+            case DateTimeOffset dateTimeOffset:
+                cell.Value = dateTimeOffset.DateTime;
+                break;
+            case byte number:
+                cell.Value = number;
+                break;
+            case sbyte number:
+                cell.Value = number;
+                break;
+            case short number:
+                cell.Value = number;
+                break;
+            case ushort number:
+                cell.Value = number;
+                break;
+            case int number:
+                cell.Value = number;
+                break;
+            case uint number:
+                cell.Value = number;
+                break;
+            case long number:
+                cell.Value = number;
+                break;
+            case ulong number when number <= long.MaxValue:
+                cell.Value = (long)number;
+                break;
+            case float number:
+                cell.Value = number;
+                break;
+            case double number:
+                cell.Value = number;
+                break;
+            case decimal number:
+                cell.Value = number;
                 break;
             default:
-                throw new InvalidOperationException($"导出模板包含未知明细字段绑定 '{code}'。");
+                throw new InvalidOperationException(
+                    $"明细字段 '{code}' 的类型 '{value.GetType().Name}' 不能写入 Excel。");
         }
     }
 

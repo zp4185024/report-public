@@ -86,7 +86,7 @@ public static class PocReportCatalog
             ? PreviewRowCount
             : Math.Max(0, Math.Min(preview.PageSize, PreviewRowCount - offset));
         var rows = Enumerable.Range(offset + 1, count)
-            .Select(sequence => CreateRow(sequence, request.DeptId))
+            .Select(sequence => PocDataRow.FromWorkload(CreateRow(sequence, request.DeptId)))
             .ToArray();
 
         var parameters = new PocResolvedParameters(
@@ -107,7 +107,7 @@ public static class PocReportCatalog
     /// <summary>
     /// 从第一批开始读取完整导出数据。Paged 只控制每批查询量，绝不把当前预览页当成导出范围。
     /// </summary>
-    public static IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> ReadExportPages(
+    public static IAsyncEnumerable<IReadOnlyList<PocDataRow>> ReadExportPages(
         PocExecuteRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -115,7 +115,7 @@ public static class PocReportCatalog
     }
 
     /// <summary>按显式预览设置分批读取完整导出数据，最终行集不受 Full/Paged 选择影响。</summary>
-    public static async IAsyncEnumerable<IReadOnlyList<PocWorkloadRow>> ReadExportPages(
+    public static async IAsyncEnumerable<IReadOnlyList<PocDataRow>> ReadExportPages(
         PocExecuteRequest request,
         PocPreviewSettings preview,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -124,7 +124,9 @@ public static class PocReportCatalog
         if (preview.Mode == PocPreviewMode.Full)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            yield return EnumerateRows(PreviewRowCount, request.DeptId).ToArray();
+            yield return EnumerateRows(PreviewRowCount, request.DeptId)
+                .Select(PocDataRow.FromWorkload)
+                .ToArray();
             yield break;
         }
 

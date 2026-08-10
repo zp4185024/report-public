@@ -56,7 +56,7 @@ public sealed class PocReportCatalogTests
     public async Task ReadExportPages_FullPreviewReturnsOneCompleteBatch()
     {
         var request = new PocExecuteRequest(3, "H01", "D02", "P03", "2026-07-01", "2026-07-14");
-        var pages = new List<IReadOnlyList<PocWorkloadRow>>();
+        var pages = new List<IReadOnlyList<PocDataRow>>();
 
         await foreach (var page in PocReportCatalog.ReadExportPages(request, CancellationToken.None))
         {
@@ -76,7 +76,7 @@ public sealed class PocReportCatalogTests
         // 导出不能继承页面当前页码。即使用户正在看第 3 页，也必须从第 1 页开始顺序读取全部数据。
         var request = new PocExecuteRequest(3, "H01", "D02", "P03", "2026-07-01", "2026-07-14");
         var preview = new PocPreviewSettings(PocPreviewMode.Paged, 20, false);
-        var pages = new List<IReadOnlyList<PocWorkloadRow>>();
+        var pages = new List<IReadOnlyList<PocDataRow>>();
 
         await foreach (var page in PocReportCatalog.ReadExportPages(request, preview, CancellationToken.None))
         {
