@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Braces,
   Database,
+  Eye,
   LoaderCircle,
   Plus,
   Save,
@@ -16,6 +17,7 @@ import type {
   DataSourceDocument,
   DataSourceInput,
   DatasetDocument,
+  DatasetPreviewResult,
 } from './types';
 
 type AssetKind = 'data-sources' | 'datasets';
@@ -99,6 +101,9 @@ export default function DataAssetPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewParameters, setPreviewParameters] = useState<Record<string, string>>({});
+  const [previewResult, setPreviewResult] = useState<DatasetPreviewResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -129,6 +134,7 @@ export default function DataAssetPage() {
     () => sqlParameters(datasetDraft?.queryText ?? ''),
     [datasetDraft?.queryText],
   );
+  const urlParameters = useMemo(() => new URLSearchParams(window.location.search), []);
 
   const selectSource = (source: DataSourceDocument) => {
     setDataSourceDraft(sourceDraft(source));
@@ -138,6 +144,8 @@ export default function DataAssetPage() {
 
   const selectDataset = (dataset: DatasetDocument) => {
     setDatasetDraft({ ...dataset, columns: dataset.columns.map((column) => ({ ...column })) });
+    setPreviewParameters({});
+    setPreviewResult(null);
     setError(null);
     setStatus(null);
   };
@@ -219,6 +227,36 @@ export default function DataAssetPage() {
     }
   };
 
+  const previewDataset = async () => {
+    if (datasetDraft === null) return;
+    if (!datasetDraft.dataSourceCode || !datasetDraft.queryText.trim()) {
+      setError('数据源和 SQL 不能为空。');
+      return;
+    }
+    setPreviewing(true);
+    setError(null);
+    setStatus(null);
+    try {
+      const parameters = Object.fromEntries(inferredParameters.map((code) => {
+        const value = previewParameters[code] ?? urlParameters.get(code) ?? '';
+        return [code, value.trim() === '' ? null : value];
+      }));
+      const result = await dataAssetApi.previewDataset({
+        dataSourceCode: datasetDraft.dataSourceCode,
+        queryText: datasetDraft.queryText,
+        parameters,
+        timeoutSeconds: datasetDraft.timeoutSeconds,
+      });
+      setPreviewResult(result);
+      setStatus(`预览完成，返回 ${result.rows.length} 行，耗时 ${result.durationMilliseconds} ms`);
+    } catch (exception) {
+      setPreviewResult(null);
+      setError(exception instanceof Error ? exception.message : '数据集预览失败。');
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
   return (
     <main className="asset-page">
       <header className="asset-header">
@@ -246,7 +284,11 @@ export default function DataAssetPage() {
             <button type="button" className="icon-button" title={kind === 'data-sources' ? '新增数据源' : '新增数据集'} aria-label={kind === 'data-sources' ? '新增数据源' : '新增数据集'} onClick={() => {
               setError(null); setStatus(null);
               if (kind === 'data-sources') setDataSourceDraft(newDataSource(dataSources));
-              else setDatasetDraft(newDataset(datasets, dataSources));
+              else {
+                setDatasetDraft(newDataset(datasets, dataSources));
+                setPreviewParameters({});
+                setPreviewResult(null);
+              }
             }}><Plus size={17} /></button>
           </div>
           <div className="asset-list-scroll">
@@ -282,17 +324,25 @@ export default function DataAssetPage() {
             </>
           ) : kind === 'datasets' && datasetDraft !== null ? (
             <>
-              <div className="asset-editor-header"><div><h2>{datasetDraft.revision === 0 ? '新增数据集' : datasetDraft.name}</h2><p>修订号 {datasetDraft.revision}</p></div><button type="button" className="button button-primary" disabled={saving} onClick={() => void saveDataset()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button></div>
+              <div className="asset-editor-header"><div><h2>{datasetDraft.revision === 0 ? '新增数据集' : datasetDraft.name}</h2><p>修订号 {datasetDraft.revision}</p></div><button type="button" className="button button-primary" disabled={saving || previewing} onClick={() => void saveDataset()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button></div>
               <div className="asset-form-grid dataset-form-grid">
                 <label><span>数据集编码</span><input disabled={datasetDraft.revision > 0} value={datasetDraft.code} onChange={(event) => setDatasetDraft({ ...datasetDraft, code: event.target.value })} /></label>
                 <label><span>数据集名称</span><input value={datasetDraft.name} onChange={(event) => setDatasetDraft({ ...datasetDraft, name: event.target.value })} /></label>
-                <label><span>数据源</span><select value={datasetDraft.dataSourceCode} onChange={(event) => setDatasetDraft({ ...datasetDraft, dataSourceCode: event.target.value })}>{dataSources.map((source) => <option key={source.code} value={source.code} disabled={!source.enabled}>{source.name}（{source.code}）</option>)}</select></label>
+                <label><span>数据源</span><select value={datasetDraft.dataSourceCode} onChange={(event) => { setDatasetDraft({ ...datasetDraft, dataSourceCode: event.target.value }); setPreviewResult(null); }}>{dataSources.map((source) => <option key={source.code} value={source.code} disabled={!source.enabled}>{source.name}（{source.code}）</option>)}</select></label>
                 <label className="toggle-field"><span>状态</span><input type="checkbox" checked={datasetDraft.enabled} onChange={(event) => setDatasetDraft({ ...datasetDraft, enabled: event.target.checked })} /></label>
                 <label><span>查询超时（秒）</span><input type="number" min="1" max="600" value={datasetDraft.timeoutSeconds} onChange={(event) => setDatasetDraft({ ...datasetDraft, timeoutSeconds: Number(event.target.value) })} /></label>
                 <label><span>最大返回行数</span><input type="number" min="1" max="1000000" value={datasetDraft.maxRows} onChange={(event) => setDatasetDraft({ ...datasetDraft, maxRows: Number(event.target.value) })} /></label>
               </div>
-              <label className="asset-sql-field"><span>参数化只读 SQL</span><textarea spellCheck={false} value={datasetDraft.queryText} onChange={(event) => setDatasetDraft({ ...datasetDraft, queryText: event.target.value })} /></label>
+              <label className="asset-sql-field"><span>参数化只读 SQL</span><textarea spellCheck={false} value={datasetDraft.queryText} onChange={(event) => { setDatasetDraft({ ...datasetDraft, queryText: event.target.value }); setPreviewResult(null); }} /></label>
               <div className="dataset-parameter-line"><strong>识别到的参数</strong><span>{inferredParameters.length === 0 ? '无' : inferredParameters.map((code) => `@${code}`).join('、')}</span></div>
+              <section className="dataset-preview-section">
+                <div className="dataset-preview-header">
+                  <div><strong>数据预览</strong><span>最多 50 行</span></div>
+                  <button type="button" className="button" disabled={previewing || saving} onClick={() => void previewDataset()}>{previewing ? <LoaderCircle className="spin" size={16} /> : <Eye size={16} />}预览数据</button>
+                </div>
+                {inferredParameters.length > 0 && <div className="dataset-preview-parameters">{inferredParameters.map((code) => <label key={code}><span>@{code}</span><input value={previewParameters[code] ?? urlParameters.get(code) ?? ''} onChange={(event) => { setPreviewParameters({ ...previewParameters, [code]: event.target.value }); setPreviewResult(null); }} /></label>)}</div>}
+                {previewResult !== null && <div className="dataset-preview-scroll"><table className="dataset-preview-table"><thead><tr><th>#</th>{previewResult.columns.map((column, index) => <th key={`${index}-${column}`}>{column || `列 ${index + 1}`}</th>)}</tr></thead><tbody>{previewResult.rows.length === 0 ? <tr><td colSpan={previewResult.columns.length + 1} className="dataset-preview-empty">暂无数据</td></tr> : previewResult.rows.map((row, rowIndex) => <tr key={rowIndex}><td>{rowIndex + 1}</td>{previewResult.columns.map((_, columnIndex) => <td key={columnIndex} title={row[columnIndex] === null ? '' : String(row[columnIndex])}>{row[columnIndex] === null ? <span className="null-value">NULL</span> : String(row[columnIndex])}</td>)}</tr>)}</tbody></table>{previewResult.hasMore && <div className="dataset-preview-limit">仅显示前 {previewResult.limit} 行</div>}</div>}
+              </section>
               <div className="dataset-columns-header"><div><strong>字段结构</strong><span>{datasetDraft.columns.length} 个字段</span></div><button type="button" className="button" onClick={() => setDatasetDraft({ ...datasetDraft, columns: [...datasetDraft.columns, newColumn(datasetDraft.columns.length)] })}><Plus size={16} />新增字段</button></div>
               <div className="configuration-table-scroll asset-column-scroll"><table className="configuration-table column-table"><thead><tr><th>字段编码</th><th>列标题</th><th>数据类型</th><th>列宽</th><th>公式模板</th><th>操作</th></tr></thead><tbody>{datasetDraft.columns.map((column, index) => <tr key={`${index}-${column.code}`}><td><input value={column.code} onChange={(event) => updateColumn(index, { code: event.target.value })} /></td><td><input value={column.header} onChange={(event) => updateColumn(index, { header: event.target.value })} /></td><td><select value={column.dataType} onChange={(event) => updateColumn(index, { dataType: event.target.value, formulaTemplate: event.target.value === 'formula' ? column.formulaTemplate || '=A{row}' : null })}><option value="string">文本</option><option value="number">数字</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="boolean">布尔值</option><option value="formula">公式</option></select></td><td><input type="number" min="40" max="500" value={column.width} onChange={(event) => updateColumn(index, { width: Number(event.target.value) })} /></td><td><input disabled={column.dataType !== 'formula'} value={column.formulaTemplate ?? ''} onChange={(event) => updateColumn(index, { formulaTemplate: event.target.value || null })} /></td><td><button type="button" className="table-icon danger" title="删除字段" aria-label={`删除字段 ${column.header}`} onClick={() => setDatasetDraft({ ...datasetDraft, columns: datasetDraft.columns.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 size={15} /></button></td></tr>)}</tbody></table></div>
             </>

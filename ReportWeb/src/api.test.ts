@@ -5,6 +5,7 @@ import type {
   DataSourceInput,
   DataSourceDocument,
   DatasetDocument,
+  DatasetPreviewRequest,
   ExecuteRequest,
   ExportJob,
   ReportConfigurationDocument,
@@ -251,6 +252,30 @@ describe('reportApi template endpoints', () => {
     expect(path).toBe('/api/report-center/poc/datasets/detail');
     expect(init.method).toBe('PUT');
     expect(JSON.parse(init.body as string)).toEqual(datasetDocument);
+  });
+
+  it('previews the current dataset draft without saving it', async () => {
+    const request: DatasetPreviewRequest = {
+      dataSourceCode: 'report_center',
+      queryText: 'SELECT @deptId AS departmentName',
+      parameters: { deptId: 'D02' },
+      timeoutSeconds: 30,
+    };
+    const result = {
+      columns: ['departmentName'],
+      rows: [['检验科']],
+      hasMore: false,
+      limit: 50,
+      durationMilliseconds: 8,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    await expect(dataAssetApi.previewDataset(request)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/datasets/preview');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(request);
   });
 
   it('saves only snapshot, binding and revision as JSON with PUT', async () => {

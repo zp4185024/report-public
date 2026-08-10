@@ -12,6 +12,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
     private readonly SqlSugarClient _database;
     private readonly PocReportConfigurationStore _store;
     private readonly PocDataAssetStore _dataAssetStore;
+    private readonly PocDataAssetService _dataAssetService;
 
     public PocReportConfigurationStoreTests()
     {
@@ -55,6 +56,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             PocReportParameter>();
         _store = new PocReportConfigurationStore(_database);
         _dataAssetStore = new PocDataAssetStore(_database);
+        _dataAssetService = new PocDataAssetService(_dataAssetStore, _database);
         _database.Insertable(new PocDataSource
         {
             Code = "report-center",
@@ -203,6 +205,32 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
     {
         var exception = Assert.Throws<PocDatasetConfigurationException>(() =>
             PocDataAssetService.ExtractParameterCodes("UPDATE Workload SET Value = @value"));
+
+        Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
+    }
+
+    [Fact]
+    public async Task Dataset_preview_requires_every_referenced_parameter()
+    {
+        var exception = await Assert.ThrowsAsync<PocDatasetConfigurationException>(() =>
+            _dataAssetService.PreviewDatasetAsync(new PocDatasetPreviewRequest(
+                "report_center",
+                "SELECT @deptId AS departmentName",
+                new Dictionary<string, string?>(),
+                30)));
+
+        Assert.Equal("DATASET_PREVIEW_PARAMETER_REQUIRED", exception.Code);
+    }
+
+    [Fact]
+    public async Task Dataset_preview_rejects_mutating_sql_before_connecting()
+    {
+        var exception = await Assert.ThrowsAsync<PocDatasetConfigurationException>(() =>
+            _dataAssetService.PreviewDatasetAsync(new PocDatasetPreviewRequest(
+                "report_center",
+                "DELETE FROM Workload",
+                new Dictionary<string, string?>(),
+                30)));
 
         Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
     }

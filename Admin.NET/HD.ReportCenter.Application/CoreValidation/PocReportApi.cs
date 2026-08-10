@@ -197,6 +197,15 @@ public sealed class PocReportApi : IDynamicApiController
         await HandleConfigurationOperation(
             () => RequireDataAssetService().SaveDatasetAsync(code, request));
 
+    /// <summary>使用当前数据集草稿执行最多 50 行只读预览，不保存数据集。</summary>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/poc/datasets/preview")]
+    public async Task<PocDatasetPreviewResult> PreviewDataset(
+        [FromBody] PocDatasetPreviewRequest request,
+        CancellationToken cancellationToken) =>
+        await HandleDatasetOperation(
+            () => RequireDataAssetService().PreviewDatasetAsync(request, cancellationToken));
+
     /// <summary>使用数据库中指定 revision 的模板生成普通体量全量数据 Excel。</summary>
     [SuppressMonitor]
     [HttpPost("/api/report-center/poc/{reportCode}/exports/normal")]

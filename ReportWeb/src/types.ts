@@ -191,6 +191,21 @@ export interface DatasetDocument {
   revision: number;
 }
 
+export interface DatasetPreviewRequest {
+  dataSourceCode: string;
+  queryText: string;
+  parameters: Record<string, string | null>;
+  timeoutSeconds: number;
+}
+
+export interface DatasetPreviewResult {
+  columns: string[];
+  rows: DataRowValue[][];
+  hasMore: boolean;
+  limit: number;
+  durationMilliseconds: number;
+}
+
 export interface DatasetOption {
   code: string;
   name: string;

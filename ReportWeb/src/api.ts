@@ -4,6 +4,8 @@ import type {
   DataSourceInput,
   DataSourceTestResult,
   DatasetDocument,
+  DatasetPreviewRequest,
+  DatasetPreviewResult,
   ExecuteRequest,
   ExecuteResult,
   ExportJob,
@@ -169,4 +171,11 @@ export const dataAssetApi = {
         body: JSON.stringify(request),
       },
     ),
+
+  previewDataset: (request: DatasetPreviewRequest) =>
+    requestJson<DatasetPreviewResult>('/api/report-center/poc/datasets/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
 };

@@ -2,12 +2,29 @@ using System.Text.RegularExpressions;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
+using System.Data;
+using System.Globalization;
 
 namespace HD.ReportCenter.Application.CoreValidation;
+
+public sealed record PocDatasetPreviewRequest(
+    string DataSourceCode,
+    string QueryText,
+    IReadOnlyDictionary<string, string?> Parameters,
+    int TimeoutSeconds);
+
+public sealed record PocDatasetPreviewResult(
+    IReadOnlyList<string> Columns,
+    IReadOnlyList<IReadOnlyList<object?>> Rows,
+    bool HasMore,
+    int Limit,
+    long DurationMilliseconds);
 
 /// <summary>全局数据源和数据集的应用服务，公开契约不返回连接字符串或密码。</summary>
 public sealed class PocDataAssetService : ITransient
 {
+    private const int PreviewRowLimit = 50;
+    private const int PreviewTimeoutLimitSeconds = 30;
     private static readonly Regex CodeRegex = new(
         "^[A-Za-z][A-Za-z0-9_]{0,63}$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -108,6 +125,107 @@ public sealed class PocDataAssetService : ITransient
             input.Enabled,
             input.Revision));
         return ToDatasetDocument((await _store.GetDatasetAsync(input.Code.Trim()))!);
+    }
+
+    public async Task<PocDatasetPreviewResult> PreviewDatasetAsync(
+        PocDatasetPreviewRequest input,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        ValidateCode(input.DataSourceCode, "DATASET_PREVIEW_INVALID");
+        if (string.IsNullOrWhiteSpace(input.QueryText) ||
+            input.QueryText.Length > 200_000 ||
+            input.TimeoutSeconds is < 1 or > 600 ||
+            input.Parameters is null)
+        {
+            throw new PocDatasetConfigurationException(
+                "DATASET_PREVIEW_INVALID",
+                "数据集预览配置无效。");
+        }
+
+        var parameterCodes = ExtractParameterCodes(input.QueryText);
+        foreach (var code in parameterCodes)
+        {
+            if (!input.Parameters.Keys.Any(key =>
+                    key.Equals(code, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new PocDatasetConfigurationException(
+                    "DATASET_PREVIEW_PARAMETER_REQUIRED",
+                    $"请填写预览参数 '@{code}'。");
+            }
+        }
+
+        var dataSource = await _store.GetDataSourceAsync(input.DataSourceCode.Trim())
+            ?? throw new PocDatasetConfigurationException(
+                "DATA_SOURCE_NOT_FOUND",
+                $"不存在数据源 '{input.DataSourceCode}'。");
+        if (!dataSource.IsEnabled)
+        {
+            throw new PocDatasetConfigurationException(
+                "DATA_SOURCE_DISABLED",
+                "预览数据前必须先启用其数据源。");
+        }
+
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            await using var connection = new SqlConnection(dataSource.ConnectionString);
+            await connection.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = input.QueryText.Trim();
+            command.CommandTimeout = Math.Min(input.TimeoutSeconds, PreviewTimeoutLimitSeconds);
+            foreach (var code in parameterCodes)
+            {
+                var value = input.Parameters.First(item =>
+                    item.Key.Equals(code, StringComparison.OrdinalIgnoreCase)).Value;
+                command.Parameters.Add(CreatePreviewParameter(code, value));
+            }
+
+            await using var reader = await command.ExecuteReaderAsync(
+                CommandBehavior.SequentialAccess | CommandBehavior.SingleResult,
+                cancellationToken);
+            var columns = Enumerable.Range(0, reader.FieldCount)
+                .Select(reader.GetName)
+                .ToArray();
+            var rows = new List<IReadOnlyList<object?>>(PreviewRowLimit + 1);
+            while (rows.Count <= PreviewRowLimit && await reader.ReadAsync(cancellationToken))
+            {
+                var row = new object?[reader.FieldCount];
+                for (var index = 0; index < reader.FieldCount; index++)
+                {
+                    row[index] = NormalizePreviewValue(reader.GetValue(index));
+                }
+                rows.Add(row);
+            }
+
+            var hasMore = rows.Count > PreviewRowLimit;
+            if (hasMore)
+            {
+                rows.RemoveAt(rows.Count - 1);
+            }
+            started.Stop();
+            return new PocDatasetPreviewResult(
+                columns,
+                rows,
+                hasMore,
+                PreviewRowLimit,
+                started.ElapsedMilliseconds);
+        }
+        catch (PocDatasetExecutionException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (SqlException exception)
+        {
+            throw new PocDatasetExecutionException(
+                exception.Number == -2 ? "DATASET_TIMEOUT" : "DATASET_QUERY_FAILED",
+                "数据集预览失败。",
+                exception);
+        }
     }
 
     public static IReadOnlyList<string> ExtractParameterCodes(string queryText)
@@ -318,4 +436,21 @@ public sealed class PocDataAssetService : ITransient
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static SqlParameter CreatePreviewParameter(string code, string? value) =>
+        new($"@{code}", SqlDbType.NVarChar, Math.Max(1, Math.Min(4000, value?.Length ?? 1)))
+        {
+            Value = value is null ? DBNull.Value : value
+        };
+
+    private static object? NormalizePreviewValue(object value) => value switch
+    {
+        DBNull => null,
+        byte[] bytes => Convert.ToBase64String(bytes),
+        Guid guid => guid.ToString("D"),
+        DateTimeOffset dateTimeOffset => dateTimeOffset,
+        DateTime dateTime => dateTime,
+        string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal => value,
+        _ => Convert.ToString(value, CultureInfo.InvariantCulture)
+    };
 }
