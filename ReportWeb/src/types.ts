@@ -164,10 +164,12 @@ export interface ExecuteResult {
   rows: WorkloadRow[];
 }
 
+export type DataSourceDbType = 'SqlServer' | 'Oracle' | 'MySql' | 'PostgreSQL';
+
 export interface DataSourceDocument {
   code: string;
   name: string;
-  dbType: 'SqlServer';
+  dbType: DataSourceDbType;
   server: string;
   port: number;
   database: string;

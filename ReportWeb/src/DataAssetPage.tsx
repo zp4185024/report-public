@@ -13,12 +13,29 @@ import {
 import { dataAssetApi } from './api';
 import type {
   DataSourceDocument,
+  DataSourceDbType,
   DataSourceInput,
   DatasetDocument,
   DatasetVariableDefinition,
 } from './types';
 
 type AssetKind = 'data-sources' | 'datasets';
+
+const DATABASE_TYPES: ReadonlyArray<{
+  value: DataSourceDbType;
+  label: string;
+  defaultPort: number;
+  databaseLabel: string;
+}> = [
+  { value: 'SqlServer', label: 'SQL Server', defaultPort: 1433, databaseLabel: '数据库' },
+  { value: 'Oracle', label: 'Oracle', defaultPort: 1521, databaseLabel: '服务名' },
+  { value: 'MySql', label: 'MySQL', defaultPort: 3306, databaseLabel: '数据库' },
+  { value: 'PostgreSQL', label: 'PostgreSQL', defaultPort: 5432, databaseLabel: '数据库' },
+];
+
+function databaseType(dbType: DataSourceDbType) {
+  return DATABASE_TYPES.find((item) => item.value === dbType) ?? DATABASE_TYPES[0];
+}
 
 function sourceDraft(document: DataSourceDocument): DataSourceInput {
   return { ...document, password: null };
@@ -33,7 +50,7 @@ function nextCode(prefix: string, codes: readonly string[]): string {
 function newDataSource(existing: readonly DataSourceDocument[]): DataSourceInput {
   return {
     code: nextCode('data_source', existing.map((item) => item.code)),
-    name: '新建 SQL Server 数据源',
+    name: '新建数据源',
     dbType: 'SqlServer',
     server: '',
     port: 1433,
@@ -148,6 +165,24 @@ export default function DataAssetPage() {
     setStatus(null);
   };
 
+  const updateSourceConnection = (
+    patch: Partial<Pick<DataSourceInput, 'dbType' | 'server' | 'port' | 'database' | 'userName'>>,
+    clearPassword = false,
+  ) => {
+    setDataSourceDraft((current) => {
+      if (current === null) return current;
+      const next = { ...current, ...patch, password: clearPassword ? null : current.password };
+      const stored = dataSources.find((item) => item.code === next.code);
+      const passwordConfigured = stored !== undefined && stored.passwordConfigured &&
+        stored.dbType === next.dbType &&
+        stored.server === next.server &&
+        stored.port === next.port &&
+        stored.database === next.database &&
+        stored.userName === next.userName;
+      return { ...next, passwordConfigured };
+    });
+  };
+
   const selectDataset = (dataset: DatasetDocument) => {
     setDatasetDraft({
       ...dataset,
@@ -188,7 +223,7 @@ export default function DataAssetPage() {
     setStatus(null);
     try {
       const result = await dataAssetApi.testDataSource(dataSourceDraft);
-      setStatus(`连接成功，耗时 ${result.durationMilliseconds} ms，SQL Server ${result.databaseVersion}`);
+      setStatus(`连接成功，耗时 ${result.durationMilliseconds} ms，${databaseType(dataSourceDraft.dbType).label} ${result.databaseVersion}`);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : '数据源连接失败。');
     } finally {
@@ -273,7 +308,7 @@ export default function DataAssetPage() {
           <div className="asset-list-scroll">
             {loading ? <div className="asset-empty"><LoaderCircle className="spin" size={20} />正在读取</div> : kind === 'data-sources' ? dataSources.map((source) => (
               <button key={source.code} type="button" className={`asset-list-item ${dataSourceDraft?.code === source.code && dataSourceDraft.revision > 0 ? 'active' : ''}`} onClick={() => selectSource(source)}>
-                <Server size={17} /><span><strong>{source.name}</strong><small>{source.code} · {source.server}/{source.database}</small></span><i className={source.enabled ? 'enabled' : ''}>{source.enabled ? '启用' : '停用'}</i>
+                <Server size={17} /><span><strong>{source.name}</strong><small>{databaseType(source.dbType).label} · {source.server}/{source.database}</small></span><i className={source.enabled ? 'enabled' : ''}>{source.enabled ? '启用' : '停用'}</i>
               </button>
             )) : datasets.map((dataset) => (
               <button key={dataset.code} type="button" className={`asset-list-item ${datasetDraft?.code === dataset.code && datasetDraft.revision > 0 ? 'active' : ''}`} onClick={() => selectDataset(dataset)}>
@@ -290,12 +325,12 @@ export default function DataAssetPage() {
               <div className="asset-form-grid">
                 <label><span>数据源编码</span><input disabled={dataSourceDraft.revision > 0} value={dataSourceDraft.code} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, code: event.target.value })} /></label>
                 <label><span>数据源名称</span><input value={dataSourceDraft.name} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, name: event.target.value })} /></label>
-                <label><span>数据库类型</span><select value={dataSourceDraft.dbType} disabled><option value="SqlServer">SQL Server</option></select></label>
+                <label><span>数据库类型</span><select value={dataSourceDraft.dbType} onChange={(event) => { const dbType = event.target.value as DataSourceDbType; updateSourceConnection({ dbType, port: databaseType(dbType).defaultPort }, true); }}>{DATABASE_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
                 <label className="toggle-field"><span>状态</span><input type="checkbox" checked={dataSourceDraft.enabled} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, enabled: event.target.checked })} /></label>
-                <label className="wide-field"><span>服务器</span><input value={dataSourceDraft.server} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, server: event.target.value })} /></label>
-                <label><span>端口</span><input type="number" min="1" max="65535" value={dataSourceDraft.port} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, port: Number(event.target.value) })} /></label>
-                <label><span>数据库</span><input value={dataSourceDraft.database} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, database: event.target.value })} /></label>
-                <label><span>用户名</span><input autoComplete="username" value={dataSourceDraft.userName} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, userName: event.target.value })} /></label>
+                <label className="wide-field"><span>服务器</span><input value={dataSourceDraft.server} onChange={(event) => updateSourceConnection({ server: event.target.value })} /></label>
+                <label><span>端口</span><input type="number" min="1" max="65535" value={dataSourceDraft.port} onChange={(event) => updateSourceConnection({ port: Number(event.target.value) })} /></label>
+                <label><span>{databaseType(dataSourceDraft.dbType).databaseLabel}</span><input value={dataSourceDraft.database} onChange={(event) => updateSourceConnection({ database: event.target.value })} /></label>
+                <label><span>用户名</span><input autoComplete="username" value={dataSourceDraft.userName} onChange={(event) => updateSourceConnection({ userName: event.target.value })} /></label>
                 <label><span>新密码</span><input type="password" autoComplete="new-password" placeholder={dataSourceDraft.passwordConfigured ? '留空保留原密码' : '请输入密码'} value={dataSourceDraft.password ?? ''} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, password: event.target.value || null })} /></label>
                 <label><span>连接超时（秒）</span><input type="number" min="1" max="600" value={dataSourceDraft.timeoutSeconds} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, timeoutSeconds: Number(event.target.value) })} /></label>
                 <label><span>默认最大行数</span><input type="number" min="1" max="1000000" value={dataSourceDraft.maxRows} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, maxRows: Number(event.target.value) })} /></label>

@@ -1,9 +1,8 @@
 using System.Text.RegularExpressions;
+using System.Data.Common;
 using HD.ReportCenter.ReportEngine.CoreValidation;
-using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Data;
 using System.Globalization;
 
 namespace HD.ReportCenter.Application.CoreValidation;
@@ -48,12 +47,9 @@ public sealed class PocDataAssetService : ITransient
         StringComparer.OrdinalIgnoreCase);
 
     private readonly PocDataAssetStore _store;
-    private readonly ISqlSugarClient _database;
-
-    public PocDataAssetService(PocDataAssetStore store, ISqlSugarClient database)
+    public PocDataAssetService(PocDataAssetStore store)
     {
         _store = store;
-        _database = database;
     }
 
     public async Task<IReadOnlyList<PocDataSourceDocument>> ListDataSourcesAsync()
@@ -80,7 +76,7 @@ public sealed class PocDataAssetService : ITransient
         await _store.SaveDataSourceAsync(new PocDataSourceMutation(
             input.Code.Trim(),
             input.Name.Trim(),
-            "SqlServer",
+            PocDatabaseProvider.NormalizeType(input.DbType),
             connectionString,
             input.TimeoutSeconds,
             input.MaxRows,
@@ -98,13 +94,30 @@ public sealed class PocDataAssetService : ITransient
         var existing = await _store.GetDataSourceAsync(input.Code.Trim());
         var connectionString = BuildConnectionString(input, existing);
         var started = System.Diagnostics.Stopwatch.StartNew();
-        await using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync(cancellationToken);
-        started.Stop();
-        return new PocDataSourceTestResult(
-            true,
-            started.ElapsedMilliseconds,
-            connection.ServerVersion);
+        try
+        {
+            using var database = PocDatabaseProvider.CreateClient(
+                input.DbType,
+                connectionString,
+                input.TimeoutSeconds,
+                cancellationToken);
+            await database.Ado.OpenAsync();
+            started.Stop();
+            return new PocDataSourceTestResult(
+                true,
+                started.ElapsedMilliseconds,
+                ((DbConnection)database.Ado.Connection).ServerVersion);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (PocDatabaseProvider.IsDatabaseException(exception))
+        {
+            throw new PocDatasetConfigurationException(
+                "DATA_SOURCE_CONNECTION_FAILED",
+                $"{PocDatabaseProvider.NormalizeType(input.DbType)} 数据源连接失败。");
+        }
     }
 
     public async Task<PocDatasetDocument> SaveDatasetAsync(
@@ -204,24 +217,29 @@ public sealed class PocDataAssetService : ITransient
         var started = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            await using var connection = new SqlConnection(dataSource.ConnectionString);
-            await connection.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = dataset.QueryText.Trim();
-            command.CommandTimeout = Math.Min(dataset.TimeoutSeconds, PreviewTimeoutLimitSeconds);
+            using var database = PocDatabaseProvider.CreateClient(
+                dataSource.DbType,
+                dataSource.ConnectionString,
+                Math.Min(dataset.TimeoutSeconds, PreviewTimeoutLimitSeconds),
+                cancellationToken);
+            var parameters = new List<SugarParameter>(parameterCodes.Count);
             foreach (var parameterCode in parameterCodes)
             {
                 var variable = schema.Variables.Single(item =>
                     item.Code.Equals(parameterCode, StringComparison.OrdinalIgnoreCase));
-                command.Parameters.Add(PocSqlDatasetExecutor.CreateParameter(
+                parameters.Add(PocDatabaseProvider.CreateParameter(
                     parameterCode,
                     variable.DataType,
                     resolved.DatabaseValues[variable.Code]));
             }
 
-            await using var reader = await command.ExecuteReaderAsync(
-                CommandBehavior.SequentialAccess | CommandBehavior.SingleResult,
-                cancellationToken);
+            var dataReader = await database.Ado.GetDataReaderAsync(
+                dataset.QueryText.Trim(),
+                parameters);
+            await using var reader = dataReader as DbDataReader
+                ?? throw new PocDatasetExecutionException(
+                    "DATASET_QUERY_FAILED",
+                    "数据库驱动未返回可读取的数据集结果。");
             var fields = ReadPreviewFields(reader);
             var rows = new List<IReadOnlyList<object?>>(PreviewRowLimit + 1);
             while (rows.Count <= PreviewRowLimit && await reader.ReadAsync(cancellationToken))
@@ -255,10 +273,10 @@ public sealed class PocDataAssetService : ITransient
         {
             throw;
         }
-        catch (SqlException exception)
+        catch (Exception exception) when (PocDatabaseProvider.IsDatabaseException(exception))
         {
             throw new PocDatasetExecutionException(
-                exception.Number == -2 ? "DATASET_TIMEOUT" : "DATASET_QUERY_FAILED",
+                PocDatabaseProvider.IsTimeout(exception) ? "DATASET_TIMEOUT" : "DATASET_QUERY_FAILED",
                 "数据集预览失败。",
                 exception);
         }
@@ -328,38 +346,39 @@ public sealed class PocDataAssetService : ITransient
 
     private static PocDataSourceDocument ToDataSourceDocument(PocDataSource dataSource)
     {
-        var builder = ParseConnectionString(dataSource.ConnectionString);
-        var (server, port) = ParseDataSource(builder.DataSource);
+        var endpoint = PocDatabaseProvider.ParseEndpoint(
+            dataSource.DbType,
+            dataSource.ConnectionString);
         return new PocDataSourceDocument(
             dataSource.Code,
             dataSource.Name,
-            "SqlServer",
-            server,
-            port,
-            builder.InitialCatalog,
-            builder.UserID,
-            !string.IsNullOrWhiteSpace(builder.Password),
+            PocDatabaseProvider.NormalizeType(dataSource.DbType),
+            endpoint.Server,
+            endpoint.Port,
+            endpoint.Database,
+            endpoint.UserName,
+            !string.IsNullOrWhiteSpace(endpoint.Password),
             dataSource.DefaultTimeoutSeconds,
             dataSource.DefaultMaxRows,
             dataSource.IsEnabled,
             dataSource.Revision);
     }
 
-    private string BuildConnectionString(PocDataSourceInput input, PocDataSource? stored)
+    private static string BuildConnectionString(PocDataSourceInput input, PocDataSource? stored)
     {
-        var baseConnectionString = stored is not null
-            ? stored.ConnectionString
-            : _database.CurrentConnectionConfig.ConnectionString;
-        var existing = ParseConnectionString(baseConnectionString);
+        var normalizedType = PocDatabaseProvider.NormalizeType(input.DbType);
+        var existing = stored is not null &&
+            normalizedType.Equals(stored.DbType, StringComparison.OrdinalIgnoreCase)
+                ? PocDatabaseProvider.ParseEndpoint(stored.DbType, stored.ConnectionString)
+                : null;
         var password = NullIfWhiteSpace(input.Password);
         if (password is null)
         {
-            var existingEndpoint = ParseDataSource(existing.DataSource);
-            var canReusePassword = stored is not null &&
-                existingEndpoint.Server.Equals(input.Server.Trim(), StringComparison.OrdinalIgnoreCase) &&
-                existingEndpoint.Port == input.Port &&
-                existing.InitialCatalog.Equals(input.Database.Trim(), StringComparison.OrdinalIgnoreCase) &&
-                existing.UserID.Equals(input.UserName.Trim(), StringComparison.OrdinalIgnoreCase) &&
+            var canReusePassword = existing is not null &&
+                existing.Server.Equals(input.Server.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                existing.Port == input.Port &&
+                existing.Database.Equals(input.Database.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                existing.UserName.Equals(input.UserName.Trim(), StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrWhiteSpace(existing.Password);
             if (!canReusePassword)
             {
@@ -367,27 +386,24 @@ public sealed class PocDataAssetService : ITransient
                     "DATA_SOURCE_PASSWORD_REQUIRED",
                     "新数据源或连接信息变化时必须提供密码。");
             }
-            password = existing.Password;
+            password = existing!.Password;
         }
 
-        return new SqlConnectionStringBuilder
-        {
-            DataSource = $"{input.Server.Trim()},{input.Port}",
-            InitialCatalog = input.Database.Trim(),
-            UserID = input.UserName.Trim(),
-            Password = password,
-            Encrypt = false,
-            TrustServerCertificate = true,
-            ConnectTimeout = Math.Clamp(input.TimeoutSeconds, 1, 120),
-            ApplicationName = "hd-report-center-runtime"
-        }.ConnectionString;
+        return PocDatabaseProvider.BuildConnectionString(
+            normalizedType,
+            input.Server.Trim(),
+            input.Port,
+            input.Database.Trim(),
+            input.UserName.Trim(),
+            password,
+            input.TimeoutSeconds);
     }
 
     private static void ValidateDataSource(PocDataSourceInput input)
     {
         ValidateCode(input.Code, "DATA_SOURCE_INVALID");
-        if (!input.DbType.Equals("SqlServer", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(input.Name) ||
+        _ = PocDatabaseProvider.NormalizeType(input.DbType);
+        if (string.IsNullOrWhiteSpace(input.Name) ||
             input.Name.Length > 128 ||
             string.IsNullOrWhiteSpace(input.Server) ||
             input.Server.Length > 256 ||
@@ -403,7 +419,7 @@ public sealed class PocDataAssetService : ITransient
         {
             throw new PocDatasetConfigurationException(
                 "DATA_SOURCE_INVALID",
-                "SQL Server 数据源配置无效。");
+                "数据源配置无效。");
         }
     }
 
@@ -480,7 +496,7 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
-    private static IReadOnlyList<PocDatasetFieldDefinition> ReadPreviewFields(SqlDataReader reader)
+    private static IReadOnlyList<PocDatasetFieldDefinition> ReadPreviewFields(DbDataReader reader)
     {
         var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fields = new List<PocDatasetFieldDefinition>(reader.FieldCount);
@@ -516,26 +532,6 @@ public sealed class PocDataAssetService : ITransient
         {
             throw new PocDatasetConfigurationException(errorCode, $"编码 '{code}' 无效。");
         }
-    }
-
-    private static SqlConnectionStringBuilder ParseConnectionString(string connectionString)
-    {
-        try
-        {
-            return new SqlConnectionStringBuilder(connectionString);
-        }
-        catch (ArgumentException exception)
-        {
-            throw new PocDatasetConfigurationException("DATA_SOURCE_INVALID", exception.Message);
-        }
-    }
-
-    private static (string Server, int Port) ParseDataSource(string dataSource)
-    {
-        var parts = dataSource.Split(',', 2, StringSplitOptions.TrimEntries);
-        return (
-            parts[0],
-            parts.Length == 2 && int.TryParse(parts[1], out var port) ? port : 1433);
     }
 
     private static string? NullIfWhiteSpace(string? value) =>

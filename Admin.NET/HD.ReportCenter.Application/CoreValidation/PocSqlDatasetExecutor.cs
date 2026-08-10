@@ -1,6 +1,5 @@
 using HD.ReportCenter.ReportEngine.CoreValidation;
-using Microsoft.Data.SqlClient;
-using System.Data;
+using System.Data.Common;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
@@ -22,7 +21,7 @@ public sealed record PocRuntimeExecutionPlan(
     PocExecuteRequest Query,
     PocResolvedParameterSet Parameters);
 
-/// <summary>SQL Server 只读数据集执行器。配置读取与 SQL 执行分离，便于导出任务冻结运行输入。</summary>
+/// <summary>多数据库只读数据集执行器。配置读取与 SQL 执行分离，便于导出任务冻结运行输入。</summary>
 public sealed class PocSqlDatasetExecutor : ITransient
 {
     private readonly PocReportConfigurationService _configurationService;
@@ -78,15 +77,18 @@ public sealed class PocSqlDatasetExecutor : ITransient
         var take = full ? plan.Configuration.MaxRows + 1 : preview.PageSize + 1;
         var queryText = full
             ? plan.Configuration.QueryText
-            : $"{plan.Configuration.QueryText.TrimEnd()} OFFSET @__offset ROWS FETCH NEXT @__take ROWS ONLY";
+            : PocDatabaseProvider.BuildPagedQuery(
+                plan.Configuration.DbType,
+                plan.Configuration.QueryText);
 
         try
         {
-            await using var connection = new SqlConnection(plan.Configuration.ConnectionString);
-            await connection.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = queryText;
-            command.CommandTimeout = Math.Clamp(plan.Configuration.TimeoutSeconds, 1, 600);
+            using var database = PocDatabaseProvider.CreateClient(
+                plan.Configuration.DbType,
+                plan.Configuration.ConnectionString,
+                plan.Configuration.TimeoutSeconds,
+                cancellationToken);
+            var parameters = new List<SugarParameter>();
 
             var referenced = PocReadOnlySqlValidator.Validate(
                 plan.Configuration.QueryText,
@@ -96,26 +98,25 @@ public sealed class PocSqlDatasetExecutor : ITransient
             {
                 var parameterDefinition = definition.Parameters.Single(
                     item => item.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
-                command.Parameters.Add(CreateParameter(
+                parameters.Add(PocDatabaseProvider.CreateParameter(
                     code,
                     parameterDefinition.DataType,
                     plan.Parameters.DatabaseValues[code]));
             }
             if (!full)
             {
-                command.Parameters.Add(new SqlParameter("@__offset", SqlDbType.Int)
-                {
-                    Value = checked((page - 1) * preview.PageSize)
-                });
-                command.Parameters.Add(new SqlParameter("@__take", SqlDbType.Int)
-                {
-                    Value = take
-                });
+                parameters.Add(PocDatabaseProvider.CreateParameter(
+                    "__offset",
+                    "int",
+                    checked((page - 1) * preview.PageSize)));
+                parameters.Add(PocDatabaseProvider.CreateParameter("__take", "int", take));
             }
 
-            await using var reader = await command.ExecuteReaderAsync(
-                CommandBehavior.SequentialAccess | CommandBehavior.SingleResult,
-                cancellationToken);
+            var dataReader = await database.Ado.GetDataReaderAsync(queryText, parameters);
+            await using var reader = dataReader as DbDataReader
+                ?? throw new PocDatasetExecutionException(
+                    "DATASET_QUERY_FAILED",
+                    "数据库驱动未返回可读取的数据集结果。");
             var fields = definition.Fields.ToArray();
             var ordinals = ResolveOrdinals(reader, fields);
             var rows = new List<PocDataRow>(Math.Min(take, 4096));
@@ -156,10 +157,10 @@ public sealed class PocSqlDatasetExecutor : ITransient
         {
             throw;
         }
-        catch (SqlException exception)
+        catch (Exception exception) when (PocDatabaseProvider.IsDatabaseException(exception))
         {
             throw new PocDatasetExecutionException(
-                exception.Number == -2 ? "DATASET_TIMEOUT" : "DATASET_QUERY_FAILED",
+                PocDatabaseProvider.IsTimeout(exception) ? "DATASET_TIMEOUT" : "DATASET_QUERY_FAILED",
                 "数据集查询失败。",
                 exception);
         }
@@ -198,7 +199,7 @@ public sealed class PocSqlDatasetExecutor : ITransient
     }
 
     private static IReadOnlyDictionary<string, int> ResolveOrdinals(
-        SqlDataReader reader,
+        DbDataReader reader,
         IReadOnlyList<PocDatasetFieldDefinition> fields)
     {
         var actual = Enumerable.Range(0, reader.FieldCount)
@@ -215,33 +216,6 @@ public sealed class PocSqlDatasetExecutor : ITransient
             ordinals[field.Code] = ordinal;
         }
         return ordinals;
-    }
-
-    internal static SqlParameter CreateParameter(string code, string dataType, object? value)
-    {
-        var parameter = new SqlParameter($"@{code}", dataType.Trim().ToLowerInvariant() switch
-        {
-            "long" or "int64" => SqlDbType.BigInt,
-            "int" or "int32" or "number" => SqlDbType.Int,
-            "decimal" => SqlDbType.Decimal,
-            "date" => SqlDbType.Date,
-            "datetime" => SqlDbType.DateTime2,
-            "bool" or "boolean" => SqlDbType.Bit,
-            _ => SqlDbType.NVarChar
-        })
-        {
-            Value = value ?? DBNull.Value
-        };
-        if (parameter.SqlDbType == SqlDbType.NVarChar)
-        {
-            parameter.Size = Math.Max(1, Math.Min(4000, Convert.ToString(value, CultureInfo.InvariantCulture)?.Length ?? 1));
-        }
-        if (parameter.SqlDbType == SqlDbType.Decimal)
-        {
-            parameter.Precision = 28;
-            parameter.Scale = 8;
-        }
-        return parameter;
     }
 
     private static object? NormalizeValue(object value) => value switch

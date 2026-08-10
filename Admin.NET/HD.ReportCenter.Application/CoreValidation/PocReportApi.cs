@@ -3,7 +3,7 @@ using HD.ReportCenter.ReportEngine.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation.Exchange;
 using HD.ReportCenter.ReportEngine.CoreValidation.Export;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
+using System.Data.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -173,7 +173,7 @@ public sealed class PocReportApi : IDynamicApiController
         await HandleConfigurationOperation(
             () => RequireDataAssetService().SaveDataSourceAsync(code, request));
 
-    /// <summary>测试 SQL Server 连接；响应不包含连接串和密码。</summary>
+    /// <summary>测试所选数据库连接；响应不包含连接串和密码。</summary>
     [SuppressMonitor]
     [HttpPost("/api/report-center/poc/data-sources/test")]
     public async Task<PocDataSourceTestResult> TestDataSource(
@@ -416,7 +416,11 @@ public sealed class PocReportApi : IDynamicApiController
         {
             throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
         }
-        catch (SqlException)
+        catch (DbException)
+        {
+            throw Oops.Oh("DATA_SOURCE_CONNECTION_FAILED").StatusCode(400);
+        }
+        catch (SqlSugarException)
         {
             throw Oops.Oh("DATA_SOURCE_CONNECTION_FAILED").StatusCode(400);
         }

@@ -57,7 +57,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             PocReportParameter>();
         _store = new PocReportConfigurationStore(_database);
         _dataAssetStore = new PocDataAssetStore(_database);
-        _dataAssetService = new PocDataAssetService(_dataAssetStore, _database);
+        _dataAssetService = new PocDataAssetService(_dataAssetStore);
         _configurationService = new PocReportConfigurationService(
             _store,
             _dataAssetStore,
@@ -176,6 +176,80 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal(2, datasetRevision);
         Assert.Equal("共享只读库", (await _dataAssetStore.GetDataSourceAsync("report-center"))!.Name);
         Assert.Equal("共享工作量明细", (await _dataAssetStore.GetDatasetAsync("detail"))!.Name);
+    }
+
+    [Theory]
+    [InlineData("SqlServer", "source_sqlserver", 1433)]
+    [InlineData("Oracle", "source_oracle", 1521)]
+    [InlineData("MySql", "source_mysql", 3306)]
+    [InlineData("PostgreSQL", "source_postgresql", 5432)]
+    public async Task Data_source_round_trips_supported_database_types(
+        string dbType,
+        string code,
+        int port)
+    {
+        var saved = await _dataAssetService.SaveDataSourceAsync(
+            code,
+            new PocDataSourceInput(
+                code,
+                $"{dbType} 报表库",
+                dbType,
+                "db.example.local",
+                port,
+                "reporting",
+                "report_reader",
+                "secret",
+                30,
+                20_000,
+                true,
+                0));
+
+        Assert.Equal(dbType, saved.DbType);
+        Assert.Equal("db.example.local", saved.Server);
+        Assert.Equal(port, saved.Port);
+        Assert.Equal("reporting", saved.Database);
+        Assert.Equal("report_reader", saved.UserName);
+        Assert.True(saved.PasswordConfigured);
+        Assert.Equal(dbType, (await _dataAssetStore.GetDataSourceAsync(code))!.DbType);
+    }
+
+    [Fact]
+    public async Task Data_source_rejects_an_unsupported_database_type()
+    {
+        var exception = await Assert.ThrowsAsync<PocDatasetConfigurationException>(() =>
+            _dataAssetService.SaveDataSourceAsync(
+                "unsupported_source",
+                new PocDataSourceInput(
+                    "unsupported_source",
+                    "不支持的数据源",
+                    "Access",
+                    "db.example.local",
+                    1000,
+                    "reporting",
+                    "report_reader",
+                    "secret",
+                    30,
+                    20_000,
+                    true,
+                    0)));
+
+        Assert.Equal("DATA_SOURCE_TYPE_UNSUPPORTED", exception.Code);
+    }
+
+    [Theory]
+    [InlineData("SqlServer", 1433, "OFFSET @__offset ROWS FETCH NEXT @__take ROWS ONLY")]
+    [InlineData("Oracle", 1521, "OFFSET @__offset ROWS FETCH NEXT @__take ROWS ONLY")]
+    [InlineData("MySql", 3306, "LIMIT @__take OFFSET @__offset")]
+    [InlineData("PostgreSQL", 5432, "LIMIT @__take OFFSET @__offset")]
+    public void Database_provider_uses_the_expected_default_port_and_paging_dialect(
+        string dbType,
+        int defaultPort,
+        string pagingClause)
+    {
+        Assert.Equal(defaultPort, PocDatabaseProvider.DefaultPort(dbType));
+        Assert.EndsWith(
+            pagingClause,
+            PocDatabaseProvider.BuildPagedQuery(dbType, "SELECT 1 ORDER BY 1"));
     }
 
     [Fact]
