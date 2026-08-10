@@ -2,9 +2,12 @@ import { LocaleType, type IWorkbookData } from '@univerjs/presets';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reportApi } from './api';
 import type {
+  DataSourceInput,
   ExecuteRequest,
   ExportJob,
+  ReportConfigurationDocument,
   SaveTemplateRequest,
+  SaveReportConfigurationRequest,
   TemplateBinding,
   TemplateDocument,
   TemplateXlsxImportResult,
@@ -35,11 +38,89 @@ const document: TemplateDocument = {
 
 const executeRequest: ExecuteRequest = {
   page: 3,
-  hospitalId: 'H01',
-  deptId: 'D02',
-  personId: 'P03',
-  startDate: '2026-07-01',
-  endDate: '2026-07-14',
+  parameters: {
+    hospitalId: 'H01',
+    deptId: 'D02',
+    personId: 'P03',
+    startDate: '2026-07-01',
+    endDate: '2026-07-14',
+  },
+};
+
+const dataSourceInput: DataSourceInput = {
+  code: 'report_center',
+  name: '报表中心 SQL Server',
+  dbType: 'SqlServer',
+  server: '127.0.0.1',
+  port: 1433,
+  database: 'report_center',
+  userName: 'report_reader',
+  password: null,
+  timeoutSeconds: 30,
+  maxRows: 20_000,
+  enabled: true,
+};
+const { password: _password, ...maskedDataSource } = dataSourceInput;
+
+const configuration: ReportConfigurationDocument = {
+  reportCode: 'dept-workload',
+  name: '科室工作量统计',
+  sheetName: '科室工作量',
+  preview: { mode: 'Full', pageSize: 20, showExactTotal: false },
+  export: {
+    defaultMode: 'Normal',
+    normalMaxRows: 20_000,
+    normalMaxCells: 500_000,
+    normalTimeoutSeconds: 60,
+    largeExportEnabled: true,
+    rowsPerSheet: 1_000_000,
+    fileRetentionHours: 24,
+  },
+  dataSource: { ...maskedDataSource, passwordConfigured: true },
+  dataset: {
+    code: 'detail',
+    name: '科室工作量明细',
+    dataSourceCode: 'report_center',
+    queryText: 'SELECT @deptId AS departmentName',
+    timeoutSeconds: 30,
+    maxRows: 20_000,
+    enabled: true,
+  },
+  parameters: [{
+    code: 'deptId',
+    displayName: '科室',
+    controlType: 'text',
+    sourceType: 'Form',
+    defaultValue: null,
+    visible: true,
+    dataType: 'string',
+    defaultExpression: null,
+    fixedValue: null,
+    readOnly: false,
+    required: false,
+    allowUrlPrefill: true,
+    urlKey: 'deptId',
+  }],
+  columns: [{
+    code: 'departmentName',
+    header: '科室',
+    dataType: 'string',
+    width: 180,
+    formulaTemplate: null,
+  }],
+  revision: 3,
+};
+
+const saveConfigurationRequest: SaveReportConfigurationRequest = {
+  name: configuration.name,
+  sheetName: configuration.sheetName,
+  preview: configuration.preview,
+  export: configuration.export,
+  dataSource: dataSourceInput,
+  dataset: configuration.dataset,
+  parameters: configuration.parameters,
+  columns: configuration.columns,
+  revision: configuration.revision,
 };
 
 const fetchMock = vi.fn();
@@ -83,6 +164,39 @@ describe('reportApi template endpoints', () => {
       '/api/report-center/poc/dept-workload/template',
       undefined,
     );
+  });
+
+  it('loads the masked report configuration from its management path', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: configuration }));
+
+    await expect(reportApi.configuration()).resolves.toEqual(configuration);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/dept-workload/configuration',
+      undefined,
+    );
+  });
+
+  it('saves the editable report configuration with optimistic revision', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: configuration }));
+
+    await expect(reportApi.saveConfiguration(saveConfigurationRequest)).resolves.toEqual(configuration);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/dept-workload/configuration');
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual(saveConfigurationRequest);
+  });
+
+  it('tests a data source without reading its stored password', async () => {
+    const result = { success: true, durationMilliseconds: 12, databaseVersion: '16.0' };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    await expect(reportApi.testDataSource(dataSourceInput)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/dept-workload/configuration/test-data-source');
+    expect(JSON.parse(init.body as string)).toEqual(dataSourceInput);
   });
 
   it('saves only snapshot, binding and revision as JSON with PUT', async () => {

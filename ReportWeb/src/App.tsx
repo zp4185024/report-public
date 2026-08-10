@@ -18,6 +18,7 @@ import {
   Pencil,
   Save,
   Search,
+  Settings2,
   X,
 } from 'lucide-react';
 import { reportApi } from './api';
@@ -31,6 +32,7 @@ import { scanTemplateBindings } from './templateBinding';
 import { createTemplatePreviewPlan } from './templatePreview';
 import { createPreviewToolbarPresentation } from './previewToolbar';
 import { TemplateFieldPanel } from './TemplateFieldPanel';
+import { ReportConfigurationDialog } from './ReportConfigurationDialog';
 import {
   UniverTemplateHost,
   type TemplateEditorMode,
@@ -41,6 +43,7 @@ import type {
   ExecuteResult,
   ExportJob,
   ReportDefinition,
+  ReportConfigurationDocument,
   TemplateDocument,
 } from './types';
 
@@ -69,17 +72,33 @@ const backendErrorMessages: Readonly<Record<string, string>> = {
   NORMAL_EXPORT_ROW_LIMIT_EXCEEDED: '数据行数超过普通导出限制，请使用大文件导出',
   NORMAL_EXPORT_CELL_LIMIT_EXCEEDED: '数据单元格超过普通导出限制，请使用大文件导出',
   NORMAL_EXPORT_TIMEOUT: '普通导出超时，请使用大文件导出',
+  REPORT_CONFIGURATION_REVISION_CONFLICT: '报表配置已被其它页面修改，请重新打开配置',
+  DATA_SOURCE_CONNECTION_FAILED: '无法连接到数据源',
+  DATA_SOURCE_PASSWORD_REQUIRED: '连接信息变化后必须填写新密码',
+  READ_ONLY_SQL_REQUIRED: '只允许配置单条只读 SELECT 查询',
 };
 
-/** 创建第一页查询；日期先留空，等待后台 definition 返回已解析的默认函数值。 */
-function createInitialRequest(): ExecuteRequest {
+/** 根据后台定义建立参数字典；只有明确允许 URL 预填的参数才读取查询字符串。 */
+function createInitialRequest(definition?: ReportDefinition): ExecuteRequest {
+  const parameters: Record<string, string | null> = {};
+  for (const parameter of definition?.parameters ?? []) {
+    const urlValue = parameter.allowUrlPrefill
+      ? urlParameters.get(parameter.urlKey || parameter.code)
+      : null;
+    parameters[parameter.code] = urlValue ?? parameter.defaultValue ?? parameter.fixedValue;
+  }
+  return { page: 1, parameters };
+}
+
+function toReportDefinition(configuration: ReportConfigurationDocument): ReportDefinition {
   return {
-    page: 1,
-    hospitalId: urlParameters.get('hospitalId'),
-    deptId: urlParameters.get('deptId'),
-    personId: urlParameters.get('personId'),
-    startDate: null,
-    endDate: null,
+    code: configuration.reportCode,
+    name: configuration.name,
+    sheetName: configuration.sheetName,
+    preview: configuration.preview,
+    export: configuration.export,
+    parameters: configuration.parameters,
+    columns: configuration.columns,
   };
 }
 
@@ -124,6 +143,8 @@ export default function App() {
   const [exchangeStatus, setExchangeStatus] = useState<string | null>(null);
   const [queryDuration, setQueryDuration] = useState(0);
   const [renderDuration, setRenderDuration] = useState(0);
+  const [configurationOpen, setConfigurationOpen] = useState(false);
+  const [configurationDocument, setConfigurationDocument] = useState<ReportConfigurationDocument | null>(null);
 
   // editorRef 是页面调用 Univer 的窄接口；draftSnapshotRef 保存“最后设计草稿”的同步事实来源。
   // 同一快照另存 state 是为了触发 React 生命周期；异步回调使用 ref 可避免读到闭包中的旧值。
@@ -151,11 +172,7 @@ export default function App() {
         }
 
         // URL 提供业务对象参数，日期默认值以后端函数计算结果为准，浏览器不复制月份边界规则。
-        const nextRequest: ExecuteRequest = {
-          ...createInitialRequest(),
-          startDate: nextDefinition.parameters.find((item) => item.code === 'startDate')?.defaultValue ?? null,
-          endDate: nextDefinition.parameters.find((item) => item.code === 'endDate')?.defaultValue ?? null,
-        };
+        const nextRequest = createInitialRequest(nextDefinition);
         draftSnapshotRef.current = nextTemplateDocument.snapshot;
         setDefinition(nextDefinition);
         setTemplateDocument(nextTemplateDocument);
@@ -247,7 +264,7 @@ export default function App() {
       setQueryDuration(performance.now() - queryStartedAt);
 
       // 纯函数计划先完成数据/坐标校验，随后才让 Univer 插行和写单元格。
-      const plan = createTemplatePreviewPlan(snapshot, binding, nextResult);
+      const plan = createTemplatePreviewPlan(snapshot, binding, nextResult, definition);
       const editor = editorRef.current;
       if (editor === null) {
         throw new Error('模板编辑器尚未准备完成。');
@@ -535,10 +552,13 @@ export default function App() {
     }
   }, []);
 
-  const updateRequest = useCallback((field: keyof ExecuteRequest, value: string) => {
+  const updateRequest = useCallback((code: string, value: string) => {
     setRequest((current) => ({
       ...current,
-      [field]: value || null,
+      parameters: {
+        ...current.parameters,
+        [code]: value || null,
+      },
     }));
   }, []);
 
@@ -546,6 +566,30 @@ export default function App() {
     event.preventDefault();
     void enterPreview(1);
   }, [enterPreview]);
+
+  const openConfiguration = useCallback(async () => {
+    if (operationRef.current || mode !== 'design') {
+      return;
+    }
+    setConfigurationOpen(true);
+    setConfigurationDocument(null);
+    setError(null);
+    try {
+      setConfigurationDocument(await reportApi.configuration());
+    } catch (exception) {
+      setConfigurationOpen(false);
+      setError(errorMessage(exception, '报表配置读取失败'));
+    }
+  }, [mode]);
+
+  const configurationSaved = useCallback((saved: ReportConfigurationDocument) => {
+    const nextDefinition = toReportDefinition(saved);
+    setConfigurationDocument(saved);
+    setDefinition(nextDefinition);
+    setRequest(createInitialRequest(nextDefinition));
+    setResult(null);
+    setExchangeStatus(`报表配置已保存（修订号 ${saved.revision}）`);
+  }, []);
 
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
   const busy = loading || saving || importing || exportingTemplate || exportingData || previewing;
@@ -597,6 +641,16 @@ export default function App() {
         <div className="command-actions">
           {mode === 'design' && (
             <>
+              <button
+                className="button configuration-button"
+                type="button"
+                title="配置查询参数、数据源和结果字段"
+                disabled={busy || !initialized}
+                onClick={() => void openConfiguration()}
+              >
+                <Settings2 size={16} />
+                报表配置
+              </button>
               <input
                 ref={templateFileInputRef}
                 className="visually-hidden"
@@ -681,46 +735,37 @@ export default function App() {
       </div>
 
       <form className="query-band" onSubmit={handleSubmit}>
-        <label>
-          <span>医院</span>
-          <input
-            value={request.hospitalId ?? ''}
-            onChange={(event) => updateRequest('hospitalId', event.target.value)}
-            placeholder="全部医院"
-          />
-        </label>
-        <label>
-          <span>科室</span>
-          <input
-            value={request.deptId ?? ''}
-            onChange={(event) => updateRequest('deptId', event.target.value)}
-            placeholder="全部科室"
-          />
-        </label>
-        <label>
-          <span>人员</span>
-          <input
-            value={request.personId ?? ''}
-            onChange={(event) => updateRequest('personId', event.target.value)}
-            placeholder="全部人员"
-          />
-        </label>
-        <label>
-          <span>开始日期</span>
-          <input
-            type="date"
-            value={request.startDate ?? ''}
-            onChange={(event) => updateRequest('startDate', event.target.value)}
-          />
-        </label>
-        <label>
-          <span>结束日期</span>
-          <input
-            type="date"
-            value={request.endDate ?? ''}
-            onChange={(event) => updateRequest('endDate', event.target.value)}
-          />
-        </label>
+        {definition?.parameters
+          .filter((parameter) => parameter.visible && parameter.controlType !== 'hidden')
+          .map((parameter) => (
+            <label key={parameter.code}>
+              <span>{parameter.displayName}</span>
+              {parameter.dataType === 'bool' || parameter.controlType === 'checkbox' ? (
+                <select
+                  value={request.parameters[parameter.code] ?? ''}
+                  disabled={parameter.readOnly}
+                  required={parameter.required}
+                  onChange={(event) => updateRequest(parameter.code, event.target.value)}
+                >
+                  <option value="">全部</option>
+                  <option value="true">是</option>
+                  <option value="false">否</option>
+                </select>
+              ) : (
+                <input
+                  type={parameter.controlType === 'date' || parameter.dataType === 'date'
+                    ? 'date'
+                    : parameter.dataType === 'long' || parameter.dataType === 'int' || parameter.dataType === 'decimal'
+                      ? 'number'
+                      : 'text'}
+                  value={request.parameters[parameter.code] ?? ''}
+                  readOnly={parameter.readOnly}
+                  required={parameter.required}
+                  onChange={(event) => updateRequest(parameter.code, event.target.value)}
+                />
+              )}
+            </label>
+          ))}
         <div className="query-actions">
           <button
             className="button button-primary query-button"
@@ -806,6 +851,13 @@ export default function App() {
           </div>
         </div>
       </section>
+
+      <ReportConfigurationDialog
+        open={configurationOpen}
+        document={configurationDocument}
+        onClose={() => setConfigurationOpen(false)}
+        onSaved={configurationSaved}
+      />
     </main>
   );
 }

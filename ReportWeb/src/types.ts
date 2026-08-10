@@ -37,6 +37,13 @@ export interface ParameterDefinition {
   sourceType: string;
   defaultValue: string | null;
   visible: boolean;
+  dataType: string;
+  defaultExpression: string | null;
+  fixedValue: string | null;
+  readOnly: boolean;
+  required: boolean;
+  allowUrlPrefill: boolean;
+  urlKey: string | null;
 }
 
 /** 报表数据集列；formulaTemplate 仅属于公式列，普通字段来自 ExecuteResult.rows。 */
@@ -62,11 +69,7 @@ export interface ReportDefinition {
 /** 一次预览或导出的查询条件。page 始终使用一基页码，空输入转换为 null。 */
 export interface ExecuteRequest {
   page: number;
-  hospitalId: string | null;
-  deptId: string | null;
-  personId: string | null;
-  startDate: string | null;
-  endDate: string | null;
+  parameters: Record<string, string | null>;
 }
 
 /** 数据导出只引用数据库中的已保存模板，不能携带浏览器中的未保存快照。 */
@@ -76,34 +79,13 @@ export interface DataExportRequest {
 }
 
 /** 后台解析完成的非空参数，值可直接替换工作簿中的 params token。 */
-export interface ResolvedParameters {
-  hospitalId: string;
-  deptId: string;
-  personId: string;
-  startDate: string;
-  endDate: string;
-}
+export type ResolvedParameters = Record<string, string>;
 
-/** 当前验证报表的后台明细行；合计等公式字段不由后台返回。 */
-export interface WorkloadRow {
-  sequence: number;
-  departmentName: string;
-  outpatientCount: number;
-  dischargeCount: number;
-}
+/** 后台明细行；合计等公式字段不由后台返回。 */
+export type DataRowValue = string | number | boolean | null;
+export type WorkloadRow = Record<string, DataRowValue>;
 
-/**
- * 明细 token 的运行时白名单。
- * satisfies 确保这里的字符串在编译期仍是 WorkloadRow 的真实属性，防止前后端字段漂移。
- */
-export const workloadRowFieldCodes = [
-  'sequence',
-  'departmentName',
-  'outpatientCount',
-  'dischargeCount',
-] as const satisfies readonly (keyof WorkloadRow)[];
-
-export type WorkloadRowFieldCode = typeof workloadRowFieldCodes[number];
+export type WorkloadRowFieldCode = string;
 
 /** 参数 token 的零基工作簿坐标。一个单元格可以对应多个参数绑定。 */
 export interface ParameterBinding {
@@ -174,6 +156,65 @@ export interface ExecuteResult {
   hasMore: boolean;
   parameters: ResolvedParameters;
   rows: WorkloadRow[];
+}
+
+export interface DataSourceDocument {
+  code: string;
+  name: string;
+  dbType: 'SqlServer';
+  server: string;
+  port: number;
+  database: string;
+  userName: string;
+  passwordConfigured: boolean;
+  timeoutSeconds: number;
+  maxRows: number;
+  enabled: boolean;
+}
+
+export interface DataSourceInput extends Omit<DataSourceDocument, 'passwordConfigured'> {
+  password: string | null;
+}
+
+export interface DatasetDocument {
+  code: string;
+  name: string;
+  dataSourceCode: string;
+  queryText: string;
+  timeoutSeconds: number;
+  maxRows: number;
+  enabled: boolean;
+}
+
+export interface ReportConfigurationDocument {
+  reportCode: string;
+  name: string;
+  sheetName: string;
+  preview: PreviewSettings;
+  export: ExportSettings;
+  dataSource: DataSourceDocument;
+  dataset: DatasetDocument;
+  parameters: ParameterDefinition[];
+  columns: ColumnDefinition[];
+  revision: number;
+}
+
+export interface SaveReportConfigurationRequest {
+  name: string;
+  sheetName: string;
+  preview: PreviewSettings;
+  export: ExportSettings;
+  dataSource: DataSourceInput;
+  dataset: DatasetDocument;
+  parameters: ParameterDefinition[];
+  columns: ColumnDefinition[];
+  revision: number;
+}
+
+export interface DataSourceTestResult {
+  success: boolean;
+  durationMilliseconds: number;
+  databaseVersion: string;
 }
 
 /** 异步大文件导出状态，与后端字符串枚举保持一致。 */

@@ -18,10 +18,10 @@ const definition: ReportDefinition = {
     fileRetentionHours: 24,
   },
   parameters: [
-    { code: 'hospitalId', displayName: '医院', controlType: 'text', sourceType: 'url', defaultValue: null, visible: true },
-    { code: 'deptId', displayName: '科室', controlType: 'text', sourceType: 'url', defaultValue: null, visible: true },
-    { code: 'startDate', displayName: '开始日期', controlType: 'date', sourceType: 'query', defaultValue: null, visible: true },
-    { code: 'endDate', displayName: '结束日期', controlType: 'date', sourceType: 'query', defaultValue: null, visible: true },
+    { code: 'hospitalId', displayName: '医院', controlType: 'text', sourceType: 'Form', defaultValue: null, visible: true, dataType: 'string', defaultExpression: null, fixedValue: null, readOnly: false, required: false, allowUrlPrefill: true, urlKey: 'hospitalId' },
+    { code: 'deptId', displayName: '科室', controlType: 'text', sourceType: 'Form', defaultValue: null, visible: true, dataType: 'string', defaultExpression: null, fixedValue: null, readOnly: false, required: false, allowUrlPrefill: true, urlKey: 'deptId' },
+    { code: 'startDate', displayName: '开始日期', controlType: 'date', sourceType: 'Form', defaultValue: null, visible: true, dataType: 'date', defaultExpression: 'startOfMonth', fixedValue: null, readOnly: false, required: false, allowUrlPrefill: false, urlKey: null },
+    { code: 'endDate', displayName: '结束日期', controlType: 'date', sourceType: 'Form', defaultValue: null, visible: true, dataType: 'date', defaultExpression: 'endOfMonth', fixedValue: null, readOnly: false, required: false, allowUrlPrefill: false, urlKey: null },
   ],
   columns: [
     { code: 'sequence', header: '序号', dataType: 'number', width: 70, formulaTemplate: null },
@@ -251,18 +251,10 @@ describe('scanTemplateBindings', () => {
     });
   });
 
-  it('rejects a detail code outside the WorkloadRow field whitelist', () => {
-    const expandedDefinition: ReportDefinition = {
-      ...definition,
-      columns: [
-        ...definition.columns,
-        { code: 'runtimeOnlyField', header: '运行时字段', dataType: 'text', width: 100, formulaTemplate: null },
-      ],
-    };
+  it('rejects a detail code outside the configured result fields', () => {
     const error = expectBindingError(
       oneSheet({ 0: { 0: { v: '{{detail.runtimeOnlyField}}' } } }),
       { sheetId: 'sheet-1', row: 0, column: 0, cellAddress: 'A1' },
-      expandedDefinition,
     );
 
     expect(error.message).toContain('runtimeOnlyField');

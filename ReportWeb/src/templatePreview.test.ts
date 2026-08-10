@@ -8,6 +8,15 @@ import type { ExecuteResult, TemplateBinding, WorkloadRowFieldCode } from './typ
 
 const maxTemplateCoordinate = 2_147_483_647;
 
+const resultDefinition = {
+  columns: [
+    { code: 'sequence', header: '序号', dataType: 'number', width: 70, formulaTemplate: null },
+    { code: 'departmentName', header: '科室', dataType: 'string', width: 180, formulaTemplate: null },
+    { code: 'outpatientCount', header: '门诊人次', dataType: 'number', width: 110, formulaTemplate: null },
+    { code: 'dischargeCount', header: '出院人次', dataType: 'number', width: 110, formulaTemplate: null },
+  ],
+};
+
 function workbookWithSheets(sheets: IWorkbookData['sheets']): IWorkbookData {
   return {
     id: 'template-workbook',
@@ -648,6 +657,7 @@ describe('createTemplatePreviewPlan', () => {
         snapshot,
         binding,
         executeResult({ rows: rows as unknown as ExecuteResult['rows'] }),
+        resultDefinition,
       ),
       location,
     );

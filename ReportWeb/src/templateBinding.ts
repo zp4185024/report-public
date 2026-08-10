@@ -1,12 +1,10 @@
 import type { IWorkbookData } from '@univerjs/presets';
-import { workloadRowFieldCodes } from './types';
 import type {
   DetailBinding,
   DetailFieldBinding,
   ParameterBinding,
   ReportDefinition,
   TemplateBinding,
-  WorkloadRowFieldCode,
 } from './types';
 
 /**
@@ -16,7 +14,6 @@ import type {
 const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}/g;
 /** 与后端 Int32 坐标范围保持一致，避免浏览器接受后台无法保存的坐标。 */
 export const MAX_TEMPLATE_COORDINATE = 2_147_483_647;
-const workloadRowFieldCodeSet: ReadonlySet<string> = new Set(workloadRowFieldCodes);
 
 interface ErrorLocation {
   sheetId?: string;
@@ -147,9 +144,6 @@ export function scanTemplateBindings(
             throw new TemplateBindingError('明细 token 必须独占整个单元格。', location);
           }
           ensureKnownCode(detailCodes, scope, code, location);
-          if (!isWorkloadRowFieldCode(code)) {
-            throw new TemplateBindingError(`未知的 detail code '${code}'。`, location);
-          }
           // 当前预览执行器通过复制一条模板行展开，所以所有明细字段必须共用工作表和行。
           if (
             detailLocation !== null &&
@@ -232,10 +226,6 @@ function formatSheetLabel(sheetName: string, sheetId: string): string {
   return sheetName === sheetId
     ? `'${sheetId}'`
     : `'${sheetName}'（ID: ${sheetId}）`;
-}
-
-function isWorkloadRowFieldCode(code: string): code is WorkloadRowFieldCode {
-  return workloadRowFieldCodeSet.has(code);
 }
 
 function ensureKnownCode(

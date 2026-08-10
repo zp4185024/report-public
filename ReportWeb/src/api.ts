@@ -1,8 +1,12 @@
 import type {
   ExecuteRequest,
   ExecuteResult,
+  DataSourceInput,
+  DataSourceTestResult,
   ExportJob,
   ReportDefinition,
+  ReportConfigurationDocument,
+  SaveReportConfigurationRequest,
   SaveTemplateRequest,
   TemplateDocument,
   TemplateXlsxImportResult,
@@ -70,6 +74,23 @@ async function requestDownload(
 /** 固定报表的全部接口。模板交换和数据导出使用不同方法，避免调用方混淆两个文件语义。 */
 export const reportApi = {
   definition: () => requestJson<ReportDefinition>(`${basePath}/definition`),
+
+  configuration: () =>
+    requestJson<ReportConfigurationDocument>(`${basePath}/configuration`),
+
+  saveConfiguration: (request: SaveReportConfigurationRequest) =>
+    requestJson<ReportConfigurationDocument>(`${basePath}/configuration`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+
+  testDataSource: (request: DataSourceInput) =>
+    requestJson<DataSourceTestResult>(`${basePath}/configuration/test-data-source`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
 
   template: () => requestJson<TemplateDocument>(`${basePath}/template`),
 

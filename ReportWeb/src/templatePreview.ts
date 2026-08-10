@@ -1,11 +1,11 @@
 import type { IWorkbookData } from '@univerjs/presets';
 import { MAX_TEMPLATE_COORDINATE } from './templateBinding';
-import { workloadRowFieldCodes } from './types';
 import type {
+  DataRowValue,
   ExecuteResult,
+  ReportDefinition,
   ResolvedParameters,
   TemplateBinding,
-  WorkloadRowFieldCode,
 } from './types';
 
 /**
@@ -15,15 +15,6 @@ import type {
 const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}/g;
 // 参数允许嵌入固定文字；明细必须独占单元格，所以使用独立的整串正则再次确认。
 const detailTokenRegex = /^\{\{[ \t\r\n\f\v]*detail\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}$/;
-const resolvedParameterCodes = [
-  'hospitalId',
-  'deptId',
-  'personId',
-  'startDate',
-  'endDate',
-] as const satisfies readonly (keyof ResolvedParameters)[];
-const resolvedParameterCodeSet: ReadonlySet<string> = new Set(resolvedParameterCodes);
-const workloadRowFieldCodeSet: ReadonlySet<string> = new Set(workloadRowFieldCodes);
 
 type JsonObject = Record<string, unknown>;
 
@@ -37,7 +28,7 @@ interface ParameterCellGroup {
   sheetId: string;
   row: number;
   column: number;
-  codes: Set<keyof ResolvedParameters>;
+  codes: Set<string>;
 }
 
 /** 经过运行时防御性校验的内部绑定形态，避免对 TypeScript 类型断言产生错误信任。 */
@@ -86,7 +77,7 @@ export interface CellWrite {
 /** 一条展开后明细行及其后台字段写入；模板公式列不在 values 中，会由整行复制保留。 */
 export interface DetailRowPlan {
   row: number;
-  values: Array<{ column: number; value: string | number | null }>;
+  values: Array<{ column: number; value: DataRowValue }>;
 }
 
 /**
@@ -137,6 +128,7 @@ export function createTemplatePreviewPlan(
   snapshot: IWorkbookData,
   binding: TemplateBinding,
   result: ExecuteResult,
+  definition?: Pick<ReportDefinition, 'columns'>,
 ): TemplatePreviewPlan {
   const validatedSnapshot = validateSnapshot(snapshot as unknown);
   const validatedBinding = validateTemplateBinding(binding as unknown);
@@ -144,7 +136,7 @@ export function createTemplatePreviewPlan(
 
   return {
     parameterWrites: createParameterWrites(validatedSnapshot, validatedBinding, validatedResult),
-    detail: createDetailPlan(validatedSnapshot, validatedBinding, validatedResult),
+    detail: createDetailPlan(validatedSnapshot, validatedBinding, validatedResult, definition),
   };
 }
 
@@ -210,7 +202,7 @@ function replaceParameterTokens(
     row: group.row,
     column: group.column,
   };
-  const matchedCodes = new Set<keyof ResolvedParameters>();
+  const matchedCodes = new Set<string>();
 
   // 同时校验“绑定指向 token”和“token 拥有绑定”，防止过期 Binding 与当前草稿错位。
   for (const match of originalValue.matchAll(tokenRegex)) {
@@ -221,7 +213,7 @@ function replaceParameterTokens(
     }
 
     const scope = match[1];
-    const typedCode = match[2] as keyof ResolvedParameters;
+    const typedCode = match[2];
     if (scope !== 'params') {
       throw new TemplatePreviewError('参数绑定单元格不能包含 detail token。', location);
     }
@@ -242,7 +234,7 @@ function replaceParameterTokens(
   // ResolvedParameters 已由后台填充默认值，因此替换结果不会因 null 产生 "undefined" 文本。
   const value = originalValue.replace(
     tokenRegex,
-    (_token, _scope: string, code: string) => parameters[code as keyof ResolvedParameters],
+    (_token, _scope: string, code: string) => parameters[code],
   );
   if (value.includes('{{') || value.includes('}}')) {
     throw new TemplatePreviewError('参数绑定单元格替换后仍包含残留 token。', location);
@@ -254,6 +246,7 @@ function createDetailPlan(
   snapshot: ValidatedSnapshot,
   binding: ValidatedTemplateBinding,
   result: ValidatedExecuteResult,
+  definition?: Pick<ReportDefinition, 'columns'>,
 ): TemplatePreviewPlan['detail'] {
   const detailBinding = binding.detailBinding;
   if (detailBinding === null) {
@@ -270,20 +263,17 @@ function createDetailPlan(
   });
 
   // 逐字段回查模板单元格，不能只信任 Binding 中记录的 code/column。
-  const fields = detailBinding.fields.map((field): { code: WorkloadRowFieldCode; column: number } => {
+  const fields = detailBinding.fields.map((field): { code: string; column: number } => {
     const column = field.column;
     const location = {
       sheetId,
       row: templateRow,
       column,
     };
-    if (!workloadRowFieldCodeSet.has(field.code)) {
-      throw new TemplatePreviewError(`未知的 detail code '${field.code}'。`, location);
-    }
     ensureDetailTemplateCell(snapshot, sheetId, templateRow, column, field.code);
 
     return {
-      code: field.code as WorkloadRowFieldCode,
+      code: field.code,
       column,
     };
   }).sort(
@@ -298,7 +288,10 @@ function createDetailPlan(
     column: fields[0]?.column ?? 0,
   });
 
-  const rows = createDetailRows(sheetId, templateRow, fields, result.rows);
+  const columnTypes = definition === undefined
+    ? undefined
+    : new Map(definition.columns.map((column) => [column.code, column.dataType]));
+  const rows = createDetailRows(sheetId, templateRow, fields, result.rows, columnTypes);
 
   return {
     sheetId,
@@ -311,8 +304,9 @@ function createDetailPlan(
 function createDetailRows(
   sheetId: string,
   templateRow: number,
-  fields: Array<{ code: WorkloadRowFieldCode; column: number }>,
+  fields: Array<{ code: string; column: number }>,
   resultRows: unknown[],
+  columnTypes?: ReadonlyMap<string, string>,
 ): DetailRowPlan[] {
   if (resultRows.length === 0) {
     // 零数据也保留一条模板行并清空绑定单元格，这样表头/边框/公式结构仍可预览且不会显示 token。
@@ -343,7 +337,7 @@ function createDetailRows(
           sheetId,
           row: targetRow,
           column,
-        }),
+        }, columnTypes?.get(code)),
       })),
     };
   });
@@ -351,25 +345,40 @@ function createDetailRows(
 
 function getDetailFieldValue(
   resultRow: JsonObject,
-  code: WorkloadRowFieldCode,
+  code: string,
   location: ErrorLocation,
-): string | number {
-  // 显式区分文本和数值，防止 "123" 字符串进入数字单元格后让模板公式产生隐式转换。
+  dataType?: string,
+): DataRowValue {
   if (!Object.prototype.hasOwnProperty.call(resultRow, code)) {
     throw new TemplatePreviewError(`明细结果行缺少字段 '${code}'。`, location);
   }
 
   const value = resultRow[code];
-  if (code === 'departmentName') {
-    if (typeof value !== 'string') {
-      throw new TemplatePreviewError(`明细字段 '${code}' 必须是字符串。`, location);
+  if (
+    value !== null &&
+    typeof value !== 'string' &&
+    typeof value !== 'boolean' &&
+    (typeof value !== 'number' || !Number.isFinite(value))
+  ) {
+    throw new TemplatePreviewError(`明细字段 '${code}' 必须是可写入单元格的标量。`, location);
+  }
+  if (value !== null && dataType !== undefined) {
+    const normalizedType = dataType.toLowerCase();
+    const numberRequired = ['number', 'int', 'long', 'decimal'].includes(normalizedType);
+    const booleanRequired = ['bool', 'boolean'].includes(normalizedType);
+    const stringRequired = ['string', 'text', 'date', 'datetime'].includes(normalizedType);
+    if (
+      (numberRequired && typeof value !== 'number') ||
+      (booleanRequired && typeof value !== 'boolean') ||
+      (stringRequired && typeof value !== 'string')
+    ) {
+      throw new TemplatePreviewError(
+        `明细字段 '${code}' 与配置的数据类型 '${dataType}' 不一致。`,
+        location,
+      );
     }
-    return value;
   }
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    throw new TemplatePreviewError(`明细字段 '${code}' 必须是有限数字。`, location);
-  }
-  return value;
+  return value as DataRowValue;
 }
 
 function validateTemplateBinding(value: unknown): ValidatedTemplateBinding {
@@ -488,11 +497,8 @@ function validateExecuteResult(value: unknown): ValidatedExecuteResult {
   if (!isJsonObject(value.parameters)) {
     throw new TemplatePreviewError('执行结果 parameters 必须是对象。');
   }
-  for (const code of resolvedParameterCodes) {
-    if (
-      !Object.prototype.hasOwnProperty.call(value.parameters, code) ||
-      typeof value.parameters[code] !== 'string'
-    ) {
+  for (const [code, parameterValue] of Object.entries(value.parameters)) {
+    if (typeof parameterValue !== 'string') {
       throw new TemplatePreviewError(`执行结果参数 '${code}' 必须是字符串。`);
     }
   }
@@ -510,16 +516,15 @@ function ensureParameterCode(
   code: string,
   parameters: ResolvedParameters,
   location: ErrorLocation,
-): keyof ResolvedParameters {
+): string {
   if (
-    !resolvedParameterCodeSet.has(code) ||
     !isJsonObject(parameters) ||
     !Object.prototype.hasOwnProperty.call(parameters, code) ||
     typeof parameters[code] !== 'string'
   ) {
     throw new TemplatePreviewError(`未知的 params code '${code}'。`, location);
   }
-  return code as keyof ResolvedParameters;
+  return code;
 }
 
 function getParameterCellValue(
