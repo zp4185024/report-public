@@ -603,29 +603,45 @@ export default function App() {
   return (
     <main className="app-shell">
       <header className={`command-bar ${mode}-mode`} aria-label="模板命令栏">
-        <div className="mode-switch" aria-label="工作模式">
-          <button
-            type="button"
-            className={mode === 'design' ? 'mode-button active' : 'mode-button'}
-            aria-pressed={mode === 'design'}
-            title="切换到模板设计"
-            disabled={busy || mode === 'design'}
-            onClick={returnDesign}
-          >
-            <Pencil size={15} />
-            模板设计
-          </button>
-          <button
-            type="button"
-            className={mode === 'preview' ? 'mode-button active' : 'mode-button'}
-            aria-pressed={mode === 'preview'}
-            title="使用当前草稿预览数据"
-            disabled={busy || mode === 'preview' || !initialized}
-            onClick={() => void enterPreview(1)}
-          >
-            {previewing ? <LoaderCircle className="spin" size={15} /> : <Eye size={15} />}
-            数据预览
-          </button>
+        <div className="command-leading">
+          <div className="mode-switch" aria-label="工作模式">
+            <button
+              type="button"
+              className={mode === 'design' ? 'mode-button active' : 'mode-button'}
+              aria-pressed={mode === 'design'}
+              title="切换到模板设计"
+              disabled={busy || mode === 'design'}
+              onClick={returnDesign}
+            >
+              <Pencil size={15} />
+              模板设计
+            </button>
+            <button
+              type="button"
+              className={mode === 'preview' ? 'mode-button active' : 'mode-button'}
+              aria-pressed={mode === 'preview'}
+              title="使用当前草稿预览数据"
+              disabled={busy || mode === 'preview' || !initialized}
+              onClick={() => void enterPreview(1)}
+            >
+              {previewing ? <LoaderCircle className="spin" size={15} /> : <Eye size={15} />}
+              数据预览
+            </button>
+          </div>
+          {mode === 'design' && (
+            <div className="quick-access-actions" aria-label="快捷访问">
+              <button
+                className="button data-assets-button quick-access-button"
+                type="button"
+                title="管理全局数据源和数据集"
+                disabled={busy}
+                onClick={() => window.location.assign(`/data-assets${window.location.search}`)}
+              >
+                <Database size={16} />
+                数据管理
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="report-heading" title={definition?.name ?? '科室工作量报表'}>
@@ -636,24 +652,14 @@ export default function App() {
           {mode === 'design' && (
             <>
               <button
-                className="button configuration-button"
+                className="button configuration-button secondary-command"
                 type="button"
                 title="配置报表使用的数据集和查询参数"
                 disabled={busy || !initialized}
                 onClick={() => void openConfiguration()}
               >
                 <Settings2 size={16} />
-                报表配置
-              </button>
-              <button
-                className="button data-assets-button"
-                type="button"
-                title="管理全局数据源和数据集"
-                disabled={busy}
-                onClick={() => window.location.assign(`/data-assets${window.location.search}`)}
-              >
-                <Database size={16} />
-                数据管理
+                <span className="button-label">报表配置</span>
               </button>
               <input
                 ref={templateFileInputRef}
@@ -664,24 +670,24 @@ export default function App() {
                 onChange={(event) => void importTemplate(event)}
               />
               <button
-                className="button exchange-button"
+                className="button exchange-button secondary-command"
                 type="button"
                 title="导入 XLSX 作为当前模板草稿"
                 disabled={busy || !initialized}
                 onClick={chooseTemplateFile}
               >
                 {importing ? <LoaderCircle className="spin" size={16} /> : <FileUp size={16} />}
-                导入模板
+                <span className="button-label">导入模板</span>
               </button>
               <button
-                className="button exchange-button"
+                className="button exchange-button secondary-command"
                 type="button"
                 title="把当前模板草稿导出为 XLSX"
                 disabled={busy || !initialized}
                 onClick={() => void exportTemplate()}
               >
                 {exportingTemplate ? <LoaderCircle className="spin" size={16} /> : <FileDown size={16} />}
-                导出模板
+                <span className="button-label">导出模板</span>
               </button>
             </>
           )}
@@ -713,16 +719,16 @@ export default function App() {
               </button>
             )}
           {mode === 'design' && (
-              <button
-                className="button save-button"
-                type="button"
-                title="保存当前模板草稿"
-                disabled={busy || !initialized}
-                onClick={() => void saveTemplate()}
-              >
-                {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
-                保存模板
-              </button>
+            <button
+              className="button save-button"
+              type="button"
+              title="保存当前模板草稿"
+              disabled={busy || !initialized}
+              onClick={() => void saveTemplate()}
+            >
+              {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
+              保存模板
+            </button>
           )}
           <div className="template-state" title={dirty ? '模板有未保存修改' : '模板已保存'}>
             <span>{revision === undefined ? 'revision --' : `revision ${revision}`}</span>

@@ -72,7 +72,9 @@ h1 {
 }
 
 .runtime-status,
+.command-leading,
 .command-actions,
+.quick-access-actions,
 .template-state,
 .duration-state,
 .report-stats,
@@ -91,6 +93,18 @@ h1 {
   color: #344054;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.command-leading {
+  min-width: 0;
+  justify-self: start;
+  gap: 12px;
+}
+
+.quick-access-actions {
+  flex: 0 0 auto;
+  padding-left: 12px;
+  border-left: 1px solid #c8d0da;
 }
 
 .status-dot,
@@ -122,7 +136,6 @@ h1 {
   border: 1px solid #c8d0da;
   border-radius: 4px;
   background: #edf1f5;
-  justify-self: start;
 }
 
 .mode-button {
@@ -166,8 +179,14 @@ h1 {
   gap: 12px;
 }
 
+.command-bar .button svg {
+  width: 16px;
+  height: 16px;
+}
+
 .template-state,
 .duration-state {
+  flex: 0 0 auto;
   min-width: 0;
   gap: 8px;
   color: #5f6c7c;
@@ -1495,17 +1514,32 @@ h1 {
   }
 }
 
-@media (max-width: 1700px) {
+@media (max-width: 2200px) {
   .command-bar.design-mode .command-actions {
     gap: 8px;
   }
 
-  .command-bar.design-mode .command-actions .button {
+  .command-bar.design-mode .secondary-command {
     width: 34px;
     min-width: 34px;
     justify-content: center;
     padding: 0;
-    font-size: 0;
+  }
+
+  .command-bar.design-mode .secondary-command .button-label {
+    display: none;
+  }
+}
+
+@media (max-width: 1800px) {
+  .command-bar.design-mode .duration-state {
+    display: none;
+  }
+}
+
+@media (max-width: 1500px) {
+  .runtime-label {
+    display: none;
   }
 }
 
@@ -1516,10 +1550,6 @@ h1 {
 
   .runtime-status {
     padding-left: 8px;
-  }
-
-  .runtime-label {
-    display: none;
   }
 }
 
@@ -1560,7 +1590,7 @@ h1 {
     grid-area: heading;
   }
 
-  .mode-switch {
+  .command-leading {
     grid-area: mode;
   }
 
@@ -1759,17 +1789,30 @@ h1 {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .mode-switch,
+  .command-leading,
   .command-actions {
     width: 100%;
   }
 
+  .mode-switch {
+    width: auto;
+    flex: 1 1 auto;
+  }
+
   .mode-button {
-    width: 50%;
+    width: auto;
+    flex: 1 1 0;
   }
 
   .command-actions {
     justify-content: space-between;
+  }
+
+  .command-bar .data-export-button,
+  .command-bar .save-button {
+    width: 84px;
+    min-width: 84px;
+    padding: 0 6px;
   }
 
   .template-state {
@@ -1833,12 +1876,18 @@ h1 {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .mode-switch {
+  .command-leading {
     width: 100%;
   }
 
+  .mode-switch {
+    width: auto;
+    flex: 1 1 auto;
+  }
+
   .mode-button {
-    width: 50%;
+    width: auto;
+    flex: 1 1 0;
   }
 
   .command-actions {
