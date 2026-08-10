@@ -1,0 +1,156 @@
+using HD.ReportCenter.Application.CoreValidation;
+using Microsoft.Data.Sqlite;
+using SqlSugar;
+using System.Reflection;
+
+namespace HD.ReportCenter.Tests;
+
+public sealed class PocReportConfigurationStoreTests : IDisposable
+{
+    private long _nextId = 20_000;
+    private readonly SqlSugarClient _database;
+    private readonly PocReportConfigurationStore _store;
+
+    public PocReportConfigurationStoreTests()
+    {
+        _database = new SqlSugarClient(new ConnectionConfig
+        {
+            ConnectionString = "Data Source=:memory:",
+            DbType = DbType.Sqlite,
+            IsAutoCloseConnection = false,
+            InitKeyType = InitKeyType.Attribute,
+            ConfigureExternalServices = new ConfigureExternalServices
+            {
+                EntityService = (property, column) =>
+                {
+                    if (new NullabilityInfoContext().Create(property).WriteState is NullabilityState.Nullable)
+                    {
+                        column.IsNullable = true;
+                    }
+                }
+            }
+        });
+        _database.Aop.DataExecuting = (_, entityInfo) =>
+        {
+            if (entityInfo.OperationType != DataFilterType.InsertByObject ||
+                !entityInfo.EntityColumnInfo.IsPrimarykey ||
+                entityInfo.EntityColumnInfo.PropertyInfo.PropertyType != typeof(long))
+            {
+                return;
+            }
+
+            var id = (long)entityInfo.EntityColumnInfo.PropertyInfo.GetValue(entityInfo.EntityValue)!;
+            if (id == 0)
+            {
+                entityInfo.SetValue(Interlocked.Increment(ref _nextId));
+            }
+        };
+        _database.Ado.Open();
+        _database.CodeFirst.InitTables<
+            PocReport,
+            PocDataSource,
+            PocReportDataset,
+            PocReportParameter>();
+        _store = new PocReportConfigurationStore(_database);
+    }
+
+    [Fact]
+    public void Configuration_entities_use_production_table_names()
+    {
+        Assert.True(_database.DbMaintenance.IsAnyTable("RcReport", false));
+        Assert.True(_database.DbMaintenance.IsAnyTable("RcDataSource", false));
+        Assert.True(_database.DbMaintenance.IsAnyTable("RcDataset", false));
+        Assert.True(_database.DbMaintenance.IsAnyTable("RcReportParameter", false));
+    }
+
+    [Fact]
+    public async Task SaveAsync_InsertsAndReadsWholeConfigurationGraph()
+    {
+        var revision = await _store.SaveAsync(CreateMutation(0));
+
+        var stored = await _store.GetAsync("dept-workload");
+
+        Assert.Equal(1, revision);
+        Assert.NotNull(stored);
+        Assert.Equal("科室工作量统计", stored.Report.Name);
+        Assert.Equal("report-center", stored.DataSource.Code);
+        Assert.Equal("detail", stored.Dataset.Code);
+        Assert.Equal("SELECT @hospitalId AS hospitalId", stored.Dataset.QueryText);
+        Assert.Equal(2, stored.Parameters.Count);
+        Assert.Equal(new[] { "hospitalId", "startDate" }, stored.Parameters.Select(item => item.Code));
+    }
+
+    [Fact]
+    public async Task SaveAsync_UpdatesByRevisionAndReplacesParameters()
+    {
+        await _store.SaveAsync(CreateMutation(0));
+        var mutation = CreateMutation(1) with
+        {
+            ReportName = "更新后的报表",
+            Parameters =
+            [
+                Parameter("deptId", 0)
+            ]
+        };
+
+        var revision = await _store.SaveAsync(mutation);
+        var stored = await _store.GetAsync("dept-workload");
+
+        Assert.Equal(2, revision);
+        Assert.Equal("更新后的报表", stored!.Report.Name);
+        Assert.Equal("deptId", Assert.Single(stored.Parameters).Code);
+    }
+
+    [Fact]
+    public async Task SaveAsync_RejectsStaleRevisionWithoutPartialWrites()
+    {
+        await _store.SaveAsync(CreateMutation(0));
+
+        await Assert.ThrowsAsync<PocReportConfigurationRevisionConflictException>(
+            () => _store.SaveAsync(CreateMutation(0) with { ReportName = "不应写入" }));
+
+        var stored = await _store.GetAsync("dept-workload");
+        Assert.Equal("科室工作量统计", stored!.Report.Name);
+        Assert.Equal(1, stored.Report.Revision);
+        Assert.Equal(2, stored.Parameters.Count);
+    }
+
+    public void Dispose()
+    {
+        _database.Dispose();
+        SqliteConnection.ClearAllPools();
+    }
+
+    private static PocReportConfigurationMutation CreateMutation(int revision) =>
+        new(
+            "dept-workload",
+            "科室工作量统计",
+            "科室工作量",
+            "{\"Mode\":\"Full\",\"PageSize\":20,\"ShowExactTotal\":false}",
+            "{\"DefaultMode\":\"Normal\"}",
+            "report-center",
+            "报表中心",
+            "SqlServer",
+            "Server=localhost;Database=test;User Id=test;Password=test;",
+            30,
+            20_000,
+            "detail",
+            "明细",
+            "SELECT @hospitalId AS hospitalId",
+            "[]",
+            30,
+            20_000,
+            [Parameter("hospitalId", 0), Parameter("startDate", 1)],
+            revision);
+
+    private static PocReportParameter Parameter(string code, int order) => new()
+    {
+        Code = code,
+        DisplayName = code,
+        DataType = code.EndsWith("Date", StringComparison.Ordinal) ? "date" : "string",
+        ControlType = code.EndsWith("Date", StringComparison.Ordinal) ? "date" : "text",
+        SourceType = "Form",
+        DisplayOrder = order,
+        IsVisible = true
+    };
+}

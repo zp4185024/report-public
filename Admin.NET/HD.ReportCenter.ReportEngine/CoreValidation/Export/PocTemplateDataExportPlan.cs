@@ -13,4 +13,6 @@ public sealed record PocTemplateDataExportPlan(
     PocTemplateBinding Binding,
     PocExecuteRequest Query,
     PocExportSettings Export,
-    PocExchangeRuleSet Mappings);
+    PocExchangeRuleSet Mappings,
+    PocReportDefinition? Definition = null,
+    PocResolvedParameters? Parameters = null);

@@ -86,7 +86,9 @@ public sealed class PocTemplateDataExporter
         CancellationToken callerToken)
     {
         var rows = new List<PocDataRow>();
-        var columnsPerRow = Math.Max(1, PocReportCatalog.GetDefinition().Columns.Count);
+        var columnsPerRow = Math.Max(
+            1,
+            (plan.Definition ?? PocReportCatalog.GetDefinition()).Columns.Count);
         try
         {
             await foreach (var page in pages.WithCancellation(timeoutToken))
@@ -122,7 +124,8 @@ public sealed class PocTemplateDataExporter
         XLWorkbook workbook,
         PocTemplateDataExportPlan plan)
     {
-        var parameters = PocReportCatalog.Execute(plan.Query with { Page = 1 }).Parameters;
+        var parameters = plan.Parameters
+            ?? PocReportCatalog.Execute(plan.Query with { Page = 1 }).Parameters;
         foreach (var binding in plan.Binding.ParameterBindings)
         {
             var worksheet = ResolveWorksheet(workbook, plan, binding.SheetId);
@@ -286,15 +289,10 @@ public sealed class PocTemplateDataExporter
         }
     }
 
-    private static string ResolveParameter(PocResolvedParameters parameters, string code) => code switch
-    {
-        "hospitalId" => parameters.HospitalId,
-        "deptId" => parameters.DeptId,
-        "personId" => parameters.PersonId,
-        "startDate" => parameters.StartDate,
-        "endDate" => parameters.EndDate,
-        _ => throw new InvalidOperationException($"导出模板包含未知参数绑定 '{code}'。")
-    };
+    private static string ResolveParameter(PocResolvedParameters parameters, string code) =>
+        parameters.TryGetValue(code, out var value)
+            ? value
+            : throw new InvalidOperationException($"导出模板包含未知参数绑定 '{code}'。");
 
     private static void WriteDetailValue(IXLCell cell, string code, PocDataRow row)
     {

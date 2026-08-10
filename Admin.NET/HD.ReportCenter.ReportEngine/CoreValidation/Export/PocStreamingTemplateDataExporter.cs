@@ -139,7 +139,7 @@ public sealed class PocStreamingTemplateDataExporter
         var tailRows = sheetData.Elements(SpreadsheetNamespace + "row")
             .Where(row => ReadRowNumber(row) > templateRowNumber)
             .ToArray();
-        var parameterValues = ResolveParameterValues(plan.Query);
+        var parameterValues = ResolveParameterValues(plan);
         var parameterBindings = plan.Binding.ParameterBindings
             .Where(binding => binding.SheetId == detail.SheetId)
             .GroupBy(binding => (Row: binding.Row + 1, Column: binding.Column + 1))
@@ -426,17 +426,12 @@ public sealed class PocStreamingTemplateDataExporter
         return cell.Element(SpreadsheetNamespace + "v")?.Value ?? string.Empty;
     }
 
-    private static IReadOnlyDictionary<string, string> ResolveParameterValues(PocExecuteRequest query)
+    private static IReadOnlyDictionary<string, string> ResolveParameterValues(
+        PocTemplateDataExportPlan plan)
     {
-        var parameters = PocReportCatalog.Execute(query with { Page = 1 }).Parameters;
-        return new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["hospitalId"] = parameters.HospitalId,
-            ["deptId"] = parameters.DeptId,
-            ["personId"] = parameters.PersonId,
-            ["startDate"] = parameters.StartDate,
-            ["endDate"] = parameters.EndDate
-        };
+        var parameters = plan.Parameters
+            ?? PocReportCatalog.Execute(plan.Query with { Page = 1 }).Parameters;
+        return new Dictionary<string, string>(parameters, StringComparer.OrdinalIgnoreCase);
     }
 
     private static void AdjustWorksheetReferences(

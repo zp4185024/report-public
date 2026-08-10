@@ -16,6 +16,10 @@ public sealed class PocDataExportConflictException : Exception
     public string Code { get; }
 }
 
+public sealed record PocPreparedDataExport(
+    PocTemplateDataExportPlan TemplatePlan,
+    PocRuntimeExecutionPlan? RuntimePlan);
+
 /// <summary>
 /// 从数据库模板、报表定义和转换映射创建导出计划。该服务是数据导出的版本可信边界。
 /// </summary>
@@ -23,17 +27,28 @@ public sealed class PocTemplateDataExportService : ITransient
 {
     private readonly PocTemplateService _templateService;
     private readonly PocExchangeMappingStore _mappingStore;
+    private readonly PocSqlDatasetExecutor? _datasetExecutor;
 
     public PocTemplateDataExportService(
         PocTemplateService templateService,
-        PocExchangeMappingStore mappingStore)
+        PocExchangeMappingStore mappingStore,
+        PocSqlDatasetExecutor? datasetExecutor = null)
     {
         _templateService = templateService;
         _mappingStore = mappingStore;
+        _datasetExecutor = datasetExecutor;
     }
 
     /// <summary>校验精确模板修订号，并把本次导出使用的所有可变输入复制到独立计划。</summary>
     public async Task<PocTemplateDataExportPlan> CreatePlanAsync(
+        string reportCode,
+        PocDataExportRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return (await CreatePreparedAsync(reportCode, request, cancellationToken)).TemplatePlan;
+    }
+
+    public async Task<PocPreparedDataExport> CreatePreparedAsync(
         string reportCode,
         PocDataExportRequest request,
         CancellationToken cancellationToken = default)
@@ -68,8 +83,13 @@ public sealed class PocTemplateDataExportService : ITransient
             PocExchangeMappingDefaults.CurrentUniverVersion);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var definition = PocReportCatalog.GetDefinition();
-        return new PocTemplateDataExportPlan(
+        var runtimePlan = _datasetExecutor is null
+            ? null
+            : await _datasetExecutor.PrepareAsync(reportCode, request.Query, cancellationToken);
+        var definition = runtimePlan?.Configuration.Definition ?? PocReportCatalog.GetDefinition();
+        var parameters = runtimePlan?.Parameters.DisplayValues
+            ?? PocReportCatalog.Execute(request.Query with { Page = 1 }).Parameters;
+        var templatePlan = new PocTemplateDataExportPlan(
             normalizedReportCode,
             document.Revision,
             (Newtonsoft.Json.Linq.JObject)document.Snapshot.DeepClone(),
@@ -79,7 +99,10 @@ public sealed class PocTemplateDataExportService : ITransient
             new PocExchangeRuleSet(
                 mappings.UniverVersion,
                 mappings.MappingVersion,
-                mappings.Rules.Select(rule => rule with { }).ToArray()));
+                mappings.Rules.Select(rule => rule with { }).ToArray()),
+            definition,
+            new PocResolvedParameters(parameters));
+        return new PocPreparedDataExport(templatePlan, runtimePlan);
     }
 
     private static PocTemplateBinding CloneBinding(PocTemplateBinding binding) =>

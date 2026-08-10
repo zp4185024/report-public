@@ -87,6 +87,7 @@ public sealed record PocReportDefinition(
 /// <summary>
 /// 浏览器提交的预览/导出查询条件。可空字符串由报表目录统一解析为业务默认值。
 /// </summary>
+[method: Newtonsoft.Json.JsonConstructor]
 public sealed record PocExecuteRequest(
     int Page,
     IReadOnlyDictionary<string, string?> Parameters)

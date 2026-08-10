@@ -38,12 +38,29 @@ public static class PocReportCatalog
                 RowsPerSheet: 1_000_000,
                 FileRetentionHours: 24),
             [
-                new("hospitalId", "医院", "text", "url", null, true),
-                new("deptId", "科室", "text", "url", null, true),
-                new("personId", "人员", "text", "url", null, true),
-                // default-function 表示值由后台函数解析，而不是写死在模板或浏览器代码中。
-                new("startDate", "开始日期", "date", "default-function", FormatDate(startDate), true),
-                new("endDate", "结束日期", "date", "default-function", FormatDate(current), true)
+                new("hospitalId", "医院", "text", "Form", null, true, AllowUrlPrefill: true),
+                new("deptId", "科室", "text", "Form", null, true, AllowUrlPrefill: true),
+                new("personId", "人员", "text", "Form", null, true, AllowUrlPrefill: true),
+                new(
+                    "startDate",
+                    "开始日期",
+                    "date",
+                    "Form",
+                    FormatDate(startDate),
+                    true,
+                    "date",
+                    "startOfMonth(today())",
+                    AllowUrlPrefill: true),
+                new(
+                    "endDate",
+                    "结束日期",
+                    "date",
+                    "Form",
+                    FormatDate(current),
+                    true,
+                    "date",
+                    "today()",
+                    AllowUrlPrefill: true)
             ],
             [
                 new("sequence", "序号", "number", 70),

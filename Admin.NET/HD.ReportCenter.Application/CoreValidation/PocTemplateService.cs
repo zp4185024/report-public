@@ -63,10 +63,14 @@ public sealed class PocTemplateService : ITransient
         "HD.ReportCenter.Application.CoreValidation.Seeds.dept-workload.json";
 
     private readonly PocTemplateStore _store;
+    private readonly PocReportConfigurationService? _configurationService;
 
-    public PocTemplateService(PocTemplateStore store)
+    public PocTemplateService(
+        PocTemplateStore store,
+        PocReportConfigurationService? configurationService = null)
     {
         _store = store;
+        _configurationService = configurationService;
     }
 
     /// <summary>
@@ -74,6 +78,7 @@ public sealed class PocTemplateService : ITransient
     /// </summary>
     public async Task<PocTemplateDocument> GetAsync(string reportCode)
     {
+        var definition = await GetDefinitionAsync(reportCode);
         var stored = await _store.GetAsync(reportCode);
         if (stored is null)
         {
@@ -81,7 +86,7 @@ public sealed class PocTemplateService : ITransient
             try
             {
                 var seedJson = LoadSeedJson();
-                return CreateDocument(reportCode, seedJson, null, 0);
+                return CreateDocument(reportCode, seedJson, null, 0, definition);
             }
             catch (Exception exception) when (
                 exception is InvalidOperationException || IsTemplateDataException(exception))
@@ -97,7 +102,8 @@ public sealed class PocTemplateService : ITransient
                 stored.ReportCode,
                 stored.SnapshotJson,
                 stored.BindingJson,
-                stored.Revision);
+                stored.Revision,
+                definition);
         }
         catch (Exception exception) when (IsTemplateDataException(exception))
         {
@@ -112,9 +118,10 @@ public sealed class PocTemplateService : ITransient
         string reportCode,
         PocSaveTemplateRequest request)
     {
+        var definition = await GetDefinitionAsync(reportCode);
         var snapshotJson = request.Snapshot.ToString(Formatting.None);
         // 浏览器不是信任边界：真正入库的绑定必须由后台校验器根据工作簿快照重新生成。
-        var canonicalBinding = PocTemplateValidator.Scan(snapshotJson);
+        var canonicalBinding = PocTemplateValidator.Scan(snapshotJson, definition);
         var canonicalBindingJson = SerializeBinding(canonicalBinding);
         if (!string.Equals(
                 SerializeBinding(request.Binding),
@@ -141,10 +148,13 @@ public sealed class PocTemplateService : ITransient
         string reportCode,
         string snapshotJson,
         string? storedBindingJson,
-        int revision)
+        int revision,
+        PocReportDefinition definition)
     {
         var snapshot = JObject.Parse(snapshotJson);
-        var canonicalBinding = PocTemplateValidator.Scan(snapshot.ToString(Formatting.None));
+        var canonicalBinding = PocTemplateValidator.Scan(
+            snapshot.ToString(Formatting.None),
+            definition);
         if (storedBindingJson is not null)
         {
             // 先反序列化再重新序列化，消除 JSON 空白和属性格式差异，只比较绑定的规范形态。
@@ -179,6 +189,11 @@ public sealed class PocTemplateService : ITransient
 
     private static string SerializeBinding(PocTemplateBinding binding) =>
         JsonConvert.SerializeObject(binding, Formatting.None);
+
+    private Task<PocReportDefinition> GetDefinitionAsync(string reportCode) =>
+        _configurationService is null
+            ? Task.FromResult(PocReportCatalog.GetDefinition())
+            : _configurationService.GetDefinitionAsync(reportCode);
 
     private static bool IsTemplateDataException(Exception exception) =>
         exception is JsonException or

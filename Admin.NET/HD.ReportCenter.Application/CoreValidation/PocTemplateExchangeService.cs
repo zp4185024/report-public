@@ -60,7 +60,10 @@ public sealed class PocTemplateExchangeService : ITransient
     /// <summary>
     /// 把 XLSX 转为 Univer 快照。此操作只产生编辑器草稿，不会保存或覆盖数据库模板。
     /// </summary>
-    public async Task<PocTemplateXlsxImportResult> ImportAsync(Stream input, string fileName)
+    public async Task<PocTemplateXlsxImportResult> ImportAsync(
+        Stream input,
+        string fileName,
+        PocReportDefinition? definition = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         if (!string.Equals(Path.GetExtension(fileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
@@ -98,7 +101,9 @@ public sealed class PocTemplateExchangeService : ITransient
         }
 
         // 导入文件同样不可信。重新扫描 token 并生成规范绑定，前端不能自行声明绑定结果。
-        var binding = PocTemplateValidator.Scan(conversion.Snapshot.ToString(Formatting.None));
+        var binding = PocTemplateValidator.Scan(
+            conversion.Snapshot.ToString(Formatting.None),
+            definition ?? PocReportCatalog.GetDefinition());
         return new PocTemplateXlsxImportResult(
             conversion.Snapshot,
             binding,
@@ -109,11 +114,16 @@ public sealed class PocTemplateExchangeService : ITransient
     }
 
     /// <summary>把当前编辑器快照导出为 XLSX；不会读取或修改数据库中的模板正文。</summary>
-    public async Task<PocTemplateXlsxExportResult> ExportAsync(JObject snapshot, string fileNameStem)
+    public async Task<PocTemplateXlsxExportResult> ExportAsync(
+        JObject snapshot,
+        string fileNameStem,
+        PocReportDefinition? definition = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         // 在转换前复用保存模板的可信校验，避免导出结构损坏或包含未知 token 的快照。
-        _ = PocTemplateValidator.Scan(snapshot.ToString(Formatting.None));
+        _ = PocTemplateValidator.Scan(
+            snapshot.ToString(Formatting.None),
+            definition ?? PocReportCatalog.GetDefinition());
 
         var rules = await _mappingStore.GetCurrentAsync(PocExchangeMappingDefaults.CurrentUniverVersion);
         var output = new MemoryStream();

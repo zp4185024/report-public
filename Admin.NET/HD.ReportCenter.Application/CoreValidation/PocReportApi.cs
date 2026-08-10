@@ -3,6 +3,7 @@ using HD.ReportCenter.ReportEngine.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation.Exchange;
 using HD.ReportCenter.ReportEngine.CoreValidation.Export;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -28,16 +29,22 @@ public sealed class PocReportApi : IDynamicApiController
     private readonly PocTemplateService _templateService;
     private readonly PocTemplateExchangeService _templateExchangeService;
     private readonly PocTemplateDataExportService _templateDataExportService;
+    private readonly PocReportConfigurationService? _configurationService;
+    private readonly PocSqlDatasetExecutor? _datasetExecutor;
     private readonly PocTemplateDataExporter _templateDataExporter = new();
 
     public PocReportApi(
         PocTemplateService templateService,
         PocTemplateExchangeService templateExchangeService,
-        PocTemplateDataExportService templateDataExportService)
+        PocTemplateDataExportService templateDataExportService,
+        PocReportConfigurationService? configurationService = null,
+        PocSqlDatasetExecutor? datasetExecutor = null)
     {
         _templateService = templateService;
         _templateExchangeService = templateExchangeService;
         _templateDataExportService = templateDataExportService;
+        _configurationService = configurationService;
+        _datasetExecutor = datasetExecutor;
     }
 
     /// <summary>读取数据库模板；未保存过时由服务层返回 revision 0 的种子模板。</summary>
@@ -76,8 +83,9 @@ public sealed class PocReportApi : IDynamicApiController
         }
 
         await using var stream = file.OpenReadStream();
+        var definition = await GetDefinitionAsync(reportCode);
         return await HandleTemplateOperation(
-            () => _templateExchangeService.ImportAsync(stream, file.FileName));
+            () => _templateExchangeService.ImportAsync(stream, file.FileName, definition));
     }
 
     /// <summary>把页面当前快照导出为 XLSX；无需先保存，不会改动数据库模板。</summary>
@@ -87,10 +95,12 @@ public sealed class PocReportApi : IDynamicApiController
         [FromBody] PocTemplateXlsxExportRequest request)
     {
         EnsureReportExists(reportCode);
+        var definition = await GetDefinitionAsync(reportCode);
         var exchange = await HandleTemplateOperation(
             () => _templateExchangeService.ExportAsync(
                 request.Snapshot,
-                PocReportCatalog.GetDefinition().Name));
+                definition.Name,
+                definition));
 
         return new FileStreamResult(exchange.Content, ExcelContentType)
         {
@@ -100,23 +110,69 @@ public sealed class PocReportApi : IDynamicApiController
 
     /// <summary>返回参数、分页和数据集字段定义，供查询区、字段面板和绑定校验共同使用。</summary>
     [HttpGet("/api/report-center/poc/{reportCode}/definition")]
-    public PocReportDefinition Definition([FromRoute] string reportCode)
+    public async Task<PocReportDefinition> Definition([FromRoute] string reportCode)
     {
         EnsureReportExists(reportCode);
-        return PocReportCatalog.GetDefinition();
+        return await GetDefinitionAsync(reportCode);
     }
 
     /// <summary>按当前查询参数执行一页预览数据，不在后台计算模板公式。</summary>
+    [SuppressMonitor]
     [HttpPost("/api/report-center/poc/{reportCode}/execute")]
-    public PocExecuteResult Execute(
+    public async Task<PocExecuteResult> Execute(
         [FromRoute] string reportCode,
-        [FromBody] PocExecuteRequest request)
+        [FromBody] PocExecuteRequest request,
+        CancellationToken cancellationToken)
     {
         EnsureReportExists(reportCode);
-        return PocReportCatalog.Execute(request);
+        if (_datasetExecutor is null)
+        {
+            return PocReportCatalog.Execute(request);
+        }
+        return await HandleDatasetOperation(
+            () => _datasetExecutor.ExecuteAsync(reportCode, request, cancellationToken));
+    }
+
+    /// <summary>读取可编辑的参数、主数据集和脱敏数据源配置。</summary>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/{reportCode}/configuration")]
+    public async Task<PocReportConfigurationDocument> Configuration(
+        [FromRoute] string reportCode)
+    {
+        EnsureReportExists(reportCode);
+        return await RequireConfigurationService().GetDocumentAsync(reportCode);
+    }
+
+    /// <summary>原子保存报表定义、数据源、主数据集和参数配置。</summary>
+    [SuppressMonitor]
+    [HttpPut("/api/report-center/poc/{reportCode}/configuration")]
+    public async Task<PocReportConfigurationDocument> SaveConfiguration(
+        [FromRoute] string reportCode,
+        [FromBody] PocSaveReportConfigurationRequest request)
+    {
+        EnsureReportExists(reportCode);
+        return await HandleConfigurationOperation(
+            () => RequireConfigurationService().SaveAsync(reportCode, request));
+    }
+
+    /// <summary>测试 SQL Server 连接；响应不包含连接串和密码。</summary>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/poc/{reportCode}/configuration/test-data-source")]
+    public async Task<PocDataSourceTestResult> TestDataSource(
+        [FromRoute] string reportCode,
+        [FromBody] PocDataSourceInput request,
+        CancellationToken cancellationToken)
+    {
+        EnsureReportExists(reportCode);
+        return await HandleConfigurationOperation(
+            () => RequireConfigurationService().TestDataSourceAsync(
+                reportCode,
+                request,
+                cancellationToken));
     }
 
     /// <summary>使用数据库中指定 revision 的模板生成普通体量全量数据 Excel。</summary>
+    [SuppressMonitor]
     [HttpPost("/api/report-center/poc/{reportCode}/exports/normal")]
     public async Task<FileStreamResult> NormalExport(
         [FromRoute] string reportCode,
@@ -127,26 +183,30 @@ public sealed class PocReportApi : IDynamicApiController
         var stream = new MemoryStream();
         try
         {
-            var plan = await HandleDataExportOperation(
-                () => _templateDataExportService.CreatePlanAsync(
+            var prepared = await HandleDataExportOperation(
+                () => _templateDataExportService.CreatePreparedAsync(
                     PocReportCatalog.ReportCode,
                     request,
                     cancellationToken));
+            var pages = prepared.RuntimePlan is null
+                ? PocReportCatalog.ReadExportPages(request.Query, cancellationToken)
+                : PocSqlDatasetExecutor.ReadExportPagesAsync(
+                    prepared.RuntimePlan,
+                    cancellationToken);
             await HandleDataExportOperation(async () =>
             {
                 await _templateDataExporter.WriteNormalAsync(
                     stream,
-                    plan,
-                    PocReportCatalog.ReadExportPages(request.Query, cancellationToken),
+                    prepared.TemplatePlan,
+                    pages,
                     cancellationToken);
                 return true;
             });
             stream.Position = 0;
 
-            var parameters = PocReportCatalog.Execute(request.Query with { Page = 1 }).Parameters;
             return new FileStreamResult(stream, ExcelContentType)
             {
-                FileDownloadName = $"科室工作量_{parameters.StartDate.Replace("-", string.Empty)}_{parameters.EndDate.Replace("-", string.Empty)}.xlsx"
+                FileDownloadName = BuildExportFileName(prepared.TemplatePlan)
             };
         }
         catch
@@ -157,6 +217,7 @@ public sealed class PocReportApi : IDynamicApiController
     }
 
     /// <summary>校验并冻结已保存模板后创建异步流式导出任务，立即返回可轮询快照。</summary>
+    [SuppressMonitor]
     [HttpPost("/api/report-center/poc/{reportCode}/exports/large")]
     public async Task<PocExportJobSnapshot> StartLargeExport(
         [FromRoute] string reportCode,
@@ -164,12 +225,18 @@ public sealed class PocReportApi : IDynamicApiController
         CancellationToken cancellationToken)
     {
         EnsureReportExists(reportCode);
-        var plan = await HandleDataExportOperation(
-            () => _templateDataExportService.CreatePlanAsync(
+        var prepared = await HandleDataExportOperation(
+            () => _templateDataExportService.CreatePreparedAsync(
                 PocReportCatalog.ReportCode,
                 request,
                 cancellationToken));
-        return LargeExportJobs.Start(plan);
+        return prepared.RuntimePlan is null
+            ? LargeExportJobs.Start(prepared.TemplatePlan)
+            : LargeExportJobs.Start(
+                prepared.TemplatePlan,
+                token => PocSqlDatasetExecutor.ReadExportPagesAsync(
+                    prepared.RuntimePlan,
+                    token));
     }
 
     /// <summary>读取异步导出任务的当前状态和已写行数。</summary>
@@ -193,6 +260,21 @@ public sealed class PocReportApi : IDynamicApiController
         {
             FileDownloadName = $"科室工作量_大文件_{jobNo}.xlsx"
         };
+    }
+
+    private static string BuildExportFileName(PocTemplateDataExportPlan plan)
+    {
+        var reportName = plan.Definition?.SheetName ?? "科室工作量";
+        var parameters = plan.Parameters;
+        if (parameters is not null &&
+            parameters.TryGetValue("startDate", out var startDate) &&
+            parameters.TryGetValue("endDate", out var endDate) &&
+            !string.IsNullOrWhiteSpace(startDate) &&
+            !string.IsNullOrWhiteSpace(endDate))
+        {
+            return $"{reportName}_{startDate.Replace("-", string.Empty)}_{endDate.Replace("-", string.Empty)}.xlsx";
+        }
+        return $"{reportName}.xlsx";
     }
 
     private static void EnsureReportExists(string reportCode)
@@ -264,6 +346,55 @@ public sealed class PocReportApi : IDynamicApiController
         catch (PocNormalExportLimitException exception)
         {
             throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(413);
+        }
+    }
+
+    private Task<PocReportDefinition> GetDefinitionAsync(string reportCode) =>
+        _configurationService is null
+            ? Task.FromResult(PocReportCatalog.GetDefinition())
+            : _configurationService.GetDefinitionAsync(reportCode);
+
+    private PocReportConfigurationService RequireConfigurationService() =>
+        _configurationService
+        ?? throw Oops.Oh("REPORT_CONFIGURATION_NOT_AVAILABLE").StatusCode(503);
+
+    private static async Task<T> HandleConfigurationOperation<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (PocReportConfigurationRevisionConflictException)
+        {
+            throw Oops.Oh("REPORT_CONFIGURATION_REVISION_CONFLICT").StatusCode(409);
+        }
+        catch (PocDatasetConfigurationException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
+        }
+        catch (SqlException)
+        {
+            throw Oops.Oh("DATA_SOURCE_CONNECTION_FAILED").StatusCode(400);
+        }
+    }
+
+    private static async Task<T> HandleDatasetOperation<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (PocParameterResolutionException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.ParameterCode}").StatusCode(400);
+        }
+        catch (PocDatasetConfigurationException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
+        }
+        catch (PocDatasetExecutionException exception)
+        {
+            throw Oops.Oh(exception.Code).StatusCode(400);
         }
     }
 }

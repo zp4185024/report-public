@@ -71,11 +71,19 @@ public sealed class PocLargeExportJobStore
     /// <summary>登记任务后立即在后台线程执行，HTTP 请求无需等待整个文件生成。</summary>
     public PocExportJobSnapshot Start(PocTemplateDataExportPlan plan)
     {
+        return Start(plan, null);
+    }
+
+    public PocExportJobSnapshot Start(
+        PocTemplateDataExportPlan plan,
+        Func<CancellationToken, IAsyncEnumerable<IReadOnlyList<PocDataRow>>>? pagesFactory)
+    {
         ArgumentNullException.ThrowIfNull(plan);
 
         var jobNo = $"{DateTimeOffset.Now:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
         var filePath = Path.Combine(_outputDirectory, $"{jobNo}.xlsx");
-        var totalRows = _validationRowCount ?? PocReportCatalog.PreviewRowCount;
+        var totalRows = _validationRowCount
+            ?? (pagesFactory is null ? PocReportCatalog.PreviewRowCount : 0);
         var state = new JobState(jobNo, filePath, totalRows);
         if (!_jobs.TryAdd(jobNo, state))
         {
@@ -83,7 +91,7 @@ public sealed class PocLargeExportJobStore
         }
 
         // JobState 先进入并发字典，再启动后台任务，保证客户端拿到 jobNo 后可以立即查询。
-        _ = Task.Run(() => RunAsync(state, plan));
+        _ = Task.Run(() => RunAsync(state, plan, pagesFactory));
         return state.Snapshot();
     }
 
@@ -111,7 +119,10 @@ public sealed class PocLargeExportJobStore
         return state.FilePath;
     }
 
-    private async Task RunAsync(JobState state, PocTemplateDataExportPlan plan)
+    private async Task RunAsync(
+        JobState state,
+        PocTemplateDataExportPlan plan,
+        Func<CancellationToken, IAsyncEnumerable<IReadOnlyList<PocDataRow>>>? pagesFactory)
     {
         try
         {
@@ -125,7 +136,9 @@ public sealed class PocLargeExportJobStore
                              1024 * 1024,
                              FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
-                var pages = _validationRowCount is { } rowCount
+                var pages = pagesFactory is not null
+                    ? pagesFactory(state.CancellationToken)
+                    : _validationRowCount is { } rowCount
                     ? ReadValidationPages(
                         rowCount,
                         plan.Query.DeptId,
@@ -211,6 +224,7 @@ public sealed class PocLargeExportJobStore
         private readonly CancellationTokenSource _cancellation = new();
         private PocExportJobStatus _status = PocExportJobStatus.Pending;
         private long _writtenRows;
+        private int _totalRows = totalRows;
         private string? _error;
         private DateTimeOffset? _completedAt;
 
@@ -223,7 +237,10 @@ public sealed class PocLargeExportJobStore
 
         public void MarkCompleted() => Update(() =>
         {
-            _writtenRows = totalRows;
+            if (_totalRows == 0)
+            {
+                _totalRows = checked((int)_writtenRows);
+            }
             _status = PocExportJobStatus.Completed;
             _completedAt = DateTimeOffset.Now;
         });
@@ -260,7 +277,7 @@ public sealed class PocLargeExportJobStore
                 return new PocExportJobSnapshot(
                     jobNo,
                     _status,
-                    totalRows,
+                    _totalRows,
                     _writtenRows,
                     _error,
                     CreatedAt,
