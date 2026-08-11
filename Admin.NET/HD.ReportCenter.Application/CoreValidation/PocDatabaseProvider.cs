@@ -1,6 +1,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using Microsoft.Data.SqlClient;
 using MySqlConnector;
@@ -20,6 +21,13 @@ internal sealed record PocDataSourceEndpoint(
 /// <summary>把报表数据源的连接、参数和分页差异收敛到一个数据库提供器。</summary>
 internal static class PocDatabaseProvider
 {
+    private static readonly Regex OracleErrorRegex = new(
+        @"\bORA-\d{5}:\s*[^\r\n]+",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    private static readonly Regex ConnectionSecretRegex = new(
+        @"\b(password|pwd)\s*=\s*[^;\r\n]*",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
     public const string SqlServer = "SqlServer";
     public const string Oracle = "Oracle";
     public const string MySql = "MySql";
@@ -185,6 +193,40 @@ internal static class PocDatabaseProvider
     public static bool IsDatabaseException(Exception exception) =>
         exception is DbException or SqlSugarException;
 
+    public static string GetSafeConnectionError(Exception exception)
+    {
+        if (IsTimeout(exception))
+        {
+            return "连接超时。";
+        }
+
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            var oracleError = OracleErrorRegex.Match(current.Message);
+            if (oracleError.Success)
+            {
+                return SanitizeConnectionError(oracleError.Value);
+            }
+
+            var providerError = current switch
+            {
+                SqlException sql => $"SQL Server {sql.Number}: {FirstLine(sql.Message)}",
+                MySqlException mysql => $"MySQL {mysql.Number}: {FirstLine(mysql.Message)}",
+                PostgresException postgres =>
+                    $"PostgreSQL {postgres.SqlState}: {postgres.MessageText}",
+                OracleException oracle => FirstLine(oracle.Message),
+                DbException database => FirstLine(database.Message),
+                _ => null
+            };
+            if (!string.IsNullOrWhiteSpace(providerError))
+            {
+                return SanitizeConnectionError(providerError);
+            }
+        }
+
+        return "数据库拒绝连接，未返回可识别的错误说明。";
+    }
+
     private static SqlSugarDbType ToSqlSugarType(string dbType) => NormalizeType(dbType) switch
     {
         SqlServer => SqlSugarDbType.SqlServer,
@@ -255,5 +297,16 @@ internal static class PocDatabaseProvider
         return new PocDatasetConfigurationException(
             "DATA_SOURCE_INVALID",
             "数据库连接配置无效。");
+    }
+
+    private static string FirstLine(string value) =>
+        value.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .FirstOrDefault()
+        ?? "数据库连接失败。";
+
+    private static string SanitizeConnectionError(string value)
+    {
+        var sanitized = ConnectionSecretRegex.Replace(value, "$1=[已隐藏]").Trim();
+        return sanitized.Length <= 512 ? sanitized : sanitized[..512];
     }
 }

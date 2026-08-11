@@ -138,7 +138,8 @@ public sealed class PocDataAssetService : ITransient
         {
             throw new PocDatasetConfigurationException(
                 "DATA_SOURCE_CONNECTION_FAILED",
-                $"{PocDatabaseProvider.NormalizeType(input.DbType)} 数据源连接失败。");
+                $"{PocDatabaseProvider.NormalizeType(input.DbType)} 数据源连接失败：" +
+                PocDatabaseProvider.GetSafeConnectionError(exception));
         }
     }
 
@@ -379,7 +380,7 @@ public sealed class PocDataAssetService : ITransient
             endpoint.Port,
             endpoint.Database,
             endpoint.UserName,
-            !string.IsNullOrWhiteSpace(endpoint.Password),
+            !string.IsNullOrEmpty(endpoint.Password),
             dataSource.DefaultTimeoutSeconds,
             dataSource.DefaultMaxRows,
             dataSource.IsEnabled,
@@ -393,7 +394,7 @@ public sealed class PocDataAssetService : ITransient
             normalizedType.Equals(stored.DbType, StringComparison.OrdinalIgnoreCase)
                 ? PocDatabaseProvider.ParseEndpoint(stored.DbType, stored.ConnectionString)
                 : null;
-        var password = NullIfWhiteSpace(input.Password);
+        var password = string.IsNullOrEmpty(input.Password) ? null : input.Password;
         if (password is null)
         {
             var canReusePassword = existing is not null &&
@@ -401,7 +402,7 @@ public sealed class PocDataAssetService : ITransient
                 existing.Port == input.Port &&
                 existing.Database.Equals(input.Database.Trim(), StringComparison.OrdinalIgnoreCase) &&
                 existing.UserName.Equals(input.UserName.Trim(), StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(existing.Password);
+                !string.IsNullOrEmpty(existing.Password);
             if (!canReusePassword)
             {
                 throw new PocDatasetConfigurationException(

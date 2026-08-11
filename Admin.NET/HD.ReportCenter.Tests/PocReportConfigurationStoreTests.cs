@@ -380,6 +380,46 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("DATA_SOURCE_TYPE_UNSUPPORTED", exception.Code);
     }
 
+    [Fact]
+    public async Task Data_source_preserves_password_whitespace()
+    {
+        const string password = " secret with spaces ";
+        await _dataAssetService.SaveDataSourceAsync(
+            "source_password_spaces",
+            new PocDataSourceInput(
+                "source_password_spaces",
+                "密码空格测试",
+                "Oracle",
+                "db.example.local",
+                1521,
+                "reporting",
+                "report_reader",
+                password,
+                30,
+                20_000,
+                true,
+                0));
+
+        var stored = await _dataAssetStore.GetDataSourceAsync("source_password_spaces");
+        var endpoint = PocDatabaseProvider.ParseEndpoint(stored!.DbType, stored.ConnectionString);
+
+        Assert.Equal(password, endpoint.Password);
+    }
+
+    [Fact]
+    public void Database_provider_returns_oracle_error_without_wrapper_details()
+    {
+        var exception = new SqlSugarException(
+            "SqlSugar error: ORA-01017: invalid username/password; logon denied\r\n" +
+            "ConnectionString: User Id=report_reader;Password=must-not-leak;");
+
+        var message = PocDatabaseProvider.GetSafeConnectionError(exception);
+
+        Assert.Equal("ORA-01017: invalid username/password; logon denied", message);
+        Assert.DoesNotContain("must-not-leak", message);
+        Assert.DoesNotContain("ConnectionString", message);
+    }
+
     [Theory]
     [InlineData("SqlServer", 1433, "OFFSET @__offset ROWS FETCH NEXT @__take ROWS ONLY")]
     [InlineData("Oracle", 1521, "OFFSET @__offset ROWS FETCH NEXT @__take ROWS ONLY")]
