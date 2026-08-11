@@ -164,6 +164,20 @@ public sealed class PocReportApi : IDynamicApiController
     public async Task<IReadOnlyList<PocReportSummaryDocument>> Reports() =>
         await RequireConfigurationService().ListReportsAsync();
 
+    /// <summary>读取创建报表时可选择的已启用数据集。</summary>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/reports/create-options")]
+    public async Task<PocReportCreateOptionsDocument> ReportCreateOptions() =>
+        await RequireConfigurationService().GetCreateOptionsAsync();
+
+    /// <summary>创建报表配置；模板内容在首次进入编辑器时按报表定义生成。</summary>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/poc/reports")]
+    public async Task<PocReportConfigurationDocument> CreateReport(
+        [FromBody] PocCreateReportRequest request) =>
+        await HandleConfigurationOperation(
+            () => RequireConfigurationService().CreateAsync(request));
+
     /// <summary>读取全部脱敏数据源。</summary>
     [SuppressMonitor]
     [HttpGet("/api/report-center/poc/data-sources")]
@@ -428,6 +442,10 @@ public sealed class PocReportApi : IDynamicApiController
         catch (PocReportConfigurationRevisionConflictException)
         {
             throw Oops.Oh("REPORT_CONFIGURATION_REVISION_CONFLICT").StatusCode(409);
+        }
+        catch (PocReportAlreadyExistsException exception)
+        {
+            throw Oops.Oh($"REPORT_ALREADY_EXISTS: {exception.Message}").StatusCode(409);
         }
         catch (PocDataAssetRevisionConflictException)
         {

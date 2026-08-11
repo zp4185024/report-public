@@ -246,6 +246,82 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("detail", document.DatasetCode);
     }
 
+    [Fact]
+    public async Task CreateAsync_creates_report_and_parameters_from_the_selected_dataset()
+    {
+        var created = await _configurationService.CreateAsync(new PocCreateReportRequest(
+            "Outpatient-Log",
+            "门诊日志",
+            "门诊日志",
+            "detail"));
+
+        Assert.Equal("outpatient-log", created.ReportCode);
+        Assert.Equal("门诊日志", created.Name);
+        Assert.Equal("detail", created.DatasetCode);
+        Assert.Equal(1, created.Revision);
+        var parameter = Assert.Single(created.Parameters);
+        Assert.Equal("hospitalId", parameter.Code);
+        Assert.Equal("text", parameter.ControlType);
+        Assert.True(parameter.AllowUrlPrefill);
+        Assert.Equal("hospitalId", parameter.UrlKey);
+        Assert.Contains(
+            await _configurationService.ListReportsAsync(),
+            item => item.ReportCode == "outpatient-log");
+    }
+
+    [Fact]
+    public async Task CreateAsync_rejects_an_existing_report_code()
+    {
+        var request = new PocCreateReportRequest(
+            "outpatient-log",
+            "门诊日志",
+            "门诊日志",
+            "detail");
+        await _configurationService.CreateAsync(request);
+
+        var exception = await Assert.ThrowsAsync<PocReportAlreadyExistsException>(
+            () => _configurationService.CreateAsync(request));
+
+        Assert.Contains("outpatient-log", exception.Message);
+        Assert.Single(
+            await _configurationService.ListReportsAsync(),
+            item => item.ReportCode == "outpatient-log");
+    }
+
+    [Fact]
+    public async Task Newly_created_report_gets_its_own_editable_initial_template()
+    {
+        await _configurationService.CreateAsync(new PocCreateReportRequest(
+            "outpatient-log",
+            "门诊日志",
+            "门诊日志",
+            "detail"));
+        var templateService = new PocTemplateService(
+            new PocTemplateStore(_database),
+            _configurationService);
+
+        var template = await templateService.GetEditableAsync("outpatient-log");
+
+        Assert.Equal(0, template.Revision);
+        Assert.Equal("门诊日志（可编辑模板）", template.Snapshot.Value<string>("name"));
+        Assert.DoesNotContain("科室工作量", template.Snapshot.ToString());
+        var binding = Assert.Single(template.Binding.ParameterBindings);
+        Assert.Equal("hospitalId", binding.Code);
+    }
+
+    [Fact]
+    public async Task Report_create_options_only_include_enabled_datasets()
+    {
+        _database.Updateable<PocReportDataset>()
+            .SetColumns(item => item.IsEnabled == false)
+            .Where(item => item.Code == "detail")
+            .ExecuteCommand();
+
+        var options = await _configurationService.GetCreateOptionsAsync();
+
+        Assert.Empty(options.Datasets);
+    }
+
     [Theory]
     [InlineData("SqlServer", "source_sqlserver", 1433)]
     [InlineData("Oracle", "source_oracle", 1521)]

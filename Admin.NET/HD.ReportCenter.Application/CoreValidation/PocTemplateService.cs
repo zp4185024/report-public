@@ -86,7 +86,11 @@ public sealed class PocTemplateService : ITransient
             // 种子只负责“第一次打开即可编辑”，不会自动写库；用户明确保存后才产生 revision 1。
             try
             {
-                var seedJson = LoadSeedJson();
+                var seedJson = reportCode.Equals(
+                    PocReportCatalog.ReportCode,
+                    StringComparison.OrdinalIgnoreCase)
+                        ? LoadSeedJson()
+                        : CreateInitialTemplateJson(definition);
                 return CreateDocument(reportCode, seedJson, null, 0, definition);
             }
             catch (Exception exception) when (
@@ -248,5 +252,147 @@ public sealed class PocTemplateService : ITransient
                 $"Embedded report template seed '{SeedResourceName}' was not found.");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
+    }
+
+    private static string CreateInitialTemplateJson(PocReportDefinition definition)
+    {
+        const string sheetId = "report-sheet";
+        var fieldCount = definition.Fields.Count;
+        var parameterCount = definition.Parameters.Count;
+        var usedColumnCount = Math.Max(6, Math.Max(fieldCount, parameterCount));
+        var cellData = new JObject
+        {
+            ["0"] = new JObject
+            {
+                ["0"] = new JObject
+                {
+                    ["v"] = $"{definition.Name}（可编辑模板）",
+                    ["s"] = "title"
+                }
+            }
+        };
+
+        if (parameterCount > 0)
+        {
+            var parameterRow = new JObject();
+            for (var index = 0; index < parameterCount; index++)
+            {
+                var parameter = definition.Parameters[index];
+                parameterRow[index.ToString()] = new JObject
+                {
+                    ["v"] = $"{parameter.DisplayName}：{{{{params.{parameter.Code}}}}}",
+                    ["s"] = "meta"
+                };
+            }
+            cellData["1"] = parameterRow;
+        }
+
+        if (fieldCount > 0)
+        {
+            var headerRow = new JObject();
+            var detailRow = new JObject();
+            for (var index = 0; index < fieldCount; index++)
+            {
+                var field = definition.Fields[index];
+                headerRow[index.ToString()] = new JObject
+                {
+                    ["v"] = field.DisplayName,
+                    ["s"] = "header"
+                };
+                detailRow[index.ToString()] = new JObject
+                {
+                    ["v"] = $"{{{{detail.{field.Code}}}}}",
+                    ["s"] = field.DataType.Equals("number", StringComparison.OrdinalIgnoreCase)
+                        ? "number"
+                        : "center"
+                };
+            }
+            cellData["3"] = headerRow;
+            cellData["4"] = detailRow;
+        }
+
+        var columnData = new JObject();
+        for (var index = 0; index < usedColumnCount; index++)
+        {
+            columnData[index.ToString()] = new JObject { ["w"] = index == 0 ? 150 : 120 };
+        }
+
+        var snapshot = new JObject
+        {
+            ["id"] = $"report-{definition.Code}",
+            ["rev"] = 1,
+            ["name"] = $"{definition.Name}（可编辑模板）",
+            ["appVersion"] = "1.0.0",
+            ["locale"] = "zhCN",
+            ["styles"] = new JObject
+            {
+                ["title"] = new JObject
+                {
+                    ["ff"] = "Microsoft YaHei",
+                    ["fs"] = 16,
+                    ["bl"] = 1,
+                    ["vt"] = 2
+                },
+                ["meta"] = new JObject
+                {
+                    ["ff"] = "Microsoft YaHei",
+                    ["fs"] = 10,
+                    ["cl"] = new JObject { ["rgb"] = "#344054" },
+                    ["vt"] = 2
+                },
+                ["header"] = new JObject
+                {
+                    ["ff"] = "Microsoft YaHei",
+                    ["fs"] = 10,
+                    ["bl"] = 1,
+                    ["bg"] = new JObject { ["rgb"] = "#e9eef5" },
+                    ["cl"] = new JObject { ["rgb"] = "#18212b" },
+                    ["ht"] = 2,
+                    ["vt"] = 2
+                },
+                ["center"] = new JObject { ["ht"] = 2, ["vt"] = 2 },
+                ["number"] = new JObject
+                {
+                    ["ht"] = 3,
+                    ["vt"] = 2,
+                    ["n"] = new JObject { ["pattern"] = "#,##0.00" }
+                }
+            },
+            ["sheetOrder"] = new JArray(sheetId),
+            ["sheets"] = new JObject
+            {
+                [sheetId] = new JObject
+                {
+                    ["id"] = sheetId,
+                    ["name"] = definition.SheetName,
+                    ["hidden"] = 0,
+                    ["rowCount"] = 50,
+                    ["columnCount"] = Math.Max(12, usedColumnCount),
+                    ["zoomRatio"] = 1,
+                    ["defaultColumnWidth"] = 100,
+                    ["defaultRowHeight"] = 26,
+                    ["mergeData"] = new JArray(new JObject
+                    {
+                        ["startRow"] = 0,
+                        ["endRow"] = 0,
+                        ["startColumn"] = 0,
+                        ["endColumn"] = usedColumnCount - 1
+                    }),
+                    ["cellData"] = cellData,
+                    ["rowData"] = new JObject
+                    {
+                        ["0"] = new JObject { ["h"] = 42 },
+                        ["1"] = new JObject { ["h"] = 30 },
+                        ["3"] = new JObject { ["h"] = 34 }
+                    },
+                    ["columnData"] = columnData,
+                    ["rowHeader"] = new JObject { ["width"] = 46, ["hidden"] = 0 },
+                    ["columnHeader"] = new JObject { ["height"] = 24, ["hidden"] = 0 },
+                    ["showGridlines"] = 1,
+                    ["rightToLeft"] = 0
+                }
+            }
+        };
+        return snapshot.ToString(Formatting.None);
     }
 }

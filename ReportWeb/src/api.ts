@@ -7,10 +7,12 @@ import type {
   DatasetPreviewRequest,
   DatasetPreviewResult,
   DatasetReferenceDocument,
+  CreateReportRequest,
   ExecuteRequest,
   ExecuteResult,
   ExportJob,
   ReportConfigurationDocument,
+  ReportCreateOptionsDocument,
   ReportDefinition,
   ReportSummaryDocument,
   SaveReportConfigurationRequest,
@@ -145,6 +147,14 @@ export const reportApi = createReportApi('dept-workload');
 
 export const reportCatalogApi = {
   reports: () => requestJson<ReportSummaryDocument[]>('/api/report-center/poc/reports'),
+  createOptions: () =>
+    requestJson<ReportCreateOptionsDocument>('/api/report-center/poc/reports/create-options'),
+  create: (request: CreateReportRequest) =>
+    requestJson<ReportConfigurationDocument>('/api/report-center/poc/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
 };
 
 /** 数据源和数据集是跨报表复用的全局资源，使用独立 API 与报表配置解耦。 */

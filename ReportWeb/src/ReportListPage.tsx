@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FilePenLine, LoaderCircle, RefreshCw, Search } from 'lucide-react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { ExternalLink, FilePenLine, LoaderCircle, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { reportCatalogApi } from './api';
-import type { ReportSummaryDocument } from './types';
+import type { CreateReportRequest, DatasetOption, ReportSummaryDocument } from './types';
+
+const emptyCreateRequest: CreateReportRequest = {
+  reportCode: '',
+  name: '',
+  sheetName: '',
+  datasetCode: '',
+};
 
 function formatUpdatedAt(value: string | null): string {
   if (!value) return '暂无记录';
@@ -22,6 +29,12 @@ export default function ReportListPage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createOptionsLoading, setCreateOptionsLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [datasets, setDatasets] = useState<DatasetOption[]>([]);
+  const [createRequest, setCreateRequest] = useState<CreateReportRequest>(emptyCreateRequest);
 
   const load = async () => {
     setLoading(true);
@@ -49,6 +62,62 @@ export default function ReportListPage() {
       report.datasetCode,
     ].some((value) => value.toLocaleLowerCase('zh-CN').includes(keyword)));
   }, [query, reports]);
+
+  const openCreate = async () => {
+    setCreateOpen(true);
+    setCreateError(null);
+    setCreateOptionsLoading(true);
+    try {
+      const options = await reportCatalogApi.createOptions();
+      setDatasets(options.datasets);
+      setCreateRequest({
+        ...emptyCreateRequest,
+        datasetCode: options.datasets[0]?.code ?? '',
+      });
+    } catch (exception) {
+      setCreateError(exception instanceof Error ? exception.message : '创建选项加载失败。');
+    } finally {
+      setCreateOptionsLoading(false);
+    }
+  };
+
+  const closeCreate = () => {
+    if (creating) return;
+    setCreateOpen(false);
+    setCreateError(null);
+  };
+
+  const createReport = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalizedCode = createRequest.reportCode.trim().toLowerCase();
+    if (!/^[a-z][a-z0-9_-]{0,63}$/.test(normalizedCode)) {
+      setCreateError('模板编码必须以字母开头，只能包含小写字母、数字、下划线和连字符。');
+      return;
+    }
+    if (!createRequest.name.trim() || !createRequest.sheetName.trim()) {
+      setCreateError('模板名称和工作表名称不能为空。');
+      return;
+    }
+    if (!createRequest.datasetCode) {
+      setCreateError('请先选择一个数据集。');
+      return;
+    }
+
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const created = await reportCatalogApi.create({
+        ...createRequest,
+        reportCode: normalizedCode,
+        name: createRequest.name.trim(),
+        sheetName: createRequest.sheetName.trim(),
+      });
+      window.location.assign(`/reports/${encodeURIComponent(created.reportCode)}`);
+    } catch (exception) {
+      setCreateError(exception instanceof Error ? exception.message : '模板创建失败。');
+      setCreating(false);
+    }
+  };
 
   return (
     <main className="report-list-page">
@@ -78,6 +147,13 @@ export default function ReportListPage() {
             onClick={() => void load()}
           >
             <RefreshCw className={loading ? 'spin' : undefined} size={18} />
+          </button>
+          <button
+            type="button"
+            className="button button-primary report-create-button"
+            onClick={() => void openCreate()}
+          >
+            <Plus size={17} />新增模板
           </button>
         </div>
       </header>
@@ -128,6 +204,63 @@ export default function ReportListPage() {
           </table>
         </div>
       </section>
+
+      {createOpen && (
+        <div className="configuration-backdrop" role="presentation">
+          <form className="create-report-dialog" aria-labelledby="create-report-title" onSubmit={(event) => void createReport(event)}>
+            <header className="configuration-header">
+              <div>
+                <h2 id="create-report-title">新增模板</h2>
+                <p>创建报表配置后进入模板编辑器。</p>
+              </div>
+              <button type="button" className="icon-button" title="关闭" aria-label="关闭新增模板" disabled={creating} onClick={closeCreate}>
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className="create-report-body">
+              <div className="configuration-form-grid create-report-grid">
+                <label>
+                  <span>模板编码</span>
+                  <input autoFocus maxLength={64} value={createRequest.reportCode} onChange={(event) => setCreateRequest({ ...createRequest, reportCode: event.target.value })} placeholder="如 outpatient-log" />
+                </label>
+                <label>
+                  <span>模板名称</span>
+                  <input maxLength={128} value={createRequest.name} onChange={(event) => setCreateRequest({ ...createRequest, name: event.target.value })} />
+                </label>
+                <label>
+                  <span>工作表名称</span>
+                  <input maxLength={31} value={createRequest.sheetName} onChange={(event) => setCreateRequest({ ...createRequest, sheetName: event.target.value })} />
+                </label>
+                <label>
+                  <span>数据集</span>
+                  <select disabled={createOptionsLoading || datasets.length === 0} value={createRequest.datasetCode} onChange={(event) => setCreateRequest({ ...createRequest, datasetCode: event.target.value })}>
+                    {datasets.map((dataset) => <option key={dataset.code} value={dataset.code}>{dataset.name}（{dataset.code}）</option>)}
+                  </select>
+                </label>
+              </div>
+
+              {createOptionsLoading && <div className="create-report-state"><LoaderCircle className="spin" size={18} />正在读取数据集</div>}
+              {!createOptionsLoading && datasets.length === 0 && createError === null && (
+                <div className="create-report-state empty">
+                  <span>当前没有可用数据集</span>
+                  <a className="button" href="/datasets"><ExternalLink size={16} />前往数据集</a>
+                </div>
+              )}
+            </div>
+
+            {createError !== null && <div className="configuration-message error">{createError}</div>}
+            <footer className="configuration-footer">
+              <div>
+                <button type="button" className="button" disabled={creating} onClick={closeCreate}>取消</button>
+                <button type="submit" className="button button-primary" disabled={creating || createOptionsLoading || datasets.length === 0}>
+                  {creating ? <LoaderCircle className="spin" size={16} /> : <Plus size={16} />}创建并编辑
+                </button>
+              </div>
+            </footer>
+          </form>
+        </div>
+      )}
     </main>
   );
 }

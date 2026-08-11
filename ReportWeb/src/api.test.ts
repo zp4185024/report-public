@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createReportApi, dataAssetApi, reportApi, reportCatalogApi } from './api';
 import type {
   DataSourceInput,
+  CreateReportRequest,
   DataSourceDocument,
   DatasetDocument,
   DatasetPreviewRequest,
@@ -225,6 +226,43 @@ describe('reportApi template endpoints', () => {
     await expect(reportCatalogApi.reports()).resolves.toEqual(reports);
 
     expect(fetchMock).toHaveBeenCalledWith('/api/report-center/poc/reports', undefined);
+  });
+
+  it('loads enabled datasets for the template creation form', async () => {
+    const options = {
+      datasets: configuration.datasets,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: options }));
+
+    await expect(reportCatalogApi.createOptions()).resolves.toEqual(options);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/reports/create-options',
+      undefined,
+    );
+  });
+
+  it('creates a report configuration before opening the template editor', async () => {
+    const request: CreateReportRequest = {
+      reportCode: 'outpatient-log',
+      name: '门诊日志',
+      sheetName: '门诊日志',
+      datasetCode: 'detail',
+    };
+    const created = {
+      ...configuration,
+      reportCode: request.reportCode,
+      name: request.name,
+      sheetName: request.sheetName,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: created }));
+
+    await expect(reportCatalogApi.create(request)).resolves.toEqual(created);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/reports');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(request);
   });
 
   it('uses the selected report code for every editor endpoint', async () => {

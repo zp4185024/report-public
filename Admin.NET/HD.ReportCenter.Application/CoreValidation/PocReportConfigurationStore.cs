@@ -40,6 +40,11 @@ public sealed class PocReportConfigurationStore : ITransient
             .OrderBy(item => item.Code)
             .ToListAsync();
 
+    public async Task<bool> ReportExistsAsync(string reportCode) =>
+        await _database.Queryable<PocReport>()
+            .Where(item => item.Code == reportCode)
+            .AnyAsync();
+
     public async Task<PocStoredReportConfiguration?> GetAsync(string reportCode)
     {
         var report = await _database.Queryable<PocReport>()

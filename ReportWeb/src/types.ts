@@ -230,6 +230,13 @@ export interface ReportSummaryDocument {
   updatedAt: string | null;
 }
 
+export interface CreateReportRequest {
+  reportCode: string;
+  name: string;
+  sheetName: string;
+  datasetCode: string;
+}
+
 export interface DatasetOption {
   code: string;
   name: string;
@@ -237,6 +244,10 @@ export interface DatasetOption {
   variables: DatasetVariableDefinition[];
   fields: DatasetFieldDefinition[];
   enabled: boolean;
+}
+
+export interface ReportCreateOptionsDocument {
+  datasets: DatasetOption[];
 }
 
 export interface ReportConfigurationDocument {

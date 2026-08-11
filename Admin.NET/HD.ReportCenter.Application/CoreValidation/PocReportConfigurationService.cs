@@ -73,6 +73,15 @@ public sealed record PocReportSummaryDocument(
     int TemplateRevision,
     DateTime? UpdatedAt);
 
+public sealed record PocCreateReportRequest(
+    string ReportCode,
+    string Name,
+    string SheetName,
+    string DatasetCode);
+
+public sealed record PocReportCreateOptionsDocument(
+    IReadOnlyList<PocDatasetOption> Datasets);
+
 public sealed record PocSaveReportConfigurationRequest(
     string Name,
     string SheetName,
@@ -96,6 +105,14 @@ public sealed record PocRuntimeReportConfiguration(
     int TimeoutSeconds,
     int MaxRows,
     bool UsesFallbackData);
+
+public sealed class PocReportAlreadyExistsException : Exception
+{
+    public PocReportAlreadyExistsException(string reportCode)
+        : base($"报表编码 '{reportCode}' 已存在。")
+    {
+    }
+}
 
 /// <summary>配置应用服务：负责种子回退、公开脱敏、输入校验和连接串合成。</summary>
 public sealed class PocReportConfigurationService : ITransient
@@ -171,6 +188,64 @@ public sealed class PocReportConfigurationService : ITransient
                 template?.Revision ?? 0,
                 updatedAt);
         }).ToArray();
+    }
+
+    public async Task<PocReportCreateOptionsDocument> GetCreateOptionsAsync()
+    {
+        var datasets = await _dataAssets.ListDatasetsAsync();
+        return new PocReportCreateOptionsDocument(
+            datasets
+                .Where(item => item.IsEnabled)
+                .Select(ToDatasetOption)
+                .ToArray());
+    }
+
+    public async Task<PocReportConfigurationDocument> CreateAsync(
+        PocCreateReportRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var reportCode = NormalizeReportCode(request.ReportCode).ToLowerInvariant();
+        var datasetCode = request.DatasetCode?.Trim() ?? string.Empty;
+        ValidateCode(datasetCode, "DATASET_DEFINITION_INVALID");
+        if (await _store.ReportExistsAsync(reportCode))
+        {
+            throw new PocReportAlreadyExistsException(reportCode);
+        }
+
+        var dataset = await _dataAssets.GetDatasetAsync(datasetCode)
+            ?? throw new PocDatasetConfigurationException(
+                "DATASET_NOT_FOUND",
+                $"不存在数据集 '{datasetCode}'。");
+        var schema = PocDataAssetService.ReadSchema(dataset);
+        var parameters = schema.Variables.Select(variable => new PocParameterDefinition(
+            variable.Code,
+            variable.DisplayName,
+            ControlTypeFor(variable.DataType),
+            "Form",
+            null,
+            true,
+            variable.DataType,
+            Required: variable.Required,
+            AllowUrlPrefill: true,
+            UrlKey: variable.Code)).ToArray();
+
+        return await SaveAsync(
+            reportCode,
+            new PocSaveReportConfigurationRequest(
+                request.Name,
+                request.SheetName,
+                new PocPreviewSettings(PocPreviewMode.Full, 20, false),
+                new PocExportSettings(
+                    PocDataExportMode.Normal,
+                    NormalMaxRows: 20_000,
+                    NormalMaxCells: 500_000,
+                    NormalTimeoutSeconds: 60,
+                    LargeExportEnabled: true,
+                    RowsPerSheet: 1_000_000,
+                    FileRetentionHours: 24),
+                dataset.Code,
+                parameters,
+                0));
     }
 
     public async Task<PocReportConfigurationDocument> GetDocumentAsync(
@@ -493,6 +568,15 @@ public sealed class PocReportConfigurationService : ITransient
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string ControlTypeFor(string dataType) =>
+        dataType.ToLowerInvariant() switch
+        {
+            "int" or "long" or "decimal" => "number",
+            "date" or "datetime" => "date",
+            "bool" or "boolean" => "checkbox",
+            _ => "text"
+        };
 
     private static string NormalizeReportCode(string reportCode)
     {
