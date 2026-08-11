@@ -1,8 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   Braces,
-  Database,
   Eye,
   FilePenLine,
   Link2,
@@ -22,7 +20,11 @@ import type {
   DatasetVariableDefinition,
 } from './types';
 
-type AssetKind = 'data-sources' | 'datasets';
+export type AssetKind = 'data-sources' | 'datasets';
+
+interface DataAssetPageProps {
+  initialKind: AssetKind;
+}
 
 const SqlEditor = lazy(() => import('./SqlEditor'));
 
@@ -125,12 +127,12 @@ function previewUrl(datasetCode: string): string {
 function templateUrl(reportCode: string): string {
   const search = new URLSearchParams(window.location.search);
   search.delete('datasetCode');
-  search.set('reportCode', reportCode);
-  return `/?${search.toString()}`;
+  const suffix = search.size > 0 ? `?${search.toString()}` : '';
+  return `/reports/${encodeURIComponent(reportCode)}${suffix}`;
 }
 
-export default function DataAssetPage() {
-  const [kind, setKind] = useState<AssetKind>('data-sources');
+export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
+  const [kind, setKind] = useState<AssetKind>(initialKind);
   const [dataSources, setDataSources] = useState<DataSourceDocument[]>([]);
   const [datasets, setDatasets] = useState<DatasetDocument[]>([]);
   const [dataSourceDraft, setDataSourceDraft] = useState<DataSourceInput | null>(null);
@@ -143,6 +145,8 @@ export default function DataAssetPage() {
   const [datasetReferences, setDatasetReferences] = useState<DatasetReferenceDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => setKind(initialKind), [initialKind]);
 
   useEffect(() => {
     let active = true;
@@ -318,16 +322,10 @@ export default function DataAssetPage() {
     <main className="asset-page">
       <header className="asset-header">
         <div className="asset-title-row">
-          <a className="icon-button" href={`/${window.location.search}`} title="返回报表设计" aria-label="返回报表设计"><ArrowLeft size={18} /></a>
-          <div><span className="app-kicker">REPORT CENTER</span><h1>数据资源管理</h1></div>
+          <div><span className="app-kicker">REPORT CENTER</span><h1>{kind === 'data-sources' ? '数据源管理' : '数据集管理'}</h1></div>
         </div>
         <div className="runtime-status"><span className="status-dot" />全局复用资源</div>
       </header>
-
-      <nav className="asset-tabs" aria-label="数据资源类型">
-        <button type="button" className={kind === 'data-sources' ? 'active' : ''} onClick={() => setKind('data-sources')}><Server size={16} />数据源<span>{dataSources.length}</span></button>
-        <button type="button" className={kind === 'datasets' ? 'active' : ''} onClick={() => setKind('datasets')}><Database size={16} />数据集<span>{datasets.length}</span></button>
-      </nav>
 
       <div className="asset-messages">
         {error !== null && <div className="error-strip">{error}</div>}

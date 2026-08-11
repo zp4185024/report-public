@@ -34,6 +34,12 @@ public sealed class PocReportConfigurationStore : ITransient
         _database = database;
     }
 
+    public async Task<IReadOnlyList<PocReport>> ListReportsAsync() =>
+        await _database.Queryable<PocReport>()
+            .OrderBy(item => item.Name)
+            .OrderBy(item => item.Code)
+            .ToListAsync();
+
     public async Task<PocStoredReportConfiguration?> GetAsync(string reportCode)
     {
         var report = await _database.Queryable<PocReport>()

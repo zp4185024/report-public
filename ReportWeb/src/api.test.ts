@@ -1,6 +1,6 @@
 import { LocaleType, type IWorkbookData } from '@univerjs/presets';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { dataAssetApi, reportApi } from './api';
+import { createReportApi, dataAssetApi, reportApi, reportCatalogApi } from './api';
 import type {
   DataSourceInput,
   DataSourceDocument,
@@ -9,6 +9,7 @@ import type {
   ExecuteRequest,
   ExportJob,
   ReportConfigurationDocument,
+  ReportSummaryDocument,
   SaveTemplateRequest,
   SaveReportConfigurationRequest,
   TemplateBinding,
@@ -204,6 +205,36 @@ describe('reportApi template endpoints', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/report-center/poc/dept-workload/template',
+      undefined,
+    );
+  });
+
+  it('loads the template catalog from the report list path', async () => {
+    const reports: ReportSummaryDocument[] = [{
+      reportCode: 'dept-workload',
+      name: '科室工作量统计',
+      sheetName: '科室工作量',
+      datasetCode: 'detail',
+      enabled: true,
+      configurationRevision: 2,
+      templateRevision: 3,
+      updatedAt: '2026-08-11T10:30:00+08:00',
+    }];
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: reports }));
+
+    await expect(reportCatalogApi.reports()).resolves.toEqual(reports);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/report-center/poc/reports', undefined);
+  });
+
+  it('uses the selected report code for every editor endpoint', async () => {
+    const outpatientApi = createReportApi('outpatient-log');
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: document }));
+
+    await outpatientApi.template();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/outpatient-log/template',
       undefined,
     );
   });

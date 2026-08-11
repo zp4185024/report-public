@@ -12,14 +12,12 @@ import type {
   ExportJob,
   ReportConfigurationDocument,
   ReportDefinition,
+  ReportSummaryDocument,
   SaveReportConfigurationRequest,
   SaveTemplateRequest,
   TemplateDocument,
   TemplateXlsxImportResult,
 } from './types';
-
-const reportCode = 'dept-workload';
-const basePath = `/api/report-center/poc/${reportCode}`;
 
 interface ApiEnvelope<T> {
   code: number;
@@ -65,7 +63,9 @@ async function requestDownload(
   URL.revokeObjectURL(url);
 }
 
-export const reportApi = {
+export function createReportApi(reportCode: string) {
+  const basePath = `/api/report-center/poc/${encodeURIComponent(reportCode)}`;
+  return {
   definition: () => requestJson<ReportDefinition>(`${basePath}/definition`),
 
   configuration: () =>
@@ -138,6 +138,13 @@ export const reportApi = {
 
   downloadJob: (jobNo: string) =>
     requestDownload(`/api/report-center/poc/export-jobs/${encodeURIComponent(jobNo)}/download`),
+  };
+}
+
+export const reportApi = createReportApi('dept-workload');
+
+export const reportCatalogApi = {
+  reports: () => requestJson<ReportSummaryDocument[]>('/api/report-center/poc/reports'),
 };
 
 /** 数据源和数据集是跨报表复用的全局资源，使用独立 API 与报表配置解耦。 */

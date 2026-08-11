@@ -12,6 +12,11 @@ public sealed record PocStoredTemplate(
     string BindingJson,
     int Revision);
 
+public sealed record PocStoredTemplateSummary(
+    string ReportCode,
+    int Revision,
+    DateTime? UpdatedAt);
+
 /// <summary>
 /// 保存时的期望修订号与数据库实际状态不一致。
 /// 这是正常的并发冲突，不应重试为无条件覆盖。
@@ -42,6 +47,17 @@ public sealed class PocTemplateStore : ITransient
     public PocTemplateStore(ISqlSugarClient database)
     {
         _database = database;
+    }
+
+    public async Task<IReadOnlyList<PocStoredTemplateSummary>> ListAsync()
+    {
+        var templates = await _database.Queryable<PocReportTemplate>()
+            .OrderBy(item => item.ReportCode)
+            .ToListAsync();
+        return templates.Select(item => new PocStoredTemplateSummary(
+            item.ReportCode,
+            item.Revision,
+            item.UpdateTime ?? item.CreateTime)).ToArray();
     }
 
     /// <summary>按报表编码读取唯一模板；尚未保存过时返回 null，由服务层提供种子模板。</summary>

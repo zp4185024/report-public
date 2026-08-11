@@ -219,6 +219,17 @@ export interface DatasetReferenceDocument {
   enabled: boolean;
 }
 
+export interface ReportSummaryDocument {
+  reportCode: string;
+  name: string;
+  sheetName: string;
+  datasetCode: string;
+  enabled: boolean;
+  configurationRevision: number;
+  templateRevision: number;
+  updatedAt: string | null;
+}
+
 export interface DatasetOption {
   code: string;
   name: string;

@@ -54,14 +54,16 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             PocReport,
             PocDataSource,
             PocReportDataset,
-            PocReportParameter>();
+            PocReportParameter,
+            PocReportTemplate>();
         _store = new PocReportConfigurationStore(_database);
         _dataAssetStore = new PocDataAssetStore(_database);
         _dataAssetService = new PocDataAssetService(_dataAssetStore);
         _configurationService = new PocReportConfigurationService(
             _store,
             _dataAssetStore,
-            _database);
+            _database,
+            new PocTemplateStore(_database));
         _database.Insertable(new PocDataSource
         {
             Code = "report-center",
@@ -194,6 +196,54 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal(2, references.Count);
         Assert.Equal(["dept-workload", "outpatient-log"], references.Select(item => item.ReportCode));
         Assert.All(references, item => Assert.True(item.Enabled));
+    }
+
+    [Fact]
+    public async Task Report_list_combines_report_and_template_revisions()
+    {
+        await _store.SaveAsync(CreateMutation(0));
+        await _store.SaveAsync(CreateMutation(0) with
+        {
+            ReportCode = "outpatient-log",
+            ReportName = "门诊日志",
+            SheetName = "门诊日志"
+        });
+        _database.Insertable(new PocReportTemplate
+        {
+            ReportCode = "outpatient-log",
+            SnapshotJson = "{}",
+            BindingJson = "{}",
+            Revision = 4,
+            CreateTime = DateTime.Now,
+            UpdateTime = DateTime.Now
+        }).ExecuteCommand();
+
+        var reports = await _configurationService.ListReportsAsync();
+
+        Assert.Equal(2, reports.Count);
+        var outpatient = Assert.Single(reports, item => item.ReportCode == "outpatient-log");
+        Assert.Equal("门诊日志", outpatient.Name);
+        Assert.Equal("detail", outpatient.DatasetCode);
+        Assert.Equal(1, outpatient.ConfigurationRevision);
+        Assert.Equal(4, outpatient.TemplateRevision);
+        Assert.NotNull(outpatient.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task Configuration_service_reads_the_report_selected_from_the_list()
+    {
+        await _store.SaveAsync(CreateMutation(0) with
+        {
+            ReportCode = "outpatient-log",
+            ReportName = "门诊日志",
+            SheetName = "门诊日志"
+        });
+
+        var document = await _configurationService.GetDocumentAsync("outpatient-log");
+
+        Assert.Equal("outpatient-log", document.ReportCode);
+        Assert.Equal("门诊日志", document.Name);
+        Assert.Equal("detail", document.DatasetCode);
     }
 
     [Theory]

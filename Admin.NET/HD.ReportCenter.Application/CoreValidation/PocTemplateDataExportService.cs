@@ -55,17 +55,17 @@ public sealed class PocTemplateDataExportService : ITransient
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Query);
-        if (!string.Equals(reportCode, PocReportCatalog.ReportCode, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new KeyNotFoundException($"不存在报表 '{reportCode}'。");
-        }
         if (request.TemplateRevision <= 0)
         {
             throw SaveRequired();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var normalizedReportCode = PocReportCatalog.ReportCode;
+        var normalizedReportCode = reportCode.Equals(
+            PocReportCatalog.ReportCode,
+            StringComparison.OrdinalIgnoreCase)
+                ? PocReportCatalog.ReportCode
+                : reportCode.Trim();
         var document = await _templateService.GetAsync(normalizedReportCode);
         if (document.Revision <= 0)
         {

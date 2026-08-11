@@ -109,6 +109,24 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
             rule.Direction == PocExchangeDirections.UniverToExcel));
     }
 
+    [Fact]
+    public async Task CreatePlan_UsesTheReportSelectedFromTheTemplateList()
+    {
+        const string reportCode = "outpatient-log";
+        var seed = await _templateService.GetAsync(reportCode);
+        var saved = await _templateService.SaveAsync(
+            reportCode,
+            new PocSaveTemplateRequest(seed.Snapshot, seed.Binding, seed.Revision));
+
+        var plan = await _exportService.CreatePlanAsync(
+            reportCode,
+            new PocDataExportRequest(saved.Revision, CreateQuery()),
+            CancellationToken.None);
+
+        Assert.Equal(reportCode, plan.ReportCode);
+        Assert.Equal(saved.Revision, plan.TemplateRevision);
+    }
+
     public void Dispose()
     {
         _database.Dispose();

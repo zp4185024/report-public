@@ -63,6 +63,16 @@ public sealed record PocReportConfigurationDocument(
     IReadOnlyList<PocDatasetFieldDefinition> Fields,
     int Revision);
 
+public sealed record PocReportSummaryDocument(
+    string ReportCode,
+    string Name,
+    string SheetName,
+    string DatasetCode,
+    bool Enabled,
+    int ConfigurationRevision,
+    int TemplateRevision,
+    DateTime? UpdatedAt);
+
 public sealed record PocSaveReportConfigurationRequest(
     string Name,
     string SheetName,
@@ -104,27 +114,81 @@ public sealed class PocReportConfigurationService : ITransient
     private readonly PocReportConfigurationStore _store;
     private readonly PocDataAssetStore _dataAssets;
     private readonly ISqlSugarClient _database;
+    private readonly PocTemplateStore? _templates;
 
     public PocReportConfigurationService(
         PocReportConfigurationStore store,
         PocDataAssetStore dataAssets,
-        ISqlSugarClient database)
+        ISqlSugarClient database,
+        PocTemplateStore? templates = null)
     {
         _store = store;
         _dataAssets = dataAssets;
         _database = database;
+        _templates = templates;
+    }
+
+    public async Task<IReadOnlyList<PocReportSummaryDocument>> ListReportsAsync()
+    {
+        var reports = await _store.ListReportsAsync();
+        IReadOnlyList<PocStoredTemplateSummary> templates = _templates is null
+            ? []
+            : await _templates.ListAsync();
+        var templateByReport = templates.ToDictionary(
+            item => item.ReportCode,
+            StringComparer.OrdinalIgnoreCase);
+
+        if (reports.Count == 0)
+        {
+            templateByReport.TryGetValue(PocReportCatalog.ReportCode, out var fallbackTemplate);
+            var fallback = PocReportCatalog.GetDefinition();
+            return [new PocReportSummaryDocument(
+                fallback.Code,
+                fallback.Name,
+                fallback.SheetName,
+                DefaultDatasetCode,
+                true,
+                0,
+                fallbackTemplate?.Revision ?? 0,
+                fallbackTemplate?.UpdatedAt)];
+        }
+
+        return reports.Select(report =>
+        {
+            templateByReport.TryGetValue(report.Code, out var template);
+            var reportUpdatedAt = report.UpdateTime ?? report.CreateTime;
+            var updatedAt = template?.UpdatedAt is DateTime templateUpdatedAt &&
+                templateUpdatedAt > reportUpdatedAt
+                    ? templateUpdatedAt
+                    : reportUpdatedAt;
+            return new PocReportSummaryDocument(
+                report.Code,
+                report.Name,
+                report.SheetName,
+                report.DatasetCode,
+                report.IsEnabled,
+                report.Revision,
+                template?.Revision ?? 0,
+                updatedAt);
+        }).ToArray();
     }
 
     public async Task<PocReportConfigurationDocument> GetDocumentAsync(
         string reportCode,
         DateTimeOffset? now = null)
     {
-        EnsureReportCode(reportCode);
-        var stored = await _store.GetAsync(PocReportCatalog.ReportCode);
+        var normalizedCode = NormalizeReportCode(reportCode);
+        var stored = await _store.GetAsync(normalizedCode);
         var datasets = await _dataAssets.ListDatasetsAsync();
-        return stored is null
-            ? CreateFallbackDocument(now, datasets)
-            : CreateDocument(stored, datasets, now);
+        if (stored is not null)
+        {
+            return CreateDocument(stored, datasets, now);
+        }
+        if (normalizedCode.Equals(PocReportCatalog.ReportCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return CreateFallbackDocument(now, datasets);
+        }
+        throw new KeyNotFoundException($"不存在报表 '{normalizedCode}'。");
     }
 
     public async Task<PocReportDefinition> GetDefinitionAsync(
@@ -139,10 +203,14 @@ public sealed class PocReportConfigurationService : ITransient
         string reportCode,
         DateTimeOffset? now = null)
     {
-        EnsureReportCode(reportCode);
-        var stored = await _store.GetAsync(PocReportCatalog.ReportCode);
+        var normalizedCode = NormalizeReportCode(reportCode);
+        var stored = await _store.GetAsync(normalizedCode);
         if (stored is null)
         {
+            if (!normalizedCode.Equals(PocReportCatalog.ReportCode, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new KeyNotFoundException($"不存在报表 '{normalizedCode}'。");
+            }
             return new PocRuntimeReportConfiguration(
                 PocReportCatalog.GetDefinition(now),
                 DefaultDataSourceCode,
@@ -177,7 +245,7 @@ public sealed class PocReportConfigurationService : ITransient
         PocSaveReportConfigurationRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        EnsureReportCode(reportCode);
+        var normalizedCode = NormalizeReportCode(reportCode);
         ValidateRequest(request);
 
         var dataset = await _dataAssets.GetDatasetAsync(request.DatasetCode.Trim())
@@ -220,7 +288,7 @@ public sealed class PocReportConfigurationService : ITransient
             }).ToArray();
 
         await _store.SaveAsync(new PocReportConfigurationMutation(
-            PocReportCatalog.ReportCode,
+            normalizedCode,
             request.Name.Trim(),
             request.SheetName.Trim(),
             JsonConvert.SerializeObject(request.Preview, Formatting.None),
@@ -426,12 +494,19 @@ public sealed class PocReportConfigurationService : ITransient
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static void EnsureReportCode(string reportCode)
+    private static string NormalizeReportCode(string reportCode)
     {
-        if (!string.Equals(reportCode, PocReportCatalog.ReportCode, StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(reportCode) ||
+            !System.Text.RegularExpressions.Regex.IsMatch(
+                reportCode,
+                "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant))
         {
-            throw new KeyNotFoundException($"不存在报表 '{reportCode}'。");
+            throw new PocDatasetConfigurationException(
+                "REPORT_DEFINITION_INVALID",
+                $"报表编码 '{reportCode}' 无效。");
         }
+        return reportCode.Trim();
     }
 
     private const string FallbackQueryText = """

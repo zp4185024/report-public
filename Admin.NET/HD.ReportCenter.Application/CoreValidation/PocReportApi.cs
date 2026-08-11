@@ -54,9 +54,9 @@ public sealed class PocReportApi : IDynamicApiController
     [HttpGet("/api/report-center/poc/{reportCode}/template")]
     public async Task<PocTemplateDocument> GetTemplate([FromRoute] string reportCode)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         return await HandleTemplateOperation(
-            () => _templateService.GetEditableAsync(PocReportCatalog.ReportCode));
+            () => _templateService.GetEditableAsync(reportCode));
     }
 
     /// <summary>保存工作簿快照和绑定，使用请求中的 revision 做乐观并发检查。</summary>
@@ -65,9 +65,9 @@ public sealed class PocReportApi : IDynamicApiController
         [FromRoute] string reportCode,
         [FromBody] PocSaveTemplateRequest request)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         return await HandleTemplateOperation(
-            () => _templateService.SaveAsync(PocReportCatalog.ReportCode, request));
+            () => _templateService.SaveAsync(reportCode, request));
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ public sealed class PocReportApi : IDynamicApiController
         [FromRoute] string reportCode,
         [FromForm] IFormFile file)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         if (file is null || file.Length == 0)
         {
             throw Oops.Oh("TEMPLATE_XLSX_FILE_REQUIRED").StatusCode(400);
@@ -97,7 +97,7 @@ public sealed class PocReportApi : IDynamicApiController
         [FromRoute] string reportCode,
         [FromBody] PocTemplateXlsxExportRequest request)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         var definition = await GetDefinitionAsync(reportCode);
         var exchange = await HandleTemplateOperation(
             () => _templateExchangeService.ExportAsync(
@@ -115,7 +115,7 @@ public sealed class PocReportApi : IDynamicApiController
     [HttpGet("/api/report-center/poc/{reportCode}/definition")]
     public async Task<PocReportDefinition> Definition([FromRoute] string reportCode)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         return await GetDefinitionAsync(reportCode);
     }
 
@@ -127,7 +127,7 @@ public sealed class PocReportApi : IDynamicApiController
         [FromBody] PocExecuteRequest request,
         CancellationToken cancellationToken)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         if (_datasetExecutor is null)
         {
             return PocReportCatalog.Execute(request);
@@ -142,7 +142,7 @@ public sealed class PocReportApi : IDynamicApiController
     public async Task<PocReportConfigurationDocument> Configuration(
         [FromRoute] string reportCode)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         return await RequireConfigurationService().GetDocumentAsync(reportCode);
     }
 
@@ -153,10 +153,16 @@ public sealed class PocReportApi : IDynamicApiController
         [FromRoute] string reportCode,
         [FromBody] PocSaveReportConfigurationRequest request)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         return await HandleConfigurationOperation(
             () => RequireConfigurationService().SaveAsync(reportCode, request));
     }
+
+    /// <summary>读取全部报表及其配置、模板修订状态。</summary>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/reports")]
+    public async Task<IReadOnlyList<PocReportSummaryDocument>> Reports() =>
+        await RequireConfigurationService().ListReportsAsync();
 
     /// <summary>读取全部脱敏数据源。</summary>
     [SuppressMonitor]
@@ -223,13 +229,13 @@ public sealed class PocReportApi : IDynamicApiController
         [FromBody] PocDataExportRequest request,
         CancellationToken cancellationToken)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         var stream = new MemoryStream();
         try
         {
             var prepared = await HandleDataExportOperation(
                 () => _templateDataExportService.CreatePreparedAsync(
-                    PocReportCatalog.ReportCode,
+                    reportCode,
                     request,
                     cancellationToken));
             var pages = prepared.RuntimePlan is null
@@ -268,10 +274,10 @@ public sealed class PocReportApi : IDynamicApiController
         [FromBody] PocDataExportRequest request,
         CancellationToken cancellationToken)
     {
-        EnsureReportExists(reportCode);
+        reportCode = EnsureReportCode(reportCode);
         var prepared = await HandleDataExportOperation(
             () => _templateDataExportService.CreatePreparedAsync(
-                PocReportCatalog.ReportCode,
+                reportCode,
                 request,
                 cancellationToken));
         return prepared.RuntimePlan is null
@@ -321,12 +327,19 @@ public sealed class PocReportApi : IDynamicApiController
         return $"{reportName}.xlsx";
     }
 
-    private static void EnsureReportExists(string reportCode)
+    private static string EnsureReportCode(string reportCode)
     {
-        if (!string.Equals(reportCode, PocReportCatalog.ReportCode, StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(reportCode) ||
+            !System.Text.RegularExpressions.Regex.IsMatch(
+                reportCode,
+                "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+                System.Text.RegularExpressions.RegexOptions.CultureInvariant))
         {
-            throw Oops.Oh("REPORT_NOT_FOUND");
+            throw Oops.Oh("REPORT_NOT_FOUND").StatusCode(404);
         }
+        return reportCode.Equals(PocReportCatalog.ReportCode, StringComparison.OrdinalIgnoreCase)
+            ? PocReportCatalog.ReportCode
+            : reportCode.Trim();
     }
 
     private static T HandleJobOperation<T>(Func<T> operation)

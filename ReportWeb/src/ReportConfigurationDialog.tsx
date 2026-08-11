@@ -12,7 +12,6 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { reportApi } from './api';
 import type {
   ParameterDefinition,
   ReportConfigurationDocument,
@@ -24,6 +23,7 @@ type ConfigurationTab = 'basic' | 'parameters' | 'columns';
 interface ReportConfigurationDialogProps {
   open: boolean;
   document: ReportConfigurationDocument | null;
+  saveConfiguration: (request: SaveReportConfigurationRequest) => Promise<ReportConfigurationDocument>;
   onClose: () => void;
   onSaved: (document: ReportConfigurationDocument) => void;
 }
@@ -97,6 +97,7 @@ function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1): T[] {
 export function ReportConfigurationDialog({
   open,
   document,
+  saveConfiguration,
   onClose,
   onSaved,
 }: ReportConfigurationDialogProps) {
@@ -192,7 +193,7 @@ export function ReportConfigurationDialog({
     setError(null);
     setStatus(null);
     try {
-      const saved = await reportApi.saveConfiguration(draft);
+      const saved = await saveConfiguration(draft);
       setDraft(toDraft(saved));
       setStatus(`报表配置已保存，当前修订号 ${saved.revision}`);
       onSaved(saved);
@@ -265,8 +266,8 @@ export function ReportConfigurationDialog({
                       ))}
                     </select>
                   </label>
-                  <button type="button" className="button" onClick={() => window.location.assign(`/data-assets${window.location.search}`)}>
-                    <ExternalLink size={16} />管理数据资源
+                  <button type="button" className="button" onClick={() => window.location.assign('/datasets')}>
+                    <ExternalLink size={16} />管理数据集
                   </button>
                 </div>
                 {selectedDataset !== null && (

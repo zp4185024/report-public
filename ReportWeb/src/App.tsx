@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -10,7 +11,6 @@ import type { IWorkbookData } from '@univerjs/presets';
 import {
   ChevronLeft,
   ChevronRight,
-  Database,
   Eye,
   FileDown,
   FileSpreadsheet,
@@ -22,7 +22,7 @@ import {
   Settings2,
   X,
 } from 'lucide-react';
-import { reportApi } from './api';
+import { createReportApi } from './api';
 import {
   prepareSavedRevisionForExport,
   saveBeforeDataExportMessage,
@@ -122,7 +122,12 @@ function errorMessage(error: unknown, fallback: string): string {
   return detail.length > 0 ? `${fallback}：${detail}` : fallback;
 }
 
-export default function App() {
+interface AppProps {
+  reportCode: string;
+}
+
+export default function App({ reportCode }: AppProps) {
+  const reportApi = useMemo(() => createReportApi(reportCode), [reportCode]);
   // 后台持久状态和查询结果使用 React state，负责界面渲染。
   const [definition, setDefinition] = useState<ReportDefinition | null>(null);
   const [templateDocument, setTemplateDocument] = useState<TemplateDocument | null>(null);
@@ -197,7 +202,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reportApi]);
 
   useEffect(() => {
     if (!dirty) {
@@ -631,24 +636,10 @@ export default function App() {
               数据预览
             </button>
           </div>
-          {mode === 'design' && (
-            <div className="quick-access-actions" aria-label="快捷访问">
-              <button
-                className="button data-assets-button quick-access-button"
-                type="button"
-                title="管理全局数据源和数据集"
-                disabled={busy}
-                onClick={() => window.location.assign(`/data-assets${window.location.search}`)}
-              >
-                <Database size={16} />
-                数据管理
-              </button>
-            </div>
-          )}
         </div>
 
-        <div className="report-heading" title={definition?.name ?? '科室工作量报表'}>
-          <h1>{definition?.name ?? '科室工作量报表'}</h1>
+        <div className="report-heading" title={definition?.name ?? '模板编辑器'}>
+          <h1>{definition?.name ?? '模板编辑器'}</h1>
         </div>
 
         <div className="command-actions">
@@ -879,6 +870,7 @@ export default function App() {
       <ReportConfigurationDialog
         open={configurationOpen}
         document={configurationDocument}
+        saveConfiguration={reportApi.saveConfiguration}
         onClose={() => setConfigurationOpen(false)}
         onSaved={configurationSaved}
       />
