@@ -3,7 +3,6 @@ using System.Data.Common;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Globalization;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
@@ -20,6 +19,12 @@ public sealed record PocDatasetPreviewResult(
 public sealed record PocDatasetSchemaDocument(
     IReadOnlyList<PocDatasetVariableDefinition> Variables,
     IReadOnlyList<PocDatasetFieldDefinition> Fields);
+
+public sealed record PocDatasetReferenceDocument(
+    string ReportCode,
+    string ReportName,
+    string SheetName,
+    bool Enabled);
 
 internal sealed record PocLegacyDatasetColumn(
     string Code,
@@ -62,6 +67,23 @@ public sealed class PocDataAssetService : ITransient
     {
         var datasets = await _store.ListDatasetsAsync();
         return datasets.Select(ToDatasetDocument).ToArray();
+    }
+
+    public async Task<IReadOnlyList<PocDatasetReferenceDocument>> ListDatasetReferencesAsync(
+        string code)
+    {
+        ValidateCode(code, "DATASET_REFERENCE_INVALID");
+        var normalizedCode = code.Trim();
+        _ = await _store.GetDatasetAsync(normalizedCode)
+            ?? throw new PocDatasetConfigurationException(
+                "DATASET_NOT_FOUND",
+                $"不存在数据集 '{normalizedCode}'。");
+        var reports = await _store.ListDatasetReferencesAsync(normalizedCode);
+        return reports.Select(report => new PocDatasetReferenceDocument(
+            report.Code,
+            report.Name,
+            report.SheetName,
+            report.IsEnabled)).ToArray();
     }
 
     public async Task<PocDataSourceDocument> SaveDataSourceAsync(
@@ -247,7 +269,7 @@ public sealed class PocDataAssetService : ITransient
                 var row = new object?[reader.FieldCount];
                 for (var index = 0; index < reader.FieldCount; index++)
                 {
-                    row[index] = NormalizePreviewValue(reader.GetValue(index));
+                    row[index] = PocDatasetValueNormalizer.Normalize(reader.GetValue(index), fields[index]);
                 }
                 rows.Add(row);
             }
@@ -559,14 +581,4 @@ public sealed class PocDataAssetService : ITransient
             _ => "string"
         };
 
-    private static object? NormalizePreviewValue(object value) => value switch
-    {
-        DBNull => null,
-        byte[] bytes => Convert.ToBase64String(bytes),
-        Guid guid => guid.ToString("D"),
-        DateTimeOffset dateTimeOffset => dateTimeOffset,
-        DateTime dateTime => dateTime,
-        string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal => value,
-        _ => Convert.ToString(value, CultureInfo.InvariantCulture)
-    };
 }

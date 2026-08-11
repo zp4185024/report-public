@@ -11,7 +11,8 @@ import type {
  * 浏览器端模板绑定扫描器。
  * 作用是让设计人员在预览/保存前立即看到精确到单元格的错误；它不是安全边界，后端保存时会独立复扫。
  */
-const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}/g;
+// 字段编码与后端 ValidateCode 保持一致，允许首字母后的下划线，例如 VISIT_ID。
+const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9_]*)[ \t\r\n\f\v]*\}\}/g;
 /** 与后端 Int32 坐标范围保持一致，避免浏览器接受后台无法保存的坐标。 */
 export const MAX_TEMPLATE_COORDINATE = 2_147_483_647;
 

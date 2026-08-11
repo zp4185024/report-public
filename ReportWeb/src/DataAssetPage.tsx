@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   Braces,
   Database,
   Eye,
+  FilePenLine,
+  Link2,
   LoaderCircle,
   Plus,
   Save,
@@ -16,10 +18,13 @@ import type {
   DataSourceDbType,
   DataSourceInput,
   DatasetDocument,
+  DatasetReferenceDocument,
   DatasetVariableDefinition,
 } from './types';
 
 type AssetKind = 'data-sources' | 'datasets';
+
+const SqlEditor = lazy(() => import('./SqlEditor'));
 
 const DATABASE_TYPES: ReadonlyArray<{
   value: DataSourceDbType;
@@ -117,6 +122,13 @@ function previewUrl(datasetCode: string): string {
   return `/data-assets/preview?${search.toString()}`;
 }
 
+function templateUrl(reportCode: string): string {
+  const search = new URLSearchParams(window.location.search);
+  search.delete('datasetCode');
+  search.set('reportCode', reportCode);
+  return `/?${search.toString()}`;
+}
+
 export default function DataAssetPage() {
   const [kind, setKind] = useState<AssetKind>('data-sources');
   const [dataSources, setDataSources] = useState<DataSourceDocument[]>([]);
@@ -126,6 +138,9 @@ export default function DataAssetPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [referencesOpen, setReferencesOpen] = useState(false);
+  const [referencesLoading, setReferencesLoading] = useState(false);
+  const [datasetReferences, setDatasetReferences] = useState<DatasetReferenceDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -158,6 +173,9 @@ export default function DataAssetPage() {
       : materializeVariables(datasetDraft.queryText, datasetDraft.variables),
     [datasetDraft],
   );
+  const datasetDbType = dataSources.find(
+    (source) => source.code === datasetDraft?.dataSourceCode,
+  )?.dbType ?? 'SqlServer';
 
   const selectSource = (source: DataSourceDocument) => {
     setDataSourceDraft(sourceDraft(source));
@@ -189,8 +207,29 @@ export default function DataAssetPage() {
       variables: dataset.variables.map((variable) => ({ ...variable })),
       fields: dataset.fields.map((field) => ({ ...field })),
     });
+    setReferencesOpen(false);
+    setDatasetReferences([]);
     setError(null);
     setStatus(null);
+  };
+
+  const showReferences = async () => {
+    if (datasetDraft === null || datasetDraft.revision === 0) return;
+    if (referencesOpen) {
+      setReferencesOpen(false);
+      return;
+    }
+
+    setReferencesOpen(true);
+    setReferencesLoading(true);
+    setError(null);
+    try {
+      setDatasetReferences(await dataAssetApi.datasetReferences(datasetDraft.code));
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : '数据集引用读取失败。');
+    } finally {
+      setReferencesLoading(false);
+    }
   };
 
   const saveSource = async () => {
@@ -338,7 +377,22 @@ export default function DataAssetPage() {
             </>
           ) : kind === 'datasets' && datasetDraft !== null ? (
             <>
-              <div className="asset-editor-header"><div><h2>{datasetDraft.revision === 0 ? '新增数据集' : datasetDraft.name}</h2><p>修订号 {datasetDraft.revision}</p></div><div><button type="button" className="button" disabled={datasetDraft.revision === 0 || saving} onClick={() => window.location.assign(previewUrl(datasetDraft.code))}><Eye size={16} />数据预览</button><button type="button" className="button button-primary" disabled={saving} onClick={() => void saveDataset()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button></div></div>
+              <div className="asset-editor-header"><div><h2>{datasetDraft.revision === 0 ? '新增数据集' : datasetDraft.name}</h2><p>修订号 {datasetDraft.revision}</p></div><div><button type="button" className="button" disabled={datasetDraft.revision === 0 || saving || referencesLoading} onClick={() => void showReferences()}>{referencesLoading ? <LoaderCircle className="spin" size={16} /> : <Link2 size={16} />}查看引用</button><button type="button" className="button" disabled={datasetDraft.revision === 0 || saving} onClick={() => window.location.assign(previewUrl(datasetDraft.code))}><Eye size={16} />数据预览</button><button type="button" className="button button-primary" disabled={saving} onClick={() => void saveDataset()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button></div></div>
+              {referencesOpen && !referencesLoading && (
+                <div className="dataset-reference-panel" role="region" aria-label="数据集引用">
+                  <strong>引用报表</strong>
+                  {datasetReferences.length > 0 ? (
+                    <div className="dataset-reference-list">
+                      {datasetReferences.map((reference) => (
+                        <div className="dataset-reference-item" key={reference.reportCode}>
+                          <span>{reference.reportName}（{reference.reportCode}）</span>
+                          <button type="button" className="button" onClick={() => window.location.assign(templateUrl(reference.reportCode))}><FilePenLine size={16} />编辑模板</button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <span>当前没有报表引用这个数据集</span>}
+                </div>
+              )}
               <div className="asset-form-grid dataset-form-grid">
                 <label><span>数据集编码</span><input disabled={datasetDraft.revision > 0} value={datasetDraft.code} onChange={(event) => setDatasetDraft({ ...datasetDraft, code: event.target.value })} /></label>
                 <label><span>数据集名称</span><input value={datasetDraft.name} onChange={(event) => setDatasetDraft({ ...datasetDraft, name: event.target.value })} /></label>
@@ -347,7 +401,25 @@ export default function DataAssetPage() {
                 <label><span>查询超时（秒）</span><input type="number" min="1" max="600" value={datasetDraft.timeoutSeconds} onChange={(event) => setDatasetDraft({ ...datasetDraft, timeoutSeconds: Number(event.target.value) })} /></label>
                 <label><span>最大返回行数</span><input type="number" min="1" max="1000000" value={datasetDraft.maxRows} onChange={(event) => setDatasetDraft({ ...datasetDraft, maxRows: Number(event.target.value) })} /></label>
               </div>
-              <label className="asset-sql-field"><span>参数化只读 SQL</span><textarea spellCheck={false} value={datasetDraft.queryText} onChange={(event) => setDatasetDraft({ ...datasetDraft, queryText: event.target.value })} /></label>
+              <div className="asset-sql-field">
+                <div className="asset-sql-header">
+                  <span>参数化只读 SQL</span>
+                  <span className="sql-dialect-badge">{databaseType(datasetDbType).label}</span>
+                </div>
+                <Suspense
+                  fallback={(
+                    <div className="asset-sql-editor-loading" aria-label="SQL 编辑器加载中">
+                      <LoaderCircle className="spin" size={18} />
+                    </div>
+                  )}
+                >
+                  <SqlEditor
+                    value={datasetDraft.queryText}
+                    dbType={datasetDbType}
+                    onChange={(queryText) => setDatasetDraft({ ...datasetDraft, queryText })}
+                  />
+                </Suspense>
+              </div>
               <div className="dataset-parameter-line"><strong>SQL 输入变量</strong><span>{datasetVariables.length === 0 ? '无' : datasetVariables.map((variable) => `@${variable.code}`).join('、')}</span></div>
               <div className="dataset-columns-header"><div><strong>变量定义</strong><span>{datasetVariables.length} 个变量</span></div></div>
               <div className="configuration-table-scroll asset-column-scroll"><table className="configuration-table dataset-variable-table"><thead><tr><th>SQL 变量</th><th>业务名称</th><th>数据类型</th><th>必填</th></tr></thead><tbody>{datasetVariables.length === 0 ? <tr><td colSpan={4} className="dataset-preview-empty">当前 SQL 没有输入变量</td></tr> : datasetVariables.map((variable) => <tr key={variable.code}><td><input disabled value={`@${variable.code}`} /></td><td><input value={variable.displayName} onChange={(event) => updateVariable(variable.code, { displayName: event.target.value })} /></td><td><select value={variable.dataType} onChange={(event) => updateVariable(variable.code, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td><td><input type="checkbox" checked={variable.required} onChange={(event) => updateVariable(variable.code, { required: event.target.checked })} /></td></tr>)}</tbody></table></div>

@@ -141,6 +141,7 @@ export default function App() {
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [templateWarning, setTemplateWarning] = useState<string | null>(null);
   const [exchangeStatus, setExchangeStatus] = useState<string | null>(null);
   const [queryDuration, setQueryDuration] = useState(0);
   const [renderDuration, setRenderDuration] = useState(0);
@@ -179,6 +180,7 @@ export default function App() {
         setTemplateDocument(nextTemplateDocument);
         setDraftSnapshot(nextTemplateDocument.snapshot);
         setRequest(nextRequest);
+        setTemplateWarning(nextTemplateDocument.validationWarning);
         setInitialized(true);
       } catch (exception) {
         if (active) {
@@ -345,6 +347,7 @@ export default function App() {
     draftSnapshotRef.current = savedDocument.snapshot;
     setTemplateDocument(savedDocument);
     setDraftSnapshot(savedDocument.snapshot);
+    setTemplateWarning(null);
     setDirty(false);
     return savedDocument;
   }, [definition, mode, templateDocument]);
@@ -694,8 +697,10 @@ export default function App() {
           <button
             className="button data-export-button"
             type="button"
-            title="使用已保存模板导出全部查询数据"
-            disabled={busy || !initialized}
+            title={templateWarning === null
+              ? '使用已保存模板导出全部查询数据'
+              : '请先修复并保存模板字段绑定'}
+            disabled={busy || !initialized || templateWarning !== null}
             onClick={() => void exportData()}
           >
             {exportingData
@@ -797,6 +802,11 @@ export default function App() {
         </div>
       </form>
 
+      {templateWarning && (
+        <div className="error-strip" role="status">
+          {templateWarning} 当前工作簿仍可编辑，请替换失效字段后保存模板。
+        </div>
+      )}
       {error && <div className="error-strip" role="alert">{error}</div>}
       {exchangeStatus && <div className="success-strip" role="status">{exchangeStatus}</div>}
 

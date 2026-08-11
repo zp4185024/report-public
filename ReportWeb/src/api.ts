@@ -6,6 +6,7 @@ import type {
   DatasetDocument,
   DatasetPreviewRequest,
   DatasetPreviewResult,
+  DatasetReferenceDocument,
   ExecuteRequest,
   ExecuteResult,
   ExportJob,
@@ -161,6 +162,11 @@ export const dataAssetApi = {
     }),
 
   datasets: () => requestJson<DatasetDocument[]>('/api/report-center/poc/datasets'),
+
+  datasetReferences: (code: string) =>
+    requestJson<DatasetReferenceDocument[]>(
+      `/api/report-center/poc/datasets/${encodeURIComponent(code)}/references`,
+    ),
 
   saveDataset: (request: DatasetDocument) =>
     requestJson<DatasetDocument>(

@@ -1,6 +1,5 @@
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using System.Data.Common;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 
 namespace HD.ReportCenter.Application.CoreValidation;
@@ -125,7 +124,9 @@ public sealed class PocSqlDatasetExecutor : ITransient
                 var row = new PocDataRow();
                 foreach (var field in fields)
                 {
-                    row[field.Code] = NormalizeValue(reader.GetValue(ordinals[field.Code]));
+                    row[field.Code] = PocDatasetValueNormalizer.Normalize(
+                        reader.GetValue(ordinals[field.Code]),
+                        field);
                 }
                 rows.Add(row);
             }
@@ -218,14 +219,4 @@ public sealed class PocSqlDatasetExecutor : ITransient
         return ordinals;
     }
 
-    private static object? NormalizeValue(object value) => value switch
-    {
-        DBNull => null,
-        byte[] bytes => Convert.ToBase64String(bytes),
-        Guid guid => guid.ToString("D"),
-        DateTimeOffset dateTimeOffset => dateTimeOffset,
-        DateTime dateTime => dateTime,
-        string or bool or byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal => value,
-        _ => Convert.ToString(value, CultureInfo.InvariantCulture)
-    };
 }

@@ -189,6 +189,27 @@ describe('scanTemplateBindings', () => {
     }
   });
 
+  it('accepts dataset field codes containing underscores', () => {
+    const definitionWithUnderscore: ReportDefinition = {
+      ...definition,
+      fields: [{ code: 'VISIT_ID', displayName: '就诊标识', dataType: 'string' }],
+    };
+
+    expect(scanTemplateBindings(
+      oneSheet({ 5: { 0: { v: '{{detail.VISIT_ID}}' } } }),
+      definitionWithUnderscore,
+    )).toEqual({
+      version: 1,
+      parameterBindings: [],
+      detailBinding: {
+        datasetCode: 'detail',
+        sheetId: 'sheet-1',
+        templateRow: 5,
+        fields: [{ code: 'VISIT_ID', column: 0 }],
+      },
+    });
+  });
+
   it('requires a detail token to be the trimmed cell value', () => {
     expectBindingError(
       oneSheet({ 2: { 1: { v: '科室：{{detail.departmentName}}' } } }),

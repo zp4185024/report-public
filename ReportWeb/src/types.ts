@@ -128,6 +128,7 @@ export interface TemplateDocument {
   snapshot: IWorkbookData;
   binding: TemplateBinding;
   revision: number;
+  validationWarning: string | null;
 }
 
 /** 保存请求；后端会重新扫描 snapshot，不会直接信任这里提交的 binding。 */
@@ -209,6 +210,13 @@ export interface DatasetPreviewResult {
   hasMore: boolean;
   limit: number;
   durationMilliseconds: number;
+}
+
+export interface DatasetReferenceDocument {
+  reportCode: string;
+  reportName: string;
+  sheetName: string;
+  enabled: boolean;
 }
 
 export interface DatasetOption {

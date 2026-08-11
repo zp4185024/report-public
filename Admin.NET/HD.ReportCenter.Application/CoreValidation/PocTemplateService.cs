@@ -9,7 +9,8 @@ public sealed record PocTemplateDocument(
     string ReportCode,
     JObject Snapshot,
     PocTemplateBinding Binding,
-    int Revision);
+    int Revision,
+    string? ValidationWarning = null);
 
 /// <summary>保存模板请求。Revision 是浏览器加载模板时拿到的旧修订号。</summary>
 public sealed record PocSaveTemplateRequest(
@@ -106,6 +107,44 @@ public sealed class PocTemplateService : ITransient
                 definition);
         }
         catch (Exception exception) when (IsTemplateDataException(exception))
+        {
+            throw new PocStoredTemplateCorruptedException(reportCode, exception);
+        }
+    }
+
+    /// <summary>
+    /// 为模板设计器读取草稿。字段或参数定义变化导致绑定失效时仍返回原始快照，
+    /// 让设计人员可以删除或替换旧 token；执行和导出继续使用严格的 GetAsync。
+    /// </summary>
+    public async Task<PocTemplateDocument> GetEditableAsync(string reportCode)
+    {
+        var definition = await GetDefinitionAsync(reportCode);
+        var stored = await _store.GetAsync(reportCode);
+        if (stored is null)
+        {
+            return await GetAsync(reportCode);
+        }
+
+        try
+        {
+            return CreateDocument(
+                stored.ReportCode,
+                stored.SnapshotJson,
+                stored.BindingJson,
+                stored.Revision,
+                definition);
+        }
+        catch (Exception exception) when (
+            exception is PocTemplateValidationException or PocTemplateBindingMismatchException)
+        {
+            return new PocTemplateDocument(
+                stored.ReportCode,
+                JObject.Parse(stored.SnapshotJson),
+                new PocTemplateBinding(1, [], null),
+                stored.Revision,
+                "数据集字段或报表参数已经变化，当前模板绑定需要重新编辑并保存。");
+        }
+        catch (JsonException exception)
         {
             throw new PocStoredTemplateCorruptedException(reportCode, exception);
         }

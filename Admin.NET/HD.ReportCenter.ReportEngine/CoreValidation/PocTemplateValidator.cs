@@ -299,6 +299,7 @@ public static partial class PocTemplateValidator
     }
 
     // GeneratedRegex 在编译期生成匹配器，避免运行时构造正则；仅允许 params/detail 两种作用域。
-    [GeneratedRegex(@"\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}", RegexOptions.CultureInvariant)]
+    // 字段编码与数据集定义保持一致，允许首字母后的下划线，例如 VISIT_ID。
+    [GeneratedRegex(@"\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9_]*)[ \t\r\n\f\v]*\}\}", RegexOptions.CultureInvariant)]
     private static partial Regex TokenRegex();
 }

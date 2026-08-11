@@ -178,6 +178,24 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("共享工作量明细", (await _dataAssetStore.GetDatasetAsync("detail"))!.Name);
     }
 
+    [Fact]
+    public async Task Dataset_references_return_every_report_using_the_shared_dataset()
+    {
+        await _store.SaveAsync(CreateMutation(0));
+        await _store.SaveAsync(CreateMutation(0) with
+        {
+            ReportCode = "outpatient-log",
+            ReportName = "门诊日志",
+            SheetName = "门诊日志"
+        });
+
+        var references = await _dataAssetService.ListDatasetReferencesAsync("detail");
+
+        Assert.Equal(2, references.Count);
+        Assert.Equal(["dept-workload", "outpatient-log"], references.Select(item => item.ReportCode));
+        Assert.All(references, item => Assert.True(item.Enabled));
+    }
+
     [Theory]
     [InlineData("SqlServer", "source_sqlserver", 1433)]
     [InlineData("Oracle", "source_oracle", 1521)]

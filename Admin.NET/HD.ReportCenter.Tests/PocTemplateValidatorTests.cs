@@ -31,6 +31,26 @@ public sealed class PocTemplateValidatorTests
     }
 
     [Fact]
+    public void Scan_AcceptsDatasetFieldCodesContainingUnderscores()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot["sheets"]!["report-sheet"]!["cellData"]!["5"] = new JObject
+        {
+            ["0"] = new JObject { ["v"] = "{{detail.VISIT_ID}}" }
+        };
+        var definition = PocReportCatalog.GetDefinition() with
+        {
+            Fields = [new PocDatasetFieldDefinition("VISIT_ID", "就诊标识", "string")]
+        };
+
+        var binding = PocTemplateValidator.Scan(snapshot.ToString(), definition);
+
+        Assert.Equal(
+            [new PocDetailFieldBinding("VISIT_ID", 0)],
+            Assert.IsType<PocDetailBinding>(binding.DetailBinding).Fields);
+    }
+
+    [Fact]
     public void Scan_PreservesParameterBindingsWhenDetailTokensAreAbsent()
     {
         var snapshot = new JObject

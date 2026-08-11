@@ -37,6 +37,7 @@ const document: TemplateDocument = {
   snapshot,
   binding,
   revision: 3,
+  validationWarning: null,
 };
 
 const executeRequest: ExecuteRequest = {
@@ -245,6 +246,22 @@ describe('reportApi template endpoints', () => {
 
     await expect(dataAssetApi.dataSources()).resolves.toEqual([dataSourceDocument]);
     expect(fetchMock).toHaveBeenCalledWith('/api/report-center/poc/data-sources', undefined);
+  });
+
+  it('loads every report that references a reusable dataset', async () => {
+    const references = [{
+      reportCode: 'dept-workload',
+      reportName: '科室工作量统计',
+      sheetName: '科室工作量',
+      enabled: true,
+    }];
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: references }));
+
+    await expect(dataAssetApi.datasetReferences('detail')).resolves.toEqual(references);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/datasets/detail/references',
+      undefined,
+    );
   });
 
   it('saves a reusable dataset by its global code', async () => {

@@ -12,9 +12,10 @@ import type {
  * 纯函数预览规划器：把“模板快照 + 规范绑定 + 后台数据”转换为显式单元格写入计划。
  * 本模块不依赖 Univer facade，因此所有坐标、字段和运行时对象都在进入工作簿副作用层前完成校验。
  */
-const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}/g;
+// 必须与模板保存时的前后端校验规则一致，允许字段编码含下划线，例如 VISIT_ID。
+const tokenRegex = /\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9_]*)[ \t\r\n\f\v]*\}\}/g;
 // 参数允许嵌入固定文字；明细必须独占单元格，所以使用独立的整串正则再次确认。
-const detailTokenRegex = /^\{\{[ \t\r\n\f\v]*detail\.([A-Za-z][A-Za-z0-9]*)[ \t\r\n\f\v]*\}\}$/;
+const detailTokenRegex = /^\{\{[ \t\r\n\f\v]*detail\.([A-Za-z][A-Za-z0-9_]*)[ \t\r\n\f\v]*\}\}$/;
 
 type JsonObject = Record<string, unknown>;
 

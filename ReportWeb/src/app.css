@@ -1216,8 +1216,7 @@ h1 {
 }
 
 .asset-form-grid input,
-.asset-form-grid select,
-.asset-sql-field textarea {
+.asset-form-grid select {
   width: 100%;
   min-width: 0;
   border: 1px solid #c6ced8;
@@ -1240,23 +1239,85 @@ h1 {
 }
 
 .asset-form-grid input:focus,
-.asset-form-grid select:focus,
-.asset-sql-field textarea:focus {
+.asset-form-grid select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px #dbeafe;
 }
 
 .asset-sql-field {
+  gap: 7px;
   padding: 0 22px 14px;
 }
 
-.asset-sql-field textarea {
-  min-height: 190px;
-  resize: vertical;
-  padding: 10px;
+.asset-sql-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sql-dialect-badge {
+  border: 1px solid #c9d3df;
+  border-radius: 3px;
+  padding: 2px 7px;
+  color: #526071;
+  background: #f5f7fa;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.asset-sql-editor {
+  overflow: hidden;
+  border: 1px solid #bfc9d5;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.asset-sql-editor-loading {
+  display: grid;
+  height: 240px;
+  place-items: center;
+  border: 1px solid #bfc9d5;
+  border-radius: 4px;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.asset-sql-editor:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px #dbeafe;
+}
+
+.asset-sql-editor .cm-editor {
+  color: #18212b;
+  background: #ffffff;
   font-family: Consolas, "Microsoft YaHei", monospace;
   font-size: 12px;
   line-height: 1.55;
+}
+
+.asset-sql-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
+.asset-sql-editor .cm-scroller {
+  overflow: auto;
+}
+
+.asset-sql-editor .cm-gutters {
+  border-right-color: #dde3ea;
+  color: #7a8696;
+  background: #f6f8fa;
+}
+
+.asset-sql-editor .cm-activeLine,
+.asset-sql-editor .cm-activeLineGutter {
+  background: #eef4ff;
+}
+
+.asset-sql-editor .cm-selectionBackground,
+.asset-sql-editor .cm-content ::selection {
+  background: #cfe0ff !important;
 }
 
 .dataset-parameter-line {
@@ -1269,6 +1330,41 @@ h1 {
   color: #5d6978;
   background: #f8fafb;
   font-size: 11px;
+}
+
+.dataset-reference-panel {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 22px;
+  border-bottom: 1px solid #e1e6ec;
+  color: #5d6978;
+  background: #f8fafb;
+  font-size: 11px;
+}
+
+.dataset-reference-panel > strong {
+  flex: 0 0 auto;
+}
+
+.dataset-reference-list {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 7px 18px;
+}
+
+.dataset-reference-item {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.dataset-reference-item > span {
+  overflow-wrap: anywhere;
 }
 
 .dataset-preview-toolbar {

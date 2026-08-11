@@ -56,7 +56,7 @@ public sealed class PocReportApi : IDynamicApiController
     {
         EnsureReportExists(reportCode);
         return await HandleTemplateOperation(
-            () => _templateService.GetAsync(PocReportCatalog.ReportCode));
+            () => _templateService.GetEditableAsync(PocReportCatalog.ReportCode));
     }
 
     /// <summary>保存工作簿快照和绑定，使用请求中的 revision 做乐观并发检查。</summary>
@@ -196,6 +196,14 @@ public sealed class PocReportApi : IDynamicApiController
         [FromBody] PocDatasetDocument request) =>
         await HandleConfigurationOperation(
             () => RequireDataAssetService().SaveDatasetAsync(code, request));
+
+    /// <summary>读取所有引用指定全局数据集的报表。</summary>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/datasets/{code}/references")]
+    public async Task<IReadOnlyList<PocDatasetReferenceDocument>> DatasetReferences(
+        [FromRoute] string code) =>
+        await HandleConfigurationOperation(
+            () => RequireDataAssetService().ListDatasetReferencesAsync(code));
 
     /// <summary>使用已保存的数据集和临时变量值执行最多 50 行只读预览。</summary>
     [SuppressMonitor]

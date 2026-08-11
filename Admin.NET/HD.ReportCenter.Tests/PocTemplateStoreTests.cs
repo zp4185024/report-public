@@ -243,6 +243,14 @@ public sealed class PocTemplateStoreTests : IDisposable
 
         await Assert.ThrowsAsync<PocStoredTemplateCorruptedException>(
             () => service.GetAsync(PocReportCatalog.ReportCode));
+
+        var editable = await service.GetEditableAsync(PocReportCatalog.ReportCode);
+
+        Assert.Equal(1, editable.Revision);
+        Assert.Equal("{{params.unknown}}", editable.Snapshot["sheets"]?["report-sheet"]?["cellData"]?["0"]?["0"]?["v"]?.Value<string>());
+        Assert.NotNull(editable.ValidationWarning);
+        Assert.Empty(editable.Binding.ParameterBindings);
+        Assert.Null(editable.Binding.DetailBinding);
     }
 
     [Fact]

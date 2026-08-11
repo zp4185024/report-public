@@ -63,6 +63,13 @@ public sealed class PocDataAssetStore : ITransient
             .Where(item => item.Code == code)
             .FirstAsync();
 
+    public async Task<IReadOnlyList<PocReport>> ListDatasetReferencesAsync(string datasetCode) =>
+        await _database.Queryable<PocReport>()
+            .Where(item => item.DatasetCode == datasetCode)
+            .OrderBy(item => item.Name)
+            .OrderBy(item => item.Code)
+            .ToListAsync();
+
     public async Task<int> SaveDataSourceAsync(PocDataSourceMutation mutation)
     {
         ArgumentNullException.ThrowIfNull(mutation);

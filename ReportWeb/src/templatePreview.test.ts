@@ -387,6 +387,27 @@ describe('createTemplatePreviewPlan', () => {
     });
   });
 
+  it('plans a detail field code containing underscores', () => {
+    const plan = createTemplatePreviewPlan(
+      workbook({ 5: { 0: { v: '{{detail.VISIT_ID}}' } } }),
+      detailBinding({
+        templateRow: 5,
+        fields: [{ code: 'VISIT_ID', column: 0 }] as never,
+      }),
+      executeResult({ rows: [{ VISIT_ID: 'visit-001' }] as never }),
+      {
+        fields: [{ code: 'VISIT_ID', displayName: '就诊标识', dataType: 'string' }],
+      },
+    );
+
+    expect(plan.detail).toEqual({
+      sheetId: 'sheet-1',
+      templateRow: 5,
+      insertCount: 0,
+      rows: [{ row: 5, values: [{ column: 0, value: 'visit-001' }] }],
+    });
+  });
+
   it('allows a detail token cell whose formula value is null', () => {
     const plan = createTemplatePreviewPlan(
       workbook({
