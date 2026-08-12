@@ -17,6 +17,7 @@ import type {
   ReportSummaryDocument,
   SaveReportConfigurationRequest,
   SaveTemplateRequest,
+  ShareProtectionUnlockResult,
   TemplateDocument,
   TemplateXlsxImportResult,
 } from './types';
@@ -78,6 +79,13 @@ export function createReportApi(reportCode: string) {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
+    }),
+
+  unlockShareProtection: (password: string) =>
+    requestJson<ShareProtectionUnlockResult>(`${basePath}/share-protection/unlock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
     }),
 
   template: () => requestJson<TemplateDocument>(`${basePath}/template`),

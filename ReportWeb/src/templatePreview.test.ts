@@ -1,6 +1,7 @@
 import { LocaleType, type IWorkbookData } from '@univerjs/presets';
 import { describe, expect, it } from 'vitest';
 import {
+  createDetailValueBatches,
   createTemplatePreviewPlan,
   TemplatePreviewError,
 } from './templatePreview';
@@ -112,6 +113,61 @@ function expectPreviewError(
 
   throw new Error('预期创建模板预览计划时抛出 TemplatePreviewError');
 }
+
+describe('createDetailValueBatches', () => {
+  it('combines a 12,127-row contiguous detail result into one Univer write', () => {
+    const rows = Array.from({ length: 12_127 }, (_, rowIndex) => ({
+      row: 4 + rowIndex,
+      values: Array.from({ length: 14 }, (_, column) => ({
+        column,
+        value: `${rowIndex}:${column}`,
+      })),
+    }));
+
+    const batches = createDetailValueBatches(rows);
+
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toMatchObject({ row: 4, column: 0 });
+    expect(batches[0].values).toHaveLength(12_127);
+    expect(batches[0].values[0]).toHaveLength(14);
+    expect(batches[0].values[0][0]).toBe('0:0');
+    expect(batches[0].values[12_126][13]).toBe('12126:13');
+  });
+
+  it('splits non-contiguous columns so formula gaps are not overwritten', () => {
+    const batches = createDetailValueBatches([
+      {
+        row: 5,
+        values: [
+          { column: 0, value: 'A' },
+          { column: 1, value: 1 },
+          { column: 3, value: null },
+        ],
+      },
+      {
+        row: 6,
+        values: [
+          { column: 0, value: 'B' },
+          { column: 1, value: 2 },
+          { column: 3, value: true },
+        ],
+      },
+    ]);
+
+    expect(batches).toEqual([
+      {
+        row: 5,
+        column: 0,
+        values: [['A', 1], ['B', 2]],
+      },
+      {
+        row: 5,
+        column: 3,
+        values: [[null], [true]],
+      },
+    ]);
+  });
+});
 
 describe('createTemplatePreviewPlan', () => {
   it.each([

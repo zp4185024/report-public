@@ -9,7 +9,8 @@
             >
 				<transition-group :name="name">
 					<iframe
-						:src="`${v.meta.isLink}${v.meta.isLink.indexOf('?') > 0 ? '&' : '?'}token=${getToken()}`"
+						:src="buildIframeUrl(v.meta.isLink, getToken())"
+						:allow="getIframePermissions(v.meta.isLink)"
 						:key="v.path"
 						frameborder="0"
 						height="100%"
@@ -27,6 +28,7 @@
 import { computed, watch, ref, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { getToken } from '/@/utils/axios-utils';
+import { buildIframeUrl, getIframePermissions } from './iframeUrl';
 
 // 定义父组件传过来的值
 const props = defineProps({

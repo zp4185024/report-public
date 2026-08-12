@@ -15,7 +15,10 @@ import {
 import '@univerjs/preset-sheets-core/lib/index.css';
 import { createUniver, LocaleType, mergeLocales } from '@univerjs/presets';
 import type { IWorkbookData } from '@univerjs/presets';
-import type { TemplatePreviewPlan } from './templatePreview';
+import {
+  createDetailValueBatches,
+  type TemplatePreviewPlan,
+} from './templatePreview';
 import {
   normalizeUniverRuntimeNumber,
   normalizeWorkbookSnapshot,
@@ -26,7 +29,7 @@ import UniverWorker from './univer.worker?worker';
 
 /**
  * React 与 Univer facade 的隔离层。
- * 组件只暴露保存草稿、恢复设计、插入绑定和渲染预览四个业务动作，并在内部管理 Worker、工作簿和订阅生命周期。
+ * 组件只暴露页面需要的业务动作，并在内部管理 Worker、工作簿和订阅生命周期。
  */
 export type TemplateEditorMode = 'design' | 'preview';
 
@@ -40,6 +43,8 @@ export interface UniverTemplateHandle {
   insertBinding(token: string, kind: 'parameter' | 'detail'): void;
   /** 基于草稿副本执行预览计划，完成后把工作簿切换为只读。 */
   renderPreview(snapshot: IWorkbookData, plan: TemplatePreviewPlan): Promise<number>;
+  /** 只切换单元格值写入权限；格式、缩放、查看和导出能力保持可用。 */
+  setDataProtected(protectedMode: boolean): Promise<void>;
 }
 
 /** 宿主通过回调上报用户修改、渲染耗时和已经补充业务上下文的错误。 */
@@ -812,6 +817,88 @@ export const UniverTemplateHost = forwardRef<
       }
     },
 
+    async setDataProtected(protectedMode) {
+      try {
+        if (
+          activeTemplateOperationRef.current !== null ||
+          internalOperationDepthRef.current > 0
+        ) {
+          throw new Error('模板操作进行中，暂时不能切换数据保护状态。');
+        }
+
+        const runtime = runtimeRef.current;
+        let workbook: UniverWorkbook | null | undefined;
+        try {
+          workbook = runtime?.univerAPI.getActiveWorkbook();
+        } catch (error) {
+          throw operationError('Univer 获取工作簿失败', error);
+        }
+        if (workbook == null) {
+          throw new Error('Univer 当前没有可设置的工作簿。');
+        }
+
+        if (runtime === null) {
+          throw new Error('Univer 编辑器尚未初始化。');
+        }
+
+        const dataPoint = runtime.univerAPI.Enum.WorksheetPermissionPoint.SetCellValue;
+        const deleteProtectionPoint =
+          runtime.univerAPI.Enum.WorksheetPermissionPoint.DeleteProtection;
+        const sheets = workbook.getSheets();
+        const permissions = sheets.map((sheet) => sheet.getWorksheetPermission());
+        const previousSnapshots = permissions.map((permission) => permission.getSnapshot());
+        const createdProtections = permissions.map(() => false);
+        const previousEditable = currentWorkbookEditableRef.current;
+        try {
+          // 工作簿保持可编辑，权限点只拦截数据值写入，因此格式工具和查看能力不受影响。
+          workbook.setEditable(true);
+          currentWorkbookEditableRef.current = true;
+          for (let index = 0; index < permissions.length; index += 1) {
+            const permission = permissions[index];
+            if (!permission.isProtected()) {
+              if (!protectedMode) continue;
+              await permission.protect({
+                allowViewByOthers: true,
+                name: '共享数据保护',
+              });
+              createdProtections[index] = true;
+            }
+            // protect() 会同时影响工作表总编辑权限；先恢复全部功能，再只关闭数据写入和绕过密码的直接取消保护。
+            await permission.setEditable();
+            if (protectedMode) {
+              await permission.setPoint(dataPoint, false);
+              await permission.setPoint(deleteProtectionPoint, false);
+            }
+          }
+        } catch (error) {
+          for (let index = 0; index < permissions.length; index += 1) {
+            try {
+              if (createdProtections[index]) {
+                await permissions[index].unprotect();
+              } else if (permissions[index].isProtected()) {
+                await permissions[index].applyConfig({ points: previousSnapshots[index] });
+              }
+            } catch {
+              // 保留首个错误作为主要诊断，回滚由后续重新渲染兜底。
+            }
+          }
+          if (previousEditable !== null) {
+            try {
+              workbook.setEditable(previousEditable);
+              currentWorkbookEditableRef.current = previousEditable;
+            } catch {
+              // 保留权限设置的原始错误。
+            }
+          }
+          throw operationError('Univer 设置数据保护权限失败', error);
+        }
+      } catch (error) {
+        const contextual = operationError('Univer 切换数据保护状态失败', error);
+        safeNotifyError(contextual);
+        throw contextual;
+      }
+    },
+
     async renderPreview(snapshot, plan) {
       // 预览始终基于草稿克隆：先替换参数，再展开/复制明细模板行，最后覆盖绑定字段并切只读。
       const startedAt = performance.now();
@@ -942,26 +1029,28 @@ export const UniverTemplateHost = forwardRef<
             );
           }
 
-          // 先复制模板再写后台字段：数据单元格覆盖 token，公式单元格不在计划中，因此保持 autoFill 结果。
-          for (const row of detail.rows) {
-            for (const value of row.values) {
-              const range = requireRange(
-                worksheet,
-                detail.sheetId,
-                row.row,
-                value.column,
-                1,
-                1,
-                '明细写入目标',
+          // 先复制模板再批量写后台字段：连续字段共用一次命令，字段间隙中的公式仍保留 autoFill 结果。
+          for (const batch of createDetailValueBatches(detail.rows)) {
+            const range = requireRange(
+              worksheet,
+              detail.sheetId,
+              batch.row,
+              batch.column,
+              batch.values.length,
+              batch.values[0].length,
+              '明细批量写入目标',
+            );
+            const values = batch.values.map((row) => row.map((value) => (
+              value === null ? { v: null } : value
+            )));
+            try {
+              // Univer 运行时允许标量与显式清空对象混合，但 0.25.1 的声明只表达两种纯矩阵。
+              range.setValues(values as Parameters<UniverRange['setValues']>[0]);
+            } catch (error) {
+              throw operationError(
+                `Univer 批量写入明细失败（工作表 '${detail.sheetId}'，起始行 ${batch.row + 1}，起始列 ${batch.column + 1}，行数 ${batch.values.length}，列数 ${batch.values[0].length}）`,
+                error,
               );
-              try {
-                setRangeValue(range, value.value);
-              } catch (error) {
-                throw operationError(
-                  `Univer 写入明细失败（工作表 '${detail.sheetId}'，行 ${row.row + 1}，列 ${value.column + 1}）`,
-                  error,
-                );
-              }
             }
           }
         }

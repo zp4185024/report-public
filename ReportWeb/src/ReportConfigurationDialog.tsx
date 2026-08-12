@@ -12,13 +12,26 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import {
+  isLocalFilterParameter,
+  isLocalFilterSource,
+  localFilterSourceType,
+  toPersistedLocalFilterParameter,
+} from './localDataQuery';
+import { ValueOptionsEditor } from './ValueOptionsEditor';
+import { StatusToasts } from './StatusToasts';
 import type {
+  FieldPresentationDefinition,
   ParameterDefinition,
   ReportConfigurationDocument,
   SaveReportConfigurationRequest,
+  ValueOption,
 } from './types';
 
 type ConfigurationTab = 'basic' | 'parameters' | 'columns';
+type ValueEditorTarget =
+  | { kind: 'parameter'; index: number }
+  | { kind: 'field'; code: string };
 
 interface ReportConfigurationDialogProps {
   open: boolean;
@@ -30,16 +43,54 @@ interface ReportConfigurationDialogProps {
 
 function toDraft(document: ReportConfigurationDocument): SaveReportConfigurationRequest {
   const dataset = document.datasets.find((item) => item.code === document.datasetCode);
+  const parameters = dataset === undefined
+    ? document.parameters.map((parameter) => ({ ...parameter }))
+    : alignDatasetVariables(document.parameters, dataset.variables);
+  const datasetVariableCodes = new Set(
+    dataset?.variables.map((variable) => variable.code.toLowerCase()) ?? [],
+  );
   return {
     name: document.name,
     sheetName: document.sheetName,
     preview: { ...document.preview },
     export: { ...document.export },
     datasetCode: document.datasetCode,
-    parameters: dataset === undefined
-      ? document.parameters.map((parameter) => ({ ...parameter }))
-      : alignDatasetVariables(document.parameters, dataset.variables),
+    parameters: parameters.map((parameter) => (
+      dataset !== undefined &&
+      !datasetVariableCodes.has(parameter.code.toLowerCase()) &&
+      isLocalFilterParameter(parameter, dataset.fields)
+        ? { ...parameter, sourceType: localFilterSourceType }
+        : parameter
+    )),
     revision: document.revision,
+    shareProtection: {
+      enabled: document.shareProtection?.enabled ?? false,
+      newPassword: null,
+    },
+    fieldPresentations: (document.fieldPresentations ?? []).map((presentation) => ({
+      ...presentation,
+      valueMappings: presentation.valueMappings.map((mapping) => ({ ...mapping })),
+    })),
+  };
+}
+
+function toSaveRequest(draft: SaveReportConfigurationRequest): SaveReportConfigurationRequest {
+  return {
+    ...draft,
+    parameters: draft.parameters.map((parameter) => toPersistedLocalFilterParameter({
+      ...parameter,
+      options: (parameter.options ?? []).map((option) => ({
+        value: option.value.trim(),
+        label: option.label.trim(),
+      })),
+    })),
+    fieldPresentations: (draft.fieldPresentations ?? []).map((presentation) => ({
+      ...presentation,
+      valueMappings: presentation.valueMappings.map((mapping) => ({
+        value: mapping.value.trim(),
+        label: mapping.label.trim(),
+      })),
+    })),
   };
 }
 
@@ -58,7 +109,41 @@ function createParameter(index: number): ParameterDefinition {
     required: false,
     allowUrlPrefill: false,
     urlKey: null,
+    options: [],
   };
+}
+
+function isChoiceControl(controlType: string): boolean {
+  const normalized = controlType.toLowerCase();
+  return normalized === 'select' || normalized === 'multiselect';
+}
+
+function invalidValueOptions(options: readonly ValueOption[]): boolean {
+  const values = new Set<string>();
+  return options.length === 0 || options.some((option) => {
+    const value = option.value.trim().toLowerCase();
+    if (!value || !option.label.trim() || values.has(value)) return true;
+    values.add(value);
+    return false;
+  });
+}
+
+function controlTypeForDataType(dataType: string): string {
+  switch (dataType.toLowerCase()) {
+    case 'int':
+    case 'long':
+    case 'decimal':
+    case 'number':
+      return 'number';
+    case 'date':
+    case 'datetime':
+      return 'date';
+    case 'bool':
+    case 'boolean':
+      return 'checkbox';
+    default:
+      return 'text';
+  }
 }
 
 function alignDatasetVariables(
@@ -104,15 +189,15 @@ export function ReportConfigurationDialog({
   const [tab, setTab] = useState<ConfigurationTab>('basic');
   const [draft, setDraft] = useState<SaveReportConfigurationRequest | null>(null);
   const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [valueEditorTarget, setValueEditorTarget] = useState<ValueEditorTarget | null>(null);
 
   useEffect(() => {
     if (!open) {
       setDraft(null);
       setTab('basic');
-      setStatus(null);
       setError(null);
+      setValueEditorTarget(null);
       return;
     }
     if (document !== null && draft === null) setDraft(toDraft(document));
@@ -173,12 +258,42 @@ export function ReportConfigurationDialog({
     if (!draft.name.trim() || !draft.sheetName.trim()) return '报表名称和工作表名称不能为空。';
     if (selectedDataset === null) return '请选择一个有效的数据集。';
     if (!selectedDataset.enabled) return '当前数据集已停用，不能用于报表。';
+    if (draft.parameters.some((parameter) => !parameter.code.trim())) return '查询参数编码不能为空。';
     if (parameterCodes.size !== draft.parameters.length) return '查询参数编码不能重复。';
+    if (draft.parameters.some((parameter) => (
+      isLocalFilterSource(parameter.sourceType) &&
+      !isLocalFilterParameter(parameter, selectedDataset.fields)
+    ))) {
+      return '本地筛选必须选择一个返回字段。';
+    }
+    const invalidParameterOptions = draft.parameters.find((parameter) => (
+      isChoiceControl(parameter.controlType) && invalidValueOptions(parameter.options ?? [])
+    ));
+    if (invalidParameterOptions !== undefined) {
+      return `参数 '${invalidParameterOptions.displayName}' 的可选项不能为空、重复或缺少显示文字。`;
+    }
+    const invalidPresentation = (draft.fieldPresentations ?? []).find(
+      (presentation) => invalidValueOptions(presentation.valueMappings),
+    );
+    if (invalidPresentation !== undefined) {
+      return `返回字段 '${invalidPresentation.code}' 的显示映射不能为空、重复或缺少显示文字。`;
+    }
     if (missingParameters.length > 0) {
       return `尚未配置数据集变量：${missingParameters.map((item) => item.code).join('、')}。`;
     }
     if (mismatchedParameters.length > 0) {
       return `变量类型与数据集不一致：${mismatchedParameters.map((item) => item.code).join('、')}。`;
+    }
+    const password = draft.shareProtection.newPassword;
+    if (password !== null && (password.trim().length === 0 || password.length < 8 || password.length > 128)) {
+      return '解除保护密码长度必须为 8 到 128 个字符。';
+    }
+    if (
+      draft.shareProtection.enabled &&
+      !(document?.shareProtection?.passwordConfigured ?? false) &&
+      password === null
+    ) {
+      return '开启共享数据保护前必须设置解除保护密码。';
     }
     return null;
   };
@@ -191,11 +306,9 @@ export function ReportConfigurationDialog({
     }
     setSaving(true);
     setError(null);
-    setStatus(null);
     try {
-      const saved = await saveConfiguration(draft);
+      const saved = await saveConfiguration(toSaveRequest(draft));
       setDraft(toDraft(saved));
-      setStatus(`报表配置已保存，当前修订号 ${saved.revision}`);
       onSaved(saved);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : '报表配置保存失败。');
@@ -257,6 +370,13 @@ export function ReportConfigurationDialog({
                         parameters: nextDataset === undefined
                           ? draft.parameters
                           : alignDatasetVariables(draft.parameters, nextDataset.variables),
+                        fieldPresentations: nextDataset === undefined
+                          ? draft.fieldPresentations
+                          : (draft.fieldPresentations ?? []).filter((presentation) => (
+                              nextDataset.fields.some((field) => (
+                                field.code.toLowerCase() === presentation.code.toLowerCase()
+                              ))
+                            )),
                       });
                     }}>
                       {document?.datasets.map((dataset) => (
@@ -289,6 +409,48 @@ export function ReportConfigurationDialog({
                   <label className="toggle-field"><span>大文件导出</span><input type="checkbox" checked={draft.export.largeExportEnabled} onChange={(event) => setDraft({ ...draft, export: { ...draft.export, largeExportEnabled: event.target.checked } })} /></label>
                 </div>
               </fieldset>
+
+              <fieldset>
+                <legend>共享数据保护</legend>
+                <div className="configuration-form-grid compact-grid">
+                  <label className="toggle-field">
+                    <span>默认保护数据</span>
+                    <input
+                      type="checkbox"
+                      checked={draft.shareProtection.enabled}
+                      onChange={(event) => setDraft({
+                        ...draft,
+                        shareProtection: {
+                          ...draft.shareProtection,
+                          enabled: event.target.checked,
+                        },
+                      })}
+                    />
+                  </label>
+                  <label className="protection-password-field">
+                    <span>{document?.shareProtection?.passwordConfigured
+                      ? '修改解除保护密码'
+                      : '解除保护密码'}</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={128}
+                      placeholder={document?.shareProtection?.passwordConfigured
+                        ? '留空表示不修改'
+                        : '至少 8 个字符'}
+                      value={draft.shareProtection.newPassword ?? ''}
+                      onChange={(event) => setDraft({
+                        ...draft,
+                        shareProtection: {
+                          ...draft.shareProtection,
+                          newPassword: event.target.value === '' ? null : event.target.value,
+                        },
+                      })}
+                    />
+                  </label>
+                </div>
+              </fieldset>
             </div>
           ) : tab === 'parameters' ? (
             <div className="configuration-table-section">
@@ -299,38 +461,194 @@ export function ReportConfigurationDialog({
                 <table className="configuration-table parameter-table">
                   <thead><tr><th>顺序</th><th>参数编码</th><th>显示名称</th><th>数据类型</th><th>来源</th><th>控件</th><th>默认表达式 / 固定值</th><th>选项</th><th>操作</th></tr></thead>
                   <tbody>
-                    {draft.parameters.map((parameter, index) => (
+                    {draft.parameters.map((parameter, index) => {
+                      const localFilter = isLocalFilterSource(parameter.sourceType);
+                      const usedByAnotherParameter = new Set(
+                        draft.parameters
+                          .filter((_, parameterIndex) => parameterIndex !== index)
+                          .map((item) => item.code.toLowerCase()),
+                      );
+                      return (
                       <tr key={`${index}-${parameter.code}`}>
                         <td><div className="row-order"><button type="button" title="上移" aria-label="上移参数" disabled={index === 0} onClick={() => setDraft({ ...draft, parameters: moveItem(draft.parameters, index, -1) })}><ArrowUp size={14} /></button><button type="button" title="下移" aria-label="下移参数" disabled={index === draft.parameters.length - 1} onClick={() => setDraft({ ...draft, parameters: moveItem(draft.parameters, index, 1) })}><ArrowDown size={14} /></button></div></td>
-                        <td><input className="code-input" disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.code} onChange={(event) => updateParameter(index, { code: event.target.value })} /></td>
+                        <td>{localFilter ? (
+                          <select
+                            className="code-input"
+                            aria-label={`本地筛选字段 ${index + 1}`}
+                            value={parameter.code}
+                            onChange={(event) => {
+                              const field = selectedDataset?.fields.find(
+                                (item) => item.code === event.target.value,
+                              );
+                              if (field === undefined) {
+                                updateParameter(index, {
+                                  code: '',
+                                  displayName: '',
+                                  dataType: 'string',
+                                  controlType: 'text',
+                                  urlKey: null,
+                                });
+                                return;
+                              }
+                              updateParameter(index, {
+                                code: field.code,
+                                displayName: field.displayName,
+                                dataType: field.dataType,
+                                controlType: controlTypeForDataType(field.dataType),
+                                options: [],
+                                defaultExpression: null,
+                                fixedValue: null,
+                                urlKey: parameter.allowUrlPrefill ? field.code : null,
+                              });
+                            }}
+                          >
+                            <option value="">请选择返回字段</option>
+                            {selectedDataset?.fields.map((field) => (
+                              <option
+                                key={field.code}
+                                value={field.code}
+                                disabled={
+                                  usedByAnotherParameter.has(field.code.toLowerCase()) ||
+                                  datasetVariableCodes.has(field.code.toLowerCase())
+                                }
+                              >
+                                {field.displayName}（{field.code}）
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input className="code-input" disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.code} onChange={(event) => updateParameter(index, { code: event.target.value })} />
+                        )}</td>
                         <td><input value={parameter.displayName} onChange={(event) => updateParameter(index, { displayName: event.target.value })} /></td>
                         <td><select disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.dataType} onChange={(event) => updateParameter(index, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td>
-                        <td><select value={parameter.sourceType} onChange={(event) => updateParameter(index, { sourceType: event.target.value, readOnly: event.target.value !== 'Form' })}><option value="Form">查询表单</option><option value="System">系统默认</option><option value="Fixed">固定值</option></select></td>
-                        <td><select value={parameter.controlType} onChange={(event) => updateParameter(index, { controlType: event.target.value })}><option value="text">文本框</option><option value="number">数字框</option><option value="date">日期框</option><option value="checkbox">是/否</option><option value="hidden">隐藏</option></select></td>
-                        <td><input value={(parameter.sourceType === 'Fixed' ? parameter.fixedValue : parameter.defaultExpression) ?? ''} placeholder={parameter.sourceType === 'Fixed' ? '固定值' : '如 startOfMonth'} onChange={(event) => parameter.sourceType === 'Fixed' ? updateParameter(index, { fixedValue: event.target.value || null }) : updateParameter(index, { defaultExpression: event.target.value || null })} /></td>
+                        <td><select aria-label={`参数来源 ${index + 1}`} value={parameter.sourceType} onChange={(event) => {
+                          const sourceType = event.target.value;
+                          const currentField = selectedDataset?.fields.find(
+                            (field) => field.code.toLowerCase() === parameter.code.toLowerCase(),
+                          );
+                          if (isLocalFilterSource(sourceType)) {
+                            updateParameter(index, {
+                              sourceType,
+                              readOnly: false,
+                              code: currentField?.code ?? '',
+                              displayName: currentField === undefined
+                                ? ''
+                                : currentField.displayName,
+                              dataType: currentField?.dataType ?? 'string',
+                              controlType: currentField === undefined
+                                ? 'text'
+                                : controlTypeForDataType(currentField.dataType),
+                              options: [],
+                              defaultExpression: null,
+                              fixedValue: null,
+                              urlKey: currentField !== undefined && parameter.allowUrlPrefill
+                                ? currentField.code
+                                : null,
+                            });
+                            return;
+                          }
+                          const fallback = createParameter(index);
+                          updateParameter(index, {
+                            sourceType,
+                            readOnly: sourceType !== 'Form',
+                            code: parameter.code || fallback.code,
+                            displayName: parameter.displayName || fallback.displayName,
+                            controlType: sourceType !== 'Form' && isChoiceControl(parameter.controlType)
+                              ? 'text'
+                              : parameter.controlType,
+                            options: sourceType !== 'Form' && isChoiceControl(parameter.controlType)
+                              ? []
+                              : parameter.options,
+                          });
+                        }}><option value="Form">查询表单</option><option value={localFilterSourceType}>本地筛选</option><option value="System">系统默认</option><option value="Fixed">固定值</option></select></td>
+                        <td><select value={parameter.controlType} onChange={(event) => {
+                          const controlType = event.target.value;
+                          updateParameter(index, {
+                            controlType,
+                            dataType: controlType.toLowerCase() === 'multiselect' ? 'string' : parameter.dataType,
+                            options: isChoiceControl(controlType) ? parameter.options ?? [] : [],
+                          });
+                        }}><option value="text">文本框</option><option value="number">数字框</option><option value="date">日期框</option><option value="checkbox">是/否</option><option value="select">单选</option><option value="multiSelect">多选</option><option value="hidden">隐藏</option></select></td>
+                        <td>{isChoiceControl(parameter.controlType) ? (
+                          <button type="button" className="button option-maintenance-button" onClick={() => setValueEditorTarget({ kind: 'parameter', index })}>
+                            维护选项（{parameter.options?.length ?? 0}）
+                          </button>
+                        ) : (
+                          <input disabled={localFilter} value={(parameter.sourceType === 'Fixed' ? parameter.fixedValue : parameter.defaultExpression) ?? ''} placeholder={localFilter ? '无需配置' : parameter.sourceType === 'Fixed' ? '固定值' : '如 startOfMonth'} onChange={(event) => parameter.sourceType === 'Fixed' ? updateParameter(index, { fixedValue: event.target.value || null }) : updateParameter(index, { defaultExpression: event.target.value || null })} />
+                        )}</td>
                         <td><div className="flag-list"><label><input type="checkbox" disabled={selectedDataset?.variables.some((variable) => variable.required && variable.code.toLowerCase() === parameter.code.toLowerCase())} checked={parameter.required} onChange={(event) => updateParameter(index, { required: event.target.checked })} />必填</label><label><input type="checkbox" checked={parameter.visible} onChange={(event) => updateParameter(index, { visible: event.target.checked })} />显示</label><label><input type="checkbox" checked={parameter.allowUrlPrefill} onChange={(event) => updateParameter(index, { allowUrlPrefill: event.target.checked, urlKey: event.target.checked ? parameter.urlKey || parameter.code : null })} />URL 预填</label></div></td>
                         <td>{datasetVariableCodes.has(parameter.code.toLowerCase()) ? <span className="dataset-variable-badge">数据集</span> : <button type="button" className="table-icon danger" title="删除参数" aria-label={`删除参数 ${parameter.displayName}`} onClick={() => setDraft({ ...draft, parameters: draft.parameters.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 size={15} /></button>}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
           ) : (
-            <div className="configuration-table-section read-only-columns">
+            <div className="configuration-table-section">
               <div className="configuration-table-scroll">
                 <table className="configuration-table column-table">
-                  <thead><tr><th>顺序</th><th>字段编码</th><th>业务名称</th><th>数据类型</th></tr></thead>
-                  <tbody>{selectedDataset?.fields.map((field, index) => <tr key={field.code}><td>{index + 1}</td><td>{field.code}</td><td>{field.displayName}</td><td>{field.dataType}</td></tr>)}</tbody>
+                  <thead><tr><th>顺序</th><th>字段编码</th><th>业务名称</th><th>数据类型</th><th>显示映射</th></tr></thead>
+                  <tbody>{selectedDataset?.fields.map((field, index) => {
+                    const mappingCount = (draft.fieldPresentations ?? []).find(
+                      (presentation) => presentation.code.toLowerCase() === field.code.toLowerCase(),
+                    )?.valueMappings.length ?? 0;
+                    return <tr key={field.code}><td>{index + 1}</td><td>{field.code}</td><td>{field.displayName}</td><td>{field.dataType}</td><td><button type="button" className="button option-maintenance-button" onClick={() => setValueEditorTarget({ kind: 'field', code: field.code })}>维护映射（{mappingCount}）</button></td></tr>;
+                  })}</tbody>
                 </table>
               </div>
             </div>
           )}
         </div>
 
-        {error !== null && <div className="configuration-message error">{error}</div>}
-        {status !== null && <div className="configuration-message success">{status}</div>}
+        <StatusToasts error={error} onErrorClose={() => setError(null)} />
         <footer className="configuration-footer"><div><button type="button" className="button" disabled={saving} onClick={onClose}>取消</button><button type="button" className="button button-primary" disabled={saving || draft === null} onClick={() => void save()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存配置</button></div></footer>
+        {draft !== null && valueEditorTarget !== null && (() => {
+          const parameter = valueEditorTarget.kind === 'parameter'
+            ? draft.parameters[valueEditorTarget.index]
+            : null;
+          const presentation = valueEditorTarget.kind === 'field'
+            ? (draft.fieldPresentations ?? []).find((item) => (
+                item.code.toLowerCase() === valueEditorTarget.code.toLowerCase()
+              ))
+            : null;
+          const editorOptions = parameter?.options ?? presentation?.valueMappings ?? [];
+          const title = valueEditorTarget.kind === 'parameter'
+            ? `查询参数选项：${parameter?.displayName ?? ''}`
+            : `字段显示映射：${valueEditorTarget.code}`;
+          return <ValueOptionsEditor
+            title={title}
+            options={editorOptions}
+            onClose={() => setValueEditorTarget(null)}
+            onChange={(options) => {
+              if (valueEditorTarget.kind === 'parameter') {
+                updateParameter(valueEditorTarget.index, { options });
+                return;
+              }
+              setDraft((current) => {
+                if (current === null) return current;
+                const presentations = [...(current.fieldPresentations ?? [])];
+                const targetIndex = presentations.findIndex((item) => (
+                  item.code.toLowerCase() === valueEditorTarget.code.toLowerCase()
+                ));
+                if (options.length === 0) {
+                  return {
+                    ...current,
+                    fieldPresentations: presentations.filter((_, index) => index !== targetIndex),
+                  };
+                }
+                const nextPresentation: FieldPresentationDefinition = {
+                  code: valueEditorTarget.code,
+                  valueMappings: options,
+                };
+                if (targetIndex < 0) presentations.push(nextPresentation);
+                else presentations[targetIndex] = nextPresentation;
+                return { ...current, fieldPresentations: presentations };
+              });
+            }}
+          />;
+        })()}
       </section>
     </div>
   );

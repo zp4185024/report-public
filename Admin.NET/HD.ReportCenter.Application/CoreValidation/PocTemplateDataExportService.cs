@@ -87,8 +87,9 @@ public sealed class PocTemplateDataExportService : ITransient
             ? null
             : await _datasetExecutor.PrepareAsync(reportCode, request.Query, cancellationToken);
         var definition = runtimePlan?.Configuration.Definition ?? PocReportCatalog.GetDefinition();
-        var parameters = runtimePlan?.Parameters.DisplayValues
+        var rawParameters = runtimePlan?.Parameters.DisplayValues
             ?? PocReportCatalog.Execute(request.Query with { Page = 1 }).Parameters;
+        var parameters = PocLocalDataProjection.ApplyParameterLabels(definition, rawParameters);
         var templatePlan = new PocTemplateDataExportPlan(
             normalizedReportCode,
             document.Revision,

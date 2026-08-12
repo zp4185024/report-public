@@ -158,6 +158,21 @@ public sealed class PocReportApi : IDynamicApiController
             () => RequireConfigurationService().SaveAsync(reportCode, request));
     }
 
+    /// <summary>校验共享页的解除保护密码；响应不暴露密码摘要或具体失败原因。</summary>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/poc/{reportCode}/share-protection/unlock")]
+    public async Task<PocShareProtectionUnlockResult> UnlockShareProtection(
+        [FromRoute] string reportCode,
+        [FromBody] PocShareProtectionUnlockRequest request)
+    {
+        reportCode = EnsureReportCode(reportCode);
+        var valid = request is not null &&
+            await RequireConfigurationService().VerifyShareProtectionPasswordAsync(
+                reportCode,
+                request.Password);
+        return new PocShareProtectionUnlockResult(valid);
+    }
+
     /// <summary>读取全部报表及其配置、模板修订状态。</summary>
     [SuppressMonitor]
     [HttpGet("/api/report-center/poc/reports")]
@@ -252,11 +267,16 @@ public sealed class PocReportApi : IDynamicApiController
                     reportCode,
                     request,
                     cancellationToken));
-            var pages = prepared.RuntimePlan is null
+            var rawPages = prepared.RuntimePlan is null
                 ? PocReportCatalog.ReadExportPages(request.Query, cancellationToken)
                 : PocSqlDatasetExecutor.ReadExportPagesAsync(
                     prepared.RuntimePlan,
                     cancellationToken);
+            var pages = PocLocalDataProjection.ProjectPages(
+                rawPages,
+                prepared.TemplatePlan.Definition ?? PocReportCatalog.GetDefinition(),
+                request.Query,
+                cancellationToken);
             await HandleDataExportOperation(async () =>
             {
                 await _templateDataExporter.WriteNormalAsync(
@@ -298,8 +318,12 @@ public sealed class PocReportApi : IDynamicApiController
             ? LargeExportJobs.Start(prepared.TemplatePlan)
             : LargeExportJobs.Start(
                 prepared.TemplatePlan,
-                token => PocSqlDatasetExecutor.ReadExportPagesAsync(
-                    prepared.RuntimePlan,
+                token => PocLocalDataProjection.ProjectPages(
+                    PocSqlDatasetExecutor.ReadExportPagesAsync(
+                        prepared.RuntimePlan,
+                        token),
+                    prepared.TemplatePlan.Definition ?? PocReportCatalog.GetDefinition(),
+                    request.Query,
                     token));
     }
 

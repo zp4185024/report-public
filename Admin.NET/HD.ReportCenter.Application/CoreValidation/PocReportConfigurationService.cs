@@ -61,7 +61,9 @@ public sealed record PocReportConfigurationDocument(
     IReadOnlyList<PocDatasetOption> Datasets,
     IReadOnlyList<PocParameterDefinition> Parameters,
     IReadOnlyList<PocDatasetFieldDefinition> Fields,
-    int Revision);
+    int Revision,
+    IReadOnlyList<PocFieldPresentationDefinition>? FieldPresentations = null,
+    PocShareProtectionSettings? ShareProtection = null);
 
 public sealed record PocReportSummaryDocument(
     string ReportCode,
@@ -89,7 +91,17 @@ public sealed record PocSaveReportConfigurationRequest(
     PocExportSettings Export,
     string DatasetCode,
     IReadOnlyList<PocParameterDefinition> Parameters,
-    int Revision);
+    int Revision,
+    IReadOnlyList<PocFieldPresentationDefinition>? FieldPresentations = null,
+    PocSaveShareProtectionRequest? ShareProtection = null);
+
+public sealed record PocSaveShareProtectionRequest(
+    bool Enabled,
+    string? NewPassword);
+
+public sealed record PocShareProtectionUnlockRequest(string Password);
+
+public sealed record PocShareProtectionUnlockResult(bool Valid);
 
 public sealed record PocDataSourceTestResult(
     bool Success,
@@ -126,7 +138,7 @@ public sealed class PocReportConfigurationService : ITransient
         ["Form", "System", "Fixed"],
         StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> ParameterControlTypes = new(
-        ["text", "number", "date", "checkbox", "hidden"],
+        ["text", "number", "date", "checkbox", "select", "multiSelect", "hidden"],
         StringComparer.OrdinalIgnoreCase);
     private readonly PocReportConfigurationStore _store;
     private readonly PocDataAssetStore _dataAssets;
@@ -274,6 +286,22 @@ public sealed class PocReportConfigurationService : ITransient
         return ToDefinition(document);
     }
 
+    public async Task<bool> VerifyShareProtectionPasswordAsync(
+        string reportCode,
+        string? password)
+    {
+        var normalizedCode = NormalizeReportCode(reportCode);
+        var stored = await _store.GetAsync(normalizedCode);
+        if (stored is null || string.IsNullOrEmpty(password))
+        {
+            return false;
+        }
+
+        var protection = PocShareProtectionPassword.Read(stored.Report.PreviewSettingsJson);
+        return protection is { Enabled: true } &&
+            PocShareProtectionPassword.Verify(protection, password);
+    }
+
     public async Task<PocRuntimeReportConfiguration> GetRuntimeAsync(
         string reportCode,
         DateTimeOffset? now = null)
@@ -323,6 +351,13 @@ public sealed class PocReportConfigurationService : ITransient
         var normalizedCode = NormalizeReportCode(reportCode);
         ValidateRequest(request);
 
+        var existing = await _store.GetAsync(normalizedCode);
+        var storedProtection = PocShareProtectionPassword.Read(
+            existing?.Report.PreviewSettingsJson);
+        var nextProtection = ResolveShareProtection(
+            request.ShareProtection,
+            storedProtection);
+
         var dataset = await _dataAssets.GetDatasetAsync(request.DatasetCode.Trim())
             ?? throw new PocDatasetConfigurationException(
                 "DATASET_NOT_FOUND",
@@ -339,6 +374,7 @@ public sealed class PocReportConfigurationService : ITransient
         }
         var datasetSchema = PocDataAssetService.ReadSchema(dataset);
         ValidateDatasetVariableBindings(datasetSchema.Variables, request.Parameters);
+        ValidateFieldPresentations(request.FieldPresentations ?? [], datasetSchema.Fields);
         _ = PocReadOnlySqlValidator.Validate(
             dataset.QueryText,
             datasetSchema.Variables.Select(item => item.Code),
@@ -355,6 +391,9 @@ public sealed class PocReportConfigurationService : ITransient
                 UrlKey = NullIfWhiteSpace(parameter.UrlKey),
                 DefaultExpression = NullIfWhiteSpace(parameter.DefaultExpression),
                 FixedValue = NullIfWhiteSpace(parameter.FixedValue),
+                OptionsJson = parameter.Options is null
+                    ? null
+                    : JsonConvert.SerializeObject(parameter.Options, Formatting.None),
                 IsVisible = parameter.Visible,
                 IsReadOnly = parameter.ReadOnly,
                 IsRequired = parameter.Required,
@@ -366,11 +405,12 @@ public sealed class PocReportConfigurationService : ITransient
             normalizedCode,
             request.Name.Trim(),
             request.SheetName.Trim(),
-            JsonConvert.SerializeObject(request.Preview, Formatting.None),
+            PocShareProtectionPassword.Write(request.Preview, nextProtection),
             JsonConvert.SerializeObject(request.Export, Formatting.None),
             dataset.Code,
             parameterEntities,
-            request.Revision));
+            request.Revision,
+            JsonConvert.SerializeObject(request.FieldPresentations ?? [], Formatting.None)));
 
         return await GetDocumentAsync(reportCode);
     }
@@ -403,7 +443,9 @@ public sealed class PocReportConfigurationService : ITransient
             options,
             definition.Parameters,
             selected.Fields,
-            0);
+            0,
+            definition.FieldPresentations ?? [],
+            definition.ShareProtection ?? new PocShareProtectionSettings(false, false));
     }
 
     private static PocReportConfigurationDocument CreateDocument(
@@ -412,6 +454,7 @@ public sealed class PocReportConfigurationService : ITransient
         DateTimeOffset? now)
     {
         var preview = Deserialize<PocPreviewSettings>(stored.Report.PreviewSettingsJson);
+        var storedProtection = PocShareProtectionPassword.Read(stored.Report.PreviewSettingsJson);
         var export = Deserialize<PocExportSettings>(stored.Report.ExportSettingsJson);
         var datasetSchema = PocDataAssetService.ReadSchema(stored.Dataset);
         var parameters = stored.Parameters.Select(parameter =>
@@ -433,7 +476,8 @@ public sealed class PocReportConfigurationService : ITransient
                 parameter.IsReadOnly,
                 parameter.IsRequired,
                 parameter.AllowUrlPrefill,
-                parameter.UrlKey);
+                parameter.UrlKey,
+                DeserializeList<PocValueOption>(parameter.OptionsJson));
         }).ToArray();
         return new PocReportConfigurationDocument(
             stored.Report.Code,
@@ -445,7 +489,11 @@ public sealed class PocReportConfigurationService : ITransient
             datasets.Select(ToDatasetOption).ToArray(),
             parameters,
             datasetSchema.Fields,
-            stored.Report.Revision);
+            stored.Report.Revision,
+            DeserializeList<PocFieldPresentationDefinition>(stored.Report.FieldPresentationsJson),
+            new PocShareProtectionSettings(
+                storedProtection?.Enabled ?? false,
+                storedProtection is not null));
     }
 
     private static PocReportDefinition ToDefinition(PocReportConfigurationDocument document) =>
@@ -456,7 +504,31 @@ public sealed class PocReportConfigurationService : ITransient
             document.Preview,
             document.Export,
             document.Parameters,
-            document.Fields);
+            document.Fields,
+            document.FieldPresentations ?? [],
+            document.ShareProtection ?? new PocShareProtectionSettings(false, false));
+
+    private static PocStoredShareProtection? ResolveShareProtection(
+        PocSaveShareProtectionRequest? request,
+        PocStoredShareProtection? existing)
+    {
+        if (request is null)
+        {
+            return existing;
+        }
+
+        var next = string.IsNullOrEmpty(request.NewPassword)
+            ? existing
+            : PocShareProtectionPassword.Create(request.NewPassword, request.Enabled);
+        if (request.Enabled && next is null)
+        {
+            throw new PocDatasetConfigurationException(
+                "SHARE_PROTECTION_PASSWORD_REQUIRED",
+                "开启共享数据保护前必须设置解除保护密码。");
+        }
+
+        return next is null ? null : next with { Enabled = request.Enabled };
+    }
 
     private static PocDatasetOption ToDatasetOption(PocReportDataset dataset)
     {
@@ -519,6 +591,14 @@ public sealed class PocReportConfigurationService : ITransient
         }
         ValidateCode(request.DatasetCode, "DATASET_DEFINITION_INVALID");
 
+        if (request.ShareProtection?.NewPassword is string password &&
+            (string.IsNullOrWhiteSpace(password) || password.Length is < 8 or > 128))
+        {
+            throw new PocDatasetConfigurationException(
+                "SHARE_PROTECTION_PASSWORD_INVALID",
+                "解除保护密码长度必须为 8 到 128 个字符。");
+        }
+
         var parameterCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var parameter in request.Parameters)
         {
@@ -545,9 +625,76 @@ public sealed class PocReportConfigurationService : ITransient
             {
                 throw new PocDatasetConfigurationException("PARAM_DEFINITION_INVALID", $"参数 '{parameter.Code}' 的定义无效。");
             }
+            var choiceControl =
+                parameter.ControlType.Equals("select", StringComparison.OrdinalIgnoreCase) ||
+                parameter.ControlType.Equals("multiSelect", StringComparison.OrdinalIgnoreCase);
+            var parameterOptions = parameter.Options ?? [];
+            if ((choiceControl && parameterOptions.Count == 0) ||
+                (!choiceControl && parameterOptions.Count > 0) ||
+                (parameter.ControlType.Equals("multiSelect", StringComparison.OrdinalIgnoreCase) &&
+                 !parameter.DataType.Equals("string", StringComparison.OrdinalIgnoreCase) &&
+                 !parameter.DataType.Equals("text", StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new PocDatasetConfigurationException(
+                    "PARAM_DEFINITION_INVALID",
+                    $"参数 '{parameter.Code}' 的选项配置无效。");
+            }
+            ValidateValueOptions(parameterOptions, "PARAM_DEFINITION_INVALID", parameter.Code);
             _ = PocDefaultExpressionEvaluator.Evaluate(parameter.DefaultExpression, parameter.DataType);
         }
 
+    }
+
+    private static void ValidateFieldPresentations(
+        IReadOnlyList<PocFieldPresentationDefinition> presentations,
+        IReadOnlyList<PocDatasetFieldDefinition> fields)
+    {
+        if (presentations.Count > fields.Count)
+        {
+            throw new PocDatasetConfigurationException(
+                "FIELD_PRESENTATION_INVALID",
+                "返回字段显示映射数量无效。");
+        }
+        var fieldCodes = fields.Select(item => item.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var presentationCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var presentation in presentations)
+        {
+            if (!fieldCodes.Contains(presentation.Code) ||
+                !presentationCodes.Add(presentation.Code) ||
+                presentation.ValueMappings.Count == 0)
+            {
+                throw new PocDatasetConfigurationException(
+                    "FIELD_PRESENTATION_INVALID",
+                    $"返回字段 '{presentation.Code}' 的显示映射无效。");
+            }
+            ValidateValueOptions(
+                presentation.ValueMappings,
+                "FIELD_PRESENTATION_INVALID",
+                presentation.Code);
+        }
+    }
+
+    private static void ValidateValueOptions(
+        IReadOnlyList<PocValueOption> options,
+        string errorCode,
+        string ownerCode)
+    {
+        if (options.Count > 200)
+        {
+            throw new PocDatasetConfigurationException(errorCode, $"'{ownerCode}' 的选项不能超过 200 个。");
+        }
+        var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var option in options)
+        {
+            if (string.IsNullOrWhiteSpace(option.Value) ||
+                option.Value.Length > 256 ||
+                string.IsNullOrWhiteSpace(option.Label) ||
+                option.Label.Length > 256 ||
+                !values.Add(option.Value.Trim()))
+            {
+                throw new PocDatasetConfigurationException(errorCode, $"'{ownerCode}' 包含无效或重复的选项。");
+            }
+        }
     }
 
     private static void ValidateCode(string code, string errorCode)
@@ -565,6 +712,11 @@ public sealed class PocReportConfigurationService : ITransient
     private static T Deserialize<T>(string json) =>
         JsonConvert.DeserializeObject<T>(json)
         ?? throw new InvalidDataException($"Stored configuration JSON '{typeof(T).Name}' is null.");
+
+    private static IReadOnlyList<T> DeserializeList<T>(string? json) =>
+        string.IsNullOrWhiteSpace(json)
+            ? []
+            : JsonConvert.DeserializeObject<IReadOnlyList<T>>(json) ?? [];
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

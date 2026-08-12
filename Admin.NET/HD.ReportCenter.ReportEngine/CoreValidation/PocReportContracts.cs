@@ -46,6 +46,18 @@ public sealed record PocExportSettings(
 /// 查询参数元数据。前端根据该契约生成查询控件，并区分 URL 参数与后台默认函数。
 /// DefaultValue 是后台解析后的稳定值，不要求前端再次实现日期等默认值算法。
 /// </summary>
+public sealed record PocValueOption(string Value, string Label);
+
+/// <summary>报表返回字段的显示映射，与查询参数选项相互独立。</summary>
+public sealed record PocFieldPresentationDefinition(
+    string Code,
+    IReadOnlyList<PocValueOption> ValueMappings);
+
+/// <summary>共享查看页的数据保护状态；密码摘要只保存在服务端，不属于公开契约。</summary>
+public sealed record PocShareProtectionSettings(
+    bool Enabled,
+    bool PasswordConfigured);
+
 public sealed record PocParameterDefinition(
     string Code,
     string DisplayName,
@@ -59,7 +71,8 @@ public sealed record PocParameterDefinition(
     bool ReadOnly = false,
     bool Required = false,
     bool AllowUrlPrefill = false,
-    string? UrlKey = null);
+    string? UrlKey = null,
+    IReadOnlyList<PocValueOption>? Options = null);
 
 /// <summary>数据集 SQL 输入变量；当前报表负责为它配置具体取值来源。</summary>
 public sealed record PocDatasetVariableDefinition(
@@ -85,7 +98,9 @@ public sealed record PocReportDefinition(
     PocPreviewSettings Preview,
     PocExportSettings Export,
     IReadOnlyList<PocParameterDefinition> Parameters,
-    IReadOnlyList<PocDatasetFieldDefinition> Fields);
+    IReadOnlyList<PocDatasetFieldDefinition> Fields,
+    IReadOnlyList<PocFieldPresentationDefinition>? FieldPresentations = null,
+    PocShareProtectionSettings? ShareProtection = null);
 
 /// <summary>
 /// 浏览器提交的预览/导出查询条件。可空字符串由报表目录统一解析为业务默认值。

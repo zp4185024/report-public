@@ -29,6 +29,32 @@ export interface ExportSettings {
   fileRetentionHours: number;
 }
 
+export interface ValueOption {
+  value: string;
+  label: string;
+}
+
+/** 返回字段的值显示映射；它不参与查询参数取值。 */
+export interface FieldPresentationDefinition {
+  code: string;
+  valueMappings: ValueOption[];
+}
+
+/** 共享页的数据保护状态；密码和密码摘要永远不进入浏览器公开契约。 */
+export interface ShareProtectionSettings {
+  enabled: boolean;
+  passwordConfigured: boolean;
+}
+
+export interface SaveShareProtectionSettings {
+  enabled: boolean;
+  newPassword: string | null;
+}
+
+export interface ShareProtectionUnlockResult {
+  valid: boolean;
+}
+
 /** 后台参数定义；defaultValue 已由后台默认函数解析，浏览器不重复计算日期规则。 */
 export interface ParameterDefinition {
   code: string;
@@ -44,6 +70,7 @@ export interface ParameterDefinition {
   required: boolean;
   allowUrlPrefill: boolean;
   urlKey: string | null;
+  options?: ValueOption[] | null;
 }
 
 /** 数据集声明的 SQL 输入变量；具体值来源由每张报表配置。 */
@@ -70,6 +97,8 @@ export interface ReportDefinition {
   export: ExportSettings;
   parameters: ParameterDefinition[];
   fields: DatasetFieldDefinition[];
+  fieldPresentations?: FieldPresentationDefinition[] | null;
+  shareProtection?: ShareProtectionSettings | null;
 }
 
 /** 一次预览或导出的查询条件。page 始终使用一基页码，空输入转换为 null。 */
@@ -261,6 +290,8 @@ export interface ReportConfigurationDocument {
   parameters: ParameterDefinition[];
   fields: DatasetFieldDefinition[];
   revision: number;
+  fieldPresentations?: FieldPresentationDefinition[] | null;
+  shareProtection?: ShareProtectionSettings | null;
 }
 
 export interface SaveReportConfigurationRequest {
@@ -271,6 +302,8 @@ export interface SaveReportConfigurationRequest {
   datasetCode: string;
   parameters: ParameterDefinition[];
   revision: number;
+  fieldPresentations?: FieldPresentationDefinition[] | null;
+  shareProtection: SaveShareProtectionSettings;
 }
 
 export interface DataSourceTestResult {

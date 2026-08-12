@@ -49,8 +49,8 @@ const worksheetNumberRules = {
 const freezeNumberRules = {
   xSplit: 'coordinate',
   ySplit: 'coordinate',
-  startRow: 'coordinate',
-  startColumn: 'coordinate',
+  startRow: 'freezeStart',
+  startColumn: 'freezeStart',
 } as const;
 
 const rowNumberRules = {
@@ -80,6 +80,7 @@ type JsonObject = Record<string, unknown>;
 type NumberRule =
   | 'booleanNumber'
   | 'coordinate'
+  | 'freezeStart'
   | 'nonNegativeInteger'
   | 'positiveInteger'
   | 'nonNegativeNumber'
@@ -264,6 +265,12 @@ function normalizeNumber(value: unknown, label: string, rule: NumberRule): numbe
     (!Number.isSafeInteger(normalized) || normalized < 0 || normalized > MAX_TEMPLATE_COORDINATE)
   ) {
     throw new Error(`${label}必须是有效的非负整数。`);
+  }
+  if (
+    rule === 'freezeStart' &&
+    (!Number.isSafeInteger(normalized) || normalized < -1 || normalized > MAX_TEMPLATE_COORDINATE)
+  ) {
+    throw new Error(`${label}必须是 -1 或有效的非负整数。`);
   }
   if (rule === 'positiveInteger' && (!Number.isSafeInteger(normalized) || normalized < 1)) {
     throw new Error(`${label}必须是正整数。`);

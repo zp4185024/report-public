@@ -10,6 +10,10 @@ import './app.css';
 const path = window.location.pathname.replace(/\/$/, '') || '/';
 
 function route() {
+  if (path.startsWith('/share/reports/')) {
+    const reportCode = decodeURIComponent(path.slice('/share/reports/'.length));
+    return <App reportCode={reportCode} shared />;
+  }
   if (path === '/data-assets/preview') {
     return <AppFrame active="datasets"><DatasetPreviewPage /></AppFrame>;
   }

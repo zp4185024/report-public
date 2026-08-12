@@ -81,6 +81,13 @@ export interface DetailRowPlan {
   values: Array<{ column: number; value: DataRowValue }>;
 }
 
+/** 一块可通过 Univer setValues 一次写入的连续明细区域。 */
+export interface DetailValueBatch {
+  row: number;
+  column: number;
+  values: DataRowValue[][];
+}
+
 /**
  * Univer 副作用层消费的完整计划。
  * insertCount 只包含需要新增的行数，第一条数据复用原始模板行。
@@ -139,6 +146,73 @@ export function createTemplatePreviewPlan(
     parameterWrites: createParameterWrites(validatedSnapshot, validatedBinding, validatedResult),
     detail: createDetailPlan(validatedSnapshot, validatedBinding, validatedResult, definition),
   };
+}
+
+/**
+ * 把逐格明细计划压缩为连续矩形区域，避免大结果集为每个单元格各发送一次 Univer 命令。
+ * 不连续列会拆成不同批次，使位于字段间隙中的模板公式保持不变。
+ */
+export function createDetailValueBatches(
+  rows: readonly DetailRowPlan[],
+): DetailValueBatch[] {
+  if (rows.length === 0 || rows[0].values.length === 0) {
+    return [];
+  }
+
+  const firstRow = rows[0];
+  const columns = firstRow.values.map(({ column }) => column);
+  for (let index = 0; index < columns.length; index += 1) {
+    ensureCoordinate(columns[index], '明细批量写入列坐标无效。', {
+      row: firstRow.row,
+      column: columns[index],
+    });
+    if (index > 0 && columns[index] <= columns[index - 1]) {
+      throw new TemplatePreviewError('明细批量写入列必须严格递增。', {
+        row: firstRow.row,
+        column: columns[index],
+      });
+    }
+  }
+
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex];
+    if (row.row !== firstRow.row + rowIndex) {
+      throw new TemplatePreviewError('明细批量写入行必须连续。', {
+        row: row.row,
+        column: columns[0],
+      });
+    }
+    if (
+      row.values.length !== columns.length ||
+      row.values.some(({ column }, columnIndex) => column !== columns[columnIndex])
+    ) {
+      throw new TemplatePreviewError('明细批量写入的每一行必须使用相同列。', {
+        row: row.row,
+        column: row.values[0]?.column ?? columns[0],
+      });
+    }
+  }
+
+  const batches: DetailValueBatch[] = [];
+  let startIndex = 0;
+  for (let columnIndex = 1; columnIndex <= columns.length; columnIndex += 1) {
+    const reachesEnd = columnIndex === columns.length;
+    const hasGap = !reachesEnd && columns[columnIndex] !== columns[columnIndex - 1] + 1;
+    if (!reachesEnd && !hasGap) {
+      continue;
+    }
+
+    batches.push({
+      row: firstRow.row,
+      column: columns[startIndex],
+      values: rows.map((row) => row.values
+        .slice(startIndex, columnIndex)
+        .map(({ value }) => value)),
+    });
+    startIndex = columnIndex;
+  }
+
+  return batches;
 }
 
 function createParameterWrites(

@@ -129,6 +129,38 @@ describe('normalizeWorkbookSnapshot', () => {
       .toBe('5');
   });
 
+  it('preserves Univer no-freeze sentinel values after cancelling frozen panes', () => {
+    const snapshot = workbookWithRuntimeLayoutNumbers();
+    snapshot.sheets['report-sheet']!.freeze = {
+      xSplit: '0',
+      ySplit: 0,
+      startRow: '-1',
+      startColumn: -1,
+    } as unknown as NonNullable<typeof snapshot.sheets['report-sheet']>['freeze'];
+
+    const normalized = normalizeWorkbookSnapshot(snapshot);
+
+    expect(normalized.sheets['report-sheet']?.freeze).toEqual({
+      xSplit: 0,
+      ySplit: 0,
+      startRow: -1,
+      startColumn: -1,
+    });
+  });
+
+  it('rejects negative freeze values other than the Univer no-freeze sentinel', () => {
+    const snapshot = workbookWithRuntimeLayoutNumbers();
+    snapshot.sheets['report-sheet']!.freeze = {
+      xSplit: 0,
+      ySplit: 0,
+      startRow: -2,
+      startColumn: -1,
+    };
+
+    expect(() => normalizeWorkbookSnapshot(snapshot))
+      .toThrow("工作表 'report-sheet' 的冻结设置.startRow必须是 -1 或有效的非负整数。");
+  });
+
   it('clears formula error caches without changing formulas or valid cached values', () => {
     const snapshot = workbookWithRuntimeLayoutNumbers();
     const sheet = snapshot.sheets['report-sheet'];

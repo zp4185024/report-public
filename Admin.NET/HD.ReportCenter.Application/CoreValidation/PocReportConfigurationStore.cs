@@ -14,7 +14,8 @@ public sealed record PocReportConfigurationMutation(
     string ExportSettingsJson,
     string DatasetCode,
     IReadOnlyList<PocReportParameter> Parameters,
-    int ExpectedRevision);
+    int ExpectedRevision,
+    string? FieldPresentationsJson = null);
 
 public sealed class PocReportConfigurationRevisionConflictException : Exception
 {
@@ -103,6 +104,7 @@ public sealed class PocReportConfigurationStore : ITransient
                     DatasetCode = mutation.DatasetCode,
                     PreviewSettingsJson = mutation.PreviewSettingsJson,
                     ExportSettingsJson = mutation.ExportSettingsJson,
+                    FieldPresentationsJson = mutation.FieldPresentationsJson,
                     Revision = revision,
                     IsEnabled = true,
                     CreateTime = now,
@@ -119,6 +121,7 @@ public sealed class PocReportConfigurationStore : ITransient
                         DatasetCode = mutation.DatasetCode,
                         PreviewSettingsJson = mutation.PreviewSettingsJson,
                         ExportSettingsJson = mutation.ExportSettingsJson,
+                        FieldPresentationsJson = mutation.FieldPresentationsJson,
                         Revision = revision,
                         IsEnabled = true,
                         UpdateTime = now

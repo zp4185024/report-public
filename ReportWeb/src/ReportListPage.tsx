@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { ExternalLink, FilePenLine, LoaderCircle, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { reportCatalogApi } from './api';
+import { StatusToasts } from './StatusToasts';
 import type { CreateReportRequest, DatasetOption, ReportSummaryDocument } from './types';
 
 const emptyCreateRequest: CreateReportRequest = {
@@ -158,7 +159,13 @@ export default function ReportListPage() {
         </div>
       </header>
 
-      {error !== null && <div className="error-strip report-list-message">{error}</div>}
+      <StatusToasts
+        error={createError ?? error}
+        onErrorClose={() => {
+          if (createError !== null) setCreateError(null);
+          else setError(null);
+        }}
+      />
 
       <section className="report-table-section" aria-label="模板列表">
         <div className="report-table-meta">
@@ -249,7 +256,6 @@ export default function ReportListPage() {
               )}
             </div>
 
-            {createError !== null && <div className="configuration-message error">{createError}</div>}
             <footer className="configuration-footer">
               <div>
                 <button type="button" className="button" disabled={creating} onClick={closeCreate}>取消</button>

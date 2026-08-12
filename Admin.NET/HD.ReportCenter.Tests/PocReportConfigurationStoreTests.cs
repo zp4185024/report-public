@@ -289,6 +289,112 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Configuration_service_persists_parameter_options_and_field_presentations_separately()
+    {
+        _database.Updateable<PocReportDataset>()
+            .SetColumns(dataset => new PocReportDataset
+            {
+                QueryText = "SELECT 'M' AS GENDER_CODE",
+                FieldSchemaJson = "{\"Variables\":[],\"Fields\":[{\"Code\":\"GENDER_CODE\",\"DisplayName\":\"人员类别\",\"DataType\":\"string\"}]}"
+            })
+            .Where(dataset => dataset.Code == "detail")
+            .ExecuteCommand();
+        var parameterOptions = new[]
+        {
+            new PocValueOption("M", "男性条件"),
+            new PocValueOption("F", "女性条件")
+        };
+        var fieldMappings = new[]
+        {
+            new PocValueOption("M", "男"),
+            new PocValueOption("F", "女")
+        };
+
+        var document = await _configurationService.SaveAsync(
+            "generic-people",
+            new PocSaveReportConfigurationRequest(
+                "人员明细",
+                "人员明细",
+                new PocPreviewSettings(PocPreviewMode.Full, 20, false),
+                new PocExportSettings(
+                    PocDataExportMode.Normal,
+                    20_000,
+                    500_000,
+                    60,
+                    true,
+                    1_000_000,
+                    24),
+                "detail",
+                [new PocParameterDefinition(
+                    "GENDER_CODE",
+                    "人员类别",
+                    "select",
+                    "Form",
+                    null,
+                    true,
+                    Options: parameterOptions)],
+                0,
+                [new PocFieldPresentationDefinition("GENDER_CODE", fieldMappings)]));
+
+        var parameter = Assert.Single(document.Parameters);
+        Assert.Equal("男性条件", parameter.Options![0].Label);
+        var presentation = Assert.Single(document.FieldPresentations!);
+        Assert.Equal("男", presentation.ValueMappings[0].Label);
+        Assert.NotEqual(parameter.Options[0].Label, presentation.ValueMappings[0].Label);
+        var stored = await _store.GetAsync("generic-people");
+        Assert.Contains("男性条件", Assert.Single(stored!.Parameters).OptionsJson);
+        Assert.Contains("男", stored.Report.FieldPresentationsJson);
+    }
+
+    [Fact]
+    public async Task Share_protection_password_is_hashed_and_preserved_when_configuration_changes()
+    {
+        const string password = "Protect-123";
+        var created = await _configurationService.SaveAsync(
+            "protected-report",
+            CreateSaveRequest(
+                0,
+                new PocSaveShareProtectionRequest(true, password)));
+
+        Assert.True(created.ShareProtection?.Enabled);
+        Assert.True(created.ShareProtection?.PasswordConfigured);
+        Assert.True(await _configurationService.VerifyShareProtectionPasswordAsync(
+            "protected-report",
+            password));
+        Assert.False(await _configurationService.VerifyShareProtectionPasswordAsync(
+            "protected-report",
+            "wrong-password"));
+
+        var stored = await _store.GetAsync("protected-report");
+        Assert.DoesNotContain(password, stored!.Report.PreviewSettingsJson);
+        Assert.Contains("ShareProtection", stored.Report.PreviewSettingsJson);
+
+        var updated = await _configurationService.SaveAsync(
+            "protected-report",
+            CreateSaveRequest(
+                created.Revision,
+                new PocSaveShareProtectionRequest(true, null)));
+
+        Assert.True(updated.ShareProtection?.PasswordConfigured);
+        Assert.True(await _configurationService.VerifyShareProtectionPasswordAsync(
+            "protected-report",
+            password));
+    }
+
+    [Fact]
+    public async Task Share_protection_cannot_be_enabled_without_an_unlock_password()
+    {
+        var exception = await Assert.ThrowsAsync<PocDatasetConfigurationException>(() =>
+            _configurationService.SaveAsync(
+                "protected-report",
+                CreateSaveRequest(
+                    0,
+                    new PocSaveShareProtectionRequest(true, null))));
+
+        Assert.Equal("SHARE_PROTECTION_PASSWORD_REQUIRED", exception.Code);
+    }
+
+    [Fact]
     public async Task Newly_created_report_gets_its_own_editable_initial_template()
     {
         await _configurationService.CreateAsync(new PocCreateReportRequest(
@@ -562,6 +668,33 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             "detail",
             [Parameter("hospitalId", 0), Parameter("startDate", 1)],
             revision);
+
+    private static PocSaveReportConfigurationRequest CreateSaveRequest(
+        int revision,
+        PocSaveShareProtectionRequest protection) =>
+        new(
+            "受保护报表",
+            "受保护报表",
+            new PocPreviewSettings(PocPreviewMode.Full, 20, false),
+            new PocExportSettings(
+                PocDataExportMode.Normal,
+                20_000,
+                500_000,
+                60,
+                true,
+                1_000_000,
+                24),
+            "detail",
+            [new PocParameterDefinition(
+                "hospitalId",
+                "医院",
+                "text",
+                "Form",
+                null,
+                true)],
+            revision,
+            [],
+            protection);
 
     private static PocReportParameter Parameter(string code, int order) => new()
     {

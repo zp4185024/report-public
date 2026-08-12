@@ -16,10 +16,12 @@ import {
   FileSpreadsheet,
   FileUp,
   LoaderCircle,
+  Lock,
   Pencil,
   Save,
   Search,
   Settings2,
+  Share2,
   X,
 } from 'lucide-react';
 import { createReportApi } from './api';
@@ -31,9 +33,18 @@ import {
 } from './dataExportFlow';
 import { scanTemplateBindings } from './templateBinding';
 import { createTemplatePreviewPlan } from './templatePreview';
+import {
+  applyLocalDataQuery,
+  readMultiSelectValues,
+  serializeMultiSelectValues,
+} from './localDataQuery';
 import { createPreviewToolbarPresentation } from './previewToolbar';
 import { TemplateFieldPanel } from './TemplateFieldPanel';
 import { ReportConfigurationDialog } from './ReportConfigurationDialog';
+import { ShareReportDialog, type SharedParameterSummary } from './ShareReportDialog';
+import { StatusToasts } from './StatusToasts';
+import { UnlockProtectionDialog } from './UnlockProtectionDialog';
+import { createReportShareUrl, readReportShareParameters } from './reportShare';
 import {
   UniverTemplateHost,
   type TemplateEditorMode,
@@ -77,18 +88,61 @@ const backendErrorMessages: Readonly<Record<string, string>> = {
   DATA_SOURCE_CONNECTION_FAILED: '无法连接到数据源',
   DATA_SOURCE_PASSWORD_REQUIRED: '连接信息变化后必须填写新密码',
   READ_ONLY_SQL_REQUIRED: '只允许配置单条只读 SELECT 查询',
+  SHARE_PROTECTION_PASSWORD_REQUIRED: '开启共享数据保护前必须设置解除保护密码',
+  SHARE_PROTECTION_PASSWORD_INVALID: '解除保护密码长度必须为 8 到 128 个字符',
 };
 
 /** 根据后台定义建立参数字典；只有明确允许 URL 预填的参数才读取查询字符串。 */
-function createInitialRequest(definition?: ReportDefinition): ExecuteRequest {
+function createInitialRequest(
+  definition?: ReportDefinition,
+  sharedParameters?: Readonly<Record<string, string>>,
+): ExecuteRequest {
   const parameters: Record<string, string | null> = {};
   for (const parameter of definition?.parameters ?? []) {
-    const urlValue = parameter.allowUrlPrefill
-      ? urlParameters.get(parameter.urlKey || parameter.code)
-      : null;
+    const urlValue = sharedParameters === undefined
+      ? parameter.allowUrlPrefill
+        ? urlParameters.get(parameter.urlKey || parameter.code)
+        : null
+      : sharedParameters[parameter.code] ?? null;
     parameters[parameter.code] = urlValue ?? parameter.defaultValue ?? parameter.fixedValue;
   }
   return { page: 1, parameters };
+}
+
+function parameterDisplayValue(
+  parameter: ReportDefinition['parameters'][number],
+  value: string,
+): string {
+  if (parameter.controlType.toLowerCase() === 'multiselect') {
+    return readMultiSelectValues(value)
+      .map((item) => parameter.options?.find((option) => option.value === item)?.label ?? item)
+      .join('、');
+  }
+  if (parameter.controlType.toLowerCase() === 'select') {
+    return parameter.options?.find((option) => option.value === value)?.label ?? value;
+  }
+  if (parameter.dataType === 'bool' || parameter.controlType === 'checkbox') {
+    if (value === 'true') return '是';
+    if (value === 'false') return '否';
+  }
+  return value;
+}
+
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText !== undefined) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.append(textarea);
+  textarea.select();
+  const copied = document.execCommand('copy');
+  textarea.remove();
+  if (!copied) throw new Error('浏览器未允许复制到剪贴板。');
 }
 
 function toReportDefinition(configuration: ReportConfigurationDocument): ReportDefinition {
@@ -100,6 +154,8 @@ function toReportDefinition(configuration: ReportConfigurationDocument): ReportD
     export: configuration.export,
     parameters: configuration.parameters,
     fields: configuration.fields,
+    fieldPresentations: configuration.fieldPresentations ?? [],
+    shareProtection: configuration.shareProtection ?? { enabled: false, passwordConfigured: false },
   };
 }
 
@@ -124,16 +180,21 @@ function errorMessage(error: unknown, fallback: string): string {
 
 interface AppProps {
   reportCode: string;
+  shared?: boolean;
 }
 
-export default function App({ reportCode }: AppProps) {
+export default function App({ reportCode, shared = false }: AppProps) {
   const reportApi = useMemo(() => createReportApi(reportCode), [reportCode]);
+  const linkedParameters = useMemo(
+    () => shared ? readReportShareParameters() : {},
+    [shared],
+  );
   // 后台持久状态和查询结果使用 React state，负责界面渲染。
   const [definition, setDefinition] = useState<ReportDefinition | null>(null);
   const [templateDocument, setTemplateDocument] = useState<TemplateDocument | null>(null);
   const [request, setRequest] = useState<ExecuteRequest>(createInitialRequest);
   const [result, setResult] = useState<ExecuteResult | null>(null);
-  const [mode, setMode] = useState<TemplateEditorMode>('design');
+  const [mode, setMode] = useState<TemplateEditorMode>(shared ? 'preview' : 'design');
   const [draftSnapshot, setDraftSnapshot] = useState<IWorkbookData | null>(null);
   const [dirty, setDirty] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -152,6 +213,13 @@ export default function App({ reportCode }: AppProps) {
   const [renderDuration, setRenderDuration] = useState(0);
   const [configurationOpen, setConfigurationOpen] = useState(false);
   const [configurationDocument, setConfigurationDocument] = useState<ReportConfigurationDocument | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareIncludesParameters, setShareIncludesParameters] = useState(true);
+  const [shareProtected, setShareProtected] = useState(false);
+  const [protectionChanging, setProtectionChanging] = useState(false);
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
 
   // editorRef 是页面调用 Univer 的窄接口；draftSnapshotRef 保存“最后设计草稿”的同步事实来源。
   // 同一快照另存 state 是为了触发 React 生命周期；异步回调使用 ref 可避免读到闭包中的旧值。
@@ -160,6 +228,8 @@ export default function App({ reportCode }: AppProps) {
   const draftSnapshotRef = useRef<IWorkbookData | null>(null);
   // 保存、预览、翻页和返回设计共享一个互斥标记，防止两个异步工作簿替换流程交叉执行。
   const operationRef = useRef(false);
+  const sharedAutoPreviewAttemptedRef = useRef(false);
+  const sharedSnapshotPreparedRef = useRef(false);
 
   useEffect(() => {
     // 报表定义和模板互不依赖，并行加载可缩短首次可编辑时间。
@@ -179,9 +249,13 @@ export default function App({ reportCode }: AppProps) {
         }
 
         // URL 提供业务对象参数，日期默认值以后端函数计算结果为准，浏览器不复制月份边界规则。
-        const nextRequest = createInitialRequest(nextDefinition);
+        const nextRequest = createInitialRequest(
+          nextDefinition,
+          shared ? linkedParameters : undefined,
+        );
         draftSnapshotRef.current = nextTemplateDocument.snapshot;
         setDefinition(nextDefinition);
+        setShareProtected(nextDefinition.shareProtection?.enabled ?? false);
         setTemplateDocument(nextTemplateDocument);
         setDraftSnapshot(nextTemplateDocument.snapshot);
         setRequest(nextRequest);
@@ -202,7 +276,7 @@ export default function App({ reportCode }: AppProps) {
     return () => {
       active = false;
     };
-  }, [reportApi]);
+  }, [linkedParameters, reportApi, shared]);
 
   useEffect(() => {
     if (!dirty) {
@@ -219,9 +293,10 @@ export default function App({ reportCode }: AppProps) {
   }, [dirty]);
 
   const handleEditorChanged = useCallback(() => {
+    if (shared) return;
     setDirty(true);
     setExchangeStatus(null);
-  }, []);
+  }, [shared]);
 
   const handleEditorRendered = useCallback((duration: number) => {
     setRenderDuration(duration);
@@ -255,6 +330,16 @@ export default function App({ reportCode }: AppProps) {
         designSnapshot = snapshot;
         draftSnapshotRef.current = snapshot;
         setDraftSnapshot(snapshot);
+      } else if (shared && result === null && !sharedSnapshotPreparedRef.current) {
+        // 分享页初始工作簿是只读的，但仍需经过 Univer 序列化来规范化旧模板中的 mergeData 等运行时结构。
+        const editor = editorRef.current;
+        if (editor === null) {
+          throw new Error('共享报表编辑器尚未准备完成。');
+        }
+        snapshot = editor.saveDraft();
+        draftSnapshotRef.current = snapshot;
+        setDraftSnapshot(snapshot);
+        sharedSnapshotPreparedRef.current = true;
       } else {
         // 预览翻页不能从当前预览工作簿取快照，否则已经替换的参数和展开行会污染下一页模板。
         const savedDraft = draftSnapshotRef.current;
@@ -268,7 +353,8 @@ export default function App({ reportCode }: AppProps) {
       const binding = scanTemplateBindings(snapshot, definition);
       const nextRequest = { ...request, page };
       const queryStartedAt = performance.now();
-      const nextResult = await reportApi.execute(nextRequest);
+      const queryResult = await reportApi.execute(nextRequest);
+      const nextResult = applyLocalDataQuery(queryResult, definition, nextRequest);
       setQueryDuration(performance.now() - queryStartedAt);
 
       // 纯函数计划先完成数据/坐标校验，随后才让 Univer 插行和写单元格。
@@ -279,6 +365,9 @@ export default function App({ reportCode }: AppProps) {
       }
       renderAttempted = true;
       await editor.renderPreview(snapshot, plan);
+      if (shared) {
+        await editor.setDataProtected(shareProtected);
+      }
 
       setResult(nextResult);
       setRequest(nextRequest);
@@ -299,7 +388,41 @@ export default function App({ reportCode }: AppProps) {
       setPreviewing(false);
       setLoading(false);
     }
-  }, [definition, initialized, mode, request]);
+  }, [definition, initialized, mode, request, result, shareProtected, shared]);
+
+  useEffect(() => {
+    if (!shared || sharedAutoPreviewAttemptedRef.current || !initialized || definition === null) {
+      return;
+    }
+
+    const hasLinkedParameter = definition.parameters.some((parameter) => (
+      linkedParameters[parameter.code]?.trim()
+    ));
+    const hasMissingRequiredParameter = definition.parameters.some((parameter) => (
+      parameter.required && !(request.parameters[parameter.code]?.trim())
+    ));
+    if (!hasLinkedParameter || hasMissingRequiredParameter) {
+      sharedAutoPreviewAttemptedRef.current = true;
+      return;
+    }
+
+    let cancelled = false;
+    let timer = 0;
+    const previewWhenReady = () => {
+      if (cancelled) return;
+      if (editorRef.current === null) {
+        timer = window.setTimeout(previewWhenReady, 50);
+        return;
+      }
+      sharedAutoPreviewAttemptedRef.current = true;
+      void enterPreview(1);
+    };
+    timer = window.setTimeout(previewWhenReady, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [definition, enterPreview, initialized, linkedParameters, request.parameters, shared]);
 
   const returnDesign = useCallback(() => {
     if (operationRef.current || mode === 'design') {
@@ -576,6 +699,68 @@ export default function App({ reportCode }: AppProps) {
     void enterPreview(1);
   }, [enterPreview]);
 
+  const updateShareProtection = useCallback(async (protectedMode: boolean) => {
+    if (!shared) return;
+
+    if (!protectedMode) {
+      setUnlockError(null);
+      setUnlockOpen(true);
+      return;
+    }
+
+    if (!(definition?.shareProtection?.passwordConfigured ?? false)) {
+      setError('请先在报表配置中设置解除保护密码。');
+      return;
+    }
+
+    setProtectionChanging(true);
+    try {
+      if (result !== null) {
+        const editor = editorRef.current;
+        if (editor === null) {
+          throw new Error('共享报表编辑器尚未准备完成。');
+        }
+        await editor.setDataProtected(true);
+      }
+      setShareProtected(true);
+      setError(null);
+      setExchangeStatus('已开启数据保护');
+    } catch (exception) {
+      setError(errorMessage(exception, '开启数据保护失败'));
+    } finally {
+      setProtectionChanging(false);
+    }
+  }, [definition?.shareProtection?.passwordConfigured, result, shared]);
+
+  const unlockShareProtection = useCallback(async (password: string) => {
+    if (!shared || unlocking) return;
+
+    setUnlocking(true);
+    setUnlockError(null);
+    try {
+      const unlock = await reportApi.unlockShareProtection(password);
+      if (!unlock.valid) {
+        setUnlockError('密码错误。');
+        return;
+      }
+      if (result !== null) {
+        const editor = editorRef.current;
+        if (editor === null) {
+          throw new Error('共享报表编辑器尚未准备完成。');
+        }
+        await editor.setDataProtected(false);
+      }
+      setShareProtected(false);
+      setUnlockOpen(false);
+      setError(null);
+      setExchangeStatus('已解除数据保护');
+    } catch (exception) {
+      setUnlockError(errorMessage(exception, '解除数据保护失败'));
+    } finally {
+      setUnlocking(false);
+    }
+  }, [reportApi, result, shared, unlocking]);
+
   const openConfiguration = useCallback(async () => {
     if (operationRef.current || mode !== 'design') {
       return;
@@ -595,13 +780,52 @@ export default function App({ reportCode }: AppProps) {
     const nextDefinition = toReportDefinition(saved);
     setConfigurationDocument(saved);
     setDefinition(nextDefinition);
+    setShareProtected(nextDefinition.shareProtection?.enabled ?? false);
     setRequest(createInitialRequest(nextDefinition));
     setResult(null);
     setExchangeStatus(`报表配置已保存（修订号 ${saved.revision}）`);
   }, []);
 
+  const visibleShareParameterCodes = useMemo(
+    () => definition?.parameters
+      .filter((parameter) => parameter.visible && parameter.controlType !== 'hidden')
+      .map((parameter) => parameter.code) ?? [],
+    [definition],
+  );
+  const shareParameterSummaries = useMemo<SharedParameterSummary[]>(
+    () => definition?.parameters.flatMap((parameter) => {
+      if (!visibleShareParameterCodes.includes(parameter.code)) return [];
+      const value = request.parameters[parameter.code];
+      if (value === null || value.trim() === '') return [];
+      return [{
+        code: parameter.code,
+        label: parameter.displayName,
+        value: parameterDisplayValue(parameter, value),
+      }];
+    }) ?? [],
+    [definition, request.parameters, visibleShareParameterCodes],
+  );
+  const shareUrl = useMemo(
+    () => createReportShareUrl({
+      reportCode,
+      parameters: request.parameters,
+      visibleParameterCodes: visibleShareParameterCodes,
+      includeParameters: shareIncludesParameters,
+    }),
+    [reportCode, request.parameters, shareIncludesParameters, visibleShareParameterCodes],
+  );
+  const copyShareLink = useCallback(async () => {
+    setError(null);
+    try {
+      await copyText(shareUrl);
+      setExchangeStatus('分享链接已复制');
+    } catch (exception) {
+      setError(errorMessage(exception, '复制分享链接失败'));
+    }
+  }, [shareUrl]);
+
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
-  const busy = loading || saving || importing || exportingTemplate || exportingData || previewing;
+  const busy = loading || saving || importing || exportingTemplate || exportingData || previewing || protectionChanging;
   const revision = templateDocument?.revision;
   const previewToolbar = createPreviewToolbarPresentation(
     definition?.preview.mode ?? 'Full',
@@ -609,32 +833,35 @@ export default function App({ reportCode }: AppProps) {
   );
 
   return (
-    <main className="app-shell">
-      <header className={`command-bar ${mode}-mode`} aria-label="模板命令栏">
+    <main className={shared ? 'app-shell shared-report-shell' : 'app-shell'}>
+      {!shared && <header
+        className={`command-bar ${mode}-mode`}
+        aria-label="模板命令栏"
+      >
         <div className="command-leading">
           <div className="mode-switch" aria-label="工作模式">
-            <button
-              type="button"
-              className={mode === 'design' ? 'mode-button active' : 'mode-button'}
-              aria-pressed={mode === 'design'}
-              title="切换到模板设计"
-              disabled={busy || mode === 'design'}
-              onClick={returnDesign}
-            >
-              <Pencil size={15} />
-              模板设计
-            </button>
-            <button
-              type="button"
-              className={mode === 'preview' ? 'mode-button active' : 'mode-button'}
-              aria-pressed={mode === 'preview'}
-              title="使用当前草稿预览数据"
-              disabled={busy || mode === 'preview' || !initialized}
-              onClick={() => void enterPreview(1)}
-            >
-              {previewing ? <LoaderCircle className="spin" size={15} /> : <Eye size={15} />}
-              数据预览
-            </button>
+              <button
+                type="button"
+                className={mode === 'design' ? 'mode-button active' : 'mode-button'}
+                aria-pressed={mode === 'design'}
+                title="切换到模板设计"
+                disabled={busy || mode === 'design'}
+                onClick={returnDesign}
+              >
+                <Pencil size={15} />
+                模板设计
+              </button>
+              <button
+                type="button"
+                className={mode === 'preview' ? 'mode-button active' : 'mode-button'}
+                aria-pressed={mode === 'preview'}
+                title="使用当前草稿预览数据"
+                disabled={busy || mode === 'preview' || !initialized}
+                onClick={() => void enterPreview(1)}
+              >
+                {previewing ? <LoaderCircle className="spin" size={15} /> : <Eye size={15} />}
+                数据预览
+              </button>
           </div>
         </div>
 
@@ -685,6 +912,18 @@ export default function App({ reportCode }: AppProps) {
               </button>
             </>
           )}
+          {!shared && (
+            <button
+              className="button share-button secondary-command"
+              type="button"
+              title="生成可携带当前参数的分享链接"
+              disabled={busy || !initialized}
+              onClick={() => setShareOpen(true)}
+            >
+              <Share2 size={16} />
+              <span className="button-label">分享</span>
+            </button>
+          )}
           <button
             className="button data-export-button"
             type="button"
@@ -714,7 +953,7 @@ export default function App({ reportCode }: AppProps) {
                 取消导出
               </button>
             )}
-          {mode === 'design' && (
+          {!shared && mode === 'design' && (
             <button
               className="button save-button"
               type="button"
@@ -726,31 +965,70 @@ export default function App({ reportCode }: AppProps) {
               保存模板
             </button>
           )}
-          <div className="template-state" title={dirty ? '模板有未保存修改' : '模板已保存'}>
-            <span>{revision === undefined ? 'revision --' : `revision ${revision}`}</span>
-            <span className={dirty ? 'dirty-state' : 'saved-state'}>
-              {dirty ? '未保存' : '已保存'}
-            </span>
-            {dirty && <span className="dirty-dot" aria-label="有未保存修改" />}
-          </div>
-          <div className="duration-state">
-            <span>查询 {queryDuration.toFixed(0)} ms</span>
-            <span>渲染 {renderDuration.toFixed(0)} ms</span>
-          </div>
+          {!shared && (
+            <div className="template-state" title={dirty ? '模板有未保存修改' : '模板已保存'}>
+              <span>{revision === undefined ? 'revision --' : `revision ${revision}`}</span>
+              <span className={dirty ? 'dirty-state' : 'saved-state'}>
+                {dirty ? '未保存' : '已保存'}
+              </span>
+              {dirty && <span className="dirty-dot" aria-label="有未保存修改" />}
+            </div>
+          )}
+          {(!shared || result !== null) && (
+            <div className="duration-state">
+              <span>查询 {queryDuration.toFixed(0)} ms</span>
+              <span>渲染 {renderDuration.toFixed(0)} ms</span>
+            </div>
+          )}
           <div className="runtime-status" title="公式由 Univer Web Worker 计算">
             <span className="status-dot" />
             <span className="runtime-label">Univer Worker</span>
           </div>
         </div>
-      </header>
+      </header>}
 
-      <form className="query-band" onSubmit={handleSubmit}>
+      <form className={shared ? 'query-band shared-query-band' : 'query-band'} onSubmit={handleSubmit}>
         {definition?.parameters
           .filter((parameter) => parameter.visible && parameter.controlType !== 'hidden')
           .map((parameter) => (
             <label key={parameter.code}>
               <span>{parameter.displayName}</span>
-              {parameter.dataType === 'bool' || parameter.controlType === 'checkbox' ? (
+              {parameter.controlType.toLowerCase() === 'select' ? (
+                <select
+                  value={request.parameters[parameter.code] ?? ''}
+                  disabled={parameter.readOnly}
+                  required={parameter.required}
+                  onChange={(event) => updateRequest(parameter.code, event.target.value)}
+                >
+                  <option value="">全部</option>
+                  {(parameter.options ?? []).map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              ) : parameter.controlType.toLowerCase() === 'multiselect' ? (
+                <select
+                  className="query-multi-select"
+                  multiple
+                  size={Math.min(Math.max((parameter.options ?? []).length + 1, 2), 4)}
+                  value={readMultiSelectValues(request.parameters[parameter.code]).length === 0
+                    ? ['']
+                    : readMultiSelectValues(request.parameters[parameter.code])}
+                  disabled={parameter.readOnly}
+                  required={parameter.required}
+                  onChange={(event) => updateRequest(
+                    parameter.code,
+                    serializeMultiSelectValues(
+                      Array.from(event.currentTarget.selectedOptions, (option) => option.value)
+                        .filter(Boolean),
+                    ) ?? '',
+                  )}
+                >
+                  <option value="">全部</option>
+                  {(parameter.options ?? []).map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              ) : parameter.dataType === 'bool' || parameter.controlType === 'checkbox' ? (
                 <select
                   value={request.parameters[parameter.code] ?? ''}
                   disabled={parameter.readOnly}
@@ -781,29 +1059,90 @@ export default function App({ reportCode }: AppProps) {
             className="button button-primary query-button"
             type="submit"
             disabled={busy || !initialized}
-            title={mode === 'design' ? '使用当前模板草稿预览数据' : '重新查询当前页数据'}
+            title={shared
+              ? '使用当前参数查询共享报表'
+              : mode === 'design'
+                ? '使用当前模板草稿预览数据'
+                : '重新查询当前页数据'}
           >
             {previewing
               ? <LoaderCircle className="spin" size={16} />
-              : mode === 'design'
+              : !shared && mode === 'design'
                 ? <Eye size={16} />
                 : <Search size={16} />}
-            {mode === 'design' ? '预览' : '查询'}
+            {!shared && mode === 'design' ? '预览' : '查询'}
           </button>
+          {shared && (
+            <>
+              <button
+                className="button data-export-button"
+                type="button"
+                title={templateWarning === null
+                  ? '使用已保存模板导出全部查询数据'
+                  : '请联系报表维护人员修复模板字段绑定'}
+                disabled={busy || !initialized || templateWarning !== null}
+                onClick={() => void exportData()}
+              >
+                {exportingData
+                  ? <LoaderCircle className="spin" size={16} />
+                  : <FileSpreadsheet size={16} />}
+                导出数据
+              </button>
+              {exportJob !== null &&
+                (exportJob.status === 'Pending' || exportJob.status === 'Running') && (
+                  <button
+                    className="button cancel-export-button"
+                    type="button"
+                    title="取消正在生成的大文件"
+                    disabled={cancellingExport}
+                    onClick={() => void cancelDataExport()}
+                  >
+                    {cancellingExport
+                      ? <LoaderCircle className="spin" size={16} />
+                      : <X size={16} />}
+                    取消导出
+                  </button>
+                )}
+              <label
+                className="share-protection-toggle"
+                title={shareProtected
+                  ? '已保护单元格数据；关闭时需要输入密码'
+                  : '未保护单元格数据；格式、缩放和导出始终可用'}
+              >
+                <Lock size={15} aria-hidden="true" />
+                <span>保护</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  aria-label="保护工作表"
+                  checked={shareProtected}
+                  disabled={busy || !initialized}
+                  onChange={(event) => void updateShareProtection(event.target.checked)}
+                />
+              </label>
+            </>
+          )}
         </div>
       </form>
 
-      {templateWarning && (
-        <div className="error-strip" role="status">
-          {templateWarning} 当前工作簿仍可编辑，请替换失效字段后保存模板。
-        </div>
-      )}
-      {error && <div className="error-strip" role="alert">{error}</div>}
-      {exchangeStatus && <div className="success-strip" role="status">{exchangeStatus}</div>}
+      <StatusToasts
+        error={error}
+        success={exchangeStatus}
+        warning={templateWarning === null
+          ? null
+          : shared
+            ? `${templateWarning} 请联系报表维护人员修复模板。`
+            : `${templateWarning} 当前工作簿仍可编辑，请替换失效字段后保存模板。`}
+        onErrorClose={() => setError(null)}
+        onSuccessClose={() => setExchangeStatus(null)}
+        onWarningClose={() => setTemplateWarning(null)}
+      />
 
       <section className="report-workspace">
         <div className="report-toolbar">
-          {mode === 'preview' ? (
+          {shared && result === null ? (
+            <div className="report-stats"><span>等待查询</span></div>
+          ) : mode === 'preview' ? (
             <div className="report-stats">
               {previewToolbar.labels.map((label) => <span key={label}>{label}</span>)}
             </div>
@@ -840,15 +1179,18 @@ export default function App({ reportCode }: AppProps) {
           )}
         </div>
 
-        <div className={mode === 'design' ? 'workspace-grid design-grid' : 'workspace-grid preview-grid'}>
-          {mode === 'design' && definition && (
+        <div className={mode === 'design' && !shared ? 'workspace-grid design-grid' : 'workspace-grid preview-grid'}>
+          {mode === 'design' && !shared && definition && (
             <TemplateFieldPanel
               definition={definition}
               disabled={busy}
               onInsert={insertBinding}
             />
           )}
-          <div className="sheet-frame">
+          <div
+            className={shared && result === null ? 'sheet-frame shared-sheet-pending' : 'sheet-frame'}
+            inert={shared && result === null ? true : undefined}
+          >
             {initialized && templateDocument ? (
               <UniverTemplateHost
                 ref={editorRef}
@@ -867,13 +1209,40 @@ export default function App({ reportCode }: AppProps) {
         </div>
       </section>
 
-      <ReportConfigurationDialog
-        open={configurationOpen}
-        document={configurationDocument}
-        saveConfiguration={reportApi.saveConfiguration}
-        onClose={() => setConfigurationOpen(false)}
-        onSaved={configurationSaved}
-      />
+      {!shared && (
+        <>
+          <ReportConfigurationDialog
+            open={configurationOpen}
+            document={configurationDocument}
+            saveConfiguration={reportApi.saveConfiguration}
+            onClose={() => setConfigurationOpen(false)}
+            onSaved={configurationSaved}
+          />
+          <ShareReportDialog
+            open={shareOpen}
+            reportName={definition?.name ?? reportCode}
+            url={shareUrl}
+            includeParameters={shareIncludesParameters}
+            parameters={shareParameterSummaries}
+            onIncludeParametersChange={setShareIncludesParameters}
+            onCopy={() => void copyShareLink()}
+            onClose={() => setShareOpen(false)}
+          />
+        </>
+      )}
+      {shared && (
+        <UnlockProtectionDialog
+          open={unlockOpen}
+          busy={unlocking}
+          error={unlockError}
+          onSubmit={(password) => void unlockShareProtection(password)}
+          onClose={() => {
+            if (unlocking) return;
+            setUnlockOpen(false);
+            setUnlockError(null);
+          }}
+        />
+      )}
     </main>
   );
 }

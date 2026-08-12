@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Database, LoaderCircle, Play, Save } from 'lucide-react';
 import { dataAssetApi } from './api';
+import { StatusToasts } from './StatusToasts';
 import type {
   DatasetDocument,
   DatasetFieldDefinition,
@@ -145,10 +146,12 @@ export default function DatasetPreviewPage() {
 
       {dataset !== null && dataset.variables.length > 0 && <section className="dataset-preview-query">{dataset.variables.map((variable) => <label key={variable.code}><span>{variable.displayName}（@{variable.code}）{variable.required ? ' *' : ''}</span>{variable.dataType === 'bool' ? <select value={values[variable.code] ?? valueFromUrl(variable)} onChange={(event) => { setValues({ ...values, [variable.code]: event.target.value }); setResult(null); }}><option value="">NULL</option><option value="true">是</option><option value="false">否</option></select> : <input type={inputType(variable)} value={values[variable.code] ?? valueFromUrl(variable)} onChange={(event) => { setValues({ ...values, [variable.code]: event.target.value }); setResult(null); }} />}</label>)}</section>}
 
-      <div className="asset-messages">
-        {error !== null && <div className="error-strip">{error}</div>}
-        {status !== null && <div className="success-strip">{status}</div>}
-      </div>
+      <StatusToasts
+        error={error}
+        success={status}
+        onErrorClose={() => setError(null)}
+        onSuccessClose={() => setStatus(null)}
+      />
 
       <section className="dataset-preview-result">
         {loading ? <div className="asset-empty"><LoaderCircle className="spin" size={20} />正在读取</div> : result === null ? <div className="asset-empty">暂无预览结果</div> : <div className="dataset-preview-scroll standalone"><table className="dataset-preview-table"><thead><tr><th>#</th>{result.fields.map((field) => <th key={field.code}>{field.code}</th>)}</tr></thead><tbody>{result.rows.length === 0 ? <tr><td colSpan={result.fields.length + 1} className="dataset-preview-empty">暂无数据</td></tr> : result.rows.map((row, rowIndex) => <tr key={rowIndex}><td>{rowIndex + 1}</td>{result.fields.map((field, columnIndex) => <td key={field.code} title={row[columnIndex] === null ? '' : String(row[columnIndex])}>{row[columnIndex] === null ? <span className="null-value">NULL</span> : String(row[columnIndex])}</td>)}</tr>)}</tbody></table>{result.hasMore && <div className="dataset-preview-limit">仅显示前 {result.limit} 行</div>}</div>}

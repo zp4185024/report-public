@@ -11,6 +11,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { dataAssetApi } from './api';
+import { StatusToasts } from './StatusToasts';
 import type {
   DataSourceDocument,
   DataSourceDbType,
@@ -327,10 +328,12 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
         <div className="runtime-status"><span className="status-dot" />全局复用资源</div>
       </header>
 
-      <div className="asset-messages">
-        {error !== null && <div className="error-strip">{error}</div>}
-        {status !== null && <div className="success-strip">{status}</div>}
-      </div>
+      <StatusToasts
+        error={error}
+        success={status}
+        onErrorClose={() => setError(null)}
+        onSuccessClose={() => setStatus(null)}
+      />
 
       <section className="asset-workspace">
         <aside className="asset-list">

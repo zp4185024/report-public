@@ -23,6 +23,9 @@ public sealed class PocReport : EntityBase
     [SugarColumn(ColumnDescription = "导出设置", ColumnDataType = StaticConfig.CodeFirst_BigString)]
     public string ExportSettingsJson { get; set; } = string.Empty;
 
+    [SugarColumn(ColumnDescription = "返回字段显示映射", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]
+    public string? FieldPresentationsJson { get; set; }
+
     [SugarColumn(ColumnDescription = "配置修订号")]
     public int Revision { get; set; }
 
@@ -130,6 +133,9 @@ public sealed class PocReportParameter : EntityBase
 
     [SugarColumn(ColumnDescription = "固定值", Length = 1024, IsNullable = true)]
     public string? FixedValue { get; set; }
+
+    [SugarColumn(ColumnDescription = "参数可选项", ColumnDataType = StaticConfig.CodeFirst_BigString, IsNullable = true)]
+    public string? OptionsJson { get; set; }
 
     [SugarColumn(ColumnDescription = "是否显示")]
     public bool IsVisible { get; set; } = true;

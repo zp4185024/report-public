@@ -165,6 +165,7 @@ const saveConfigurationRequest: SaveReportConfigurationRequest = {
   datasetCode: configuration.datasetCode,
   parameters: configuration.parameters,
   revision: configuration.revision,
+  shareProtection: { enabled: false, newPassword: null },
 };
 
 const fetchMock = vi.fn();
