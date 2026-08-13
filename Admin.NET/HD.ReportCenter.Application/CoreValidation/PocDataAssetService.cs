@@ -7,7 +7,8 @@ using Newtonsoft.Json.Linq;
 namespace HD.ReportCenter.Application.CoreValidation;
 
 public sealed record PocDatasetPreviewRequest(
-    IReadOnlyDictionary<string, string?> Parameters);
+    IReadOnlyDictionary<string, string?> Parameters,
+    IReadOnlyDictionary<string, string?>? Context = null);
 
 public sealed record PocDatasetPreviewResult(
     IReadOnlyList<PocDatasetFieldDefinition> Fields,
@@ -47,14 +48,21 @@ public sealed class PocDataAssetService : ITransient
     private static readonly HashSet<string> VariableDataTypes = new(
         ["string", "int", "long", "decimal", "date", "datetime", "bool"],
         StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<string> VariableSourceTypes = new(
+        ["Form", "External"],
+        StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> FieldDataTypes = new(
         ["string", "number", "date", "datetime", "bool"],
         StringComparer.OrdinalIgnoreCase);
 
     private readonly PocDataAssetStore _store;
-    public PocDataAssetService(PocDataAssetStore store)
+    private readonly PocExternalParameterSourceService? _externalParameters;
+    public PocDataAssetService(
+        PocDataAssetStore store,
+        PocExternalParameterSourceService? externalParameters = null)
     {
         _store = store;
+        _externalParameters = externalParameters;
     }
 
     public async Task<IReadOnlyList<PocDataSourceDocument>> ListDataSourcesAsync()
@@ -160,6 +168,7 @@ public sealed class PocDataAssetService : ITransient
                 "DATA_SOURCE_DISABLED",
                 "启用数据集前必须先启用其数据源。");
         }
+        await ValidateExternalVariableBindingsAsync(input.Variables);
 
         await _store.SaveDatasetAsync(new PocDatasetMutation(
             input.Code.Trim(),
@@ -202,22 +211,35 @@ public sealed class PocDataAssetService : ITransient
         }
         var schema = ReadSchema(dataset);
         ValidateDatasetSchema(dataset.QueryText, schema.Variables, schema.Fields);
-        var resolved = PocParameterResolver.Resolve(
-            schema.Variables.Select(variable => new PocParameterDefinition(
+        var parameterDefinitions = schema.Variables.Select(variable => new PocParameterDefinition(
                 variable.Code,
                 variable.DisplayName,
                 "text",
-                "Form",
+                variable.SourceType,
                 null,
                 true,
                 variable.DataType,
-                Required: variable.Required)).ToArray(),
-            input.Parameters);
+                Required: variable.Required,
+                SourceCode: variable.SourceCode,
+                SourceFieldCode: variable.SourceFieldCode)).ToArray();
+        var externalValues = _externalParameters is null
+            ? new Dictionary<string, string?>()
+            : await _externalParameters.ResolveAsync(
+                parameterDefinitions,
+                input.Context,
+                cancellationToken);
+        var resolved = PocParameterResolver.Resolve(
+            parameterDefinitions,
+            input.Parameters,
+            externalValues);
 
         var parameterCodes = ExtractParameterCodes(dataset.QueryText);
         foreach (var parameterCode in parameterCodes)
         {
-            if (!input.Parameters.Keys.Any(key =>
+            var definition = parameterDefinitions.Single(item =>
+                item.Code.Equals(parameterCode, StringComparison.OrdinalIgnoreCase));
+            if (!definition.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase) &&
+                !input.Parameters.Keys.Any(key =>
                     key.Equals(parameterCode, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new PocDatasetConfigurationException(
@@ -363,7 +385,22 @@ public sealed class PocDataAssetService : ITransient
         var schema = token.ToObject<PocDatasetSchemaDocument>()
             ?? throw new InvalidDataException("Stored dataset schema is null.");
         return new PocDatasetSchemaDocument(
-            schema.Variables ?? [],
+            (schema.Variables ?? []).Select(variable =>
+            {
+                var sourceType = string.IsNullOrWhiteSpace(variable.SourceType)
+                    ? "Form"
+                    : variable.SourceType;
+                return variable with
+                {
+                    SourceType = sourceType,
+                    SourceCode = sourceType.Equals("External", StringComparison.OrdinalIgnoreCase)
+                        ? variable.SourceCode
+                        : null,
+                    SourceFieldCode = sourceType.Equals("External", StringComparison.OrdinalIgnoreCase)
+                        ? variable.SourceFieldCode
+                        : null
+                };
+            }).ToArray(),
             schema.Fields ?? []);
     }
 
@@ -483,7 +520,14 @@ public sealed class PocDataAssetService : ITransient
             if (!variableCodes.Add(variable.Code) ||
                 string.IsNullOrWhiteSpace(variable.DisplayName) ||
                 variable.DisplayName.Length > 128 ||
-                !VariableDataTypes.Contains(variable.DataType))
+                !VariableDataTypes.Contains(variable.DataType) ||
+                !VariableSourceTypes.Contains(variable.SourceType) ||
+                (variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase) &&
+                 (string.IsNullOrWhiteSpace(variable.SourceCode) ||
+                  string.IsNullOrWhiteSpace(variable.SourceFieldCode))) ||
+                (!variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase) &&
+                 (!string.IsNullOrWhiteSpace(variable.SourceCode) ||
+                  !string.IsNullOrWhiteSpace(variable.SourceFieldCode))))
             {
                 throw new PocDatasetConfigurationException(
                     "DATASET_VARIABLE_INVALID",
@@ -515,6 +559,45 @@ public sealed class PocDataAssetService : ITransient
                 throw new PocDatasetConfigurationException(
                     "DATASET_FIELD_INVALID",
                     $"返回字段 '{field.Code}' 的定义无效。");
+            }
+        }
+    }
+
+    private async Task ValidateExternalVariableBindingsAsync(
+        IReadOnlyList<PocDatasetVariableDefinition> variables)
+    {
+        var externalVariables = variables.Where(variable =>
+            variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (externalVariables.Length == 0)
+        {
+            return;
+        }
+        if (_externalParameters is null)
+        {
+            throw new PocDatasetConfigurationException(
+                "EXTERNAL_PARAMETER_SERVICE_UNAVAILABLE",
+                "外部参数服务不可用。");
+        }
+
+        var sources = await _externalParameters.ListAsync();
+        foreach (var variable in externalVariables)
+        {
+            var source = sources.FirstOrDefault(item =>
+                    item.Code.Equals(variable.SourceCode, StringComparison.OrdinalIgnoreCase))
+                ?? throw new PocDatasetConfigurationException(
+                    "EXTERNAL_PARAMETER_SOURCE_NOT_FOUND",
+                    $"变量 '@{variable.Code}' 引用的外部参数源不存在。");
+            var field = source.Fields.FirstOrDefault(item =>
+                    item.Code.Equals(variable.SourceFieldCode, StringComparison.OrdinalIgnoreCase))
+                ?? throw new PocDatasetConfigurationException(
+                    "EXTERNAL_PARAMETER_FIELD_NOT_FOUND",
+                    $"变量 '@{variable.Code}' 引用的外部字段不存在。");
+            if (!source.Enabled ||
+                !field.DataType.Equals(variable.DataType, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new PocDatasetConfigurationException(
+                    "EXTERNAL_PARAMETER_BINDING_INVALID",
+                    $"变量 '@{variable.Code}' 的外部字段绑定无效。");
             }
         }
     }

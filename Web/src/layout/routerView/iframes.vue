@@ -9,7 +9,7 @@
             >
 				<transition-group :name="name">
 					<iframe
-						:src="buildIframeUrl(v.meta.isLink, getToken())"
+						:src="buildIframeUrl(v.meta.isLink, getToken(), window.location.origin, iframeQuery)"
 						:allow="getIframePermissions(v.meta.isLink)"
 						:key="v.path"
 						frameborder="0"
@@ -52,6 +52,9 @@ const props = defineProps({
 // 定义变量内容
 const iframeRef = ref();
 const route = useRoute();
+
+// route.query 是业务调用方的统一参数对象；menuId 由壳自己消费，buildIframeUrl 会过滤它。
+const iframeQuery = computed(() => route.query as Record<string, unknown>);
 
 // 处理 list 列表，当打开时，才进行加载
 const setIframeList = computed(() => {

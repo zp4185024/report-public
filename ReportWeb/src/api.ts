@@ -11,6 +11,10 @@ import type {
   ExecuteRequest,
   ExecuteResult,
   ExportJob,
+  ExternalParameterSourceDocument,
+  ExternalParameterSourceInput,
+  ExternalParameterSourceTestRequest,
+  ExternalParameterSourceTestResult,
   ReportConfigurationDocument,
   ReportCreateOptionsDocument,
   ReportDefinition,
@@ -211,4 +215,31 @@ export const dataAssetApi = {
       body: JSON.stringify(request),
       },
     ),
+
+  externalParameterSources: () =>
+    requestJson<ExternalParameterSourceDocument[]>(
+      '/api/report-center/poc/external-parameter-sources',
+    ),
+
+  saveExternalParameterSource: (request: ExternalParameterSourceInput) =>
+    requestJson<ExternalParameterSourceDocument>(
+      `/api/report-center/poc/external-parameter-sources/${encodeURIComponent(request.code)}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+
+  testExternalParameterSource: (
+    code: string,
+    request: ExternalParameterSourceTestRequest,
+  ) => requestJson<ExternalParameterSourceTestResult>(
+    `/api/report-center/poc/external-parameter-sources/${encodeURIComponent(code)}/test`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    },
+  ),
 };

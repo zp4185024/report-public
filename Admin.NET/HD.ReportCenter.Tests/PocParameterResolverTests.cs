@@ -51,6 +51,75 @@ public sealed class PocParameterResolverTests
     }
 
     [Fact]
+    public void Resolve_OnlyAcceptsExternalValuesFromTrustedInput()
+    {
+        var definitions = new[]
+        {
+            Parameter("hisOrganizeId", "string", required: true, sourceType: "External")
+        };
+        var clientInput = new Dictionary<string, string?>
+        {
+            ["hisOrganizeId"] = "forged-organ"
+        };
+        var trustedInput = new Dictionary<string, string?>
+        {
+            ["hisOrganizeId"] = "organ1001"
+        };
+
+        var resolved = PocParameterResolver.Resolve(definitions, clientInput, trustedInput);
+
+        Assert.Equal("organ1001", resolved.DisplayValues["hisOrganizeId"]);
+        Assert.Equal("organ1001", resolved.DatabaseValues["hisOrganizeId"]);
+    }
+
+    [Fact]
+    public void Resolve_UnifiesPageUrlAndExternalValuesForTemplateAndSqlConsumers()
+    {
+        var definitions = new[]
+        {
+            Parameter("queryDate", "date", required: true, sourceType: "Url"),
+            Parameter("hisOrganizeName", "string", sourceType: "External"),
+            Parameter("hisDepartmentName", "string", sourceType: "External"),
+            Parameter("hisUserName", "string", sourceType: "External")
+        };
+        var pageOrUrlInput = new Dictionary<string, string?>
+        {
+            ["queryDate"] = "2026-08-13"
+        };
+        var externalInput = new Dictionary<string, string?>
+        {
+            ["hisOrganizeName"] = "锦州市凌河区医院",
+            ["hisDepartmentName"] = "财务科",
+            ["hisUserName"] = "super"
+        };
+
+        var resolved = PocParameterResolver.Resolve(
+            definitions,
+            pageOrUrlInput,
+            externalInput);
+
+        Assert.Equal("2026-08-13", resolved.DisplayValues["queryDate"]);
+        Assert.Equal("锦州市凌河区医院", resolved.DisplayValues["hisOrganizeName"]);
+        Assert.Equal("财务科", resolved.DisplayValues["hisDepartmentName"]);
+        Assert.Equal("super", resolved.DisplayValues["hisUserName"]);
+        Assert.Equal(new DateTime(2026, 8, 13), resolved.DatabaseValues["queryDate"]);
+        Assert.Equal("锦州市凌河区医院", resolved.DatabaseValues["hisOrganizeName"]);
+        Assert.Equal("财务科", resolved.DatabaseValues["hisDepartmentName"]);
+        Assert.Equal("super", resolved.DatabaseValues["hisUserName"]);
+    }
+
+    [Fact]
+    public void Resolve_RejectsRequiredExternalValueWhenTrustedInputIsMissing()
+    {
+        var exception = Assert.Throws<PocParameterResolutionException>(() =>
+            PocParameterResolver.Resolve(
+                [Parameter("hisUserName", "string", required: true, sourceType: "External")],
+                new Dictionary<string, string?> { ["hisUserName"] = "伪造用户" }));
+
+        Assert.Equal("PARAM_REQUIRED", exception.Code);
+    }
+
+    [Fact]
     public void Resolve_RejectsMissingRequiredParameter()
     {
         var exception = Assert.Throws<PocParameterResolutionException>(() =>

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createReportShareUrl, readReportShareParameters } from './reportShare';
+import {
+  createReportShareUrl,
+  readReportQueryParameters,
+  readReportShareParameters,
+} from './reportShare';
 
 describe('report sharing', () => {
   it('creates a dedicated share URL with only visible non-empty parameters', () => {
@@ -50,6 +54,17 @@ describe('report sharing', () => {
   it('ignores fragment entries outside the sharing parameter namespace', () => {
     expect(readReportShareParameters('#mode=edit&p.hisOrganizeId=organ1001')).toEqual({
       hisOrganizeId: 'organ1001',
+    });
+  });
+
+  it('allows embedded callers to pass URL-prefill parameters in the query string', () => {
+    expect(readReportQueryParameters(
+      '?hospitalId=H01&deptId=D02&personId=P03&token=opaque',
+    )).toEqual({
+      hospitalId: 'H01',
+      deptId: 'D02',
+      personId: 'P03',
+      token: 'opaque',
     });
   });
 });

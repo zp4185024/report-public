@@ -1,5 +1,13 @@
 const localNetworkPermission = 'local-network-access';
 
+function isLoopbackHostname(hostname: string): boolean {
+	const normalizedHostname = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+	return normalizedHostname === 'localhost'
+		|| normalizedHostname.endsWith('.localhost')
+		|| normalizedHostname === '127.0.0.1'
+		|| normalizedHostname === '::1';
+}
+
 function isIpv4InLocalNetwork(hostname: string): boolean {
 	const parts = hostname.split('.').map(Number);
 	if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
@@ -13,9 +21,30 @@ function isIpv4InLocalNetwork(hostname: string): boolean {
 		|| (parts[0] === 192 && parts[1] === 168);
 }
 
-export function buildIframeUrl(address: string, token: string, baseOrigin = window.location.origin): string {
+export function buildIframeUrl(
+	address: string,
+	token: string,
+	baseOrigin = window.location.origin,
+	query: Readonly<Record<string, unknown>> = {},
+): string {
 	try {
 		const url = new URL(address, baseOrigin);
+		const baseUrl = new URL(baseOrigin);
+		// A loopback hostname in a menu points at the computer running the browser.
+		// When the shell is opened over the LAN, target the shell host instead.
+		if (isLoopbackHostname(url.hostname) && !isLoopbackHostname(baseUrl.hostname)) {
+			url.hostname = baseUrl.hostname;
+		}
+		// 菜单路由自身的标识不能污染业务页面；其余查询参数按原名传给 iframe。
+		for (const [key, rawValue] of Object.entries(query)) {
+			if (key === 'menuId' || rawValue === null || rawValue === undefined) continue;
+			url.searchParams.delete(key);
+			for (const value of Array.isArray(rawValue) ? rawValue : [rawValue]) {
+				if (value !== null && value !== undefined && String(value) !== '') {
+					url.searchParams.append(key, String(value));
+				}
+			}
+		}
 		url.searchParams.set('token', token);
 		return url.toString();
 	} catch {
@@ -36,8 +65,7 @@ export function getIframePermissions(address: string, baseOrigin = window.locati
 			|| normalizedHostname.startsWith('fea')
 			|| normalizedHostname.startsWith('feb')
 		);
-		const isLocalNetwork = normalizedHostname === 'localhost'
-			|| normalizedHostname.endsWith('.localhost')
+		const isLocalNetwork = isLoopbackHostname(normalizedHostname)
 			|| normalizedHostname.endsWith('.local')
 			|| isLocalIpv6
 			|| isIpv4InLocalNetwork(normalizedHostname);

@@ -51,6 +51,34 @@ public sealed record PocDatasetOption(
     IReadOnlyList<PocDatasetFieldDefinition> Fields,
     bool Enabled);
 
+public sealed record PocExternalParameterSourceDocument(
+    string Code,
+    string Name,
+    string BaseUrl,
+    string Endpoint,
+    string HttpMethod,
+    string RequestBodyTemplate,
+    string HeadersTemplate,
+    IReadOnlyList<PocExternalRequestParameterDefinition> RequestParameters,
+    int TimeoutSeconds,
+    bool Enabled,
+    int Revision,
+    IReadOnlyList<PocExternalParameterFieldDefinition> Fields);
+
+public sealed record PocExternalParameterSourceInput(
+    string Code,
+    string Name,
+    string BaseUrl,
+    string Endpoint,
+    string HttpMethod,
+    string RequestBodyTemplate,
+    string HeadersTemplate,
+    IReadOnlyList<PocExternalRequestParameterDefinition> RequestParameters,
+    int TimeoutSeconds,
+    bool Enabled,
+    int Revision,
+    IReadOnlyList<PocExternalParameterFieldDefinition> Fields);
+
 public sealed record PocReportConfigurationDocument(
     string ReportCode,
     string Name,
@@ -63,7 +91,8 @@ public sealed record PocReportConfigurationDocument(
     IReadOnlyList<PocDatasetFieldDefinition> Fields,
     int Revision,
     IReadOnlyList<PocFieldPresentationDefinition>? FieldPresentations = null,
-    PocShareProtectionSettings? ShareProtection = null);
+    PocShareProtectionSettings? ShareProtection = null,
+    IReadOnlyList<PocExternalParameterSourceDefinition>? ExternalSources = null);
 
 public sealed record PocReportSummaryDocument(
     string ReportCode,
@@ -135,7 +164,7 @@ public sealed class PocReportConfigurationService : ITransient
         ["string", "text", "int", "long", "decimal", "date", "datetime", "bool", "boolean"],
         StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> ParameterSourceTypes = new(
-        ["Form", "System", "Fixed"],
+        ["Form", "Url", "System", "Fixed", "External"],
         StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> ParameterControlTypes = new(
         ["text", "number", "date", "checkbox", "select", "multiSelect", "hidden"],
@@ -144,17 +173,20 @@ public sealed class PocReportConfigurationService : ITransient
     private readonly PocDataAssetStore _dataAssets;
     private readonly ISqlSugarClient _database;
     private readonly PocTemplateStore? _templates;
+    private readonly PocExternalParameterSourceService? _externalParameters;
 
     public PocReportConfigurationService(
         PocReportConfigurationStore store,
         PocDataAssetStore dataAssets,
         ISqlSugarClient database,
-        PocTemplateStore? templates = null)
+        PocTemplateStore? templates = null,
+        PocExternalParameterSourceService? externalParameters = null)
     {
         _store = store;
         _dataAssets = dataAssets;
         _database = database;
         _templates = templates;
+        _externalParameters = externalParameters;
     }
 
     public async Task<IReadOnlyList<PocReportSummaryDocument>> ListReportsAsync()
@@ -233,13 +265,18 @@ public sealed class PocReportConfigurationService : ITransient
             variable.Code,
             variable.DisplayName,
             ControlTypeFor(variable.DataType),
-            "Form",
+            variable.SourceType,
             null,
-            true,
+            !variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase),
             variable.DataType,
+            ReadOnly: variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase),
             Required: variable.Required,
-            AllowUrlPrefill: true,
-            UrlKey: variable.Code)).ToArray();
+            AllowUrlPrefill: variable.SourceType.Equals("Form", StringComparison.OrdinalIgnoreCase),
+            UrlKey: variable.SourceType.Equals("Form", StringComparison.OrdinalIgnoreCase)
+                ? variable.Code
+                : null,
+            SourceCode: variable.SourceCode,
+            SourceFieldCode: variable.SourceFieldCode)).ToArray();
 
         return await SaveAsync(
             reportCode,
@@ -267,13 +304,14 @@ public sealed class PocReportConfigurationService : ITransient
         var normalizedCode = NormalizeReportCode(reportCode);
         var stored = await _store.GetAsync(normalizedCode);
         var datasets = await _dataAssets.ListDatasetsAsync();
+        var externalSources = await ExternalSourceDefinitionsAsync();
         if (stored is not null)
         {
-            return CreateDocument(stored, datasets, now);
+            return CreateDocument(stored, datasets, externalSources, now);
         }
         if (normalizedCode.Equals(PocReportCatalog.ReportCode, StringComparison.OrdinalIgnoreCase))
         {
-            return CreateFallbackDocument(now, datasets);
+            return CreateFallbackDocument(now, datasets, externalSources);
         }
         throw new KeyNotFoundException($"不存在报表 '{normalizedCode}'。");
     }
@@ -331,7 +369,11 @@ public sealed class PocReportConfigurationService : ITransient
                 "DATA_ASSET_DISABLED",
                 "报表引用的数据集或数据源已停用。");
         }
-        var document = CreateDocument(stored, [stored.Dataset], now);
+        var document = CreateDocument(
+            stored,
+            [stored.Dataset],
+            await ExternalSourceDefinitionsAsync(),
+            now);
         return new PocRuntimeReportConfiguration(
             ToDefinition(document),
             stored.DataSource.Code,
@@ -374,6 +416,9 @@ public sealed class PocReportConfigurationService : ITransient
         }
         var datasetSchema = PocDataAssetService.ReadSchema(dataset);
         ValidateDatasetVariableBindings(datasetSchema.Variables, request.Parameters);
+        ValidateExternalParameterBindings(
+            request.Parameters,
+            await ExternalSourceDocumentsAsync());
         ValidateFieldPresentations(request.FieldPresentations ?? [], datasetSchema.Fields);
         _ = PocReadOnlySqlValidator.Validate(
             dataset.QueryText,
@@ -388,6 +433,8 @@ public sealed class PocReportConfigurationService : ITransient
                 DataType = parameter.DataType.Trim(),
                 ControlType = parameter.ControlType.Trim(),
                 SourceType = parameter.SourceType.Trim(),
+                SourceCode = NullIfWhiteSpace(parameter.SourceCode),
+                SourceFieldCode = NullIfWhiteSpace(parameter.SourceFieldCode),
                 UrlKey = NullIfWhiteSpace(parameter.UrlKey),
                 DefaultExpression = NullIfWhiteSpace(parameter.DefaultExpression),
                 FixedValue = NullIfWhiteSpace(parameter.FixedValue),
@@ -417,7 +464,8 @@ public sealed class PocReportConfigurationService : ITransient
 
     private PocReportConfigurationDocument CreateFallbackDocument(
         DateTimeOffset? now,
-        IReadOnlyList<PocReportDataset> storedDatasets)
+        IReadOnlyList<PocReportDataset> storedDatasets,
+        IReadOnlyList<PocExternalParameterSourceDefinition> externalSources)
     {
         var definition = PocReportCatalog.GetDefinition(now);
         var options = storedDatasets.Count == 0
@@ -445,19 +493,21 @@ public sealed class PocReportConfigurationService : ITransient
             selected.Fields,
             0,
             definition.FieldPresentations ?? [],
-            definition.ShareProtection ?? new PocShareProtectionSettings(false, false));
+            definition.ShareProtection ?? new PocShareProtectionSettings(false, false),
+            externalSources);
     }
 
-    private static PocReportConfigurationDocument CreateDocument(
+    private PocReportConfigurationDocument CreateDocument(
         PocStoredReportConfiguration stored,
         IReadOnlyList<PocReportDataset> datasets,
+        IReadOnlyList<PocExternalParameterSourceDefinition> externalSources,
         DateTimeOffset? now)
     {
         var preview = Deserialize<PocPreviewSettings>(stored.Report.PreviewSettingsJson);
         var storedProtection = PocShareProtectionPassword.Read(stored.Report.PreviewSettingsJson);
         var export = Deserialize<PocExportSettings>(stored.Report.ExportSettingsJson);
         var datasetSchema = PocDataAssetService.ReadSchema(stored.Dataset);
-        var parameters = stored.Parameters.Select(parameter =>
+        var storedParameters = stored.Parameters.Select(parameter =>
         {
             var defaultValue = PocDefaultExpressionEvaluator.Evaluate(
                 parameter.DefaultExpression,
@@ -477,8 +527,14 @@ public sealed class PocReportConfigurationService : ITransient
                 parameter.IsRequired,
                 parameter.AllowUrlPrefill,
                 parameter.UrlKey,
-                DeserializeList<PocValueOption>(parameter.OptionsJson));
+                DeserializeList<PocValueOption>(parameter.OptionsJson),
+                parameter.SourceCode,
+                parameter.SourceFieldCode);
         }).ToArray();
+        var parameters = AlignExternalParameters(
+            storedParameters,
+            datasetSchema.Variables,
+            externalSources);
         return new PocReportConfigurationDocument(
             stored.Report.Code,
             stored.Report.Name,
@@ -493,7 +549,8 @@ public sealed class PocReportConfigurationService : ITransient
             DeserializeList<PocFieldPresentationDefinition>(stored.Report.FieldPresentationsJson),
             new PocShareProtectionSettings(
                 storedProtection?.Enabled ?? false,
-                storedProtection is not null));
+                storedProtection is not null),
+            externalSources);
     }
 
     private static PocReportDefinition ToDefinition(PocReportConfigurationDocument document) =>
@@ -506,7 +563,14 @@ public sealed class PocReportConfigurationService : ITransient
             document.Parameters,
             document.Fields,
             document.FieldPresentations ?? [],
-            document.ShareProtection ?? new PocShareProtectionSettings(false, false));
+            document.ShareProtection ?? new PocShareProtectionSettings(false, false),
+            document.ExternalSources ?? []);
+
+    private async Task<IReadOnlyList<PocExternalParameterSourceDefinition>> ExternalSourceDefinitionsAsync() =>
+        _externalParameters is null ? [] : await _externalParameters.ListDefinitionsAsync();
+
+    private async Task<IReadOnlyList<PocExternalParameterSourceDocument>> ExternalSourceDocumentsAsync() =>
+        _externalParameters is null ? [] : await _externalParameters.ListAsync();
 
     private static PocStoredShareProtection? ResolveShareProtection(
         PocSaveShareProtectionRequest? request,
@@ -553,12 +617,134 @@ public sealed class PocReportConfigurationService : ITransient
                 ?? throw new PocDatasetConfigurationException(
                     "DATASET_PARAMETER_UNMAPPED",
                     $"数据集变量 '@{variable.Code}' 尚未配置报表取值。");
+            var external = variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase);
             if (!parameter.DataType.Equals(variable.DataType, StringComparison.OrdinalIgnoreCase) ||
+                (external && !parameter.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase)) ||
+                (external && !string.Equals(
+                    parameter.SourceCode,
+                    variable.SourceCode,
+                    StringComparison.OrdinalIgnoreCase)) ||
+                (external && !string.Equals(
+                    parameter.SourceFieldCode,
+                    variable.SourceFieldCode,
+                    StringComparison.OrdinalIgnoreCase)) ||
                 (variable.Required && !parameter.Required))
             {
                 throw new PocDatasetConfigurationException(
                     "DATASET_PARAMETER_TYPE_MISMATCH",
                     $"报表参数 '{parameter.Code}' 与数据集变量定义不一致。");
+            }
+        }
+    }
+
+    internal static IReadOnlyList<PocParameterDefinition> AlignExternalParameters(
+        IReadOnlyList<PocParameterDefinition> parameters,
+        IReadOnlyList<PocDatasetVariableDefinition> variables,
+        IReadOnlyList<PocExternalParameterSourceDefinition> sources)
+    {
+        var result = parameters.Select(parameter => parameter with { }).ToList();
+        var sourceByCode = sources.ToDictionary(source => source.Code, StringComparer.OrdinalIgnoreCase);
+        foreach (var variable in variables.Where(variable =>
+            variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (string.IsNullOrWhiteSpace(variable.SourceCode) ||
+                string.IsNullOrWhiteSpace(variable.SourceFieldCode))
+            {
+                continue;
+            }
+            UpsertExternalParameter(
+                result,
+                variable.Code,
+                variable.DisplayName,
+                variable.DataType,
+                variable.Required,
+                variable.SourceCode,
+                variable.SourceFieldCode);
+
+            if (!sourceByCode.TryGetValue(variable.SourceCode, out var source))
+            {
+                continue;
+            }
+
+            foreach (var sourceField in source.Fields)
+            {
+                if (result.Any(parameter =>
+                    parameter.Code.Equals(sourceField.Code, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+                UpsertExternalParameter(
+                    result,
+                    sourceField.Code,
+                    sourceField.DisplayName,
+                    sourceField.DataType,
+                    false,
+                    source.Code,
+                    sourceField.Code);
+            }
+        }
+        return result;
+    }
+
+    private static void UpsertExternalParameter(
+        IList<PocParameterDefinition> parameters,
+        string code,
+        string displayName,
+        string dataType,
+        bool required,
+        string sourceCode,
+        string sourceFieldCode)
+    {
+        var index = parameters.ToList().FindIndex(parameter =>
+            parameter.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+        var current = index >= 0 ? parameters[index] : null;
+        var external = new PocParameterDefinition(
+            code,
+            string.IsNullOrWhiteSpace(current?.DisplayName) ? displayName : current.DisplayName,
+            current?.ControlType ?? "text",
+            "External",
+            null,
+            false,
+            dataType,
+            ReadOnly: true,
+            Required: required || current?.Required == true,
+            AllowUrlPrefill: false,
+            Options: current?.Options,
+            SourceCode: sourceCode,
+            SourceFieldCode: sourceFieldCode);
+        if (index >= 0)
+        {
+            parameters[index] = external;
+        }
+        else
+        {
+            parameters.Add(external);
+        }
+    }
+
+    private static void ValidateExternalParameterBindings(
+        IReadOnlyList<PocParameterDefinition> parameters,
+        IReadOnlyList<PocExternalParameterSourceDocument> sources)
+    {
+        foreach (var parameter in parameters.Where(item =>
+            item.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase)))
+        {
+            var source = sources.FirstOrDefault(item =>
+                    item.Code.Equals(parameter.SourceCode, StringComparison.OrdinalIgnoreCase))
+                ?? throw new PocDatasetConfigurationException(
+                    "EXTERNAL_PARAMETER_SOURCE_NOT_FOUND",
+                    $"参数 '{parameter.Code}' 引用的外部参数源不存在。");
+            var field = source.Fields.FirstOrDefault(item =>
+                    item.Code.Equals(parameter.SourceFieldCode, StringComparison.OrdinalIgnoreCase))
+                ?? throw new PocDatasetConfigurationException(
+                    "EXTERNAL_PARAMETER_FIELD_NOT_FOUND",
+                    $"参数 '{parameter.Code}' 引用的外部字段不存在。");
+            if (!source.Enabled ||
+                !field.DataType.Equals(parameter.DataType, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new PocDatasetConfigurationException(
+                    "EXTERNAL_PARAMETER_BINDING_INVALID",
+                    $"参数 '{parameter.Code}' 的外部字段绑定无效。");
             }
         }
     }
@@ -619,6 +805,12 @@ public sealed class PocReportConfigurationService : ITransient
                  string.IsNullOrWhiteSpace(parameter.FixedValue)) ||
                 (parameter.SourceType.Equals("System", StringComparison.OrdinalIgnoreCase) &&
                  string.IsNullOrWhiteSpace(parameter.DefaultExpression)) ||
+                (parameter.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase) &&
+                 (string.IsNullOrWhiteSpace(parameter.SourceCode) ||
+                  string.IsNullOrWhiteSpace(parameter.SourceFieldCode))) ||
+                (!parameter.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase) &&
+                 (!string.IsNullOrWhiteSpace(parameter.SourceCode) ||
+                  !string.IsNullOrWhiteSpace(parameter.SourceFieldCode))) ||
                 (!string.IsNullOrWhiteSpace(parameter.DefaultExpression) &&
                  !parameter.DataType.Equals("date", StringComparison.OrdinalIgnoreCase) &&
                  !parameter.DataType.Equals("datetime", StringComparison.OrdinalIgnoreCase)))

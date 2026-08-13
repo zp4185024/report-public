@@ -1,4 +1,4 @@
-import { Braces, Columns3 } from 'lucide-react';
+import { Braces, Columns3, PlugZap } from 'lucide-react';
 import type { ReportDefinition } from './types';
 
 /** 字段面板不直接操作 Univer，只把 token 和绑定种类交给宿主，保持 UI 与工作簿 API 解耦。 */
@@ -17,7 +17,12 @@ export function TemplateFieldPanel({
   disabled,
   onInsert,
 }: TemplateFieldPanelProps) {
-  const parameters = definition.parameters.filter((parameter) => parameter.visible);
+  const parameters = definition.parameters.filter((parameter) => (
+    parameter.visible && parameter.sourceType.toLowerCase() !== 'external'
+  ));
+  const externalParameters = definition.parameters.filter((parameter) => (
+    parameter.sourceType.toLowerCase() === 'external'
+  ));
   const detailFields = definition.fields;
 
   return (
@@ -45,6 +50,32 @@ export function TemplateFieldPanel({
           })}
         </div>
       </div>
+
+      {externalParameters.length > 0 && (
+        <div className="field-group">
+          <div className="field-group-title">
+            <PlugZap size={15} />
+            接口参数
+          </div>
+          <div className="field-list">
+            {externalParameters.map((parameter) => {
+              const token = `{{params.${parameter.code}}}`;
+              return (
+                <button
+                  className="field-button external"
+                  type="button"
+                  key={parameter.code}
+                  title={token}
+                  disabled={disabled}
+                  onClick={() => onInsert(token, 'parameter')}
+                >
+                  {parameter.displayName}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="field-group">
         <div className="field-group-title">

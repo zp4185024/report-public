@@ -4,6 +4,7 @@ import AppFrame from './AppFrame';
 import DataAssetPage from './DataAssetPage';
 import DatasetPreviewPage from './DatasetPreviewPage';
 import ReportListPage from './ReportListPage';
+import ExternalParameterSourcePage from './ExternalParameterSourcePage';
 import './app.css';
 
 // 入口只负责挂载 React；Univer/Worker 的重量级初始化延迟到模板数据加载完成后的宿主组件中。
@@ -22,6 +23,9 @@ function route() {
   }
   if (path === '/datasets') {
     return <AppFrame active="datasets"><DataAssetPage initialKind="datasets" /></AppFrame>;
+  }
+  if (path === '/external-parameters') {
+    return <AppFrame active="external-parameters"><ExternalParameterSourcePage /></AppFrame>;
   }
   if (path.startsWith('/reports/')) {
     const reportCode = decodeURIComponent(path.slice('/reports/'.length));

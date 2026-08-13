@@ -26,10 +26,12 @@ public static class PocParameterResolver
 {
     public static PocResolvedParameterSet Resolve(
         IReadOnlyList<PocParameterDefinition> definitions,
-        IReadOnlyDictionary<string, string?>? input)
+        IReadOnlyDictionary<string, string?>? input,
+        IReadOnlyDictionary<string, string?>? trustedInput = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         input ??= new Dictionary<string, string?>();
+        trustedInput ??= new Dictionary<string, string?>();
 
         var displayValues = new PocResolvedParameters();
         var databaseValues = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -38,12 +40,18 @@ public static class PocParameterResolver
         foreach (var definition in definitions.OrderBy(item => item.Code, StringComparer.Ordinal))
         {
             ValidateDefinition(definition, codes);
+            var externalValue = definition.SourceType.Equals(
+                "External",
+                StringComparison.OrdinalIgnoreCase);
             var acceptsClientValue =
                 !definition.SourceType.Equals("Fixed", StringComparison.OrdinalIgnoreCase) &&
-                !definition.SourceType.Equals("System", StringComparison.OrdinalIgnoreCase);
-            var rawValue = acceptsClientValue && input.TryGetValue(definition.Code, out var supplied)
-                ? supplied
-                : null;
+                !definition.SourceType.Equals("System", StringComparison.OrdinalIgnoreCase) &&
+                !externalValue;
+            var rawValue = externalValue && trustedInput.TryGetValue(definition.Code, out var resolved)
+                ? resolved
+                : acceptsClientValue && input.TryGetValue(definition.Code, out var supplied)
+                    ? supplied
+                    : null;
             if (string.IsNullOrWhiteSpace(rawValue))
             {
                 rawValue = definition.SourceType.Equals("Fixed", StringComparison.OrdinalIgnoreCase)

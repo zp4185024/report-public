@@ -31,6 +31,7 @@ public sealed class PocReportApi : IDynamicApiController
     private readonly PocTemplateDataExportService _templateDataExportService;
     private readonly PocReportConfigurationService? _configurationService;
     private readonly PocDataAssetService? _dataAssetService;
+    private readonly PocExternalParameterSourceService? _externalParameterSourceService;
     private readonly PocSqlDatasetExecutor? _datasetExecutor;
     private readonly PocTemplateDataExporter _templateDataExporter = new();
 
@@ -40,7 +41,8 @@ public sealed class PocReportApi : IDynamicApiController
         PocTemplateDataExportService templateDataExportService,
         PocReportConfigurationService? configurationService = null,
         PocSqlDatasetExecutor? datasetExecutor = null,
-        PocDataAssetService? dataAssetService = null)
+        PocDataAssetService? dataAssetService = null,
+        PocExternalParameterSourceService? externalParameterSourceService = null)
     {
         _templateService = templateService;
         _templateExchangeService = templateExchangeService;
@@ -48,6 +50,7 @@ public sealed class PocReportApi : IDynamicApiController
         _configurationService = configurationService;
         _datasetExecutor = datasetExecutor;
         _dataAssetService = dataAssetService;
+        _externalParameterSourceService = externalParameterSourceService;
     }
 
     /// <summary>读取数据库模板；未保存过时由服务层返回 revision 0 的种子模板。</summary>
@@ -216,6 +219,34 @@ public sealed class PocReportApi : IDynamicApiController
         CancellationToken cancellationToken) =>
         await HandleConfigurationOperation(
             () => RequireDataAssetService().TestDataSourceAsync(request, cancellationToken));
+
+    /// <summary>读取可跨报表复用的外部参数接口源；响应不包含运行时凭据。</summary>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/external-parameter-sources")]
+    public async Task<IReadOnlyList<PocExternalParameterSourceDocument>> ExternalParameterSources() =>
+        await RequireExternalParameterSourceService().ListAsync();
+
+    /// <summary>新增或更新一个外部参数接口源及其返回字段映射。</summary>
+    [SuppressMonitor]
+    [HttpPut("/api/report-center/poc/external-parameter-sources/{code}")]
+    public async Task<PocExternalParameterSourceDocument> SaveExternalParameterSource(
+        [FromRoute] string code,
+        [FromBody] PocExternalParameterSourceInput request) =>
+        await HandleConfigurationOperation(
+            () => RequireExternalParameterSourceService().SaveAsync(code, request));
+
+    /// <summary>使用临时上下文测试外部参数源，响应只返回已配置字段。</summary>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/poc/external-parameter-sources/{code}/test")]
+    public async Task<PocExternalParameterSourceTestResult> TestExternalParameterSource(
+        [FromRoute] string code,
+        [FromBody] PocExternalParameterSourceTestRequest request,
+        CancellationToken cancellationToken) =>
+        await HandleDatasetOperation(
+            () => RequireExternalParameterSourceService().TestAsync(
+                code,
+                request,
+                cancellationToken));
 
     /// <summary>读取全部全局数据集及其字段契约。</summary>
     [SuppressMonitor]
@@ -457,6 +488,10 @@ public sealed class PocReportApi : IDynamicApiController
         _dataAssetService
         ?? throw Oops.Oh("DATA_ASSET_SERVICE_NOT_AVAILABLE").StatusCode(503);
 
+    private PocExternalParameterSourceService RequireExternalParameterSourceService() =>
+        _externalParameterSourceService
+        ?? throw Oops.Oh("EXTERNAL_PARAMETER_SOURCE_SERVICE_NOT_AVAILABLE").StatusCode(503);
+
     private static async Task<T> HandleConfigurationOperation<T>(Func<Task<T>> operation)
     {
         try
@@ -506,6 +541,10 @@ public sealed class PocReportApi : IDynamicApiController
         catch (PocDatasetExecutionException exception)
         {
             throw Oops.Oh(exception.Code).StatusCode(400);
+        }
+        catch (PocExternalParameterException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
         }
     }
 }

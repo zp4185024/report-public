@@ -9,7 +9,8 @@ export default defineConfig(({ mode }) => {
     plugins: react(),
     server: {
       host: '0.0.0.0',
-      port: 5174,
+      // HIS 现有 iframe 配置固定指向 5175，开发启动也保持这个端口，避免每次改 HIS 菜单地址。
+      port: 5175,
       proxy: {
         // 浏览器始终请求同源 /api，由 Vite 代理到后端，开发环境无需额外放宽 CORS。
         '/api': {

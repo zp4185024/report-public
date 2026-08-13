@@ -125,6 +125,12 @@ public sealed class PocReportParameter : EntityBase
     [SugarColumn(ColumnDescription = "来源类型", Length = 16)]
     public string SourceType { get; set; } = "Form";
 
+    [SugarColumn(ColumnDescription = "外部参数源编码", Length = 64, IsNullable = true)]
+    public string? SourceCode { get; set; }
+
+    [SugarColumn(ColumnDescription = "外部返回字段编码", Length = 64, IsNullable = true)]
+    public string? SourceFieldCode { get; set; }
+
     [SugarColumn(ColumnDescription = "URL参数名", Length = 64, IsNullable = true)]
     public string? UrlKey { get; set; }
 
@@ -151,4 +157,46 @@ public sealed class PocReportParameter : EntityBase
 
     [SugarColumn(ColumnDescription = "显示顺序")]
     public int DisplayOrder { get; set; }
+}
+
+[SugarTable("RcExternalParameterSource", "外部参数接口源表")]
+[SugarIndex("uk_RcExternalParameterSource_Code", nameof(Code), OrderByType.Asc, IsUnique = true)]
+[SysTable]
+public sealed class PocExternalParameterSource : EntityBase
+{
+    [SugarColumn(ColumnDescription = "接口源编码", Length = 64)]
+    public string Code { get; set; } = string.Empty;
+
+    [SugarColumn(ColumnDescription = "接口源名称", Length = 128)]
+    public string Name { get; set; } = string.Empty;
+
+    [SugarColumn(ColumnDescription = "基础地址", Length = 512)]
+    public string BaseUrl { get; set; } = string.Empty;
+
+    [SugarColumn(ColumnDescription = "接口路径", Length = 512)]
+    public string Endpoint { get; set; } = string.Empty;
+
+    [SugarColumn(ColumnDescription = "HTTP 方法", Length = 16)]
+    public string HttpMethod { get; set; } = "POST";
+
+    [SugarColumn(ColumnDescription = "请求体模板", ColumnDataType = StaticConfig.CodeFirst_BigString)]
+    public string RequestBodyTemplate { get; set; } = "{}";
+
+    [SugarColumn(ColumnDescription = "请求头模板", ColumnDataType = StaticConfig.CodeFirst_BigString)]
+    public string HeadersTemplate { get; set; } = "{}";
+
+    [SugarColumn(ColumnDescription = "URL动态请求参数", ColumnDataType = StaticConfig.CodeFirst_BigString)]
+    public string RequestParameterSchemaJson { get; set; } = "[]";
+
+    [SugarColumn(ColumnDescription = "响应字段映射", ColumnDataType = StaticConfig.CodeFirst_BigString)]
+    public string FieldSchemaJson { get; set; } = "[]";
+
+    [SugarColumn(ColumnDescription = "请求超时秒数")]
+    public int TimeoutSeconds { get; set; } = 10;
+
+    [SugarColumn(ColumnDescription = "配置修订号")]
+    public int Revision { get; set; }
+
+    [SugarColumn(ColumnDescription = "是否启用")]
+    public bool IsEnabled { get; set; } = true;
 }

@@ -16,7 +16,8 @@ import {
   FileSpreadsheet,
   FileUp,
   LoaderCircle,
-  Lock,
+  PanelTopClose,
+  PanelTopOpen,
   Pencil,
   Save,
   Search,
@@ -43,8 +44,15 @@ import { TemplateFieldPanel } from './TemplateFieldPanel';
 import { ReportConfigurationDialog } from './ReportConfigurationDialog';
 import { ShareReportDialog, type SharedParameterSummary } from './ShareReportDialog';
 import { StatusToasts } from './StatusToasts';
-import { UnlockProtectionDialog } from './UnlockProtectionDialog';
-import { createReportShareUrl, readReportShareParameters } from './reportShare';
+import {
+  createReportShareUrl,
+  readReportQueryParameters,
+  readReportShareParameters,
+} from './reportShare';
+import {
+  createInitialReportRequest,
+  refreshReportRequestFromUrl,
+} from './reportRequest';
 import {
   UniverTemplateHost,
   type TemplateEditorMode,
@@ -63,9 +71,6 @@ import type {
  * 可编辑模板验证页的状态编排层。
  * 它负责 HTTP、设计/预览模式和保存并发；所有具体工作簿副作用封装在 UniverTemplateHost 中。
  */
-
-// URL 参数在应用启动时读取一次。它们是初始查询条件，之后输入框状态由 React 管理。
-const urlParameters = new URLSearchParams(window.location.search);
 
 // 把稳定的后台错误码翻译为设计人员可理解的提示，同时保留原始 code 便于日志定位。
 const backendErrorMessages: Readonly<Record<string, string>> = {
@@ -88,6 +93,12 @@ const backendErrorMessages: Readonly<Record<string, string>> = {
   DATA_SOURCE_CONNECTION_FAILED: '无法连接到数据源',
   DATA_SOURCE_PASSWORD_REQUIRED: '连接信息变化后必须填写新密码',
   READ_ONLY_SQL_REQUIRED: '只允许配置单条只读 SELECT 查询',
+  EXTERNAL_PARAMETER_CONTEXT_REQUIRED: '缺少接口参数所需的必填 URL 动态参数',
+  EXTERNAL_PARAMETER_SOURCE_NOT_FOUND: '接口参数源不存在',
+  EXTERNAL_PARAMETER_SOURCE_DISABLED: '接口参数源已停用',
+  EXTERNAL_PARAMETER_REQUEST_FAILED: '接口参数请求失败',
+  EXTERNAL_PARAMETER_TIMEOUT: '接口参数请求超时',
+  EXTERNAL_PARAMETER_RESPONSE_INVALID: '接口返回内容与字段映射不一致',
   SHARE_PROTECTION_PASSWORD_REQUIRED: '开启共享数据保护前必须设置解除保护密码',
   SHARE_PROTECTION_PASSWORD_INVALID: '解除保护密码长度必须为 8 到 128 个字符',
 };
@@ -97,16 +108,7 @@ function createInitialRequest(
   definition?: ReportDefinition,
   sharedParameters?: Readonly<Record<string, string>>,
 ): ExecuteRequest {
-  const parameters: Record<string, string | null> = {};
-  for (const parameter of definition?.parameters ?? []) {
-    const urlValue = sharedParameters === undefined
-      ? parameter.allowUrlPrefill
-        ? urlParameters.get(parameter.urlKey || parameter.code)
-        : null
-      : sharedParameters[parameter.code] ?? null;
-    parameters[parameter.code] = urlValue ?? parameter.defaultValue ?? parameter.fixedValue;
-  }
-  return { page: 1, parameters };
+  return createInitialReportRequest(definition, sharedParameters);
 }
 
 function parameterDisplayValue(
@@ -156,6 +158,7 @@ function toReportDefinition(configuration: ReportConfigurationDocument): ReportD
     fields: configuration.fields,
     fieldPresentations: configuration.fieldPresentations ?? [],
     shareProtection: configuration.shareProtection ?? { enabled: false, passwordConfigured: false },
+    externalSources: configuration.externalSources ?? [],
   };
 }
 
@@ -215,11 +218,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
   const [configurationDocument, setConfigurationDocument] = useState<ReportConfigurationDocument | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareIncludesParameters, setShareIncludesParameters] = useState(true);
-  const [shareProtected, setShareProtected] = useState(false);
-  const [protectionChanging, setProtectionChanging] = useState(false);
-  const [unlockOpen, setUnlockOpen] = useState(false);
-  const [unlocking, setUnlocking] = useState(false);
-  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const [sharedToolsExpanded, setSharedToolsExpanded] = useState(false);
 
   // editorRef 是页面调用 Univer 的窄接口；draftSnapshotRef 保存“最后设计草稿”的同步事实来源。
   // 同一快照另存 state 是为了触发 React 生命周期；异步回调使用 ref 可避免读到闭包中的旧值。
@@ -255,7 +254,6 @@ export default function App({ reportCode, shared = false }: AppProps) {
         );
         draftSnapshotRef.current = nextTemplateDocument.snapshot;
         setDefinition(nextDefinition);
-        setShareProtected(nextDefinition.shareProtection?.enabled ?? false);
         setTemplateDocument(nextTemplateDocument);
         setDraftSnapshot(nextTemplateDocument.snapshot);
         setRequest(nextRequest);
@@ -351,7 +349,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
 
       // 先扫描草稿，再请求数据；无效 token 不应浪费后台查询，也不能进入具有副作用的渲染阶段。
       const binding = scanTemplateBindings(snapshot, definition);
-      const nextRequest = { ...request, page };
+      const nextRequest = refreshReportRequestFromUrl({ ...request, page }, definition);
       const queryStartedAt = performance.now();
       const queryResult = await reportApi.execute(nextRequest);
       const nextResult = applyLocalDataQuery(queryResult, definition, nextRequest);
@@ -365,13 +363,16 @@ export default function App({ reportCode, shared = false }: AppProps) {
       }
       renderAttempted = true;
       await editor.renderPreview(snapshot, plan);
-      if (shared) {
-        await editor.setDataProtected(shareProtected);
-      }
 
       setResult(nextResult);
       setRequest(nextRequest);
       setMode('preview');
+      if (shared) {
+        const rowCountLabel = definition.preview.mode === 'Full'
+          ? `共 ${nextResult.rows.length} 行`
+          : `本页 ${nextResult.rows.length} 行`;
+        setExchangeStatus(`查询完成，${rowCountLabel}`);
+      }
     } catch (exception) {
       let message = errorMessage(exception, '数据预览失败');
       if (mode === 'design' && renderAttempted && designSnapshot !== null) {
@@ -388,16 +389,20 @@ export default function App({ reportCode, shared = false }: AppProps) {
       setPreviewing(false);
       setLoading(false);
     }
-  }, [definition, initialized, mode, request, result, shareProtected, shared]);
+  }, [definition, initialized, mode, request, result, shared]);
 
   useEffect(() => {
     if (!shared || sharedAutoPreviewAttemptedRef.current || !initialized || definition === null) {
       return;
     }
 
-    const hasLinkedParameter = definition.parameters.some((parameter) => (
-      linkedParameters[parameter.code]?.trim()
-    ));
+    const hasLinkedParameter = definition.parameters.some((parameter) => {
+      return Boolean(
+        linkedParameters[parameter.code]?.trim()
+        || (parameter.allowUrlPrefill
+          && readReportQueryParameters()[parameter.urlKey || parameter.code]?.trim()),
+      );
+    });
     const hasMissingRequiredParameter = definition.parameters.some((parameter) => (
       parameter.required && !(request.parameters[parameter.code]?.trim())
     ));
@@ -699,68 +704,6 @@ export default function App({ reportCode, shared = false }: AppProps) {
     void enterPreview(1);
   }, [enterPreview]);
 
-  const updateShareProtection = useCallback(async (protectedMode: boolean) => {
-    if (!shared) return;
-
-    if (!protectedMode) {
-      setUnlockError(null);
-      setUnlockOpen(true);
-      return;
-    }
-
-    if (!(definition?.shareProtection?.passwordConfigured ?? false)) {
-      setError('请先在报表配置中设置解除保护密码。');
-      return;
-    }
-
-    setProtectionChanging(true);
-    try {
-      if (result !== null) {
-        const editor = editorRef.current;
-        if (editor === null) {
-          throw new Error('共享报表编辑器尚未准备完成。');
-        }
-        await editor.setDataProtected(true);
-      }
-      setShareProtected(true);
-      setError(null);
-      setExchangeStatus('已开启数据保护');
-    } catch (exception) {
-      setError(errorMessage(exception, '开启数据保护失败'));
-    } finally {
-      setProtectionChanging(false);
-    }
-  }, [definition?.shareProtection?.passwordConfigured, result, shared]);
-
-  const unlockShareProtection = useCallback(async (password: string) => {
-    if (!shared || unlocking) return;
-
-    setUnlocking(true);
-    setUnlockError(null);
-    try {
-      const unlock = await reportApi.unlockShareProtection(password);
-      if (!unlock.valid) {
-        setUnlockError('密码错误。');
-        return;
-      }
-      if (result !== null) {
-        const editor = editorRef.current;
-        if (editor === null) {
-          throw new Error('共享报表编辑器尚未准备完成。');
-        }
-        await editor.setDataProtected(false);
-      }
-      setShareProtected(false);
-      setUnlockOpen(false);
-      setError(null);
-      setExchangeStatus('已解除数据保护');
-    } catch (exception) {
-      setUnlockError(errorMessage(exception, '解除数据保护失败'));
-    } finally {
-      setUnlocking(false);
-    }
-  }, [reportApi, result, shared, unlocking]);
-
   const openConfiguration = useCallback(async () => {
     if (operationRef.current || mode !== 'design') {
       return;
@@ -780,7 +723,6 @@ export default function App({ reportCode, shared = false }: AppProps) {
     const nextDefinition = toReportDefinition(saved);
     setConfigurationDocument(saved);
     setDefinition(nextDefinition);
-    setShareProtected(nextDefinition.shareProtection?.enabled ?? false);
     setRequest(createInitialRequest(nextDefinition));
     setResult(null);
     setExchangeStatus(`报表配置已保存（修订号 ${saved.revision}）`);
@@ -825,7 +767,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
   }, [shareUrl]);
 
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
-  const busy = loading || saving || importing || exportingTemplate || exportingData || previewing || protectionChanging;
+  const busy = loading || saving || importing || exportingTemplate || exportingData || previewing;
   const revision = templateDocument?.revision;
   const previewToolbar = createPreviewToolbarPresentation(
     definition?.preview.mode ?? 'Full',
@@ -1103,23 +1045,6 @@ export default function App({ reportCode, shared = false }: AppProps) {
                     取消导出
                   </button>
                 )}
-              <label
-                className="share-protection-toggle"
-                title={shareProtected
-                  ? '已保护单元格数据；关闭时需要输入密码'
-                  : '未保护单元格数据；格式、缩放和导出始终可用'}
-              >
-                <Lock size={15} aria-hidden="true" />
-                <span>保护</span>
-                <input
-                  type="checkbox"
-                  role="switch"
-                  aria-label="保护工作表"
-                  checked={shareProtected}
-                  disabled={busy || !initialized}
-                  onChange={(event) => void updateShareProtection(event.target.checked)}
-                />
-              </label>
             </>
           )}
         </div>
@@ -1139,45 +1064,45 @@ export default function App({ reportCode, shared = false }: AppProps) {
       />
 
       <section className="report-workspace">
-        <div className="report-toolbar">
-          {shared && result === null ? (
-            <div className="report-stats"><span>等待查询</span></div>
-          ) : mode === 'preview' ? (
-            <div className="report-stats">
-              {previewToolbar.labels.map((label) => <span key={label}>{label}</span>)}
-            </div>
-          ) : (
-            <div className="design-status">
-              <span className="formula-dot" />
-              模板编辑
-            </div>
-          )}
+        {(!shared || (mode === 'preview' && previewToolbar.showPager)) && (
+          <div className={shared ? 'report-toolbar shared-report-toolbar' : 'report-toolbar'}>
+            {!shared && (mode === 'preview' ? (
+              <div className="report-stats">
+                {previewToolbar.labels.map((label) => <span key={label}>{label}</span>)}
+              </div>
+            ) : (
+              <div className="design-status">
+                <span className="formula-dot" />
+                模板编辑
+              </div>
+            ))}
 
-          {mode === 'preview' && previewToolbar.showPager && (
-            <div className="pager">
-              <button
-                className="icon-button"
-                type="button"
-                title="上一页"
-                aria-label="上一页"
-                disabled={busy || result === null || result.page <= 1}
-                onClick={() => result && void enterPreview(result.page - 1)}
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                className="icon-button"
-                type="button"
-                title="下一页"
-                aria-label="下一页"
-                disabled={busy || !result?.hasMore}
-                onClick={() => result && void enterPreview(result.page + 1)}
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          )}
-        </div>
+            {mode === 'preview' && previewToolbar.showPager && (
+              <div className="pager">
+                <button
+                  className="icon-button"
+                  type="button"
+                  title="上一页"
+                  aria-label="上一页"
+                  disabled={busy || result === null || result.page <= 1}
+                  onClick={() => result && void enterPreview(result.page - 1)}
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  className="icon-button"
+                  type="button"
+                  title="下一页"
+                  aria-label="下一页"
+                  disabled={busy || !result?.hasMore}
+                  onClick={() => result && void enterPreview(result.page + 1)}
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className={mode === 'design' && !shared ? 'workspace-grid design-grid' : 'workspace-grid preview-grid'}>
           {mode === 'design' && !shared && definition && (
@@ -1191,11 +1116,27 @@ export default function App({ reportCode, shared = false }: AppProps) {
             className={shared && result === null ? 'sheet-frame shared-sheet-pending' : 'sheet-frame'}
             inert={shared && result === null ? true : undefined}
           >
+            {shared && initialized && (
+              <button
+                className="icon-button shared-tools-toggle"
+                type="button"
+                title={sharedToolsExpanded ? '收起表格工具栏' : '展开表格工具栏'}
+                aria-label={sharedToolsExpanded ? '收起表格工具栏' : '展开表格工具栏'}
+                aria-pressed={sharedToolsExpanded}
+                onClick={() => setSharedToolsExpanded((expanded) => !expanded)}
+              >
+                {sharedToolsExpanded
+                  ? <PanelTopClose size={17} />
+                  : <PanelTopOpen size={17} />}
+              </button>
+            )}
             {initialized && templateDocument ? (
               <UniverTemplateHost
                 ref={editorRef}
                 initialSnapshot={templateDocument.snapshot}
                 mode={mode}
+                toolsExpanded={!shared || sharedToolsExpanded}
+                suppressNumericTextWarnings={shared}
                 onChanged={handleEditorChanged}
                 onRendered={handleEditorRendered}
                 onError={handleEditorError}
@@ -1229,19 +1170,6 @@ export default function App({ reportCode, shared = false }: AppProps) {
             onClose={() => setShareOpen(false)}
           />
         </>
-      )}
-      {shared && (
-        <UnlockProtectionDialog
-          open={unlockOpen}
-          busy={unlocking}
-          error={unlockError}
-          onSubmit={(password) => void unlockShareProtection(password)}
-          onClose={() => {
-            if (unlocking) return;
-            setUnlockOpen(false);
-            setUnlockError(null);
-          }}
-        />
       )}
     </main>
   );

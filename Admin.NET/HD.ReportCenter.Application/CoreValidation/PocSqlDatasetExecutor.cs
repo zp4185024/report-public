@@ -24,10 +24,14 @@ public sealed record PocRuntimeExecutionPlan(
 public sealed class PocSqlDatasetExecutor : ITransient
 {
     private readonly PocReportConfigurationService _configurationService;
+    private readonly PocExternalParameterSourceService? _externalParameters;
 
-    public PocSqlDatasetExecutor(PocReportConfigurationService configurationService)
+    public PocSqlDatasetExecutor(
+        PocReportConfigurationService configurationService,
+        PocExternalParameterSourceService? externalParameters = null)
     {
         _configurationService = configurationService;
+        _externalParameters = externalParameters;
     }
 
     public async Task<PocRuntimeExecutionPlan> PrepareAsync(
@@ -38,9 +42,16 @@ public sealed class PocSqlDatasetExecutor : ITransient
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
         var configuration = await _configurationService.GetRuntimeAsync(reportCode);
+        var externalValues = _externalParameters is null
+            ? new Dictionary<string, string?>()
+            : await _externalParameters.ResolveAsync(
+                configuration.Definition.Parameters,
+                request.Context,
+                cancellationToken);
         var parameters = PocParameterResolver.Resolve(
             configuration.Definition.Parameters,
-            request.Parameters);
+            request.Parameters,
+            externalValues);
         if (!configuration.UsesFallbackData)
         {
             _ = PocReadOnlySqlValidator.Validate(

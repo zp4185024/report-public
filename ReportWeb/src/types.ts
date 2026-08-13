@@ -71,6 +71,55 @@ export interface ParameterDefinition {
   allowUrlPrefill: boolean;
   urlKey: string | null;
   options?: ValueOption[] | null;
+  sourceCode?: string | null;
+  sourceFieldCode?: string | null;
+}
+
+export interface ExternalParameterFieldDefinition {
+  code: string;
+  displayName: string;
+  dataType: string;
+  responsePath: string;
+}
+
+export interface ExternalRequestParameterDefinition {
+  name: string;
+  urlKey: string;
+  location: 'Query' | 'Body' | 'Header';
+  required: boolean;
+}
+
+export interface ExternalParameterSourceDefinition {
+  code: string;
+  name: string;
+  enabled: boolean;
+  fields: ExternalParameterFieldDefinition[];
+  contextKeys: string[];
+}
+
+export interface ExternalParameterSourceDocument {
+  code: string;
+  name: string;
+  baseUrl: string;
+  endpoint: string;
+  httpMethod: 'GET' | 'POST';
+  requestBodyTemplate: string;
+  headersTemplate: string;
+  requestParameters: ExternalRequestParameterDefinition[];
+  timeoutSeconds: number;
+  enabled: boolean;
+  revision: number;
+  fields: ExternalParameterFieldDefinition[];
+}
+
+export type ExternalParameterSourceInput = ExternalParameterSourceDocument;
+
+export interface ExternalParameterSourceTestRequest {
+  context: Record<string, string | null>;
+}
+
+export interface ExternalParameterSourceTestResult {
+  values: Record<string, string>;
 }
 
 /** 数据集声明的 SQL 输入变量；具体值来源由每张报表配置。 */
@@ -79,6 +128,9 @@ export interface DatasetVariableDefinition {
   displayName: string;
   dataType: string;
   required: boolean;
+  sourceType?: 'Form' | 'External';
+  sourceCode?: string | null;
+  sourceFieldCode?: string | null;
 }
 
 /** 查询返回字段，只描述数据契约；表头、列宽和公式属于工作簿模板。 */
@@ -99,12 +151,14 @@ export interface ReportDefinition {
   fields: DatasetFieldDefinition[];
   fieldPresentations?: FieldPresentationDefinition[] | null;
   shareProtection?: ShareProtectionSettings | null;
+  externalSources?: ExternalParameterSourceDefinition[] | null;
 }
 
 /** 一次预览或导出的查询条件。page 始终使用一基页码，空输入转换为 null。 */
 export interface ExecuteRequest {
   page: number;
   parameters: Record<string, string | null>;
+  context?: Record<string, string | null>;
 }
 
 /** 数据导出只引用数据库中的已保存模板，不能携带浏览器中的未保存快照。 */
@@ -231,6 +285,7 @@ export interface DatasetDocument {
 
 export interface DatasetPreviewRequest {
   parameters: Record<string, string | null>;
+  context?: Record<string, string | null>;
 }
 
 export interface DatasetPreviewResult {
@@ -292,6 +347,7 @@ export interface ReportConfigurationDocument {
   revision: number;
   fieldPresentations?: FieldPresentationDefinition[] | null;
   shareProtection?: ShareProtectionSettings | null;
+  externalSources?: ExternalParameterSourceDefinition[] | null;
 }
 
 export interface SaveReportConfigurationRequest {

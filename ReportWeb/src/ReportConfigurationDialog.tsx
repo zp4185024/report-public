@@ -6,6 +6,7 @@ import {
   Database,
   ExternalLink,
   LoaderCircle,
+  PlugZap,
   Plus,
   Save,
   SlidersHorizontal,
@@ -20,6 +21,11 @@ import {
 } from './localDataQuery';
 import { ValueOptionsEditor } from './ValueOptionsEditor';
 import { StatusToasts } from './StatusToasts';
+import {
+  alignDatasetVariables,
+  bindExternalField,
+  importExternalSourceFields,
+} from './reportParameterSources';
 import type {
   FieldPresentationDefinition,
   ParameterDefinition,
@@ -110,6 +116,8 @@ function createParameter(index: number): ParameterDefinition {
     allowUrlPrefill: false,
     urlKey: null,
     options: [],
+    sourceCode: null,
+    sourceFieldCode: null,
   };
 }
 
@@ -146,31 +154,6 @@ function controlTypeForDataType(dataType: string): string {
   }
 }
 
-function alignDatasetVariables(
-  parameters: readonly ParameterDefinition[],
-  variables: readonly { code: string; displayName: string; dataType: string; required: boolean }[],
-): ParameterDefinition[] {
-  const variableCodes = new Set(variables.map((variable) => variable.code.toLowerCase()));
-  const mapped = variables.map((variable, index) => {
-    const current = parameters.find(
-      (parameter) => parameter.code.toLowerCase() === variable.code.toLowerCase(),
-    );
-    return {
-      ...(current ?? createParameter(index)),
-      code: variable.code,
-      displayName: current?.displayName || variable.displayName,
-      dataType: variable.dataType,
-      required: variable.required || current?.required || false,
-    };
-  });
-  return [
-    ...mapped,
-    ...parameters
-      .filter((parameter) => !variableCodes.has(parameter.code.toLowerCase()))
-      .map((parameter) => ({ ...parameter })),
-  ];
-}
-
 function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1): T[] {
   const target = index + offset;
   if (target < 0 || target >= items.length) return [...items];
@@ -191,6 +174,7 @@ export function ReportConfigurationDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [valueEditorTarget, setValueEditorTarget] = useState<ValueEditorTarget | null>(null);
+  const [externalSourceToImport, setExternalSourceToImport] = useState('');
 
   useEffect(() => {
     if (!open) {
@@ -198,6 +182,7 @@ export function ReportConfigurationDialog({
       setTab('basic');
       setError(null);
       setValueEditorTarget(null);
+      setExternalSourceToImport('');
       return;
     }
     if (document !== null && draft === null) setDraft(toDraft(document));
@@ -221,6 +206,7 @@ export function ReportConfigurationDialog({
     () => document?.datasets.find((dataset) => dataset.code === draft?.datasetCode) ?? null,
     [document?.datasets, draft?.datasetCode],
   );
+  const externalSources = document?.externalSources?.filter((source) => source.enabled) ?? [];
   const parameterCodes = useMemo(
     () => new Set(draft?.parameters.map((parameter) => parameter.code.toLowerCase()) ?? []),
     [draft?.parameters],
@@ -265,6 +251,15 @@ export function ReportConfigurationDialog({
       !isLocalFilterParameter(parameter, selectedDataset.fields)
     ))) {
       return '本地筛选必须选择一个返回字段。';
+    }
+    const invalidExternalParameter = draft.parameters.find((parameter) => {
+      if (parameter.sourceType !== 'External') return false;
+      const source = externalSources.find((item) => item.code === parameter.sourceCode);
+      const field = source?.fields.find((item) => item.code === parameter.sourceFieldCode);
+      return source === undefined || field === undefined || field.dataType !== parameter.dataType;
+    });
+    if (invalidExternalParameter !== undefined) {
+      return `参数 '${invalidExternalParameter.displayName}' 需要选择数据类型一致的接口返回字段。`;
     }
     const invalidParameterOptions = draft.parameters.find((parameter) => (
       isChoiceControl(parameter.controlType) && invalidValueOptions(parameter.options ?? [])
@@ -456,13 +451,35 @@ export function ReportConfigurationDialog({
             <div className="configuration-table-section">
               <div className="configuration-section-bar">
                 <button type="button" className="button" onClick={() => setDraft({ ...draft, parameters: [...draft.parameters, createParameter(draft.parameters.length)] })}><Plus size={16} />新增模板参数</button>
+                <div className="external-parameter-import">
+                  <select aria-label="选择要导入的接口" value={externalSourceToImport} onChange={(event) => setExternalSourceToImport(event.target.value)}>
+                    <option value="">选择接口</option>
+                    {externalSources.map((source) => <option key={source.code} value={source.code}>{source.name}</option>)}
+                  </select>
+                  <button type="button" className="button" disabled={!externalSourceToImport} onClick={() => {
+                    const source = externalSources.find((item) => item.code === externalSourceToImport);
+                    if (source !== undefined) {
+                      setDraft({ ...draft, parameters: importExternalSourceFields(draft.parameters, source) });
+                    }
+                  }}><PlugZap size={16} />导入接口字段</button>
+                </div>
               </div>
               <div className="configuration-table-scroll">
                 <table className="configuration-table parameter-table">
-                  <thead><tr><th>顺序</th><th>参数编码</th><th>显示名称</th><th>数据类型</th><th>来源</th><th>控件</th><th>默认表达式 / 固定值</th><th>选项</th><th>操作</th></tr></thead>
+                  <thead><tr><th>顺序</th><th>参数编码</th><th>显示名称</th><th>数据类型</th><th>来源</th><th>控件</th><th>来源配置</th><th>选项</th><th>操作</th></tr></thead>
                   <tbody>
                     {draft.parameters.map((parameter, index) => {
                       const localFilter = isLocalFilterSource(parameter.sourceType);
+                      const datasetVariable = selectedDataset?.variables.find(
+                        (variable) => variable.code.toLowerCase() === parameter.code.toLowerCase(),
+                      );
+                      const datasetOwnsExternalBinding = datasetVariable?.sourceType === 'External';
+                      const selectedExternalSource = externalSources.find(
+                        (source) => source.code === parameter.sourceCode,
+                      );
+                      const selectableExternalFields = selectedExternalSource?.fields.filter((field) => (
+                        datasetVariable === undefined || field.dataType === parameter.dataType
+                      )) ?? [];
                       const usedByAnotherParameter = new Set(
                         draft.parameters
                           .filter((_, parameterIndex) => parameterIndex !== index)
@@ -521,7 +538,7 @@ export function ReportConfigurationDialog({
                         )}</td>
                         <td><input value={parameter.displayName} onChange={(event) => updateParameter(index, { displayName: event.target.value })} /></td>
                         <td><select disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.dataType} onChange={(event) => updateParameter(index, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td>
-                        <td><select aria-label={`参数来源 ${index + 1}`} value={parameter.sourceType} onChange={(event) => {
+                        <td><select aria-label={`参数来源 ${index + 1}`} disabled={datasetOwnsExternalBinding} value={parameter.sourceType} onChange={(event) => {
                           const sourceType = event.target.value;
                           const currentField = selectedDataset?.fields.find(
                             (field) => field.code.toLowerCase() === parameter.code.toLowerCase(),
@@ -547,9 +564,53 @@ export function ReportConfigurationDialog({
                             });
                             return;
                           }
+                          if (sourceType === 'External') {
+                            const source = externalSources.find((item) => item.fields.some((field) => (
+                              datasetVariable === undefined || field.dataType === parameter.dataType
+                            )));
+                            const field = source?.fields.find((item) => (
+                              datasetVariable === undefined || item.dataType === parameter.dataType
+                            ));
+                            if (source !== undefined && field !== undefined) {
+                              updateParameter(index, bindExternalField(parameter, source, field));
+                            } else {
+                              updateParameter(index, {
+                                sourceType: 'External',
+                                sourceCode: null,
+                                sourceFieldCode: null,
+                                readOnly: true,
+                                visible: false,
+                                allowUrlPrefill: false,
+                                urlKey: null,
+                              });
+                            }
+                            return;
+                          }
+                          if (sourceType === 'Url') {
+                            updateParameter(index, {
+                              sourceType: 'Url',
+                              sourceCode: null,
+                              sourceFieldCode: null,
+                              readOnly: true,
+                              visible: true,
+                              allowUrlPrefill: true,
+                              urlKey: parameter.urlKey || parameter.code,
+                              defaultExpression: null,
+                              fixedValue: null,
+                              controlType: isChoiceControl(parameter.controlType)
+                                ? 'text'
+                                : parameter.controlType,
+                              options: isChoiceControl(parameter.controlType)
+                                ? []
+                                : parameter.options,
+                            });
+                            return;
+                          }
                           const fallback = createParameter(index);
                           updateParameter(index, {
                             sourceType,
+                            sourceCode: null,
+                            sourceFieldCode: null,
                             readOnly: sourceType !== 'Form',
                             code: parameter.code || fallback.code,
                             displayName: parameter.displayName || fallback.displayName,
@@ -560,7 +621,7 @@ export function ReportConfigurationDialog({
                               ? []
                               : parameter.options,
                           });
-                        }}><option value="Form">查询表单</option><option value={localFilterSourceType}>本地筛选</option><option value="System">系统默认</option><option value="Fixed">固定值</option></select></td>
+                        }}><option value="Form">页面输入</option><option value="Url">URL 参数</option><option value={localFilterSourceType}>本地筛选</option><option value="System">系统默认</option><option value="Fixed">固定值</option><option value="External">外部接口</option></select></td>
                         <td><select value={parameter.controlType} onChange={(event) => {
                           const controlType = event.target.value;
                           updateParameter(index, {
@@ -569,14 +630,42 @@ export function ReportConfigurationDialog({
                             options: isChoiceControl(controlType) ? parameter.options ?? [] : [],
                           });
                         }}><option value="text">文本框</option><option value="number">数字框</option><option value="date">日期框</option><option value="checkbox">是/否</option><option value="select">单选</option><option value="multiSelect">多选</option><option value="hidden">隐藏</option></select></td>
-                        <td>{isChoiceControl(parameter.controlType) ? (
+                        <td>{parameter.sourceType === 'External' ? (
+                          <div className="external-binding-selects">
+                            <select aria-label={`接口来源 ${index + 1}`} value={parameter.sourceCode ?? ''} disabled={datasetOwnsExternalBinding} onChange={(event) => {
+                              const source = externalSources.find((item) => item.code === event.target.value);
+                              const field = source?.fields.find((item) => (
+                                datasetVariable === undefined || item.dataType === parameter.dataType
+                              ));
+                              if (source !== undefined && field !== undefined) {
+                                updateParameter(index, bindExternalField(parameter, source, field));
+                              }
+                            }}>
+                              <option value="">选择接口</option>
+                              {externalSources.filter((source) => source.fields.some((field) => (
+                                datasetVariable === undefined || field.dataType === parameter.dataType
+                              ))).map((source) => <option key={source.code} value={source.code}>{source.name}</option>)}
+                            </select>
+                            <select aria-label={`接口字段 ${index + 1}`} value={parameter.sourceFieldCode ?? ''} disabled={datasetOwnsExternalBinding} onChange={(event) => {
+                              const field = selectableExternalFields.find((item) => item.code === event.target.value);
+                              if (selectedExternalSource !== undefined && field !== undefined) {
+                                updateParameter(index, bindExternalField(parameter, selectedExternalSource, field));
+                              }
+                            }}>
+                              <option value="">选择返回字段</option>
+                              {selectableExternalFields.map((field) => <option key={field.code} value={field.code}>{field.displayName}（{field.code}）</option>)}
+                            </select>
+                          </div>
+                        ) : parameter.sourceType === 'Url' ? (
+                          <input aria-label={`URL 参数名 ${index + 1}`} value={parameter.urlKey ?? ''} placeholder={parameter.code} onChange={(event) => updateParameter(index, { urlKey: event.target.value || parameter.code })} />
+                        ) : isChoiceControl(parameter.controlType) ? (
                           <button type="button" className="button option-maintenance-button" onClick={() => setValueEditorTarget({ kind: 'parameter', index })}>
                             维护选项（{parameter.options?.length ?? 0}）
                           </button>
                         ) : (
                           <input disabled={localFilter} value={(parameter.sourceType === 'Fixed' ? parameter.fixedValue : parameter.defaultExpression) ?? ''} placeholder={localFilter ? '无需配置' : parameter.sourceType === 'Fixed' ? '固定值' : '如 startOfMonth'} onChange={(event) => parameter.sourceType === 'Fixed' ? updateParameter(index, { fixedValue: event.target.value || null }) : updateParameter(index, { defaultExpression: event.target.value || null })} />
                         )}</td>
-                        <td><div className="flag-list"><label><input type="checkbox" disabled={selectedDataset?.variables.some((variable) => variable.required && variable.code.toLowerCase() === parameter.code.toLowerCase())} checked={parameter.required} onChange={(event) => updateParameter(index, { required: event.target.checked })} />必填</label><label><input type="checkbox" checked={parameter.visible} onChange={(event) => updateParameter(index, { visible: event.target.checked })} />显示</label><label><input type="checkbox" checked={parameter.allowUrlPrefill} onChange={(event) => updateParameter(index, { allowUrlPrefill: event.target.checked, urlKey: event.target.checked ? parameter.urlKey || parameter.code : null })} />URL 预填</label></div></td>
+                        <td><div className="flag-list"><label><input type="checkbox" disabled={selectedDataset?.variables.some((variable) => variable.required && variable.code.toLowerCase() === parameter.code.toLowerCase())} checked={parameter.required} onChange={(event) => updateParameter(index, { required: event.target.checked })} />必填</label><label><input type="checkbox" disabled={parameter.sourceType === 'External'} checked={parameter.visible} onChange={(event) => updateParameter(index, { visible: event.target.checked })} />显示</label><label><input type="checkbox" disabled={parameter.sourceType === 'External' || parameter.sourceType === 'Url'} checked={parameter.allowUrlPrefill} onChange={(event) => updateParameter(index, { allowUrlPrefill: event.target.checked, urlKey: event.target.checked ? parameter.urlKey || parameter.code : null })} />URL 预填</label></div></td>
                         <td>{datasetVariableCodes.has(parameter.code.toLowerCase()) ? <span className="dataset-variable-badge">数据集</span> : <button type="button" className="table-icon danger" title="删除参数" aria-label={`删除参数 ${parameter.displayName}`} onClick={() => setDraft({ ...draft, parameters: draft.parameters.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 size={15} /></button>}</td>
                       </tr>
                       );

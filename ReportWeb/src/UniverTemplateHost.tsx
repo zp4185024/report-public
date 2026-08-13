@@ -25,6 +25,7 @@ import {
 } from './workbookSnapshot';
 import { isTemplateChangeCommand } from './templateChangeCommand';
 import { recalculateFormulas } from './formulaCalculation';
+import { createSpreadsheetWarningConfig } from './spreadsheetPresentation';
 import UniverWorker from './univer.worker?worker';
 
 /**
@@ -51,6 +52,8 @@ export interface UniverTemplateHandle {
 export interface UniverTemplateHostProps {
   initialSnapshot: IWorkbookData;
   mode: TemplateEditorMode;
+  toolsExpanded?: boolean;
+  suppressNumericTextWarnings?: boolean;
   onChanged: () => void;
   onRendered: (duration: number) => void;
   onError: (error: Error) => void;
@@ -156,7 +159,15 @@ export const UniverTemplateHost = forwardRef<
   UniverTemplateHandle,
   UniverTemplateHostProps
 >(function UniverTemplateHost(
-  { initialSnapshot, mode, onChanged, onRendered, onError },
+  {
+    initialSnapshot,
+    mode,
+    toolsExpanded = true,
+    suppressNumericTextWarnings = false,
+    onChanged,
+    onRendered,
+    onError,
+  },
   ref,
 ) {
   // 生命周期资源：DOM 容器、Univer 运行时、公式 Worker 和活动工作簿命令订阅必须成组创建/释放。
@@ -566,6 +577,7 @@ export const UniverTemplateHost = forwardRef<
             formula: {
               initialFormulaComputing: CalculationMode.NO_CALCULATION,
             },
+            sheets: createSpreadsheetWarningConfig(suppressNumericTextWarnings),
             contextMenu: true,
             disableAutoFocus: true,
           }),
@@ -1123,7 +1135,9 @@ export const UniverTemplateHost = forwardRef<
   return (
     <div
       ref={containerRef}
-      className="univer-template-host"
+      className={toolsExpanded
+        ? 'univer-template-host'
+        : 'univer-template-host spreadsheet-tools-collapsed'}
       data-testid="univer-template-host"
       style={hostStyle}
     />

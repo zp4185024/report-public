@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Database, LoaderCircle, Play, Save } from 'lucide-react';
+import { ArrowLeft, Database, LoaderCircle, Play, PlugZap, Save } from 'lucide-react';
 import { dataAssetApi } from './api';
+import { externalParameterDocumentContext } from './externalParameterContext';
 import { StatusToasts } from './StatusToasts';
 import type {
   DatasetDocument,
   DatasetFieldDefinition,
   DatasetPreviewResult,
   DatasetVariableDefinition,
+  ExternalParameterSourceDocument,
 } from './types';
 
 function backUrl(): string {
@@ -38,6 +40,7 @@ function mergeFieldNames(
 
 export default function DatasetPreviewPage() {
   const [datasets, setDatasets] = useState<DatasetDocument[]>([]);
+  const [externalSources, setExternalSources] = useState<ExternalParameterSourceDocument[]>([]);
   const [datasetCode, setDatasetCode] = useState(
     () => new URLSearchParams(window.location.search).get('datasetCode') ?? '',
   );
@@ -53,9 +56,13 @@ export default function DatasetPreviewPage() {
     let active = true;
     const load = async () => {
       try {
-        const next = await dataAssetApi.datasets();
+        const [next, nextExternalSources] = await Promise.all([
+          dataAssetApi.datasets(),
+          dataAssetApi.externalParameterSources(),
+        ]);
         if (!active) return;
         setDatasets(next);
+        setExternalSources(nextExternalSources);
         const requested = next.find((dataset) => dataset.code === datasetCode && dataset.enabled);
         setDatasetCode(requested?.code ?? next.find((dataset) => dataset.enabled)?.code ?? next[0]?.code ?? '');
       } catch (exception) {
@@ -98,11 +105,16 @@ export default function DatasetPreviewPage() {
     setError(null);
     setStatus(null);
     try {
-      const parameters = Object.fromEntries(dataset.variables.map((variable) => {
+      const parameters = Object.fromEntries(dataset.variables
+        .filter((variable) => variable.sourceType !== 'External')
+        .map((variable) => {
         const value = values[variable.code] ?? valueFromUrl(variable);
         return [variable.code, value.trim() === '' ? null : value];
       }));
-      const next = await dataAssetApi.previewDataset(dataset.code, { parameters });
+      const next = await dataAssetApi.previewDataset(dataset.code, {
+        parameters,
+        context: externalParameterDocumentContext(externalSources),
+      });
       setResult(next);
       setStatus(`返回 ${next.rows.length} 行，耗时 ${next.durationMilliseconds} ms`);
     } catch (exception) {
@@ -144,7 +156,10 @@ export default function DatasetPreviewPage() {
         <div className="dataset-preview-actions"><button type="button" className="button button-primary" disabled={dataset === null || previewing || syncing} onClick={() => void preview()}>{previewing ? <LoaderCircle className="spin" size={16} /> : <Play size={16} />}运行预览</button><button type="button" className="button" disabled={!fieldsChanged || previewing || syncing} onClick={() => void syncFields()}>{syncing ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存返回字段</button></div>
       </section>
 
-      {dataset !== null && dataset.variables.length > 0 && <section className="dataset-preview-query">{dataset.variables.map((variable) => <label key={variable.code}><span>{variable.displayName}（@{variable.code}）{variable.required ? ' *' : ''}</span>{variable.dataType === 'bool' ? <select value={values[variable.code] ?? valueFromUrl(variable)} onChange={(event) => { setValues({ ...values, [variable.code]: event.target.value }); setResult(null); }}><option value="">NULL</option><option value="true">是</option><option value="false">否</option></select> : <input type={inputType(variable)} value={values[variable.code] ?? valueFromUrl(variable)} onChange={(event) => { setValues({ ...values, [variable.code]: event.target.value }); setResult(null); }} />}</label>)}</section>}
+      {dataset !== null && dataset.variables.length > 0 && <section className="dataset-preview-query">
+        {dataset.variables.filter((variable) => variable.sourceType !== 'External').map((variable) => <label key={variable.code}><span>{variable.displayName}（@{variable.code}）{variable.required ? ' *' : ''}</span>{variable.dataType === 'bool' ? <select value={values[variable.code] ?? valueFromUrl(variable)} onChange={(event) => { setValues({ ...values, [variable.code]: event.target.value }); setResult(null); }}><option value="">NULL</option><option value="true">是</option><option value="false">否</option></select> : <input type={inputType(variable)} value={values[variable.code] ?? valueFromUrl(variable)} onChange={(event) => { setValues({ ...values, [variable.code]: event.target.value }); setResult(null); }} />}</label>)}
+        {dataset.variables.filter((variable) => variable.sourceType === 'External').map((variable) => <div className="dataset-external-variable" key={variable.code}><PlugZap size={15} /><span><strong>{variable.displayName}</strong><small>@{variable.code} · {variable.sourceCode}.{variable.sourceFieldCode}</small></span></div>)}
+      </section>}
 
       <StatusToasts
         error={error}

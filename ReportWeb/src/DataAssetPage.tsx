@@ -19,7 +19,9 @@ import type {
   DatasetDocument,
   DatasetReferenceDocument,
   DatasetVariableDefinition,
+  ExternalParameterSourceDocument,
 } from './types';
+import type { SqlParameterPresentation } from './SqlEditor';
 
 export type AssetKind = 'data-sources' | 'datasets';
 
@@ -116,6 +118,9 @@ function materializeVariables(
     displayName: code,
     dataType: 'string',
     required: false,
+    sourceType: 'Form',
+    sourceCode: null,
+    sourceFieldCode: null,
   });
 }
 
@@ -136,6 +141,7 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
   const [kind, setKind] = useState<AssetKind>(initialKind);
   const [dataSources, setDataSources] = useState<DataSourceDocument[]>([]);
   const [datasets, setDatasets] = useState<DatasetDocument[]>([]);
+  const [externalSources, setExternalSources] = useState<ExternalParameterSourceDocument[]>([]);
   const [dataSourceDraft, setDataSourceDraft] = useState<DataSourceInput | null>(null);
   const [datasetDraft, setDatasetDraft] = useState<DatasetDocument | null>(null);
   const [loading, setLoading] = useState(true);
@@ -153,13 +159,15 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     let active = true;
     const load = async () => {
       try {
-        const [nextSources, nextDatasets] = await Promise.all([
+        const [nextSources, nextDatasets, nextExternalSources] = await Promise.all([
           dataAssetApi.dataSources(),
           dataAssetApi.datasets(),
+          dataAssetApi.externalParameterSources(),
         ]);
         if (!active) return;
         setDataSources(nextSources);
         setDatasets(nextDatasets);
+        setExternalSources(nextExternalSources);
         setDataSourceDraft(nextSources[0] ? sourceDraft(nextSources[0]) : newDataSource([]));
         setDatasetDraft(nextDatasets[0] ?? newDataset([], nextSources));
       } catch (exception) {
@@ -181,6 +189,10 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
   const datasetDbType = dataSources.find(
     (source) => source.code === datasetDraft?.dataSourceCode,
   )?.dbType ?? 'SqlServer';
+  const sqlParameters = useMemo<SqlParameterPresentation[]>(() => datasetVariables.map((variable) => ({
+    code: variable.code,
+    category: variable.sourceType === 'External' ? 'external' : 'form',
+  })), [datasetVariables]);
 
   const selectSource = (source: DataSourceDocument) => {
     setDataSourceDraft(sourceDraft(source));
@@ -417,13 +429,36 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
                   <SqlEditor
                     value={datasetDraft.queryText}
                     dbType={datasetDbType}
+                    parameters={sqlParameters}
                     onChange={(queryText) => setDatasetDraft({ ...datasetDraft, queryText })}
                   />
                 </Suspense>
               </div>
-              <div className="dataset-parameter-line"><strong>SQL 输入变量</strong><span>{datasetVariables.length === 0 ? '无' : datasetVariables.map((variable) => `@${variable.code}`).join('、')}</span></div>
+              <div className="dataset-parameter-line"><strong>SQL 输入变量</strong><span className="parameter-legend form">查询输入</span><span className="parameter-legend external">外部接口</span><span>{datasetVariables.length === 0 ? '无' : datasetVariables.map((variable) => `@${variable.code}`).join('、')}</span></div>
               <div className="dataset-columns-header"><div><strong>变量定义</strong><span>{datasetVariables.length} 个变量</span></div></div>
-              <div className="configuration-table-scroll asset-column-scroll"><table className="configuration-table dataset-variable-table"><thead><tr><th>SQL 变量</th><th>业务名称</th><th>数据类型</th><th>必填</th></tr></thead><tbody>{datasetVariables.length === 0 ? <tr><td colSpan={4} className="dataset-preview-empty">当前 SQL 没有输入变量</td></tr> : datasetVariables.map((variable) => <tr key={variable.code}><td><input disabled value={`@${variable.code}`} /></td><td><input value={variable.displayName} onChange={(event) => updateVariable(variable.code, { displayName: event.target.value })} /></td><td><select value={variable.dataType} onChange={(event) => updateVariable(variable.code, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td><td><input type="checkbox" checked={variable.required} onChange={(event) => updateVariable(variable.code, { required: event.target.checked })} /></td></tr>)}</tbody></table></div>
+              <div className="configuration-table-scroll asset-column-scroll"><table className="configuration-table dataset-variable-table"><thead><tr><th>SQL 变量</th><th>业务名称</th><th>数据类型</th><th>参数来源</th><th>接口字段</th><th>必填</th></tr></thead><tbody>{datasetVariables.length === 0 ? <tr><td colSpan={6} className="dataset-preview-empty">当前 SQL 没有输入变量</td></tr> : datasetVariables.map((variable) => {
+                const source = externalSources.find((item) => item.code === variable.sourceCode);
+                return <tr key={variable.code}><td><input disabled value={`@${variable.code}`} /></td><td><input value={variable.displayName} onChange={(event) => updateVariable(variable.code, { displayName: event.target.value })} /></td><td><select disabled={variable.sourceType === 'External'} value={variable.dataType} onChange={(event) => updateVariable(variable.code, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td><td><select value={variable.sourceType === 'External' ? variable.sourceCode ?? '' : 'Form'} onChange={(event) => {
+                  const external = externalSources.find((item) => item.code === event.target.value);
+                  const field = external?.fields.find((item) =>
+                    item.code.toLowerCase() === variable.code.toLowerCase()) ?? external?.fields[0];
+                  updateVariable(variable.code, external === undefined ? {
+                    sourceType: 'Form', sourceCode: null, sourceFieldCode: null,
+                  } : {
+                    sourceType: 'External', sourceCode: external.code,
+                    sourceFieldCode: field?.code ?? null,
+                    dataType: field?.dataType ?? 'string',
+                    displayName: field?.displayName ?? variable.displayName,
+                  });
+                }}><option value="Form">查询输入</option>{externalSources.map((item) => <option key={item.code} value={item.code} disabled={!item.enabled}>{item.name}</option>)}</select></td><td>{variable.sourceType === 'External' ? <select value={variable.sourceFieldCode ?? ''} onChange={(event) => {
+                  const field = source?.fields.find((item) => item.code === event.target.value);
+                  updateVariable(variable.code, {
+                    sourceFieldCode: field?.code ?? null,
+                    dataType: field?.dataType ?? 'string',
+                    displayName: field?.displayName ?? variable.displayName,
+                  });
+                }}><option value="">请选择字段</option>{source?.fields.map((field) => <option key={field.code} value={field.code}>{field.displayName}（{field.code}）</option>)}</select> : <span className="source-field-empty">不适用</span>}</td><td><input type="checkbox" checked={variable.required} onChange={(event) => updateVariable(variable.code, { required: event.target.checked })} /></td></tr>;
+              })}</tbody></table></div>
             </>
           ) : <div className="asset-empty">请选择资源</div>}
         </div>

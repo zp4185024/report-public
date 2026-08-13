@@ -60,6 +60,8 @@ $env:HD_REPORT_CENTER_DB_CONNECTION_STRING='Server=192.168.2.5;Database=lis_admi
 GET /api/report-center/health
 ```
 
+本地固定启动端口：前端 `5175`（HIS iframe 已使用此地址），后端 `5006`。启动前端直接执行 `pnpm --dir ReportWeb dev`，不要改动 HIS 菜单中的 iframe 地址。
+
 ## 参考说明
 
 - Admin.NET 原始说明已保留在 `README.AdminNET.md`。

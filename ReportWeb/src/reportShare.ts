@@ -40,3 +40,11 @@ export function readReportShareParameters(hash = window.location.hash): Record<s
   }
   return result;
 }
+
+export function readReportQueryParameters(search = window.location.search): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of new URLSearchParams(search).entries()) {
+    result[key] = value;
+  }
+  return result;
+}

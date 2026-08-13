@@ -72,14 +72,41 @@ public sealed record PocParameterDefinition(
     bool Required = false,
     bool AllowUrlPrefill = false,
     string? UrlKey = null,
-    IReadOnlyList<PocValueOption>? Options = null);
+    IReadOnlyList<PocValueOption>? Options = null,
+    string? SourceCode = null,
+    string? SourceFieldCode = null);
 
-/// <summary>数据集 SQL 输入变量；当前报表负责为它配置具体取值来源。</summary>
+/// <summary>外部参数源返回字段；ResponsePath 使用 JSON 路径，例如 content.userName。</summary>
+public sealed record PocExternalParameterFieldDefinition(
+    string Code,
+    string DisplayName,
+    string DataType,
+    string ResponsePath);
+
+/// <summary>从报表页面 URL 上下文读取并转发给外部接口的查询参数。</summary>
+public sealed record PocExternalRequestParameterDefinition(
+    string Name,
+    string UrlKey,
+    string Location,
+    bool Required);
+
+/// <summary>可配置的外部参数接口。HIS 是默认内置源，其它系统通过同一契约接入。</summary>
+public sealed record PocExternalParameterSourceDefinition(
+    string Code,
+    string Name,
+    bool Enabled,
+    IReadOnlyList<PocExternalParameterFieldDefinition> Fields,
+    IReadOnlyList<string> ContextKeys);
+
+/// <summary>数据集 SQL 输入变量；可由查询表单或已登记的外部接口提供取值。</summary>
 public sealed record PocDatasetVariableDefinition(
     string Code,
     string DisplayName,
     string DataType,
-    bool Required);
+    bool Required,
+    string SourceType = "Form",
+    string? SourceCode = null,
+    string? SourceFieldCode = null);
 
 /// <summary>数据集查询返回字段，只描述数据契约，不包含 Excel 表现属性。</summary>
 public sealed record PocDatasetFieldDefinition(
@@ -100,7 +127,8 @@ public sealed record PocReportDefinition(
     IReadOnlyList<PocParameterDefinition> Parameters,
     IReadOnlyList<PocDatasetFieldDefinition> Fields,
     IReadOnlyList<PocFieldPresentationDefinition>? FieldPresentations = null,
-    PocShareProtectionSettings? ShareProtection = null);
+    PocShareProtectionSettings? ShareProtection = null,
+    IReadOnlyList<PocExternalParameterSourceDefinition>? ExternalSources = null);
 
 /// <summary>
 /// 浏览器提交的预览/导出查询条件。可空字符串由报表目录统一解析为业务默认值。
@@ -108,7 +136,8 @@ public sealed record PocReportDefinition(
 [method: Newtonsoft.Json.JsonConstructor]
 public sealed record PocExecuteRequest(
     int Page,
-    IReadOnlyDictionary<string, string?> Parameters)
+    IReadOnlyDictionary<string, string?> Parameters,
+    IReadOnlyDictionary<string, string?>? Context = null)
 {
     public PocExecuteRequest(
         int page,
