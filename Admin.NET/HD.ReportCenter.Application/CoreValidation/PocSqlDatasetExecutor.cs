@@ -1,6 +1,11 @@
 using HD.ReportCenter.ReportEngine.CoreValidation;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
@@ -18,20 +23,27 @@ public sealed class PocDatasetExecutionException : Exception
 public sealed record PocRuntimeExecutionPlan(
     PocRuntimeReportConfiguration Configuration,
     PocExecuteRequest Query,
-    PocResolvedParameterSet Parameters);
+    PocResolvedParameterSet Parameters,
+    bool IncludeSqlDebug = false);
 
 /// <summary>多数据库只读数据集执行器。配置读取与 SQL 执行分离，便于导出任务冻结运行输入。</summary>
 public sealed class PocSqlDatasetExecutor : ITransient
 {
     private readonly PocReportConfigurationService _configurationService;
     private readonly PocExternalParameterSourceService? _externalParameters;
+    private readonly IHostEnvironment? _environment;
+    private readonly ILogger<PocSqlDatasetExecutor>? _logger;
 
     public PocSqlDatasetExecutor(
         PocReportConfigurationService configurationService,
-        PocExternalParameterSourceService? externalParameters = null)
+        PocExternalParameterSourceService? externalParameters = null,
+        IHostEnvironment? environment = null,
+        ILogger<PocSqlDatasetExecutor>? logger = null)
     {
         _configurationService = configurationService;
         _externalParameters = externalParameters;
+        _environment = environment;
+        _logger = logger;
     }
 
     public async Task<PocRuntimeExecutionPlan> PrepareAsync(
@@ -59,7 +71,11 @@ public sealed class PocSqlDatasetExecutor : ITransient
                 configuration.Definition.Parameters.Select(item => item.Code),
                 configuration.Definition.Preview.Mode);
         }
-        return new PocRuntimeExecutionPlan(configuration, request, parameters);
+        return new PocRuntimeExecutionPlan(
+            configuration,
+            request,
+            parameters,
+            request.SqlDebug && _environment?.IsDevelopment() == true);
     }
 
     public async Task<PocExecuteResult> ExecuteAsync(
@@ -68,12 +84,13 @@ public sealed class PocSqlDatasetExecutor : ITransient
         CancellationToken cancellationToken = default)
     {
         var plan = await PrepareAsync(reportCode, request, cancellationToken);
-        return await ExecuteAsync(plan, cancellationToken);
+        return await ExecuteAsync(plan, cancellationToken, _logger);
     }
 
     public static async Task<PocExecuteResult> ExecuteAsync(
         PocRuntimeExecutionPlan plan,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ILogger<PocSqlDatasetExecutor>? logger = null)
     {
         if (plan.Configuration.UsesFallbackData)
         {
@@ -122,6 +139,29 @@ public sealed class PocSqlDatasetExecutor : ITransient
                 parameters.Add(PocDatabaseProvider.CreateParameter("__take", "int", take));
             }
 
+            // SqlSugar 执行时会改写参数对象；调试快照必须在提交数据库前生成。
+            var sqlDebug = plan.IncludeSqlDebug
+                ? PocSqlDebugFormatter.Create(queryText, parameters)
+                : null;
+            if (sqlDebug is not null)
+            {
+                logger?.LogInformation(
+                    """
+                    ==================== 报表 SQL 开始 ====================
+                    报表编码: {ReportCode}
+                    实际绑定参数:
+                    {BoundParameters}
+                    参数化 SQL:
+                    {ParameterizedSql}
+                    参数替换后的展示 SQL（仅用于调试）:
+                    {DisplaySql}
+                    ==================== 报表 SQL 结束 ====================
+                    """,
+                    definition.Code,
+                    PocSqlDebugFormatter.FormatParametersForLog(sqlDebug.Parameters),
+                    sqlDebug.ParameterizedSql,
+                    sqlDebug.DisplaySql);
+            }
             var dataReader = await database.Ado.GetDataReaderAsync(queryText, parameters);
             await using var reader = dataReader as DbDataReader
                 ?? throw new PocDatasetExecutionException(
@@ -159,7 +199,8 @@ public sealed class PocSqlDatasetExecutor : ITransient
                 full ? rows.Count : preview.PageSize,
                 !full && hasMore,
                 plan.Parameters.DisplayValues,
-                rows);
+                rows,
+                sqlDebug);
         }
         catch (PocDatasetExecutionException)
         {
@@ -230,4 +271,68 @@ public sealed class PocSqlDatasetExecutor : ITransient
         return ordinals;
     }
 
+}
+
+internal static class PocSqlDebugFormatter
+{
+    private const string DisplaySqlWarning =
+        "-- 仅用于开发调试展示；数据库实际执行参数化 SQL，不执行下方拼接文本。";
+
+    public static PocSqlDebugInfo Create(
+        string parameterizedSql,
+        IReadOnlyList<SugarParameter> parameters)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(parameterizedSql);
+        ArgumentNullException.ThrowIfNull(parameters);
+
+        var debugParameters = parameters
+            .Select(parameter => new PocSqlDebugParameter(
+                parameter.ParameterName,
+                parameter.DbType.ToString(),
+                parameter.Value is DBNull ? null : parameter.Value))
+            .ToArray();
+        var displaySql = parameters
+            .OrderByDescending(parameter => parameter.ParameterName.Length)
+            .Aggregate(parameterizedSql, ReplaceParameter);
+
+        return new PocSqlDebugInfo(
+            parameterizedSql,
+            $"{DisplaySqlWarning}{Environment.NewLine}{displaySql}",
+            debugParameters);
+    }
+
+    public static string FormatParametersForLog(
+        IReadOnlyList<PocSqlDebugParameter> parameters)
+    {
+        ArgumentNullException.ThrowIfNull(parameters);
+        return parameters.Count == 0
+            ? "  （无）"
+            : string.Join(
+                Environment.NewLine,
+                parameters.Select(parameter =>
+                    $"  {parameter.Name} [{parameter.DataType}] = {FormatValue(parameter.Value)}"));
+    }
+
+    private static string ReplaceParameter(string sql, SugarParameter parameter)
+    {
+        var pattern = $@"(?<![\w@]){Regex.Escape(parameter.ParameterName)}\b";
+        return Regex.Replace(
+            sql,
+            pattern,
+            _ => FormatValue(parameter.Value),
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
+
+    private static string FormatValue(object? value) => value switch
+    {
+        null or DBNull => "NULL",
+        bool boolean => boolean ? "1" : "0",
+        DateTime dateTime => $"'{dateTime.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture)}'",
+        DateTimeOffset dateTimeOffset => $"'{dateTimeOffset.ToString("yyyy-MM-dd HH:mm:ss.fffffff zzz", CultureInfo.InvariantCulture)}'",
+        byte[] bytes => $"'<{bytes.Length} bytes>'",
+        string text => $"'{text.Replace("'", "''", StringComparison.Ordinal)}'",
+        char character => $"'{character.ToString().Replace("'", "''", StringComparison.Ordinal)}'",
+        IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+        _ => $"'{Convert.ToString(value, CultureInfo.InvariantCulture)?.Replace("'", "''", StringComparison.Ordinal)}'"
+    };
 }

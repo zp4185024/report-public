@@ -137,7 +137,8 @@ public sealed record PocReportDefinition(
 public sealed record PocExecuteRequest(
     int Page,
     IReadOnlyDictionary<string, string?> Parameters,
-    IReadOnlyDictionary<string, string?>? Context = null)
+    IReadOnlyDictionary<string, string?>? Context = null,
+    bool SqlDebug = false)
 {
     public PocExecuteRequest(
         int page,
@@ -292,9 +293,20 @@ public sealed class PocDataRow : Dictionary<string, object?>
 /// <summary>
 /// 单页执行结果。HasMore 让前端在不查询精确总数的情况下控制“下一页”按钮。
 /// </summary>
+public sealed record PocSqlDebugParameter(
+    string Name,
+    string DataType,
+    object? Value);
+
+public sealed record PocSqlDebugInfo(
+    string ParameterizedSql,
+    string DisplaySql,
+    IReadOnlyList<PocSqlDebugParameter> Parameters);
+
 public sealed record PocExecuteResult(
     int Page,
     int PageSize,
     bool HasMore,
     PocResolvedParameters Parameters,
-    IReadOnlyList<PocDataRow> Rows);
+    IReadOnlyList<PocDataRow> Rows,
+    PocSqlDebugInfo? SqlDebug = null);

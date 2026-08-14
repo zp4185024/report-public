@@ -159,6 +159,8 @@ export interface ExecuteRequest {
   page: number;
   parameters: Record<string, string | null>;
   context?: Record<string, string | null>;
+  /** 仅开发环境请求后端返回 SQL 调试信息。 */
+  sqlDebug?: boolean;
 }
 
 /** 数据导出只引用数据库中的已保存模板，不能携带浏览器中的未保存快照。 */
@@ -246,6 +248,19 @@ export interface ExecuteResult {
   hasMore: boolean;
   parameters: ResolvedParameters;
   rows: WorkloadRow[];
+  sqlDebug?: SqlDebugInfo | null;
+}
+
+export interface SqlDebugParameter {
+  name: string;
+  dataType: string;
+  value: unknown;
+}
+
+export interface SqlDebugInfo {
+  parameterizedSql: string;
+  displaySql: string;
+  parameters: SqlDebugParameter[];
 }
 
 export type DataSourceDbType = 'SqlServer' | 'Oracle' | 'MySql' | 'PostgreSQL';

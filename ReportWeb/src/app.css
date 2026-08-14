@@ -625,6 +625,7 @@ h1 {
 }
 
 .data-export-button,
+.print-button,
 .cancel-export-button,
 .configuration-button,
 .data-assets-button {
@@ -652,6 +653,17 @@ h1 {
 .data-export-button:hover:not(:disabled) {
   border-color: #2f6d53;
   background: #e8f5ee;
+}
+
+.print-button {
+  border-color: #718096;
+  color: #334155;
+  background: #f8fafc;
+}
+
+.print-button:hover:not(:disabled) {
+  border-color: #52657a;
+  background: #eef2f6;
 }
 
 .cancel-export-button {

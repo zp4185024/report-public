@@ -42,8 +42,8 @@ const definition = {
     fileRetentionHours: 24,
   },
   parameters: [
-    parameter({ code: 'departmentId', sourceType: 'Url', urlKey: 'departmentId' }),
-    parameter({ code: 'departmentName', sourceType: 'Url', urlKey: 'departmentName' }),
+    parameter({ code: 'hisDepartmentId', sourceType: 'Url', urlKey: 'departmentId' }),
+    parameter({ code: 'hisDepartmentName', sourceType: 'Url', urlKey: 'departmentName' }),
     parameter({ code: 'sex', allowUrlPrefill: true, urlKey: 'sex' }),
     parameter({ code: 'userName', sourceType: 'External' }),
   ],
@@ -68,8 +68,8 @@ describe('reportRequest', () => {
     );
 
     expect(request.parameters).toMatchObject({
-      departmentId: 'D01',
-      departmentName: '财务科',
+      hisDepartmentId: 'D01',
+      hisDepartmentName: '财务科',
       sex: 'F',
     });
     expect(request.context).toEqual({ token: 'old' });
@@ -90,10 +90,32 @@ describe('reportRequest', () => {
     );
 
     expect(refreshed.parameters).toMatchObject({
-      departmentId: 'D03',
-      departmentName: '方便门诊',
+      hisDepartmentId: 'D03',
+      hisDepartmentName: '方便门诊',
       sex: 'M',
     });
     expect(refreshed.context).toEqual({ token: 'new' });
+  });
+
+  it('maps any defined URL key into the unified parameter object and ignores unknown keys', () => {
+    const dynamicDefinition = {
+      ...definition,
+      parameters: [parameter({
+        code: 'callerValue',
+        displayName: '调用方参数',
+        sourceType: 'Url',
+        visible: false,
+        urlKey: 'caller_key',
+      })],
+    } satisfies ReportDefinition;
+
+    const request = createInitialReportRequest(
+      dynamicDefinition,
+      undefined,
+      '?caller_key=dynamic-value&unknown=not-forwarded',
+    );
+
+    expect(request.parameters).toEqual({ callerValue: 'dynamic-value' });
+    expect(request.parameters).not.toHaveProperty('unknown');
   });
 });

@@ -1,3 +1,5 @@
+using System.Data;
+using HD.ReportCenter.Application.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 
 namespace HD.ReportCenter.Tests;
@@ -106,6 +108,34 @@ public sealed class PocParameterResolverTests
         Assert.Equal("锦州市凌河区医院", resolved.DatabaseValues["hisOrganizeName"]);
         Assert.Equal("财务科", resolved.DatabaseValues["hisDepartmentName"]);
         Assert.Equal("super", resolved.DatabaseValues["hisUserName"]);
+    }
+
+    [Fact]
+    public void Resolve_UrlDepartmentId_CreatesNamedSqlParameterWithUrlValue()
+    {
+        var definitions = new[]
+        {
+            Parameter("hisDepartmentId", "string", required: true, sourceType: "Url")
+        };
+        var input = new Dictionary<string, string?>
+        {
+            ["hisDepartmentId"] = "D03"
+        };
+
+        var resolved = PocParameterResolver.Resolve(definitions, input);
+        var referenced = PocReadOnlySqlValidator.Validate(
+            "SELECT @hisDepartmentId AS URL_DEPARTMENT_ID FROM DUAL",
+            definitions.Select(item => item.Code),
+            PocPreviewMode.Full);
+        var sqlParameter = PocDatabaseProvider.CreateParameter(
+            "hisDepartmentId",
+            definitions[0].DataType,
+            resolved.DatabaseValues["hisDepartmentId"]);
+
+        Assert.Contains("hisDepartmentId", referenced, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal("@hisDepartmentId", sqlParameter.ParameterName);
+        Assert.Equal("D03", sqlParameter.Value);
+        Assert.Equal(DbType.String, sqlParameter.DbType);
     }
 
     [Fact]

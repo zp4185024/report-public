@@ -28,6 +28,7 @@ export function createInitialReportRequest(
     page: 1,
     parameters,
     context: externalParameterContext(definition?.externalSources, search),
+    sqlDebug: import.meta.env.DEV,
   };
 }
 

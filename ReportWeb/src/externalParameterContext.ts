@@ -76,9 +76,12 @@ export function externalParameterDocumentContext(
   })), search);
 }
 
-export function parameterSourceCategory(sourceType: string): 'form' | 'system' | 'external' {
+export type ParameterSourceCategory = 'form' | 'url' | 'system' | 'external';
+
+export function parameterSourceCategory(sourceType: string): ParameterSourceCategory {
   const normalized = sourceType.toLowerCase();
   if (normalized === 'external') return 'external';
-  if (normalized === 'form' || normalized === 'url') return 'form';
+  if (normalized === 'url') return 'url';
+  if (normalized === 'form' || normalized === 'localfilter') return 'form';
   return 'system';
 }

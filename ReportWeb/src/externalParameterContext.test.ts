@@ -92,7 +92,8 @@ describe('externalParameterContext', () => {
 describe('parameterSourceCategory', () => {
   it.each([
     ['Form', 'form'],
-    ['Url', 'form'],
+    ['Url', 'url'],
+    ['LocalFilter', 'form'],
     ['System', 'system'],
     ['Fixed', 'system'],
     ['External', 'external'],

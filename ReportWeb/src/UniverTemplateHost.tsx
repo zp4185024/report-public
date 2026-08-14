@@ -26,6 +26,13 @@ import {
 import { isTemplateChangeCommand } from './templateChangeCommand';
 import { recalculateFormulas } from './formulaCalculation';
 import { createSpreadsheetWarningConfig } from './spreadsheetPresentation';
+import {
+  printPrintableSheet,
+  type PrintableBorder,
+  type PrintableCellStyle,
+  type PrintableMerge,
+  type PrintableSheet,
+} from './workbookPrint';
 import UniverWorker from './univer.worker?worker';
 
 /**
@@ -44,6 +51,8 @@ export interface UniverTemplateHandle {
   insertBinding(token: string, kind: 'parameter' | 'detail'): void;
   /** 基于草稿副本执行预览计划，完成后把工作簿切换为只读。 */
   renderPreview(snapshot: IWorkbookData, plan: TemplatePreviewPlan): Promise<number>;
+  /** 把当前预览工作表转换为完整 HTML，并在隔离 iframe 中打开浏览器打印。 */
+  printCurrentSheet(): Promise<void>;
   /** 只切换单元格值写入权限；格式、缩放、查看和导出能力保持可用。 */
   setDataProtected(protectedMode: boolean): Promise<void>;
 }
@@ -64,6 +73,19 @@ type UniverWorkbook = ReturnType<UniverRuntime['univerAPI']['createWorkbook']>;
 type UniverWorksheet = NonNullable<ReturnType<UniverWorkbook['getSheetBySheetId']>>;
 type UniverRange = ReturnType<UniverWorksheet['getRange']>;
 type CommandSubscription = ReturnType<UniverWorkbook['onCommandExecuted']>;
+type UniverTextStyle = NonNullable<ReturnType<UniverRange['getCellStyles']>[number][number]>;
+
+interface UniverPrintableBorderEdge {
+  cl: { rgb?: string | null };
+  s: number;
+}
+
+interface UniverPrintableBorderData {
+  b?: UniverPrintableBorderEdge | null;
+  l?: UniverPrintableBorderEdge | null;
+  r?: UniverPrintableBorderEdge | null;
+  t?: UniverPrintableBorderEdge | null;
+}
 
 interface TemplateOperation {
   /** 单调递增代次；异步步骤恢复后用它判断本操作是否已被后来的工作簿切换取代。 */
@@ -153,6 +175,145 @@ function waitForTwoAnimationFrames(): Promise<void> {
       requestAnimationFrame(() => resolve());
     });
   });
+}
+
+function toPrintableBorder(
+  edge: UniverPrintableBorderEdge | null | undefined,
+): PrintableBorder | undefined {
+  if (edge === null || edge === undefined || edge.s === 0) return undefined;
+  const widthPt = edge.s === 13
+    ? 2.25
+    : edge.s >= 8
+      ? 1.5
+      : edge.s === 7
+        ? 2
+        : edge.s === 2
+          ? 0.25
+          : 0.75;
+  const style: PrintableBorder['style'] = edge.s === 7
+    ? 'double'
+    : edge.s === 3
+      ? 'dotted'
+      : [4, 5, 6, 9, 10, 11, 12].includes(edge.s)
+        ? 'dashed'
+        : 'solid';
+  return {
+    color: edge.cl.rgb ?? undefined,
+    style,
+    widthPt,
+  };
+}
+
+function toPrintableCellStyle(
+  textStyle: UniverTextStyle | null | undefined,
+  background: string | undefined,
+  horizontal: string | undefined,
+  vertical: string | undefined,
+  wrap: boolean | undefined,
+): PrintableCellStyle {
+  // 0.25.1 的 facade 声明没有完整暴露单元格四边结构，运行时仍使用 IBorderData 的 t/r/b/l。
+  const borders = textStyle?.border as UniverPrintableBorderData | null | undefined;
+  return {
+    background,
+    bold: textStyle?.bold,
+    borders: borders == null ? undefined : {
+      top: toPrintableBorder(borders.t),
+      right: toPrintableBorder(borders.r),
+      bottom: toPrintableBorder(borders.b),
+      left: toPrintableBorder(borders.l),
+    },
+    color: textStyle?.color?.rgb ?? undefined,
+    fontFamily: textStyle?.fontFamily ?? undefined,
+    fontSizePt: textStyle?.fontSize,
+    horizontal,
+    italic: textStyle?.italic,
+    strikethrough: textStyle?.strikethrough?.show,
+    underline: textStyle?.underline?.show,
+    vertical,
+    wrap,
+  };
+}
+
+function createPrintableSheet(worksheet: UniverWorksheet): PrintableSheet {
+  let dataRange: UniverRange;
+  let mergeRanges: PrintableMerge[];
+  try {
+    dataRange = worksheet.getDataRange();
+    mergeRanges = worksheet.getMergeData().map((range) => ({ ...range.getRange() }));
+  } catch (error) {
+    throw operationError('Univer 读取打印范围失败', error);
+  }
+
+  let startRow = dataRange.getRow();
+  let endRow = dataRange.getLastRow();
+  let startColumn = dataRange.getColumn();
+  let endColumn = dataRange.getLastColumn();
+  for (const merge of mergeRanges) {
+    const intersects = merge.startRow <= endRow
+      && merge.endRow >= startRow
+      && merge.startColumn <= endColumn
+      && merge.endColumn >= startColumn;
+    if (!intersects) continue;
+    startRow = Math.min(startRow, merge.startRow);
+    endRow = Math.max(endRow, merge.endRow);
+    startColumn = Math.min(startColumn, merge.startColumn);
+    endColumn = Math.max(endColumn, merge.endColumn);
+  }
+
+  const rowCount = endRow - startRow + 1;
+  const columnCount = endColumn - startColumn + 1;
+  let range: UniverRange;
+  try {
+    range = worksheet.getRange(startRow, startColumn, rowCount, columnCount);
+  } catch (error) {
+    throw operationError('Univer 创建打印数据范围失败', error);
+  }
+
+  try {
+    const values = range.getDisplayValues();
+    if (!values.some((row) => row.some((value) => value.length > 0))) {
+      throw new Error('当前工作表没有可打印内容。');
+    }
+    const textStyles = range.getCellStyles();
+    const backgrounds = range.getBackgrounds();
+    const horizontalAlignments = range.getHorizontalAlignments();
+    const verticalAlignments = range.getVerticalAlignments();
+    const wraps = range.getWraps();
+    const rowHeights = Array.from({ length: rowCount }, (_, index) => (
+      normalizeUniverRuntimeNumber(
+        worksheet.getRowHeight(startRow + index),
+        `工作表 '${worksheet.getSheetId()}' 第 ${startRow + index + 1} 行的打印高度`,
+      )
+    ));
+    const columnWidths = Array.from({ length: columnCount }, (_, index) => (
+      normalizeUniverRuntimeNumber(
+        worksheet.getColumnWidth(startColumn + index),
+        `工作表 '${worksheet.getSheetId()}' 第 ${startColumn + index + 1} 列的打印宽度`,
+      )
+    ));
+    const styles = values.map((row, rowIndex) => row.map((_value, columnIndex) => (
+      toPrintableCellStyle(
+        textStyles[rowIndex]?.[columnIndex],
+        backgrounds[rowIndex]?.[columnIndex],
+        horizontalAlignments[rowIndex]?.[columnIndex],
+        verticalAlignments[rowIndex]?.[columnIndex],
+        wraps[rowIndex]?.[columnIndex],
+      )
+    )));
+
+    return {
+      columnWidths,
+      merges: mergeRanges,
+      name: worksheet.getSheetName(),
+      rowHeights,
+      startColumn,
+      startRow,
+      styles,
+      values,
+    };
+  } catch (error) {
+    throw operationError('Univer 生成打印数据失败', error);
+  }
 }
 
 export const UniverTemplateHost = forwardRef<
@@ -824,6 +985,42 @@ export const UniverTemplateHost = forwardRef<
         safeNotifyChanged();
       } catch (error) {
         const contextual = operationError('Univer 插入绑定 token 失败', error);
+        safeNotifyError(contextual);
+        throw contextual;
+      }
+    },
+
+    async printCurrentSheet() {
+      try {
+        if (
+          activeTemplateOperationRef.current !== null
+          || internalOperationDepthRef.current > 0
+        ) {
+          throw new Error('模板操作进行中，暂时不能打印。');
+        }
+        if (modeRef.current !== 'preview') {
+          throw new Error('请先预览报表数据，再执行打印。');
+        }
+
+        let workbook: UniverWorkbook | null | undefined;
+        try {
+          workbook = runtimeRef.current?.univerAPI.getActiveWorkbook();
+        } catch (error) {
+          throw operationError('Univer 获取待打印工作簿失败', error);
+        }
+        if (workbook == null) {
+          throw new Error('Univer 当前没有可打印的工作簿。');
+        }
+
+        let worksheet: UniverWorksheet;
+        try {
+          worksheet = workbook.getActiveSheet();
+        } catch (error) {
+          throw operationError('Univer 获取待打印工作表失败', error);
+        }
+        await printPrintableSheet(createPrintableSheet(worksheet));
+      } catch (error) {
+        const contextual = operationError('Univer 打印当前工作表失败', error);
         safeNotifyError(contextual);
         throw contextual;
       }

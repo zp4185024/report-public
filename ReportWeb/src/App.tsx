@@ -19,6 +19,7 @@ import {
   PanelTopClose,
   PanelTopOpen,
   Pencil,
+  Printer,
   Save,
   Search,
   Settings2,
@@ -53,6 +54,7 @@ import {
   createInitialReportRequest,
   refreshReportRequestFromUrl,
 } from './reportRequest';
+import { logSqlDebug } from './sqlDebug';
 import {
   UniverTemplateHost,
   type TemplateEditorMode,
@@ -206,6 +208,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
   const [importing, setImporting] = useState(false);
   const [exportingTemplate, setExportingTemplate] = useState(false);
   const [exportingData, setExportingData] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [cancellingExport, setCancellingExport] = useState(false);
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -352,6 +355,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
       const nextRequest = refreshReportRequestFromUrl({ ...request, page }, definition);
       const queryStartedAt = performance.now();
       const queryResult = await reportApi.execute(nextRequest);
+      logSqlDebug(reportCode, queryResult);
       const nextResult = applyLocalDataQuery(queryResult, definition, nextRequest);
       setQueryDuration(performance.now() - queryStartedAt);
 
@@ -654,6 +658,35 @@ export default function App({ reportCode, shared = false }: AppProps) {
     }
   }, [definition, dirty, initialized, persistTemplate, request, templateDocument]);
 
+  const printReport = useCallback(async () => {
+    if (
+      operationRef.current
+      || mode !== 'preview'
+      || result === null
+      || !initialized
+    ) {
+      return;
+    }
+
+    operationRef.current = true;
+    setPrinting(true);
+    setError(null);
+    setExchangeStatus(null);
+    try {
+      const editor = editorRef.current;
+      if (editor === null) {
+        throw new Error('报表预览尚未准备完成。');
+      }
+      await editor.printCurrentSheet();
+      setExchangeStatus('已打开浏览器打印窗口');
+    } catch (exception) {
+      setError(errorMessage(exception, '报表打印失败'));
+    } finally {
+      operationRef.current = false;
+      setPrinting(false);
+    }
+  }, [initialized, mode, result]);
+
   const cancelDataExport = useCallback(async () => {
     if (
       cancellingExport ||
@@ -767,7 +800,13 @@ export default function App({ reportCode, shared = false }: AppProps) {
   }, [shareUrl]);
 
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
-  const busy = loading || saving || importing || exportingTemplate || exportingData || previewing;
+  const busy = loading
+    || saving
+    || importing
+    || exportingTemplate
+    || exportingData
+    || printing
+    || previewing;
   const revision = templateDocument?.revision;
   const previewToolbar = createPreviewToolbarPresentation(
     definition?.preview.mode ?? 'Full',
@@ -880,6 +919,20 @@ export default function App({ reportCode, shared = false }: AppProps) {
               : <FileSpreadsheet size={16} />}
             导出数据
           </button>
+          {mode === 'preview' && result !== null && (
+            <button
+              className="button print-button"
+              type="button"
+              title="打印当前预览工作表"
+              disabled={busy || !initialized}
+              onClick={() => void printReport()}
+            >
+              {printing
+                ? <LoaderCircle className="spin" size={16} />
+                : <Printer size={16} />}
+              打印
+            </button>
+          )}
           {exportJob !== null &&
             (exportJob.status === 'Pending' || exportJob.status === 'Running') && (
               <button
@@ -1030,6 +1083,20 @@ export default function App({ reportCode, shared = false }: AppProps) {
                   : <FileSpreadsheet size={16} />}
                 导出数据
               </button>
+              {result !== null && (
+                <button
+                  className="button print-button"
+                  type="button"
+                  title="打印当前预览工作表"
+                  disabled={busy || !initialized}
+                  onClick={() => void printReport()}
+                >
+                  {printing
+                    ? <LoaderCircle className="spin" size={16} />
+                    : <Printer size={16} />}
+                  打印
+                </button>
+              )}
               {exportJob !== null &&
                 (exportJob.status === 'Pending' || exportJob.status === 'Running') && (
                   <button
