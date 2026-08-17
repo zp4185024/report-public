@@ -15,6 +15,7 @@ import {
   FileDown,
   FileSpreadsheet,
   FileUp,
+  Filter,
   LoaderCircle,
   PanelTopClose,
   PanelTopOpen,
@@ -41,6 +42,7 @@ import {
   serializeMultiSelectValues,
 } from './localDataQuery';
 import { createPreviewToolbarPresentation } from './previewToolbar';
+import { createPageLoadingPresentation } from './pageLoading';
 import { TemplateFieldPanel } from './TemplateFieldPanel';
 import { ReportConfigurationDialog } from './ReportConfigurationDialog';
 import { ShareReportDialog, type SharedParameterSummary } from './ShareReportDialog';
@@ -687,6 +689,32 @@ export default function App({ reportCode, shared = false }: AppProps) {
     }
   }, [initialized, mode, result]);
 
+  const toggleFilter = useCallback(async () => {
+    if (operationRef.current || !initialized || result === null) {
+      return;
+    }
+
+    operationRef.current = true;
+    setError(null);
+    setExchangeStatus(null);
+    try {
+      const editor = editorRef.current;
+      if (editor === null) {
+        throw new Error('报表预览尚未准备完成。');
+      }
+      const appliedRange = await editor.toggleFilter();
+      setExchangeStatus(
+        appliedRange === null
+          ? '已关闭列筛选'
+          : `已对 ${appliedRange} 启用列筛选`,
+      );
+    } catch (exception) {
+      setError(errorMessage(exception, '切换筛选失败'));
+    } finally {
+      operationRef.current = false;
+    }
+  }, [initialized, result]);
+
   const cancelDataExport = useCallback(async () => {
     if (
       cancellingExport ||
@@ -807,6 +835,18 @@ export default function App({ reportCode, shared = false }: AppProps) {
     || exportingData
     || printing
     || previewing;
+  const pageLoading = createPageLoadingPresentation({
+    loading,
+    saving,
+    importing,
+    exportingTemplate,
+    exportingData,
+    printing,
+    previewing,
+    cancellingExport,
+    mode,
+    exportJob,
+  });
   const revision = templateDocument?.revision;
   const previewToolbar = createPreviewToolbarPresentation(
     definition?.preview.mode ?? 'Full',
@@ -814,10 +854,35 @@ export default function App({ reportCode, shared = false }: AppProps) {
   );
 
   return (
-    <main className={shared ? 'app-shell shared-report-shell' : 'app-shell'}>
+    <main
+      className={shared ? 'app-shell shared-report-shell' : 'app-shell'}
+      aria-busy={pageLoading !== null}
+    >
+      {pageLoading !== null && (
+        <div className="page-loading-overlay" role="status" aria-live="polite">
+          <div className="page-loading-panel">
+            <LoaderCircle className="spin page-loading-icon" size={32} aria-hidden="true" />
+            <strong>{pageLoading.title}</strong>
+            <span>{pageLoading.detail}</span>
+            {exportingData && exportJob !== null
+              && (exportJob.status === 'Pending' || exportJob.status === 'Running') && (
+                <button
+                  className="button cancel-export-button"
+                  type="button"
+                  disabled={cancellingExport}
+                  onClick={() => void cancelDataExport()}
+                >
+                  <X size={16} />
+                  取消导出
+                </button>
+              )}
+          </div>
+        </div>
+      )}
       {!shared && <header
         className={`command-bar ${mode}-mode`}
         aria-label="模板命令栏"
+        inert={busy ? true : undefined}
       >
         <div className="command-leading">
           <div className="mode-switch" aria-label="工作模式">
@@ -840,7 +905,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 disabled={busy || mode === 'preview' || !initialized}
                 onClick={() => void enterPreview(1)}
               >
-                {previewing ? <LoaderCircle className="spin" size={15} /> : <Eye size={15} />}
+                <Eye size={15} />
                 数据预览
               </button>
           </div>
@@ -878,7 +943,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 disabled={busy || !initialized}
                 onClick={chooseTemplateFile}
               >
-                {importing ? <LoaderCircle className="spin" size={16} /> : <FileUp size={16} />}
+                <FileUp size={16} />
                 <span className="button-label">导入模板</span>
               </button>
               <button
@@ -888,7 +953,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 disabled={busy || !initialized}
                 onClick={() => void exportTemplate()}
               >
-                {exportingTemplate ? <LoaderCircle className="spin" size={16} /> : <FileDown size={16} />}
+                <FileDown size={16} />
                 <span className="button-label">导出模板</span>
               </button>
             </>
@@ -914,24 +979,32 @@ export default function App({ reportCode, shared = false }: AppProps) {
             disabled={busy || !initialized || templateWarning !== null}
             onClick={() => void exportData()}
           >
-            {exportingData
-              ? <LoaderCircle className="spin" size={16} />
-              : <FileSpreadsheet size={16} />}
+            <FileSpreadsheet size={16} />
             导出数据
           </button>
           {mode === 'preview' && result !== null && (
-            <button
-              className="button print-button"
-              type="button"
-              title="打印当前预览工作表"
-              disabled={busy || !initialized}
-              onClick={() => void printReport()}
-            >
-              {printing
-                ? <LoaderCircle className="spin" size={16} />
-                : <Printer size={16} />}
-              打印
-            </button>
+            <>
+              <button
+                className="button secondary-command"
+                type="button"
+                title="选中表头或数据单元格后，为连续数据区域启用或关闭列筛选"
+                disabled={busy || !initialized}
+                onClick={() => void toggleFilter()}
+              >
+                <Filter size={16} />
+                筛选
+              </button>
+              <button
+                className="button print-button"
+                type="button"
+                title="打印当前预览工作表"
+                disabled={busy || !initialized}
+                onClick={() => void printReport()}
+              >
+                <Printer size={16} />
+                打印
+              </button>
+            </>
           )}
           {exportJob !== null &&
             (exportJob.status === 'Pending' || exportJob.status === 'Running') && (
@@ -956,7 +1029,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
               disabled={busy || !initialized}
               onClick={() => void saveTemplate()}
             >
-              {saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
+              <Save size={16} />
               保存模板
             </button>
           )}
@@ -982,7 +1055,11 @@ export default function App({ reportCode, shared = false }: AppProps) {
         </div>
       </header>}
 
-      <form className={shared ? 'query-band shared-query-band' : 'query-band'} onSubmit={handleSubmit}>
+      <form
+        className={shared ? 'query-band shared-query-band' : 'query-band'}
+        inert={busy ? true : undefined}
+        onSubmit={handleSubmit}
+      >
         {definition?.parameters
           .filter((parameter) => parameter.visible && parameter.controlType !== 'hidden')
           .map((parameter) => (
@@ -1060,11 +1137,9 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 ? '使用当前模板草稿预览数据'
                 : '重新查询当前页数据'}
           >
-            {previewing
-              ? <LoaderCircle className="spin" size={16} />
-              : !shared && mode === 'design'
-                ? <Eye size={16} />
-                : <Search size={16} />}
+            {!shared && mode === 'design'
+              ? <Eye size={16} />
+              : <Search size={16} />}
             {!shared && mode === 'design' ? '预览' : '查询'}
           </button>
           {shared && (
@@ -1078,24 +1153,32 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 disabled={busy || !initialized || templateWarning !== null}
                 onClick={() => void exportData()}
               >
-                {exportingData
-                  ? <LoaderCircle className="spin" size={16} />
-                  : <FileSpreadsheet size={16} />}
+                <FileSpreadsheet size={16} />
                 导出数据
               </button>
               {result !== null && (
-                <button
-                  className="button print-button"
-                  type="button"
-                  title="打印当前预览工作表"
-                  disabled={busy || !initialized}
-                  onClick={() => void printReport()}
-                >
-                  {printing
-                    ? <LoaderCircle className="spin" size={16} />
-                    : <Printer size={16} />}
-                  打印
-                </button>
+                <>
+                  <button
+                    className="button secondary-command"
+                    type="button"
+                    title="选中表头或数据单元格后，为连续数据区域启用或关闭列筛选"
+                    disabled={busy || !initialized}
+                    onClick={() => void toggleFilter()}
+                  >
+                    <Filter size={16} />
+                    筛选
+                  </button>
+                  <button
+                    className="button print-button"
+                    type="button"
+                    title="打印当前预览工作表"
+                    disabled={busy || !initialized}
+                    onClick={() => void printReport()}
+                  >
+                    <Printer size={16} />
+                    打印
+                  </button>
+                </>
               )}
               {exportJob !== null &&
                 (exportJob.status === 'Pending' || exportJob.status === 'Running') && (
@@ -1130,7 +1213,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
         onWarningClose={() => setTemplateWarning(null)}
       />
 
-      <section className="report-workspace">
+      <section className="report-workspace" inert={busy ? true : undefined}>
         {(!shared || (mode === 'preview' && previewToolbar.showPager)) && (
           <div className={shared ? 'report-toolbar shared-report-toolbar' : 'report-toolbar'}>
             {!shared && (mode === 'preview' ? (

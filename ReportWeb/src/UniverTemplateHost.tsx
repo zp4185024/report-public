@@ -13,12 +13,26 @@ import {
   UniverSheetsCorePreset,
 } from '@univerjs/preset-sheets-core';
 import '@univerjs/preset-sheets-core/lib/index.css';
+import UniverPresetSheetsFilterZhCN from '@univerjs/preset-sheets-filter/locales/zh-CN';
+import {
+  RemoveSheetFilterCommand,
+  SetSheetFilterRangeCommand,
+  SmartToggleSheetsFilterCommand,
+  UniverSheetsFilterPreset,
+} from '@univerjs/preset-sheets-filter';
+import '@univerjs/preset-sheets-filter/lib/index.css';
 import { createUniver, LocaleType, mergeLocales } from '@univerjs/presets';
 import type { IWorkbookData } from '@univerjs/presets';
 import {
   createDetailValueBatches,
   type TemplatePreviewPlan,
 } from './templatePreview';
+import {
+  createPreviewFilterTarget,
+  formatFilterRange,
+  shouldRepairPreviewFilterRange,
+  type PreviewFilterTarget,
+} from './previewFilter';
 import {
   normalizeUniverRuntimeNumber,
   normalizeWorkbookSnapshot,
@@ -33,6 +47,10 @@ import {
   type PrintableMerge,
   type PrintableSheet,
 } from './workbookPrint';
+import {
+  configureWorksheetDataProtection,
+  setWorksheetProtectionShadowVisible,
+} from './worksheetDataProtection';
 import UniverWorker from './univer.worker?worker';
 
 /**
@@ -49,10 +67,12 @@ export interface UniverTemplateHandle {
   loadDesign(snapshot: IWorkbookData): void;
   /** 向当前活动单元格插入参数或明细 token。 */
   insertBinding(token: string, kind: 'parameter' | 'detail'): void;
-  /** 基于草稿副本执行预览计划，完成后把工作簿切换为只读。 */
+  /** 基于草稿副本执行预览计划，完成后只禁止修改数据值。 */
   renderPreview(snapshot: IWorkbookData, plan: TemplatePreviewPlan): Promise<number>;
   /** 把当前预览工作表转换为完整 HTML，并在隔离 iframe 中打开浏览器打印。 */
   printCurrentSheet(): Promise<void>;
+  /** 为当前选择的连续数据区域启用或关闭 Excel 式列筛选。 */
+  toggleFilter(): Promise<string | null>;
   /** 只切换单元格值写入权限；格式、缩放、查看和导出能力保持可用。 */
   setDataProtected(protectedMode: boolean): Promise<void>;
 }
@@ -335,6 +355,7 @@ export const UniverTemplateHost = forwardRef<
   const containerRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<UniverRuntime | null>(null);
   const workerRef = useRef<Worker | null>(null);
+  const previewFilterTargetRef = useRef<PreviewFilterTarget | null>(null);
   const commandSubscriptionRef = useRef<CommandSubscription | null>(null);
   const currentWorkbookEditableRef = useRef<boolean | null>(null);
   // 深度计数支持嵌套程序操作；大于 0 时命令订阅不得把初始化、预览写入等标成用户修改。
@@ -718,7 +739,10 @@ export const UniverTemplateHost = forwardRef<
       runtime = createUniver({
         locale: LocaleType.ZH_CN,
         locales: {
-          [LocaleType.ZH_CN]: mergeLocales(UniverPresetSheetsCoreZhCN),
+          [LocaleType.ZH_CN]: mergeLocales(
+            UniverPresetSheetsCoreZhCN,
+            UniverPresetSheetsFilterZhCN,
+          ),
         },
         presets: [
           UniverSheetsCorePreset({
@@ -742,6 +766,7 @@ export const UniverTemplateHost = forwardRef<
             contextMenu: true,
             disableAutoFocus: true,
           }),
+          UniverSheetsFilterPreset(),
         ],
       });
 
@@ -857,6 +882,59 @@ export const UniverTemplateHost = forwardRef<
     replaceWorkbook,
   ]);
 
+  const applyDataProtection = useCallback(async (
+    workbook: UniverWorkbook,
+    runtime: UniverRuntime,
+    protectedMode: boolean,
+    protectionName: string,
+  ) => {
+    const points = {
+      setCellValue: runtime.univerAPI.Enum.WorksheetPermissionPoint.SetCellValue,
+      deleteProtection: runtime.univerAPI.Enum.WorksheetPermissionPoint.DeleteProtection,
+      filter: runtime.univerAPI.Enum.WorksheetPermissionPoint.Filter,
+    };
+    const permissions = workbook
+      .getSheets()
+      .map((sheet) => sheet.getWorksheetPermission());
+    const previousSnapshots = permissions.map((permission) => permission.getSnapshot());
+    const createdProtections = permissions.map(() => false);
+    const previousEditable = currentWorkbookEditableRef.current;
+
+    try {
+      workbook.setEditable(true);
+      currentWorkbookEditableRef.current = true;
+      for (let index = 0; index < permissions.length; index += 1) {
+        createdProtections[index] = await configureWorksheetDataProtection(
+          permissions[index],
+          protectedMode,
+          points,
+          protectionName,
+        );
+      }
+    } catch (error) {
+      for (let index = 0; index < permissions.length; index += 1) {
+        try {
+          if (createdProtections[index]) {
+            await permissions[index].unprotect();
+          } else if (permissions[index].isProtected()) {
+            await permissions[index].applyConfig({ points: previousSnapshots[index] });
+          }
+        } catch {
+          // 保留首个错误作为主要诊断，回滚由后续重新渲染兜底。
+        }
+      }
+      if (previousEditable !== null) {
+        try {
+          workbook.setEditable(previousEditable);
+          currentWorkbookEditableRef.current = previousEditable;
+        } catch {
+          // 保留权限设置的原始错误。
+        }
+      }
+      throw operationError('Univer 设置数据保护权限失败', error);
+    }
+  }, []);
+
   useImperativeHandle(ref, () => ({
     saveDraft() {
       // saveDraft 只序列化活动工作簿，不改变模式；归一化后快照才能进入扫描器和 .NET 后端。
@@ -887,6 +965,13 @@ export const UniverTemplateHost = forwardRef<
       const startedAt = performance.now();
       const operation = beginTemplateOperation();
       try {
+        previewFilterTargetRef.current = null;
+        const runtime = runtimeRef.current;
+        if (runtime === null) {
+          throw new Error('Univer 编辑器尚未初始化。');
+        }
+        // 设计模式恢复 Univer 默认的保护范围提示，方便模板作者识别已有保护规则。
+        setWorksheetProtectionShadowVisible(runtime.univerAPI, true);
         replaceWorkbook(snapshot, true, operation.generation);
       } catch (error) {
         if (!isCurrentGeneration(operation.generation)) {
@@ -1026,6 +1111,106 @@ export const UniverTemplateHost = forwardRef<
       }
     },
 
+    async toggleFilter() {
+      try {
+        if (
+          activeTemplateOperationRef.current !== null
+          || internalOperationDepthRef.current > 0
+        ) {
+          throw new Error('模板操作进行中，暂时不能切换筛选。');
+        }
+
+        const runtime = runtimeRef.current;
+        if (runtime === null) {
+          throw new Error('Univer 编辑器尚未初始化。');
+        }
+
+        let workbook: UniverWorkbook | null | undefined;
+        try {
+          workbook = runtime.univerAPI.getActiveWorkbook();
+        } catch (error) {
+          throw operationError('Univer 获取工作簿失败', error);
+        }
+        if (workbook == null) {
+          throw new Error('Univer 当前没有可筛选的工作簿。');
+        }
+
+        const worksheet = workbook.getActiveSheet();
+        const commandTarget = {
+          unitId: workbook.getId(),
+          subUnitId: worksheet.getSheetId(),
+        };
+        const target = previewFilterTargetRef.current;
+        const expectedRange = target?.sheetId === commandTarget.subUnitId
+          ? target.range
+          : null;
+        const existingFilter = worksheet.getFilter();
+
+        if (existingFilter !== null) {
+          const removed = await runtime.univerAPI.executeCommand<object, boolean>(
+            RemoveSheetFilterCommand.id,
+            commandTarget,
+          );
+          if (!removed) {
+            throw new Error('Univer 未能移除当前筛选范围。');
+          }
+          return null;
+        }
+
+        const activeSelection = workbook.getActiveRange()?.getRange() ?? null;
+        let success = await runtime.univerAPI.executeCommand<object, boolean>(
+          SmartToggleSheetsFilterCommand.id,
+        );
+        if (!success && expectedRange !== null) {
+          success = await runtime.univerAPI.executeCommand<object, boolean>(
+              SetSheetFilterRangeCommand.id,
+              { ...commandTarget, range: expectedRange },
+            );
+        }
+        if (!success) {
+          throw new Error('请先选择包含表头和数据的连续区域，筛选区域至少需要两行。');
+        }
+
+        let appliedFilter = worksheet.getFilter();
+        if (appliedFilter === null) {
+          throw new Error('Univer 未返回已经启用的筛选范围。');
+        }
+
+        const appliedRange = appliedFilter.getRange().getRange();
+        if (
+          expectedRange !== null
+          && shouldRepairPreviewFilterRange(
+            activeSelection,
+            appliedRange,
+            expectedRange,
+          )
+        ) {
+          const removed = await runtime.univerAPI.executeCommand<object, boolean>(
+            RemoveSheetFilterCommand.id,
+            commandTarget,
+          );
+          const repaired = removed
+            && await runtime.univerAPI.executeCommand<object, boolean>(
+              SetSheetFilterRangeCommand.id,
+              { ...commandTarget, range: expectedRange },
+            );
+          if (!repaired) {
+            throw new Error('Univer 未能把默认筛选范围校正到完整报表区域。');
+          }
+          appliedFilter = worksheet.getFilter();
+          if (appliedFilter === null) {
+            throw new Error('Univer 未返回校正后的筛选范围。');
+          }
+        }
+
+        return formatFilterRange(appliedFilter.getRange().getRange());
+      } catch (error) {
+        const contextual = operationError('Univer 切换当前区域筛选失败', error);
+        safeNotifyError(contextual);
+        throw contextual;
+      }
+    },
+
     async setDataProtected(protectedMode) {
       try {
         if (
@@ -1049,58 +1234,8 @@ export const UniverTemplateHost = forwardRef<
         if (runtime === null) {
           throw new Error('Univer 编辑器尚未初始化。');
         }
-
-        const dataPoint = runtime.univerAPI.Enum.WorksheetPermissionPoint.SetCellValue;
-        const deleteProtectionPoint =
-          runtime.univerAPI.Enum.WorksheetPermissionPoint.DeleteProtection;
-        const sheets = workbook.getSheets();
-        const permissions = sheets.map((sheet) => sheet.getWorksheetPermission());
-        const previousSnapshots = permissions.map((permission) => permission.getSnapshot());
-        const createdProtections = permissions.map(() => false);
-        const previousEditable = currentWorkbookEditableRef.current;
-        try {
-          // 工作簿保持可编辑，权限点只拦截数据值写入，因此格式工具和查看能力不受影响。
-          workbook.setEditable(true);
-          currentWorkbookEditableRef.current = true;
-          for (let index = 0; index < permissions.length; index += 1) {
-            const permission = permissions[index];
-            if (!permission.isProtected()) {
-              if (!protectedMode) continue;
-              await permission.protect({
-                allowViewByOthers: true,
-                name: '共享数据保护',
-              });
-              createdProtections[index] = true;
-            }
-            // protect() 会同时影响工作表总编辑权限；先恢复全部功能，再只关闭数据写入和绕过密码的直接取消保护。
-            await permission.setEditable();
-            if (protectedMode) {
-              await permission.setPoint(dataPoint, false);
-              await permission.setPoint(deleteProtectionPoint, false);
-            }
-          }
-        } catch (error) {
-          for (let index = 0; index < permissions.length; index += 1) {
-            try {
-              if (createdProtections[index]) {
-                await permissions[index].unprotect();
-              } else if (permissions[index].isProtected()) {
-                await permissions[index].applyConfig({ points: previousSnapshots[index] });
-              }
-            } catch {
-              // 保留首个错误作为主要诊断，回滚由后续重新渲染兜底。
-            }
-          }
-          if (previousEditable !== null) {
-            try {
-              workbook.setEditable(previousEditable);
-              currentWorkbookEditableRef.current = previousEditable;
-            } catch {
-              // 保留权限设置的原始错误。
-            }
-          }
-          throw operationError('Univer 设置数据保护权限失败', error);
-        }
+        setWorksheetProtectionShadowVisible(runtime.univerAPI, !protectedMode);
+        await applyDataProtection(workbook, runtime, protectedMode, '报表数据保护');
       } catch (error) {
         const contextual = operationError('Univer 切换数据保护状态失败', error);
         safeNotifyError(contextual);
@@ -1113,6 +1248,7 @@ export const UniverTemplateHost = forwardRef<
       const startedAt = performance.now();
       const operation = beginTemplateOperation();
       let previewWorkbook: UniverWorkbook | null = null;
+      previewFilterTargetRef.current = null;
       try {
         previewWorkbook = replaceWorkbook(snapshot, true, operation.generation);
 
@@ -1278,17 +1414,38 @@ export const UniverTemplateHost = forwardRef<
         }
         assertCurrentGeneration(operation.generation);
 
-        // 所有写入完成后才切只读；任何失败路径也尽量切只读，避免用户误编辑半完成的预览副本。
+        // 所有程序写入完成后只关闭数据值修改，保留字体、颜色、边框和对齐等格式工具。
         assertCurrentGeneration(operation.generation);
         try {
-          previewWorkbook.setEditable(false);
+          // 预览数据依然受保护，但不显示会遮盖整张报表的斜纹覆盖层。
+          setWorksheetProtectionShadowVisible(runtime.univerAPI, false);
+          await applyDataProtection(
+            previewWorkbook,
+            runtime,
+            true,
+            '报表预览数据保护',
+          );
         } catch (error) {
-          throw operationError('Univer 将预览工作簿切换为只读失败', error);
+          throw operationError('Univer 保护预览数据失败', error);
         }
-        currentWorkbookEditableRef.current = false;
         assertCurrentGeneration(operation.generation);
         await waitForTwoAnimationFrames();
         assertCurrentGeneration(operation.generation);
+        const previewFilterTarget = createPreviewFilterTarget(plan);
+        previewFilterTargetRef.current = previewFilterTarget;
+        if (previewFilterTarget !== null) {
+          const filterWorksheet = previewWorkbook.getSheetBySheetId(
+            previewFilterTarget.sheetId,
+          );
+          filterWorksheet
+            ?.getRange(
+              previewFilterTarget.range.startRow,
+              previewFilterTarget.range.startColumn,
+              1,
+              1,
+            )
+            .activate();
+        }
         const duration = performance.now() - startedAt;
         safeNotifyRendered(duration);
         assertCurrentGeneration(operation.generation);
@@ -1319,6 +1476,7 @@ export const UniverTemplateHost = forwardRef<
     },
   }), [
     acquireInternalOperation,
+    applyDataProtection,
     assertCurrentGeneration,
     beginTemplateOperation,
     finishTemplateOperation,

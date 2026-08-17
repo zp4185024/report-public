@@ -355,6 +355,51 @@ button svg {
   background: #f3f5f7;
 }
 
+.page-loading-overlay {
+  position: fixed;
+  z-index: 2000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overscroll-behavior: contain;
+  touch-action: none;
+  background: rgb(243 245 247 / 82%);
+  backdrop-filter: blur(2px);
+}
+
+.page-loading-panel {
+  display: grid;
+  width: min(360px, calc(100vw - 32px));
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  border: 1px solid #c9d1dc;
+  border-radius: 6px;
+  color: #223044;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgb(15 23 42 / 18%);
+  text-align: center;
+}
+
+.page-loading-panel strong {
+  font-size: 15px;
+}
+
+.page-loading-panel span {
+  color: #647184;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.page-loading-icon {
+  color: #2563eb;
+}
+
+.page-loading-panel .cancel-export-button {
+  margin-top: 4px;
+}
+
 .report-heading {
   width: min(34vw, 520px);
   min-width: 0;
