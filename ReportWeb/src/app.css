@@ -634,8 +634,20 @@ h1 {
   gap: 7px;
 }
 
+.shared-query-band {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.shared-query-band > label {
+  min-width: 180px;
+  flex: 1 1 220px;
+}
+
 .shared-query-band .query-actions {
-  min-width: max-content;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  margin-left: auto;
   flex-wrap: nowrap;
 }
 
@@ -899,11 +911,6 @@ h1 {
   gap: 14px;
 }
 
-.shared-report-toolbar {
-  justify-content: flex-end;
-  padding: 4px 12px;
-}
-
 .report-stats,
 .design-status {
   gap: 8px;
@@ -995,13 +1002,26 @@ h1 {
   border-radius: 0;
 }
 
-.shared-report-shell .shared-tools-toggle {
+.shared-report-shell .shared-sheet-actions {
   position: absolute;
   z-index: 40;
   top: 6px;
   right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared-report-shell .shared-sheet-actions .pager {
+  gap: 4px;
+  padding-right: 8px;
+  border-right: 1px solid #c8d0da;
+}
+
+.shared-report-shell .shared-sheet-actions .icon-button {
   width: 30px;
   height: 30px;
+  flex-basis: 30px;
   border-color: #b8c2ce;
   color: #425466;
   background: rgb(255 255 255 / 92%);
@@ -3446,6 +3466,18 @@ h1 {
 
   .query-actions {
     grid-column: auto;
+  }
+
+  .shared-query-band .query-actions {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .shared-query-band .query-actions .button {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 0 6px;
   }
 
   .configuration-form-grid,

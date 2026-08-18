@@ -852,6 +852,30 @@ export default function App({ reportCode, shared = false }: AppProps) {
     definition?.preview.mode ?? 'Full',
     result,
   );
+  const pager = mode === 'preview' && previewToolbar.showPager ? (
+    <div className="pager" role="group" aria-label="分页">
+      <button
+        className="icon-button"
+        type="button"
+        title="上一页"
+        aria-label="上一页"
+        disabled={busy || result === null || result.page <= 1}
+        onClick={() => result && void enterPreview(result.page - 1)}
+      >
+        <ChevronLeft size={18} />
+      </button>
+      <button
+        className="icon-button"
+        type="button"
+        title="下一页"
+        aria-label="下一页"
+        disabled={busy || !result?.hasMore}
+        onClick={() => result && void enterPreview(result.page + 1)}
+      >
+        <ChevronRight size={18} />
+      </button>
+    </div>
+  ) : null;
 
   return (
     <main
@@ -1214,9 +1238,9 @@ export default function App({ reportCode, shared = false }: AppProps) {
       />
 
       <section className="report-workspace" inert={busy ? true : undefined}>
-        {(!shared || (mode === 'preview' && previewToolbar.showPager)) && (
-          <div className={shared ? 'report-toolbar shared-report-toolbar' : 'report-toolbar'}>
-            {!shared && (mode === 'preview' ? (
+        {!shared && (
+          <div className="report-toolbar">
+            {mode === 'preview' ? (
               <div className="report-stats">
                 {previewToolbar.labels.map((label) => <span key={label}>{label}</span>)}
               </div>
@@ -1225,32 +1249,9 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 <span className="formula-dot" />
                 模板编辑
               </div>
-            ))}
-
-            {mode === 'preview' && previewToolbar.showPager && (
-              <div className="pager">
-                <button
-                  className="icon-button"
-                  type="button"
-                  title="上一页"
-                  aria-label="上一页"
-                  disabled={busy || result === null || result.page <= 1}
-                  onClick={() => result && void enterPreview(result.page - 1)}
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  className="icon-button"
-                  type="button"
-                  title="下一页"
-                  aria-label="下一页"
-                  disabled={busy || !result?.hasMore}
-                  onClick={() => result && void enterPreview(result.page + 1)}
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
             )}
+
+            {pager}
           </div>
         )}
 
@@ -1267,18 +1268,21 @@ export default function App({ reportCode, shared = false }: AppProps) {
             inert={shared && result === null ? true : undefined}
           >
             {shared && initialized && (
-              <button
-                className="icon-button shared-tools-toggle"
-                type="button"
-                title={sharedToolsExpanded ? '收起表格工具栏' : '展开表格工具栏'}
-                aria-label={sharedToolsExpanded ? '收起表格工具栏' : '展开表格工具栏'}
-                aria-pressed={sharedToolsExpanded}
-                onClick={() => setSharedToolsExpanded((expanded) => !expanded)}
-              >
-                {sharedToolsExpanded
-                  ? <PanelTopClose size={17} />
-                  : <PanelTopOpen size={17} />}
-              </button>
+              <div className="shared-sheet-actions">
+                {pager}
+                <button
+                  className="icon-button shared-tools-toggle"
+                  type="button"
+                  title={sharedToolsExpanded ? '收起表格工具栏' : '展开表格工具栏'}
+                  aria-label={sharedToolsExpanded ? '收起表格工具栏' : '展开表格工具栏'}
+                  aria-pressed={sharedToolsExpanded}
+                  onClick={() => setSharedToolsExpanded((expanded) => !expanded)}
+                >
+                  {sharedToolsExpanded
+                    ? <PanelTopClose size={17} />
+                    : <PanelTopOpen size={17} />}
+                </button>
+              </div>
             )}
             {initialized && templateDocument ? (
               <UniverTemplateHost
