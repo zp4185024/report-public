@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createInitialReportRequest,
+  findMissingRequiredParameterCodes,
   refreshReportRequestFromUrl,
 } from './reportRequest';
 import type { ParameterDefinition, ReportDefinition } from './types';
@@ -117,5 +118,37 @@ describe('reportRequest', () => {
 
     expect(request.parameters).toEqual({ callerValue: 'dynamic-value' });
     expect(request.parameters).not.toHaveProperty('unknown');
+  });
+
+  it('uses resolved dynamic defaults and fixed fallback values before preview', () => {
+    const parameterDefinition = {
+      ...definition,
+      parameters: [
+        parameter({ code: 'queryDate', dataType: 'date', defaultValue: '2026-08-18', defaultExpression: 'today()' }),
+        parameter({ code: 'department', fixedValue: '门诊' }),
+      ],
+    } satisfies ReportDefinition;
+
+    expect(createInitialReportRequest(parameterDefinition, undefined, '').parameters).toEqual({
+      queryDate: '2026-08-18',
+      department: '门诊',
+    });
+  });
+
+  it('reports missing required form parameters without blocking trusted external values', () => {
+    const parameterDefinition = {
+      ...definition,
+      parameters: [
+        parameter({ code: 'bdate', displayName: '申请开始日期', required: true }),
+        parameter({ code: 'edate', displayName: '申请结束日期', required: true }),
+        parameter({ code: 'hisOrganizeId', sourceType: 'External', required: true }),
+      ],
+    } satisfies ReportDefinition;
+
+    expect(findMissingRequiredParameterCodes(parameterDefinition, {
+      bdate: '2026-08-01',
+      edate: null,
+      hisOrganizeId: null,
+    })).toEqual(['edate']);
   });
 });

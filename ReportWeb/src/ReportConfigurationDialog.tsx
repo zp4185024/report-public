@@ -26,6 +26,12 @@ import {
   bindExternalField,
   importExternalSourceFields,
 } from './reportParameterSources';
+import {
+  defaultDataTypeForControl,
+  isTemporalControlType,
+  parameterInputAttributes,
+  parameterInputValue,
+} from './parameterInput';
 import type {
   FieldPresentationDefinition,
   ParameterDefinition,
@@ -144,14 +150,75 @@ function controlTypeForDataType(dataType: string): string {
     case 'number':
       return 'number';
     case 'date':
-    case 'datetime':
       return 'date';
+    case 'datetime':
+      return 'datetime';
     case 'bool':
     case 'boolean':
       return 'checkbox';
     default:
       return 'text';
   }
+}
+
+const dateDefaultPresets = [
+  { value: '', label: '无默认值' },
+  { value: 'today()', label: '今天' },
+  { value: 'yesterday()', label: '昨天' },
+  { value: 'tomorrow()', label: '明天' },
+  { value: 'startOfMonth(today())', label: '本月第一天' },
+  { value: 'endOfMonth(today())', label: '本月最后一天' },
+  { value: 'startOfYear(today())', label: '今年第一天' },
+  { value: 'endOfYear(today())', label: '今年最后一天' },
+];
+
+function isDateParameter(dataType: string, controlType?: string): boolean {
+  const normalizedDataType = dataType.toLowerCase();
+  return normalizedDataType === 'date'
+    || normalizedDataType === 'datetime'
+    || (controlType !== undefined && isTemporalControlType(controlType));
+}
+
+function dateDefaultOptions(current: string | null): typeof dateDefaultPresets {
+  if (!current || dateDefaultPresets.some((option) => option.value.toLowerCase() === current.toLowerCase())) {
+    return dateDefaultPresets;
+  }
+  return [
+    { value: current, label: `当前表达式：${current}` },
+    ...dateDefaultPresets,
+  ];
+}
+
+function calendarDefaultOptions(
+  controlType: string,
+  current: string | null,
+): typeof dateDefaultPresets {
+  const normalized = controlType.toLowerCase();
+  if (normalized === 'month') {
+    const options = [
+      { value: '', label: '无默认值' },
+      { value: 'today()', label: '本月' },
+      { value: 'yesterday()', label: '上月' },
+      { value: 'tomorrow()', label: '下月' },
+      { value: 'startOfYear(today())', label: '今年 1 月' },
+      { value: 'endOfYear(today())', label: '今年 12 月' },
+    ];
+    return !current || options.some((option) => option.value.toLowerCase() === current.toLowerCase())
+      ? options
+      : [{ value: current, label: `当前表达式：${current}` }, ...options];
+  }
+  if (normalized === 'year') {
+    const options = [
+      { value: '', label: '无默认值' },
+      { value: 'today()', label: '今年' },
+      { value: 'yesterday()', label: '去年' },
+      { value: 'tomorrow()', label: '明年' },
+    ];
+    return !current || options.some((option) => option.value.toLowerCase() === current.toLowerCase())
+      ? options
+      : [{ value: current, label: `当前表达式：${current}` }, ...options];
+  }
+  return dateDefaultOptions(current);
 }
 
 function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1): T[] {
@@ -466,7 +533,7 @@ export function ReportConfigurationDialog({
               </div>
               <div className="configuration-table-scroll">
                 <table className="configuration-table parameter-table">
-                  <thead><tr><th>顺序</th><th>参数编码</th><th>显示名称</th><th>数据类型</th><th>来源</th><th>控件</th><th>来源配置</th><th>选项</th><th>操作</th></tr></thead>
+                  <thead><tr><th>顺序</th><th>参数编码</th><th>显示名称</th><th>数据类型</th><th>来源</th><th>控件</th><th>来源配置</th><th>默认值</th><th>属性</th><th>操作</th></tr></thead>
                   <tbody>
                     {draft.parameters.map((parameter, index) => {
                       const localFilter = isLocalFilterSource(parameter.sourceType);
@@ -537,7 +604,10 @@ export function ReportConfigurationDialog({
                           <input className="code-input" disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.code} onChange={(event) => updateParameter(index, { code: event.target.value })} />
                         )}</td>
                         <td><input value={parameter.displayName} onChange={(event) => updateParameter(index, { displayName: event.target.value })} /></td>
-                        <td><select disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.dataType} onChange={(event) => updateParameter(index, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td>
+                        <td><select disabled={datasetVariableCodes.has(parameter.code.toLowerCase())} value={parameter.dataType} onChange={(event) => updateParameter(index, {
+                          dataType: event.target.value,
+                          defaultExpression: isDateParameter(event.target.value) ? parameter.defaultExpression : null,
+                        })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td>
                         <td><select aria-label={`参数来源 ${index + 1}`} disabled={datasetOwnsExternalBinding} value={parameter.sourceType} onChange={(event) => {
                           const sourceType = event.target.value;
                           const currentField = selectedDataset?.fields.find(
@@ -624,12 +694,18 @@ export function ReportConfigurationDialog({
                         }}><option value="Form">页面输入</option><option value="Url">URL 参数</option><option value={localFilterSourceType}>本地筛选</option><option value="System">系统默认</option><option value="Fixed">固定值</option><option value="External">外部接口</option></select></td>
                         <td><select value={parameter.controlType} onChange={(event) => {
                           const controlType = event.target.value;
+                          const dataType = datasetVariableCodes.has(parameter.code.toLowerCase())
+                            ? parameter.dataType
+                            : defaultDataTypeForControl(controlType, parameter.dataType);
                           updateParameter(index, {
                             controlType,
-                            dataType: controlType.toLowerCase() === 'multiselect' ? 'string' : parameter.dataType,
+                            dataType,
+                            defaultExpression: isTemporalControlType(controlType)
+                              ? parameter.defaultExpression
+                              : null,
                             options: isChoiceControl(controlType) ? parameter.options ?? [] : [],
                           });
-                        }}><option value="text">文本框</option><option value="number">数字框</option><option value="date">日期框</option><option value="checkbox">是/否</option><option value="select">单选</option><option value="multiSelect">多选</option><option value="hidden">隐藏</option></select></td>
+                        }}><option value="text">文本框</option><option value="number">数字框</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="month">年月</option><option value="year">年份</option><option value="checkbox">是/否</option><option value="select">单选</option><option value="multiSelect">多选</option><option value="hidden">隐藏</option></select></td>
                         <td>{parameter.sourceType === 'External' ? (
                           <div className="external-binding-selects">
                             <select aria-label={`接口来源 ${index + 1}`} value={parameter.sourceCode ?? ''} disabled={datasetOwnsExternalBinding} onChange={(event) => {
@@ -663,7 +739,64 @@ export function ReportConfigurationDialog({
                             维护选项（{parameter.options?.length ?? 0}）
                           </button>
                         ) : (
-                          <input disabled={localFilter} value={(parameter.sourceType === 'Fixed' ? parameter.fixedValue : parameter.defaultExpression) ?? ''} placeholder={localFilter ? '无需配置' : parameter.sourceType === 'Fixed' ? '固定值' : '如 startOfMonth'} onChange={(event) => parameter.sourceType === 'Fixed' ? updateParameter(index, { fixedValue: event.target.value || null }) : updateParameter(index, { defaultExpression: event.target.value || null })} />
+                          <span className="parameter-source-none">
+                            {parameter.sourceType === 'System'
+                              ? '系统计算'
+                              : parameter.sourceType === 'Fixed'
+                                ? '使用默认值'
+                                : '页面输入'}
+                          </span>
+                        )}</td>
+                        <td>{localFilter || parameter.sourceType === 'External' ? (
+                          <span className="parameter-source-none">无需配置</span>
+                        ) : isDateParameter(parameter.dataType, parameter.controlType) && parameter.sourceType !== 'Fixed' ? (
+                          <select
+                            aria-label={`时间格式默认值 ${index + 1}`}
+                            value={parameter.defaultExpression ?? ''}
+                            onChange={(event) => updateParameter(index, {
+                              defaultExpression: event.target.value || null,
+                              fixedValue: null,
+                            })}
+                          >
+                            {calendarDefaultOptions(parameter.controlType, parameter.defaultExpression).map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        ) : parameter.controlType.toLowerCase() === 'select' ? (
+                          <select
+                            aria-label={`选项默认值 ${index + 1}`}
+                            value={parameter.fixedValue ?? ''}
+                            onChange={(event) => updateParameter(index, { fixedValue: event.target.value || null })}
+                          >
+                            <option value="">无默认值</option>
+                            {(parameter.options ?? []).map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        ) : parameter.controlType.toLowerCase() === 'checkbox' || parameter.dataType.toLowerCase() === 'bool' || parameter.dataType.toLowerCase() === 'boolean' ? (
+                          <select
+                            aria-label={`布尔默认值 ${index + 1}`}
+                            value={parameter.fixedValue ?? ''}
+                            onChange={(event) => updateParameter(index, { fixedValue: event.target.value || null })}
+                          >
+                            <option value="">无默认值</option>
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                          </select>
+                        ) : (
+                          (() => {
+                            const inputAttributes = parameterInputAttributes(parameter);
+                            return <input
+                            type={inputAttributes.type}
+                            min={inputAttributes.min}
+                            max={inputAttributes.max}
+                            step={inputAttributes.step}
+                            aria-label={`参数默认值 ${index + 1}`}
+                            value={parameterInputValue(parameter, parameter.fixedValue ?? '')}
+                            placeholder="无默认值"
+                            onChange={(event) => updateParameter(index, { fixedValue: event.target.value || null })}
+                          />;
+                          })()
                         )}</td>
                         <td><div className="flag-list"><label><input type="checkbox" disabled={selectedDataset?.variables.some((variable) => variable.required && variable.code.toLowerCase() === parameter.code.toLowerCase())} checked={parameter.required} onChange={(event) => updateParameter(index, { required: event.target.checked })} />必填</label><label><input type="checkbox" disabled={parameter.sourceType === 'External'} checked={parameter.visible} onChange={(event) => updateParameter(index, { visible: event.target.checked })} />显示</label><label><input type="checkbox" disabled={parameter.sourceType === 'External' || parameter.sourceType === 'Url'} checked={parameter.allowUrlPrefill} onChange={(event) => updateParameter(index, { allowUrlPrefill: event.target.checked, urlKey: event.target.checked ? parameter.urlKey || parameter.code : null })} />URL 预填</label></div></td>
                         <td>{datasetVariableCodes.has(parameter.code.toLowerCase()) ? <span className="dataset-variable-badge">数据集</span> : <button type="button" className="table-icon danger" title="删除参数" aria-label={`删除参数 ${parameter.displayName}`} onClick={() => setDraft({ ...draft, parameters: draft.parameters.filter((_, itemIndex) => itemIndex !== index) })}><Trash2 size={15} /></button>}</td>

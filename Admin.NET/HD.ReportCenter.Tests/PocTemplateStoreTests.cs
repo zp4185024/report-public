@@ -301,7 +301,7 @@ public sealed class PocTemplateStoreTests : IDisposable
         var sheet = workbook.Worksheet("科室工作量");
         Assert.Equal(137d, sheet.Cell("A142").GetDouble());
         Assert.Equal("C142+D142", sheet.Cell("E142").FormulaA1);
-        Assert.Equal("科室工作量_20260701_20260714.xlsx", file.FileDownloadName);
+        Assert.Equal("科室工作量统计_20260701_20260714.xlsx", file.FileDownloadName);
     }
 
     public void Dispose()

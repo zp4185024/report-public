@@ -21,8 +21,14 @@ public static class PocDefaultExpressionEvaluator
         {
             "now()" => current,
             "today()" => StartOfDay(current),
+            "yesterday()" => StartOfDay(current).AddDays(-1),
+            "tomorrow()" => StartOfDay(current).AddDays(1),
             "startofday(now())" => StartOfDay(current),
             "endofday(today())" => StartOfDay(current).AddDays(1).AddTicks(-1),
+            "startofday(yesterday())" => StartOfDay(current).AddDays(-1),
+            "endofday(yesterday())" => StartOfDay(current).AddTicks(-1),
+            "startofday(tomorrow())" => StartOfDay(current).AddDays(1),
+            "endofday(tomorrow())" => StartOfDay(current).AddDays(2).AddTicks(-1),
             "startofmonth(today())" => new DateTimeOffset(
                 current.Year,
                 current.Month,
@@ -64,9 +70,13 @@ public static class PocDefaultExpressionEvaluator
                 $"不支持默认表达式 '{expression}'。")
         };
 
-        return dataType.Equals("date", StringComparison.OrdinalIgnoreCase)
-            ? value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
-            : value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        return dataType.Trim().ToLowerInvariant() switch
+        {
+            "date" => value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            "month" => value.ToString("yyyy-MM", CultureInfo.InvariantCulture),
+            "year" => value.ToString("yyyy", CultureInfo.InvariantCulture),
+            _ => value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+        };
     }
 
     private static DateTimeOffset StartOfDay(DateTimeOffset value) =>

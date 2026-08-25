@@ -31,8 +31,6 @@ output/playwright/
 /Admin.NET/Admin.NET.Web.Entry/Properties/PublishProfiles
 /Admin.NET/Admin.NET.Web.Entry/publish
 /Admin.NET/Admin.NET.Web.Entry/logs
-/Admin.NET/Admin.NET.Web.Entry/Admin.NET.db
-/Admin.NET/Admin.NET.Web.Entry/Admin.NET.Log.db
 /Admin.NET/Admin.NET.Web.Entry/.config
 
 # folders
@@ -47,8 +45,6 @@ node_modules/
 .vs
 .idea
 .DS_Store
-/Admin.NET/Admin.NET.Web.Entry/Admin.NET.db-journal
-/Admin.NET/Admin.NET.Web.Entry/Admin.NET.Log.db-journal
 /Admin.NET/Admin.NET.sln.DotSettings.user
 Admin.NET/Admin.NET.Application/Configuration/DeepSeek.json
 *.user

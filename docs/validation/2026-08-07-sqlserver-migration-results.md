@@ -89,7 +89,6 @@
 
 ```text
 dotnet test Admin.NET/HD.ReportCenter.Tests/HD.ReportCenter.Tests.csproj -c Release --no-build --no-restore
-python -B -m unittest scripts/database/test_migrate_report_template.py -v
 cd ReportWeb
 npm test -- --run
 npm run build
@@ -97,7 +96,7 @@ cd ..
 dotnet build Admin.NET/Admin.NET.Web.Entry/Admin.NET.Web.Entry.csproj -c Release --no-restore -o .codex-run/editable-template-validation/release-verify
 ```
 
-结果：后端测试 98/98，迁移工具测试 6/6，前端测试 107/107，前端生产构建成功；后端 Release 独立目录构建为 0 个错误、15 个 Admin.NET 既有警告。
+结果：后端测试 98/98，前端测试 107/107，前端生产构建成功；后端 Release 独立目录构建为 0 个错误、15 个 Admin.NET 既有警告。一次性 SQLite 迁移工具已在迁移完成后移除。
 
 ## 8. 结论
 

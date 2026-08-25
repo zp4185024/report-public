@@ -24,6 +24,7 @@ public sealed class PocStreamingTemplateDataExporter
         "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
     private static readonly XNamespace PackageRelationshipsNamespace =
         "http://schemas.openxmlformats.org/package/2006/relationships";
+    private const string XmlnsNamespace = "http://www.w3.org/2000/xmlns/";
 
     private readonly PocXlsxExchangeConverter _exchangeConverter;
 
@@ -156,6 +157,17 @@ public sealed class PocStreamingTemplateDataExporter
         });
         await writer.WriteStartDocumentAsync();
         await writer.WriteStartElementAsync(null, root.Name.LocalName, root.Name.NamespaceName);
+        foreach (var attribute in root.Attributes().Where(attribute =>
+                     attribute.IsNamespaceDeclaration &&
+                     attribute.Name.LocalName != "xmlns"))
+        {
+            // mc:Ignorable 等兼容属性会在值中引用命名空间前缀；这些声明必须保留在根节点上。
+            await writer.WriteAttributeStringAsync(
+                "xmlns",
+                attribute.Name.LocalName,
+                XmlnsNamespace,
+                attribute.Value);
+        }
         foreach (var attribute in root.Attributes().Where(attribute => !attribute.IsNamespaceDeclaration))
         {
             await writer.WriteAttributeStringAsync(

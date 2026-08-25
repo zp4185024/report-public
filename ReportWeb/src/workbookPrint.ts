@@ -21,6 +21,34 @@ export interface PrintableCellStyle {
   wrap?: boolean;
 }
 
+export interface PrintableRichTextStyleData {
+  bl?: unknown;
+  cl?: { rgb?: string | null } | null;
+  ff?: unknown;
+  fs?: unknown;
+  it?: unknown;
+  st?: { s?: unknown } | null;
+  ul?: { s?: unknown } | null;
+}
+
+/** Univer 富文本样式可能来自旧模板字符串值，这里统一转换为打印 CSS 可用类型。 */
+export function applyPrintableRichTextStyle(
+  base: PrintableCellStyle,
+  richTextStyle?: PrintableRichTextStyleData | null,
+): PrintableCellStyle {
+  if (richTextStyle == null) return base;
+  return {
+    ...base,
+    bold: readBooleanFlag(richTextStyle.bl) ?? base.bold,
+    color: richTextStyle.cl?.rgb ?? base.color,
+    fontFamily: readNonEmptyString(richTextStyle.ff) ?? base.fontFamily,
+    fontSizePt: readFiniteNumber(richTextStyle.fs) ?? base.fontSizePt,
+    italic: readBooleanFlag(richTextStyle.it) ?? base.italic,
+    strikethrough: readBooleanFlag(richTextStyle.st?.s) ?? base.strikethrough,
+    underline: readBooleanFlag(richTextStyle.ul?.s) ?? base.underline,
+  };
+}
+
 export interface PrintableMerge {
   startRow: number;
   endRow: number;
@@ -30,9 +58,13 @@ export interface PrintableMerge {
 
 export interface PrintableSheet {
   columnWidths: number[];
+  /** 导出/打印统一使用的报表名称；未提供时回退到工作表名称。 */
+  documentTitle?: string;
   merges: PrintableMerge[];
   name: string;
   rowHeights: number[];
+  /** 工作表视图网格线；关闭时打印不应人为补充浅灰单元格边框。 */
+  showGridlines?: boolean;
   startColumn: number;
   startRow: number;
   styles: PrintableCellStyle[][];
@@ -111,8 +143,13 @@ export function buildPrintableSheetDocument(sheet: PrintableSheet): PrintableShe
   const columns = columnWidths
     .map((width) => `<col style="width:${width}px">`)
     .join('');
-  const title = escapeHtml(sheet.name || '报表');
-  const printCss = buildPrintCss(orientation, totalWidth, scale);
+  const title = escapeHtml(sheet.documentTitle?.trim() || sheet.name || '报表');
+  const printCss = buildPrintCss(
+    orientation,
+    totalWidth,
+    scale,
+    sheet.showGridlines !== false,
+  );
   const html = [
     '<!doctype html>',
     '<html lang="zh-CN">',
@@ -184,7 +221,9 @@ function buildPrintCss(
   orientation: PrintOrientation,
   sourceWidth: number,
   scale: number,
+  showGridlines: boolean,
 ): string {
+  const defaultCellBorder = showGridlines ? '0.5pt solid #d1d5db' : '0';
   return `
     @page { size: A4 ${orientation}; margin: ${pageMarginMm}mm; }
     * { box-sizing: border-box; }
@@ -197,7 +236,7 @@ function buildPrintCss(
       min-width: 0;
       padding: 2px 4px;
       overflow: hidden;
-      border: 0.5pt solid #d1d5db;
+      border: ${defaultCellBorder};
       background-clip: padding-box;
       vertical-align: middle;
     }
@@ -344,6 +383,27 @@ function finiteDimension(
   return Number.isFinite(value)
     ? Math.min(maximum, Math.max(minimum, value!))
     : fallback;
+}
+
+function readFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function readBooleanFlag(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value !== 0 : undefined;
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'true' || normalized === '1') return true;
+  if (normalized === 'false' || normalized === '0') return false;
+  return undefined;
+}
+
+function readNonEmptyString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
 function validCoordinate(value: number): boolean {

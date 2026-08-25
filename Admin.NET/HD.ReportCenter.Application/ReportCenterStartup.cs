@@ -28,5 +28,6 @@ public sealed class ReportCenterStartup : AppStartup
             CoreValidation.PocReportDataset,
             CoreValidation.PocReportParameter,
             CoreValidation.PocExternalParameterSource>();
+        database.CodeFirst.InitTables<CoreValidation.PocReportTemplate>();
     }
 }

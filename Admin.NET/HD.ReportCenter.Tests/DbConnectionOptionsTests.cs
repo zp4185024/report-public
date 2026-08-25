@@ -56,6 +56,20 @@ public sealed class DbConnectionOptionsTests
         }
     }
 
+    [Fact]
+    public void Runtime_rejects_sqlite_main_database()
+    {
+        var options = CreateOptions();
+        options.ConnectionConfigs[0].DbType = DbType.Sqlite;
+        options.ConnectionConfigs[0].ConnectionString = "Data Source=./Admin.NET.db";
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            options.PostConfigure(options, new ConfigurationBuilder().Build()));
+
+        Assert.Contains("必须使用 SQL Server", exception.Message);
+        Assert.Contains("禁止使用 SQLite", exception.Message);
+    }
+
     private static DbConnectionOptions CreateOptions() =>
         new()
         {

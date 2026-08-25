@@ -595,7 +595,15 @@ public sealed class PocXlsxExchangeConverter
         else
         {
             var valueRule = mapping["univer-to-xlsx-cell-value"];
-            WriteCellValue(cell, SelectToken(cellData, valueRule.SourcePath));
+            var value = SelectToken(cellData, valueRule.SourcePath);
+            if (value is not null && value.Type is not (JTokenType.Null or JTokenType.Undefined))
+            {
+                WriteCellValue(cell, value);
+            }
+            else if (TryReadRichText(cellData["p"], out var richText))
+            {
+                cell.Value = richText;
+            }
         }
 
         var styleRule = mapping["univer-to-xlsx-cell-style"];
@@ -636,6 +644,21 @@ public sealed class PocXlsxExchangeConverter
             default:
                 throw InvalidSnapshot($"单元格值类型 '{token.Type}' 不能导出到 XLSX。");
         }
+    }
+
+    private static bool TryReadRichText(JToken? paragraph, out string text)
+    {
+        text = string.Empty;
+        var dataStream = paragraph?["body"]?["dataStream"]?.Value<string>();
+        if (string.IsNullOrEmpty(dataStream))
+        {
+            return false;
+        }
+
+        // 只移除文档末尾的段落换行；其余字符全部属于模板内容，不能按具体标题猜测。
+        dataStream = dataStream.TrimEnd('\r', '\n');
+        text = dataStream.Replace('\r', '\n');
+        return text.Length > 0;
     }
 
     private static void ApplyStyle(IXLStyle target, JObject source, RuleLookup mapping)
@@ -784,9 +807,9 @@ public sealed class PocXlsxExchangeConverter
     {
         var rule = mapping.GetOptional(ruleCode);
         var token = rule is null ? null : SelectToken(source, rule.SourcePath);
-        if (token?.Type is JTokenType.Integer or JTokenType.Float)
+        if (TryReadNumber(token, out var value))
         {
-            apply(token.Value<double>());
+            apply(value);
         }
     }
 
@@ -798,10 +821,36 @@ public sealed class PocXlsxExchangeConverter
     {
         var rule = mapping.GetOptional(ruleCode);
         var token = rule is null ? null : SelectToken(source, rule.SourcePath);
-        if (token?.Type is JTokenType.Integer or JTokenType.Boolean)
+        if (token?.Type == JTokenType.Boolean)
         {
-            apply(token.Type == JTokenType.Boolean ? token.Value<bool>() : token.Value<int>() != 0);
+            apply(token.Value<bool>());
         }
+        else if (TryReadNumber(token, out var numericValue))
+        {
+            apply(numericValue != 0);
+        }
+        else if (token?.Type == JTokenType.String &&
+                 bool.TryParse(token.Value<string>(), out var booleanValue))
+        {
+            apply(booleanValue);
+        }
+    }
+
+    private static bool TryReadNumber(JToken? token, out double value)
+    {
+        value = 0;
+        if (token?.Type is JTokenType.Integer or JTokenType.Float)
+        {
+            value = token.Value<double>();
+            return true;
+        }
+
+        return token?.Type == JTokenType.String &&
+               double.TryParse(
+                   token.Value<string>(),
+                   NumberStyles.Float,
+                   CultureInfo.InvariantCulture,
+                   out value);
     }
 
     private static void ApplyColor(
@@ -877,16 +926,82 @@ public sealed class PocXlsxExchangeConverter
             return false;
         }
 
+        value = NormalizeCssColor(value);
+        if (value is null)
+        {
+            return false;
+        }
+
         try
         {
             color = XLColor.FromHtml(value);
             return true;
         }
-        catch (ArgumentException)
+        catch (Exception exception) when (exception is ArgumentException or FormatException)
         {
             return false;
         }
     }
+
+    private static string? NormalizeCssColor(string value)
+    {
+        var trimmed = value.Trim();
+        var openParenthesis = trimmed.IndexOf('(');
+        if (openParenthesis <= 0 || !trimmed.EndsWith(')'))
+        {
+            return trimmed;
+        }
+
+        var functionName = trimmed[..openParenthesis].Trim();
+        if (!functionName.Equals("rgb", StringComparison.OrdinalIgnoreCase) &&
+            !functionName.Equals("rgba", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        var components = trimmed[(openParenthesis + 1)..^1]
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var expectedComponentCount = functionName.Equals("rgba", StringComparison.OrdinalIgnoreCase) ? 4 : 3;
+        if (components.Length != expectedComponentCount ||
+            !TryCssColorComponent(components[0], out var red) ||
+            !TryCssColorComponent(components[1], out var green) ||
+            !TryCssColorComponent(components[2], out var blue))
+        {
+            return null;
+        }
+
+        if (components.Length == 4 && !TryCssAlpha(components[3]))
+        {
+            return null;
+        }
+
+        return $"#{red:X2}{green:X2}{blue:X2}";
+    }
+
+    private static bool TryCssColorComponent(string value, out byte component)
+    {
+        component = 0;
+        if (value.EndsWith('%') &&
+            decimal.TryParse(value[..^1], NumberStyles.Number, CultureInfo.InvariantCulture, out var percentage))
+        {
+            if (percentage is < 0 or > 100)
+            {
+                return false;
+            }
+
+            component = (byte)Math.Round(percentage * 255m / 100m, MidpointRounding.AwayFromZero);
+            return true;
+        }
+
+        return byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out component);
+    }
+
+    private static bool TryCssAlpha(string value) =>
+        value.EndsWith('%')
+            ? decimal.TryParse(value[..^1], NumberStyles.Number, CultureInfo.InvariantCulture, out var percentage) &&
+              percentage is >= 0 and <= 100
+            : decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var alpha) &&
+              alpha is >= 0 and <= 1;
 
     private static XLAlignmentHorizontalValues ToHorizontalAlignment(int value) => value switch
     {

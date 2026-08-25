@@ -53,3 +53,17 @@ export function refreshReportRequestFromUrl(
     context: externalParameterContext(definition.externalSources, search),
   };
 }
+
+/** 返回需要用户填写但当前仍为空的参数；外部参数由后端可信来源解析，不在此处拦截。 */
+export function findMissingRequiredParameterCodes(
+  definition: ReportDefinition,
+  parameters: Readonly<Record<string, string | null>>,
+): string[] {
+  return definition.parameters
+    .filter((parameter) => (
+      parameter.required &&
+      parameter.sourceType.toLowerCase() !== 'external' &&
+      !(parameters[parameter.code]?.trim())
+    ))
+    .map((parameter) => parameter.code);
+}

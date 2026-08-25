@@ -1,4 +1,6 @@
 using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Validation;
 using HD.ReportCenter.Application.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation;
 using HD.ReportCenter.ReportEngine.CoreValidation.Exchange;
@@ -42,6 +44,12 @@ public sealed class PocStreamingTemplateDataExporterTests
             ReadPages(2_001, 500, query.DeptId, CancellationToken.None),
             progress.Add,
             CancellationToken.None);
+
+        output.Position = 0;
+        using (var document = SpreadsheetDocument.Open(output, false))
+        {
+            Assert.Empty(new OpenXmlValidator().Validate(document));
+        }
 
         output.Position = 0;
         using var workbook = new XLWorkbook(output);

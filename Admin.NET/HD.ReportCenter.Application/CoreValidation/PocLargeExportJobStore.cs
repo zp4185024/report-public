@@ -84,7 +84,7 @@ public sealed class PocLargeExportJobStore
         var filePath = Path.Combine(_outputDirectory, $"{jobNo}.xlsx");
         var totalRows = _validationRowCount
             ?? (pagesFactory is null ? PocReportCatalog.PreviewRowCount : 0);
-        var state = new JobState(jobNo, filePath, totalRows);
+        var state = new JobState(jobNo, filePath, totalRows, plan);
         if (!_jobs.TryAdd(jobNo, state))
         {
             throw new InvalidOperationException("EXPORT_JOB_CREATE_FAILED");
@@ -118,6 +118,9 @@ public sealed class PocLargeExportJobStore
 
         return state.FilePath;
     }
+
+    /// <summary>读取已登记任务对应的导出计划，供下载响应使用报表模板名称。</summary>
+    public PocTemplateDataExportPlan GetPlan(string jobNo) => Find(jobNo).Plan;
 
     private async Task RunAsync(
         JobState state,
@@ -217,7 +220,11 @@ public sealed class PocLargeExportJobStore
         }
     }
 
-    private sealed class JobState(string jobNo, string filePath, int totalRows)
+    private sealed class JobState(
+        string jobNo,
+        string filePath,
+        int totalRows,
+        PocTemplateDataExportPlan plan)
     {
         // 进度、状态和完成时间必须在同一把锁下更新/读取，确保每个 Snapshot 内部自洽。
         private readonly object _sync = new();
@@ -229,6 +236,7 @@ public sealed class PocLargeExportJobStore
         private DateTimeOffset? _completedAt;
 
         public string FilePath { get; } = filePath;
+        public PocTemplateDataExportPlan Plan { get; } = plan;
         public CancellationToken CancellationToken => _cancellation.Token;
 
         public void MarkRunning() => Update(() => _status = PocExportJobStatus.Running);

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { Database, FileSpreadsheet, PlugZap, Server } from 'lucide-react';
+import { ArrowRightLeft, Database, FileSpreadsheet, PlugZap, Server } from 'lucide-react';
 
-export type ManagementSection = 'reports' | 'data-sources' | 'datasets' | 'external-parameters';
+export type ManagementSection = 'reports' | 'data-sources' | 'datasets' | 'external-parameters' | 'jnpf-migration';
 
 interface AppFrameProps {
   active: ManagementSection;
@@ -13,6 +13,7 @@ const menuItems = [
   { key: 'data-sources', href: '/data-sources', label: '数据源', icon: Server },
   { key: 'datasets', href: '/datasets', label: '数据集', icon: Database },
   { key: 'external-parameters', href: '/external-parameters', label: '接口参数', icon: PlugZap },
+  { key: 'jnpf-migration', href: '/jnpf-migration', label: 'JNPF迁移', icon: ArrowRightLeft },
 ] as const;
 
 function preservePageContext(href: string): string {

@@ -73,7 +73,8 @@ public static class PocParameterResolver
 
             try
             {
-                var (display, database) = ConvertValue(definition.DataType, rawValue.Trim());
+                var normalizedValue = NormalizeControlValue(definition.ControlType, rawValue.Trim());
+                var (display, database) = ConvertValue(definition.DataType, normalizedValue);
                 displayValues[definition.Code] = display;
                 databaseValues[definition.Code] = database;
             }
@@ -135,6 +136,49 @@ public static class PocParameterResolver
                 return (boolValue ? "true" : "false", boolValue);
             default:
                 throw new FormatException($"Unsupported parameter data type '{dataType}'.");
+        }
+    }
+
+    private static string NormalizeControlValue(string controlType, string value)
+    {
+        switch (controlType.Trim().ToLowerInvariant())
+        {
+            case "date":
+                return DateTime.ParseExact(
+                        value,
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.None)
+                    .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            case "datetime":
+                var dateTime = DateTime.ParseExact(
+                    value,
+                    [
+                        "yyyy-MM-dd'T'HH:mm",
+                        "yyyy-MM-dd'T'HH:mm:ss",
+                        "yyyy-MM-dd HH:mm",
+                        "yyyy-MM-dd HH:mm:ss"
+                    ],
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None);
+                return dateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            case "month":
+                return DateTime.ParseExact(
+                        value,
+                        "yyyy-MM",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.None)
+                    .ToString("yyyy-MM", CultureInfo.InvariantCulture);
+            case "year":
+                if (value.Length != 4 ||
+                    !int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var year) ||
+                    year is < 1 or > 9999)
+                {
+                    throw new FormatException("Year parameters must use yyyy format.");
+                }
+                return year.ToString("D4", CultureInfo.InvariantCulture);
+            default:
+                return value;
         }
     }
 

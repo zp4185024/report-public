@@ -373,17 +373,22 @@ public sealed class PocReportApi : IDynamicApiController
     public FileStreamResult DownloadExportJob([FromRoute] string jobNo)
     {
         var path = HandleJobOperation(() => LargeExportJobs.GetDownloadPath(jobNo));
+        var plan = HandleJobOperation(() => LargeExportJobs.GetPlan(jobNo));
         return new FileStreamResult(
             new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.SequentialScan),
             ExcelContentType)
         {
-            FileDownloadName = $"科室工作量_大文件_{jobNo}.xlsx"
+            FileDownloadName = BuildExportFileName(plan)
         };
     }
 
     private static string BuildExportFileName(PocTemplateDataExportPlan plan)
     {
-        var reportName = plan.Definition?.SheetName ?? "科室工作量";
+        var reportName = plan.Definition?.Name ?? plan.Definition?.SheetName ?? "科室工作量";
+        foreach (var invalidCharacter in Path.GetInvalidFileNameChars())
+        {
+            reportName = reportName.Replace(invalidCharacter, '_');
+        }
         var parameters = plan.Parameters;
         if (parameters is not null &&
             parameters.TryGetValue("startDate", out var startDate) &&

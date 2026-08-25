@@ -21,8 +21,14 @@ internal sealed record PocDataSourceEndpoint(
 /// <summary>把报表数据源的连接、参数和分页差异收敛到一个数据库提供器。</summary>
 internal static class PocDatabaseProvider
 {
+    public const string PageOffsetParameterCode = "rcPageOffset";
+    public const string PageTakeParameterCode = "rcPageTake";
+
     private static readonly Regex OracleErrorRegex = new(
         @"\bORA-\d{5}:\s*[^\r\n]+",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+    private static readonly Regex MySqlAccessDeniedRegex = new(
+        @"Access denied for user '[^'\r\n]+'@'[^'\r\n]+'(?: \(using password: (?:YES|NO)\))?",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     private static readonly Regex ConnectionSecretRegex = new(
         @"\b(password|pwd)\s*=\s*[^;\r\n]*",
@@ -177,9 +183,11 @@ internal static class PocDatabaseProvider
         NormalizeType(dbType) switch
         {
             SqlServer or Oracle =>
-                $"{queryText.TrimEnd()} OFFSET @__offset ROWS FETCH NEXT @__take ROWS ONLY",
+                $"{queryText.TrimEnd()} OFFSET @{PageOffsetParameterCode} ROWS " +
+                $"FETCH NEXT @{PageTakeParameterCode} ROWS ONLY",
             MySql or PostgreSql =>
-                $"{queryText.TrimEnd()} LIMIT @__take OFFSET @__offset",
+                $"{queryText.TrimEnd()} LIMIT @{PageTakeParameterCode} " +
+                $"OFFSET @{PageOffsetParameterCode}",
             _ => throw new UnreachableException()
         };
 
@@ -190,8 +198,18 @@ internal static class PocDatabaseProvider
         exception.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
         exception.Message.Contains("超时", StringComparison.OrdinalIgnoreCase);
 
-    public static bool IsDatabaseException(Exception exception) =>
-        exception is DbException or SqlSugarException;
+    public static bool IsDatabaseException(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is DbException or SqlSugarException)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     public static string GetSafeConnectionError(Exception exception)
     {
@@ -206,6 +224,12 @@ internal static class PocDatabaseProvider
             if (oracleError.Success)
             {
                 return SanitizeConnectionError(oracleError.Value);
+            }
+
+            var mySqlAccessDenied = MySqlAccessDeniedRegex.Match(current.Message);
+            if (mySqlAccessDenied.Success)
+            {
+                return $"MySQL 1045: {mySqlAccessDenied.Value}";
             }
 
             var providerError = current switch

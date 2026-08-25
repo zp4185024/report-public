@@ -1,5 +1,7 @@
 # SQL Server Database Migration Implementation Plan
 
+> **已完成并废弃（2026-08-19）**：本计划中的 SQLite 验证库、备份文件和一次性迁移脚本均已清理。当前报表中心固定使用 SQL Server；不要按本文旧命令重新创建 SQLite 文件。本文仅保留历史记录。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 在 `192.168.2.5` 创建 `hd_report_center`，使用 Admin.NET CodeFirst 建立并初始化全部系统表，将报表表改为正式名称并迁移当前模板，最后让应用使用 SQL Server 运行。

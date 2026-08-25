@@ -15,6 +15,7 @@ import type {
   ExternalParameterSourceInput,
   ExternalParameterSourceTestRequest,
   ExternalParameterSourceTestResult,
+  JnpfMigrationRunResult,
   ReportConfigurationDocument,
   ReportCreateOptionsDocument,
   ReportDefinition,
@@ -33,8 +34,21 @@ interface ApiEnvelope<T> {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, init);
-  const body = (await response.json()) as ApiEnvelope<T>;
+  let response: Response;
+  try {
+    response = await fetch(path, init);
+  } catch {
+    throw new Error('无法连接后端服务，请确认服务已启动。');
+  }
+
+  let body: ApiEnvelope<T>;
+  try {
+    body = (await response.json()) as ApiEnvelope<T>;
+  } catch {
+    throw new Error(response.ok
+      ? '服务器返回内容不是有效的 JSON。'
+      : `后端服务不可用（HTTP ${response.status}）。`);
+  }
   if (!response.ok || body.code !== 200) {
     throw new Error(body.message || `请求失败（${body.code || response.status}）`);
   }
@@ -242,4 +256,27 @@ export const dataAssetApi = {
       body: JSON.stringify(request),
     },
   ),
+};
+
+export const jnpfMigrationApi = {
+  inventory: (request: {
+    jnpfDataSourceCode: string;
+    reportDataSourceCode: string;
+    maxReports: number;
+  }) => requestJson<JnpfMigrationRunResult>('/api/report-center/poc/jnpf-report-migration/inventory', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  }),
+
+  migrate: (request: {
+    jnpfDataSourceCode: string;
+    reportDataSourceCode: string;
+    sourceReportIds: string[];
+    maxReports: number;
+  }) => requestJson<JnpfMigrationRunResult>('/api/report-center/poc/jnpf-report-migration/migrate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  }),
 };
