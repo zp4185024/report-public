@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  applyPrintableRichTextStyle,
   buildPrintableSheetDocument,
   type PrintableSheet,
 } from './workbookPrint';
@@ -22,6 +23,17 @@ function printableSheet(overrides: Partial<PrintableSheet> = {}): PrintableSheet
 }
 
 describe('工作表浏览器打印', () => {
+  it('把旧模板富文本中的字符串字号和加粗标记转换为打印样式', () => {
+    const style = applyPrintableRichTextStyle(
+      { bold: false, fontFamily: 'Microsoft YaHei', fontSizePt: 11 },
+      { bl: '1', ff: 'Arial', fs: '16' },
+    );
+
+    expect(style.bold).toBe(true);
+    expect(style.fontFamily).toBe('Arial');
+    expect(style.fontSizePt).toBe(16);
+  });
+
   it('生成带 A4 纸张规则、合并单元格和安全文本的完整打印文档', () => {
     const result = buildPrintableSheetDocument(printableSheet({
       merges: [{ startRow: 0, endRow: 0, startColumn: 0, endColumn: 1 }],
@@ -37,6 +49,15 @@ describe('工作表浏览器打印', () => {
     expect(result.html).toContain('门诊 &lt;日报&gt;');
     expect(result.html).toContain('方便门诊<br>一楼');
     expect(result.html).not.toContain('<td></td><td></td>');
+  });
+
+  it('打印文档标题优先使用报表名称，而不是工作表名称', () => {
+    const result = buildPrintableSheetDocument(printableSheet({
+      documentTitle: '医保-锦州市城镇职工医疗保险费用申报表-异地（JNPF迁移）',
+    }));
+
+    expect(result.html).toContain('<title>医保-锦州市城镇职工医疗保险费用申报表-异地（JNPF迁移）</title>');
+    expect(result.html).not.toContain('<title>门诊日报</title>');
   });
 
   it('保留可打印的字体、颜色、对齐、换行和边框样式', () => {
@@ -70,6 +91,22 @@ describe('工作表浏览器打印', () => {
     expect(result.html).toContain('vertical-align:top');
     expect(result.html).toContain('white-space:pre-wrap');
     expect(result.html).toContain('border-bottom:2pt double #0f172a');
+  });
+
+  it('关闭工作表网格线后不为打印单元格补充浅灰边框', () => {
+    const result = buildPrintableSheetDocument(printableSheet({
+      showGridlines: false,
+      styles: [[{
+        borders: {
+          bottom: { color: '#0f172a', style: 'solid', widthPt: 1 },
+        },
+      }]],
+      values: [['无网格线', '打印']],
+    }));
+
+    expect(result.html).toContain('border: 0;');
+    expect(result.html).not.toContain('border: 0.5pt solid #d1d5db;');
+    expect(result.html).toContain('border-bottom:1pt solid #0f172a');
   });
 
   it('宽表自动使用横向打印，非法合并范围不会吞掉单元格', () => {

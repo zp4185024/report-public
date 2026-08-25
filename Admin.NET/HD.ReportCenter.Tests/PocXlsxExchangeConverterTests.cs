@@ -43,6 +43,91 @@ public sealed class PocXlsxExchangeConverterTests
         Assert.InRange(sheet.Column(1).Width, 9d, 10d);
     }
 
+    [Theory]
+    [InlineData("rgb(5,80,92)", "#05505C")]
+    [InlineData("rgb(50, 54, 57)", "#323639")]
+    [InlineData("rgba(255,255,255,0.8)", "#FFFFFF")]
+    public void Export_accepts_css_rgb_colors(string cssColor, string expectedColor)
+    {
+        var snapshot = LoadSeedSnapshot();
+        ((JObject)snapshot["styles"]!["header"]!)["cl"]!["rgb"] = cssColor;
+        var converter = new PocXlsxExchangeConverter();
+        using var output = new MemoryStream();
+
+        converter.Export(snapshot, CurrentRules(), output);
+
+        output.Position = 0;
+        using var workbook = new XLWorkbook(output);
+        var color = workbook.Worksheet("科室工作量").Cell("A5").Style.Font.FontColor.Color;
+        Assert.Equal(
+            expectedColor,
+            $"#{color.R:X2}{color.G:X2}{color.B:X2}");
+    }
+
+    [Fact]
+    public void Export_writes_univer_rich_text_cells()
+    {
+        var snapshot = LoadSeedSnapshot();
+        var cellData = (JObject)snapshot["sheets"]!["report-sheet"]!["cellData"]!;
+        ((JObject)snapshot["styles"]!)["ryHb-o"] = new JObject
+        {
+            ["ff"] = "Arial",
+            ["fs"] = "16",
+            ["bl"] = "1",
+            ["ht"] = "2",
+            ["vt"] = "2"
+        };
+        snapshot["sheets"]!["report-sheet"]!["mergeData"] = new JArray
+        {
+            new JObject
+            {
+                ["startRow"] = 1,
+                ["endRow"] = 1,
+                ["startColumn"] = 3,
+                ["endColumn"] = 8
+            }
+        };
+        cellData["1"] = new JObject
+        {
+            ["3"] = new JObject
+            {
+                ["s"] = "ryHb-o",
+                ["p"] = new JObject
+                {
+                    ["body"] = new JObject
+                    {
+                        ["dataStream"] = "锦州市城镇职工医疗保险(异地医保本地就医)1\r\n",
+                        ["textRuns"] = new JArray(new JObject
+                        {
+                            ["st"] = 0,
+                            ["ed"] = 22,
+                            ["ts"] = new JObject { ["ff"] = "Arial", ["fs"] = "16", ["bl"] = "1" }
+                        })
+                    }
+                }
+            }
+        };
+        cellData["4"]!["0"] = new JObject
+        {
+            ["p"] = new JObject
+            {
+                ["body"] = new JObject { ["dataStream"] = "               项目\r\r医疗类别\r\n" }
+            }
+        };
+        var converter = new PocXlsxExchangeConverter();
+        using var output = new MemoryStream();
+
+        converter.Export(snapshot, CurrentRules(), output);
+
+        output.Position = 0;
+        using var workbook = new XLWorkbook(output);
+        var sheet = workbook.Worksheet("科室工作量");
+        Assert.Equal("锦州市城镇职工医疗保险(异地医保本地就医)1", sheet.Cell("D2").GetString());
+        Assert.True(sheet.Cell("D2").Style.Font.Bold);
+        Assert.Equal(16d, sheet.Cell("D2").Style.Font.FontSize);
+        Assert.Equal("               项目\n\n医疗类别", sheet.Cell("A5").GetString());
+    }
+
     [Fact]
     public void Import_creates_a_sparse_univer_0251_snapshot()
     {

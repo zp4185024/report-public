@@ -171,17 +171,52 @@ public sealed class PocParameterResolverTests
         Assert.Equal("PARAM_INVALID", exception.Code);
     }
 
+    [Theory]
+    [InlineData("date", "string", "2026-08-24", "2026-08-24")]
+    [InlineData("datetime", "string", "2026-08-24T10:30", "2026-08-24 10:30:00")]
+    [InlineData("month", "string", "2026-08", "2026-08")]
+    [InlineData("year", "string", "2026", "2026")]
+    public void Resolve_NormalizesCalendarControlFormats(
+        string controlType,
+        string dataType,
+        string value,
+        string expected)
+    {
+        var resolved = PocParameterResolver.Resolve(
+            [Parameter("period", dataType, controlType: controlType)],
+            new Dictionary<string, string?> { ["period"] = value });
+
+        Assert.Equal(expected, resolved.DisplayValues["period"]);
+        Assert.Equal(expected, resolved.DatabaseValues["period"]);
+    }
+
+    [Theory]
+    [InlineData("date", "2026-08")]
+    [InlineData("datetime", "2026-08-24")]
+    [InlineData("month", "2026-08-24")]
+    [InlineData("year", "26")]
+    public void Resolve_RejectsValuesOutsideCalendarControlFormat(string controlType, string value)
+    {
+        var exception = Assert.Throws<PocParameterResolutionException>(() =>
+            PocParameterResolver.Resolve(
+                [Parameter("period", "string", controlType: controlType)],
+                new Dictionary<string, string?> { ["period"] = value }));
+
+        Assert.Equal("PARAM_INVALID", exception.Code);
+    }
+
     private static PocParameterDefinition Parameter(
         string code,
         string dataType,
         bool required = false,
         string sourceType = "Form",
         string? defaultValue = null,
-        string? fixedValue = null) =>
+        string? fixedValue = null,
+        string? controlType = null) =>
         new(
             code,
             code,
-            dataType == "date" ? "date" : "text",
+            controlType ?? (dataType == "date" ? "date" : "text"),
             sourceType,
             defaultValue,
             true,

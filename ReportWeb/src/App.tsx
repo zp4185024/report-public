@@ -43,6 +43,7 @@ import {
 } from './localDataQuery';
 import { createPreviewToolbarPresentation } from './previewToolbar';
 import { createPageLoadingPresentation } from './pageLoading';
+import { parameterInputAttributes, parameterInputValue } from './parameterInput';
 import { TemplateFieldPanel } from './TemplateFieldPanel';
 import { ReportConfigurationDialog } from './ReportConfigurationDialog';
 import { ShareReportDialog, type SharedParameterSummary } from './ShareReportDialog';
@@ -54,6 +55,7 @@ import {
 } from './reportShare';
 import {
   createInitialReportRequest,
+  findMissingRequiredParameterCodes,
   refreshReportRequestFromUrl,
 } from './reportRequest';
 import { logSqlDebug } from './sqlDebug';
@@ -355,6 +357,17 @@ export default function App({ reportCode, shared = false }: AppProps) {
       // 先扫描草稿，再请求数据；无效 token 不应浪费后台查询，也不能进入具有副作用的渲染阶段。
       const binding = scanTemplateBindings(snapshot, definition);
       const nextRequest = refreshReportRequestFromUrl({ ...request, page }, definition);
+      const missingParameterCodes = findMissingRequiredParameterCodes(
+        definition,
+        nextRequest.parameters,
+      );
+      if (missingParameterCodes.length > 0) {
+        const missingLabels = missingParameterCodes.map((code) => {
+          const parameter = definition.parameters.find((item) => item.code === code);
+          return parameter === undefined ? code : `${parameter.displayName}（${code}）`;
+        });
+        throw new Error(`请先填写必填参数：${missingLabels.join('、')}。`);
+      }
       const queryStartedAt = performance.now();
       const queryResult = await reportApi.execute(nextRequest);
       logSqlDebug(reportCode, queryResult);
@@ -1086,7 +1099,9 @@ export default function App({ reportCode, shared = false }: AppProps) {
       >
         {definition?.parameters
           .filter((parameter) => parameter.visible && parameter.controlType !== 'hidden')
-          .map((parameter) => (
+          .map((parameter) => {
+            const inputAttributes = parameterInputAttributes(parameter);
+            return (
             <label key={parameter.code}>
               <span>{parameter.displayName}</span>
               {parameter.controlType.toLowerCase() === 'select' ? (
@@ -1137,19 +1152,19 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 </select>
               ) : (
                 <input
-                  type={parameter.controlType === 'date' || parameter.dataType === 'date'
-                    ? 'date'
-                    : parameter.dataType === 'long' || parameter.dataType === 'int' || parameter.dataType === 'decimal'
-                      ? 'number'
-                      : 'text'}
-                  value={request.parameters[parameter.code] ?? ''}
+                  type={inputAttributes.type}
+                  min={inputAttributes.min}
+                  max={inputAttributes.max}
+                  step={inputAttributes.step}
+                  value={parameterInputValue(parameter, request.parameters[parameter.code] ?? '')}
                   readOnly={parameter.readOnly}
                   required={parameter.required}
                   onChange={(event) => updateRequest(parameter.code, event.target.value)}
                 />
               )}
             </label>
-          ))}
+            );
+          })}
         <div className="query-actions">
           <button
             className="button button-primary query-button"
@@ -1289,6 +1304,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 ref={editorRef}
                 initialSnapshot={templateDocument.snapshot}
                 mode={mode}
+                reportName={definition?.name}
                 toolsExpanded={!shared || sharedToolsExpanded}
                 suppressNumericTextWarnings={shared}
                 onChanged={handleEditorChanged}

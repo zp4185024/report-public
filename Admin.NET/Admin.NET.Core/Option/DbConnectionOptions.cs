@@ -29,12 +29,27 @@ public sealed class DbConnectionOptions : IConfigurableOptions<DbConnectionOptio
     public void PostConfigure(DbConnectionOptions options, IConfiguration configuration)
     {
         ApplyReportCenterDatabaseSecret(options);
+        EnsureReportCenterUsesSqlServer(options);
         ApplyReportCenterOneTimeInitialization(options);
 
         foreach (var dbConfig in options.ConnectionConfigs)
         {
             if (dbConfig.ConfigId == null || string.IsNullOrWhiteSpace(dbConfig.ConfigId.ToString()))
                 dbConfig.ConfigId = SqlSugarConst.MainConfigId;
+        }
+    }
+
+    private static void EnsureReportCenterUsesSqlServer(DbConnectionOptions options)
+    {
+        var mainConfig = options.ConnectionConfigs?.FirstOrDefault();
+        if (mainConfig == null)
+        {
+            throw new InvalidOperationException("报表中心未配置主数据库，无法启动。");
+        }
+
+        if (mainConfig.DbType != SqlSugar.DbType.SqlServer)
+        {
+            throw new InvalidOperationException("报表中心运行库必须使用 SQL Server，已禁止使用 SQLite 或其他数据库类型。");
         }
     }
 

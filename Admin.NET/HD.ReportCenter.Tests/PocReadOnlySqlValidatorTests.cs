@@ -8,6 +8,9 @@ public sealed class PocReadOnlySqlValidatorTests
     [InlineData("SELECT DepartmentName FROM Workload WHERE HospitalId = @hospitalId")]
     [InlineData("WITH source AS (SELECT 1 AS Sequence) SELECT Sequence FROM source")]
     [InlineData("SELECT '-- literal' AS TextValue, @hospitalId AS HospitalId")]
+    [InlineData("-- report header\nSELECT DepartmentName FROM Workload WHERE HospitalId = @hospitalId")]
+    [InlineData("SELECT DepartmentName FROM Workload /* safe note; DELETE FROM Workload */ WHERE HospitalId = @hospitalId")]
+    [InlineData("SELECT/* adjacent comment */DepartmentName FROM Workload WHERE HospitalId = @hospitalId")]
     public void Validate_AllowsSingleReadOnlyQuery(string query)
     {
         var parameters = PocReadOnlySqlValidator.Validate(
@@ -20,7 +23,7 @@ public sealed class PocReadOnlySqlValidatorTests
 
     [Theory]
     [InlineData("SELECT 1; SELECT 2")]
-    [InlineData("SELECT 1 -- hidden statement")]
+    [InlineData("SELECT * FROM #TemporaryWorkload")]
     [InlineData("SELECT * INTO BackupRows FROM Workload")]
     [InlineData("UPDATE Workload SET Value = 1")]
     [InlineData("WITH changed AS (DELETE FROM Workload OUTPUT deleted.Id) SELECT * FROM changed")]
@@ -43,6 +46,29 @@ public sealed class PocReadOnlySqlValidatorTests
                 PocPreviewMode.Full));
 
         Assert.Equal("DATASET_PARAMETER_UNDEFINED", exception.Code);
+    }
+
+    [Fact]
+    public void Validate_RejectsUnclosedBlockComment()
+    {
+        var exception = Assert.Throws<PocDatasetConfigurationException>(() =>
+            PocReadOnlySqlValidator.Validate(
+                "SELECT 1 /* unfinished",
+                [],
+                PocPreviewMode.Full));
+
+        Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
+    }
+
+    [Theory]
+    [InlineData("SELECT 1 /*! UNION SELECT secret FROM users */")]
+    [InlineData("SELECT 1 /*M! UNION SELECT secret FROM users */")]
+    public void Validate_RejectsMySqlExecutableComments(string query)
+    {
+        var exception = Assert.Throws<PocDatasetConfigurationException>(() =>
+            PocReadOnlySqlValidator.Validate(query, [], PocPreviewMode.Full));
+
+        Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
     }
 
     [Fact]

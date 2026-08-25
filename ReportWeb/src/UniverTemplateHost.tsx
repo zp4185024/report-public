@@ -41,10 +41,12 @@ import { isTemplateChangeCommand } from './templateChangeCommand';
 import { recalculateFormulas } from './formulaCalculation';
 import { createSpreadsheetWarningConfig } from './spreadsheetPresentation';
 import {
+  applyPrintableRichTextStyle,
   printPrintableSheet,
   type PrintableBorder,
   type PrintableCellStyle,
   type PrintableMerge,
+  type PrintableRichTextStyleData,
   type PrintableSheet,
 } from './workbookPrint';
 import {
@@ -81,6 +83,7 @@ export interface UniverTemplateHandle {
 export interface UniverTemplateHostProps {
   initialSnapshot: IWorkbookData;
   mode: TemplateEditorMode;
+  reportName?: string;
   toolsExpanded?: boolean;
   suppressNumericTextWarnings?: boolean;
   onChanged: () => void;
@@ -94,6 +97,19 @@ type UniverWorksheet = NonNullable<ReturnType<UniverWorkbook['getSheetBySheetId'
 type UniverRange = ReturnType<UniverWorksheet['getRange']>;
 type CommandSubscription = ReturnType<UniverWorkbook['onCommandExecuted']>;
 type UniverTextStyle = NonNullable<ReturnType<UniverRange['getCellStyles']>[number][number]>;
+
+interface UniverRichTextRunData {
+  ts?: PrintableRichTextStyleData | null;
+}
+
+interface UniverRichTextValue {
+  getData(): { body?: { textRuns?: UniverRichTextRunData[] | null } | null };
+}
+
+interface UniverRichTextRange extends UniverRange {
+  // Univer 0.25.1 运行时已提供该 beta facade，当前类型声明遗漏了读取方法。
+  getRichTextValues(): Array<Array<UniverRichTextValue | null>>;
+}
 
 interface UniverPrintableBorderEdge {
   cl: { rgb?: string | null };
@@ -226,6 +242,7 @@ function toPrintableBorder(
 
 function toPrintableCellStyle(
   textStyle: UniverTextStyle | null | undefined,
+  richText: UniverRichTextValue | null | undefined,
   background: string | undefined,
   horizontal: string | undefined,
   vertical: string | undefined,
@@ -233,7 +250,7 @@ function toPrintableCellStyle(
 ): PrintableCellStyle {
   // 0.25.1 的 facade 声明没有完整暴露单元格四边结构，运行时仍使用 IBorderData 的 t/r/b/l。
   const borders = textStyle?.border as UniverPrintableBorderData | null | undefined;
-  return {
+  const cellStyle: PrintableCellStyle = {
     background,
     bold: textStyle?.bold,
     borders: borders == null ? undefined : {
@@ -252,9 +269,19 @@ function toPrintableCellStyle(
     vertical,
     wrap,
   };
+  const richTextStyle = richText
+    ?.getData()
+    .body
+    ?.textRuns
+    ?.find((run) => run.ts != null)
+    ?.ts as PrintableRichTextStyleData | undefined;
+  return applyPrintableRichTextStyle(cellStyle, richTextStyle);
 }
 
-function createPrintableSheet(worksheet: UniverWorksheet): PrintableSheet {
+function createPrintableSheet(
+  worksheet: UniverWorksheet,
+  reportName?: string,
+): PrintableSheet {
   let dataRange: UniverRange;
   let mergeRanges: PrintableMerge[];
   try {
@@ -295,6 +322,7 @@ function createPrintableSheet(worksheet: UniverWorksheet): PrintableSheet {
       throw new Error('当前工作表没有可打印内容。');
     }
     const textStyles = range.getCellStyles();
+    const richTextValues = (range as UniverRichTextRange).getRichTextValues();
     const backgrounds = range.getBackgrounds();
     const horizontalAlignments = range.getHorizontalAlignments();
     const verticalAlignments = range.getVerticalAlignments();
@@ -314,6 +342,7 @@ function createPrintableSheet(worksheet: UniverWorksheet): PrintableSheet {
     const styles = values.map((row, rowIndex) => row.map((_value, columnIndex) => (
       toPrintableCellStyle(
         textStyles[rowIndex]?.[columnIndex],
+        richTextValues[rowIndex]?.[columnIndex],
         backgrounds[rowIndex]?.[columnIndex],
         horizontalAlignments[rowIndex]?.[columnIndex],
         verticalAlignments[rowIndex]?.[columnIndex],
@@ -323,9 +352,11 @@ function createPrintableSheet(worksheet: UniverWorksheet): PrintableSheet {
 
     return {
       columnWidths,
+      documentTitle: reportName,
       merges: mergeRanges,
       name: worksheet.getSheetName(),
       rowHeights,
+      showGridlines: worksheet.getSheet().getConfig().showGridlines === 1,
       startColumn,
       startRow,
       styles,
@@ -343,6 +374,7 @@ export const UniverTemplateHost = forwardRef<
   {
     initialSnapshot,
     mode,
+    reportName,
     toolsExpanded = true,
     suppressNumericTextWarnings = false,
     onChanged,
@@ -770,6 +802,23 @@ export const UniverTemplateHost = forwardRef<
         ],
       });
 
+      // Univer 默认只把网格线切换放在工作表底部菜单；报表编辑时应在 Excel 顶部工具栏直接可用。
+      // 复用内置命令和图标，保证按钮状态会随活动工作表及命令执行自动同步。
+      runtime.univerAPI.createMenu({
+        id: 'hd-report-toggle-gridlines',
+        title: '网格线',
+        tooltip: '显示/隐藏网格线',
+        icon: 'HideGridlinesDoubleIcon',
+        action: () => {
+          void runtime?.univerAPI
+            .executeCommand('sheet.command.toggle-gridlines')
+            .catch((error: unknown) => {
+              safeNotifyError(operationError('切换工作表网格线失败', error));
+            });
+        },
+        order: 2,
+      }).appendTo('ribbon.start.history');
+
       workerRef.current = worker;
       runtimeRef.current = runtime;
       // 初始工作簿加载也视为内部模板操作，屏蔽 createWorkbook 触发的初始化 mutation。
@@ -1103,7 +1152,7 @@ export const UniverTemplateHost = forwardRef<
         } catch (error) {
           throw operationError('Univer 获取待打印工作表失败', error);
         }
-        await printPrintableSheet(createPrintableSheet(worksheet));
+        await printPrintableSheet(createPrintableSheet(worksheet, reportName));
       } catch (error) {
         const contextual = operationError('Univer 打印当前工作表失败', error);
         safeNotifyError(contextual);
@@ -1481,6 +1530,7 @@ export const UniverTemplateHost = forwardRef<
     beginTemplateOperation,
     finishTemplateOperation,
     isCurrentGeneration,
+    reportName,
     safeNotifyChanged,
     safeNotifyError,
     safeNotifyRendered,

@@ -383,6 +383,41 @@ export interface DataSourceTestResult {
   databaseVersion: string;
 }
 
+/** JNPF 报表迁移程序返回的只读盘点项；标记和阻断原因由服务端拼接为文本。 */
+export interface JnpfMigrationInventoryItem {
+  sourceReportId: string | null;
+  sourceVersionId: string | null;
+  reportName: string | null;
+  sourceReportCode: string | null;
+  targetReportCode: string | null;
+  dataSourceNames: string | null;
+  dbTypes: string | null;
+  migratable: boolean;
+  status: 'Ready' | 'Blocked' | string | null;
+  fieldCount: number;
+  parameterCount: number;
+  detailFieldCount: number;
+  blockers: string | null;
+  markers: string | null;
+}
+
+export interface JnpfMigrationRunResult {
+  inventory: JnpfMigrationInventoryItem[];
+  results: JnpfMigrationResultItem[];
+  reportDataSourceCode: string;
+  reportDataSourceName: string;
+  reportDataSourceDbType: DataSourceDbType;
+  writeTargetDatabase: string;
+  writeTargetDbType: DataSourceDbType;
+}
+
+export interface JnpfMigrationResultItem {
+  reportCode: string | null;
+  reportName: string | null;
+  status: string | null;
+  message: string | null;
+}
+
 /** 异步大文件导出状态，与后端字符串枚举保持一致。 */
 export type ExportJobStatus = 'Pending' | 'Running' | 'Completed' | 'Failed' | 'Cancelled';
 

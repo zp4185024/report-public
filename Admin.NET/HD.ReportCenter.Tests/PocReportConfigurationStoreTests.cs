@@ -382,6 +382,82 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Date_control_with_string_dataset_type_supports_dynamic_default()
+    {
+        var request = CreateSaveRequest(
+            0,
+            new PocSaveShareProtectionRequest(false, null)) with
+        {
+            Parameters =
+            [
+                new PocParameterDefinition(
+                    "hospitalId",
+                    "医院",
+                    "text",
+                    "Form",
+                    null,
+                    true),
+                new PocParameterDefinition(
+                    "queryDate",
+                    "查询日期",
+                    "date",
+                    "Form",
+                    null,
+                    true,
+                    DataType: "string",
+                    DefaultExpression: "yesterday()")
+            ]
+        };
+
+        await _configurationService.SaveAsync("date-default-report", request);
+        var document = await _configurationService.GetDocumentAsync(
+            "date-default-report",
+            new DateTimeOffset(2026, 8, 18, 9, 0, 0, TimeSpan.FromHours(8)));
+
+        var dateParameter = Assert.Single(document.Parameters, parameter => parameter.Code == "queryDate");
+        Assert.Equal("2026-08-17", dateParameter.DefaultValue);
+    }
+
+    [Theory]
+    [InlineData("month", "2026-08")]
+    [InlineData("year", "2026")]
+    public async Task Calendar_period_control_formats_dynamic_default(string controlType, string expected)
+    {
+        var request = CreateSaveRequest(
+            0,
+            new PocSaveShareProtectionRequest(false, null)) with
+        {
+            Parameters =
+            [
+                new PocParameterDefinition(
+                    "hospitalId",
+                    "医院",
+                    "text",
+                    "Form",
+                    null,
+                    true),
+                new PocParameterDefinition(
+                    "queryDate",
+                    "查询日期",
+                    controlType,
+                    "Form",
+                    null,
+                    true,
+                    DataType: "string",
+                    DefaultExpression: "today()")
+            ]
+        };
+
+        await _configurationService.SaveAsync($"{controlType}-default-report", request);
+        var document = await _configurationService.GetDocumentAsync(
+            $"{controlType}-default-report",
+            new DateTimeOffset(2026, 8, 18, 9, 0, 0, TimeSpan.FromHours(8)));
+
+        var parameter = Assert.Single(document.Parameters, item => item.Code == "queryDate");
+        Assert.Equal(expected, parameter.DefaultValue);
+    }
+
+    [Fact]
     public async Task Share_protection_cannot_be_enabled_without_an_unlock_password()
     {
         var exception = await Assert.ThrowsAsync<PocDatasetConfigurationException>(() =>
@@ -526,11 +602,42 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.DoesNotContain("ConnectionString", message);
     }
 
+    [Fact]
+    public void Database_provider_recognizes_database_errors_nested_in_wrappers()
+    {
+        var exception = new InvalidOperationException(
+            "数据库打开失败。",
+            new TestDatabaseException("MySQL 1045: Access denied for user 'root'@'172.26.0.1'"));
+
+        Assert.True(PocDatabaseProvider.IsDatabaseException(exception));
+        Assert.Contains("MySQL 1045", PocDatabaseProvider.GetSafeConnectionError(exception));
+    }
+
+    [Fact]
+    public void Database_provider_extracts_mysql_access_denied_from_sqlsugar_message()
+    {
+        var exception = new SqlSugarException(
+            "Connection open error: Access denied for user 'root'@'172.26.0.1' " +
+            "(using password: YES); Password=must-not-leak;");
+
+        var message = PocDatabaseProvider.GetSafeConnectionError(exception);
+
+        Assert.Equal(
+            "MySQL 1045: Access denied for user 'root'@'172.26.0.1' (using password: YES)",
+            message);
+        Assert.DoesNotContain("must-not-leak", message);
+    }
+
+    private sealed class TestDatabaseException : System.Data.Common.DbException
+    {
+        public TestDatabaseException(string message) : base(message) { }
+    }
+
     [Theory]
-    [InlineData("SqlServer", 1433, "OFFSET @__offset ROWS FETCH NEXT @__take ROWS ONLY")]
-    [InlineData("Oracle", 1521, "OFFSET @__offset ROWS FETCH NEXT @__take ROWS ONLY")]
-    [InlineData("MySql", 3306, "LIMIT @__take OFFSET @__offset")]
-    [InlineData("PostgreSQL", 5432, "LIMIT @__take OFFSET @__offset")]
+    [InlineData("SqlServer", 1433, "OFFSET @rcPageOffset ROWS FETCH NEXT @rcPageTake ROWS ONLY")]
+    [InlineData("Oracle", 1521, "OFFSET @rcPageOffset ROWS FETCH NEXT @rcPageTake ROWS ONLY")]
+    [InlineData("MySql", 3306, "LIMIT @rcPageTake OFFSET @rcPageOffset")]
+    [InlineData("PostgreSQL", 5432, "LIMIT @rcPageTake OFFSET @rcPageOffset")]
     public void Database_provider_uses_the_expected_default_port_and_paging_dialect(
         string dbType,
         int defaultPort,

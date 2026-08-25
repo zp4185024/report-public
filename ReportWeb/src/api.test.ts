@@ -1,6 +1,6 @@
 import { LocaleType, type IWorkbookData } from '@univerjs/presets';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createReportApi, dataAssetApi, reportApi, reportCatalogApi } from './api';
+import { createReportApi, dataAssetApi, jnpfMigrationApi, reportApi, reportCatalogApi } from './api';
 import type {
   DataSourceInput,
   CreateReportRequest,
@@ -175,6 +175,14 @@ function jsonResponse(body: unknown, status = 200): Response {
     ok: status >= 200 && status < 300,
     status,
     json: vi.fn().mockResolvedValue(body),
+  } as unknown as Response;
+}
+
+function invalidJsonResponse(status: number): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: vi.fn().mockRejectedValue(new SyntaxError('Unexpected end of JSON input')),
   } as unknown as Response;
 }
 
@@ -398,6 +406,20 @@ describe('reportApi template endpoints', () => {
     await expect(reportApi.template()).rejects.toThrow('模板版本已过期');
   });
 
+  it('reports an unavailable backend when the proxy returns an empty error response', async () => {
+    fetchMock.mockResolvedValue(invalidJsonResponse(502));
+
+    await expect(dataAssetApi.externalParameterSources())
+      .rejects.toThrow('后端服务不可用（HTTP 502）。');
+  });
+
+  it('reports a connection failure when fetch cannot reach the backend', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(dataAssetApi.externalParameterSources())
+      .rejects.toThrow('无法连接后端服务，请确认服务已启动。');
+  });
+
   it('uploads one xlsx file as multipart form data without forcing a content type', async () => {
     const file = new File(['xlsx'], '测试模板.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -485,5 +507,40 @@ describe('reportApi template endpoints', () => {
       templateRevision: 3,
       query: executeRequest,
     });
+  });
+
+  it('uses the JNPF report migration endpoints without sending credentials', async () => {
+    const result = {
+      inventory: [],
+      results: [],
+      reportDataSourceCode: 'report_center',
+      reportDataSourceName: '报表运行数据源',
+      reportDataSourceDbType: 'SqlServer',
+      writeTargetDatabase: 'hd_report_center',
+      writeTargetDbType: 'SqlServer',
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    await expect(jnpfMigrationApi.inventory({
+      jnpfDataSourceCode: 'jnpf_metadata',
+      reportDataSourceCode: 'report_center',
+      maxReports: 2,
+    })).resolves.toEqual(result);
+    const [inventoryPath, inventoryInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(inventoryPath).toBe('/api/report-center/poc/jnpf-report-migration/inventory');
+    expect(JSON.parse(inventoryInit.body as string)).toEqual({
+      jnpfDataSourceCode: 'jnpf_metadata',
+      reportDataSourceCode: 'report_center',
+      maxReports: 2,
+    });
+    expect(String(inventoryInit.body)).not.toContain('password');
+
+    await expect(jnpfMigrationApi.migrate({
+      jnpfDataSourceCode: 'jnpf_metadata',
+      reportDataSourceCode: 'report_center',
+      sourceReportIds: ['report-1'],
+      maxReports: 1,
+    })).resolves.toEqual(result);
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/report-center/poc/jnpf-report-migration/migrate');
   });
 });

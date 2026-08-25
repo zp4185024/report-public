@@ -89,9 +89,51 @@ public static partial class PocReadOnlySqlValidator
             switch (state)
             {
                 case SqlLexState.Normal:
-                    if ((current == '-' && next == '-') || (current == '/' && next == '*'))
+                    if (current == '-' && next == '-')
                     {
-                        throw Unsafe("数据集 SQL 不允许注释。");
+                        output.Append("  ");
+                        index += 2;
+                        while (index < queryText.Length &&
+                               queryText[index] is not '\r' and not '\n')
+                        {
+                            output.Append(' ');
+                            index++;
+                        }
+                        continue;
+                    }
+                    if (current == '/' && next == '*')
+                    {
+                        var executableComment = index + 2 < queryText.Length &&
+                            (queryText[index + 2] == '!' ||
+                             (queryText[index + 2] is 'M' or 'm' &&
+                              index + 3 < queryText.Length &&
+                              queryText[index + 3] == '!'));
+                        if (executableComment)
+                        {
+                            throw Unsafe("数据集 SQL 不允许 MySQL 可执行注释。");
+                        }
+                        output.Append("  ");
+                        index += 2;
+                        var closed = false;
+                        while (index < queryText.Length)
+                        {
+                            current = queryText[index];
+                            next = index + 1 < queryText.Length ? queryText[index + 1] : '\0';
+                            if (current == '*' && next == '/')
+                            {
+                                output.Append("  ");
+                                index++;
+                                closed = true;
+                                break;
+                            }
+                            output.Append(current is '\r' or '\n' ? current : ' ');
+                            index++;
+                        }
+                        if (!closed)
+                        {
+                            throw Unsafe("数据集 SQL 包含未闭合的块注释。");
+                        }
+                        continue;
                     }
                     if (current == ';' || current == '#')
                     {

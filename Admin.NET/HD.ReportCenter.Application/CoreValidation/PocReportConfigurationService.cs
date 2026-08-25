@@ -167,7 +167,7 @@ public sealed class PocReportConfigurationService : ITransient
         ["Form", "Url", "System", "Fixed", "External"],
         StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> ParameterControlTypes = new(
-        ["text", "number", "date", "checkbox", "select", "multiSelect", "hidden"],
+        ["text", "number", "date", "datetime", "month", "year", "checkbox", "select", "multiSelect", "hidden"],
         StringComparer.OrdinalIgnoreCase);
     private readonly PocReportConfigurationStore _store;
     private readonly PocDataAssetStore _dataAssets;
@@ -511,7 +511,7 @@ public sealed class PocReportConfigurationService : ITransient
         {
             var defaultValue = PocDefaultExpressionEvaluator.Evaluate(
                 parameter.DefaultExpression,
-                parameter.DataType,
+                DefaultExpressionDataType(parameter.DataType, parameter.ControlType),
                 now);
             return new PocParameterDefinition(
                 parameter.Code,
@@ -812,8 +812,7 @@ public sealed class PocReportConfigurationService : ITransient
                  (!string.IsNullOrWhiteSpace(parameter.SourceCode) ||
                   !string.IsNullOrWhiteSpace(parameter.SourceFieldCode))) ||
                 (!string.IsNullOrWhiteSpace(parameter.DefaultExpression) &&
-                 !parameter.DataType.Equals("date", StringComparison.OrdinalIgnoreCase) &&
-                 !parameter.DataType.Equals("datetime", StringComparison.OrdinalIgnoreCase)))
+                 !IsDateParameter(parameter.DataType, parameter.ControlType)))
             {
                 throw new PocDatasetConfigurationException("PARAM_DEFINITION_INVALID", $"参数 '{parameter.Code}' 的定义无效。");
             }
@@ -832,7 +831,9 @@ public sealed class PocReportConfigurationService : ITransient
                     $"参数 '{parameter.Code}' 的选项配置无效。");
             }
             ValidateValueOptions(parameterOptions, "PARAM_DEFINITION_INVALID", parameter.Code);
-            _ = PocDefaultExpressionEvaluator.Evaluate(parameter.DefaultExpression, parameter.DataType);
+            _ = PocDefaultExpressionEvaluator.Evaluate(
+                parameter.DefaultExpression,
+                DefaultExpressionDataType(parameter.DataType, parameter.ControlType));
         }
 
     }
@@ -917,9 +918,29 @@ public sealed class PocReportConfigurationService : ITransient
         dataType.ToLowerInvariant() switch
         {
             "int" or "long" or "decimal" => "number",
-            "date" or "datetime" => "date",
+            "date" => "date",
+            "datetime" => "datetime",
             "bool" or "boolean" => "checkbox",
             _ => "text"
+        };
+
+    private static bool IsDateParameter(string dataType, string controlType) =>
+        dataType.Equals("date", StringComparison.OrdinalIgnoreCase) ||
+        dataType.Equals("datetime", StringComparison.OrdinalIgnoreCase) ||
+        controlType.Equals("date", StringComparison.OrdinalIgnoreCase) ||
+        controlType.Equals("datetime", StringComparison.OrdinalIgnoreCase) ||
+        controlType.Equals("month", StringComparison.OrdinalIgnoreCase) ||
+        controlType.Equals("year", StringComparison.OrdinalIgnoreCase);
+
+    private static string DefaultExpressionDataType(string dataType, string controlType) =>
+        controlType.Trim().ToLowerInvariant() switch
+        {
+            "month" => "month",
+            "year" => "year",
+            "datetime" => "datetime",
+            _ => dataType.Equals("datetime", StringComparison.OrdinalIgnoreCase)
+                ? "datetime"
+                : "date"
         };
 
     private static string NormalizeReportCode(string reportCode)
