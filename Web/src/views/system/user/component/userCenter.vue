@@ -205,6 +205,10 @@ const state = reactive({
 	signOptions: {
 		penColor: '#000000',
 		minWidth: 1.0,
+		/**
+		 * 响应 userCenter 的 on Begin 事件，并协调相关状态和后续操作。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		onBegin: () => {
 			signaturePadRef.value.resizeCanvas();
 		},
@@ -232,6 +236,11 @@ watch(state.signOptions, () => {
 });
 
 // 上传头像图片
+/**
+ * 接收并校验 userCenter 的 upload Cropper Img 输入，随后写入目标状态。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const uploadCropperImg = async (e: any) => {
 	var res = await getAPI(SysFileApi).apiSysFileUploadAvatarPostForm(blobToFile(e.img, userInfos.value.account + '.png'));
 	userInfos.value.avatar = getFileUrl(res.data.result!);
@@ -239,11 +248,19 @@ const uploadCropperImg = async (e: any) => {
 };
 
 // 打开电子签名页面
+/**
+ * 准备 userCenter 的 open Sign Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openSignDialog = () => {
 	state.signDialogVisible = true;
 };
 
 // 保存并上传电子签名
+/**
+ * 更新 userCenter 的 save Upload Sign 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const saveUploadSign = async () => {
 	const { isEmpty, data } = signaturePadRef.value.saveSignature();
 	if (isEmpty) {
@@ -259,16 +276,29 @@ const saveUploadSign = async () => {
 };
 
 // 撤销电子签名
+/**
+ * 负责 userCenter 的 un Do Sign 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const unDoSign = () => {
 	signaturePadRef.value.undoSignature();
 };
 
 // 清空电子签名
+/**
+ * 移除 userCenter 中与 clear Sign 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clearSign = () => {
 	signaturePadRef.value.clearSignature();
 };
 
 // 上传手写电子签名
+/**
+ * 接收并校验 userCenter 的 upload Sign File 输入，随后写入目标状态。
+ * @param file - file 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const uploadSignFile = async (file: any) => {
 	var res = await getAPI(SysFileApi).apiSysFileUploadSignaturePostForm(file.raw);
 	userInfos.value.signature = res.data.result?.url;
@@ -276,11 +306,21 @@ const uploadSignFile = async (file: any) => {
 };
 
 // 获得电子签名文件列表
+/**
+ * 响应 userCenter 的 handle Change Sign File 事件，并协调相关状态和后续操作。
+ * @param _file - _file 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param fileList - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleChangeSignFile = (_file: any, fileList: []) => {
 	state.signFileList = fileList;
 };
 
 // 修改个人信息
+/**
+ * 执行 userCenter 的 submit User Base 核心流程，并保持错误和结果语义稳定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submitUserBase = () => {
 	ruleFormBaseRef.value?.validate(async (valid: boolean) => {
 		if (!valid) return;
@@ -298,6 +338,13 @@ const submitUserBase = () => {
 };
 
 // 密码验证
+/**
+ * 校验 userCenter 的 validate Password 条件，并返回可供后续流程判断的结果。
+ * @param _rule - _rule 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param callback - 处理完成或状态变化时调用的回调。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const validatePassword = (_rule: any, value: any, callback: any) => {
 	if (state.passwordNew2 != state.ruleFormPassword.passwordNew) {
 		callback(new Error('两次密码不一致！'));
@@ -307,6 +354,10 @@ const validatePassword = (_rule: any, value: any, callback: any) => {
 };
 
 // 密码重置
+/**
+ * 重置或刷新 userCenter 的 reset Password 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetPassword = () => {
 	state.ruleFormPassword.passwordOld = '';
 	state.ruleFormPassword.passwordNew = '';
@@ -314,6 +365,10 @@ const resetPassword = () => {
 };
 
 // 密码提交
+/**
+ * 执行 userCenter 的 submit Password 核心流程，并保持错误和结果语义稳定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submitPassword = () => {
 	ruleFormPasswordRef.value?.validate(async (valid: boolean) => {
 		if (!valid) return;
@@ -337,21 +392,38 @@ const submitPassword = () => {
 };
 
 // 打开裁剪弹窗
+/**
+ * 准备 userCenter 的 open Cropper Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openCropperDialog = () => {
 	state.cropperTitle = '更换头像';
 	cropperDialogRef.value?.openDialog(userInfos.value.avatar);
 };
 
 // 鼠标进入和离开头像时
+/**
+ * 负责 userCenter 的 mouse Enter Avatar 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const mouseEnterAvatar = () => {
 	state.avatarLoading = true;
 };
 
+/**
+ * 负责 userCenter 的 mouse Leave Avatar 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const mouseLeaveAvatar = () => {
 	state.avatarLoading = false;
 };
 
 // 上传签名超出数量限制时执行
+/**
+ * 接收并校验 userCenter 的 upload Sign File Exceed 输入，随后写入目标状态。
+ * @param files - files 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const uploadSignFileExceed: UploadProps['onExceed'] = (files) => {
 	uploadSignRef.value!.clearFiles();
 	const file = files[0] as UploadRawFile;
@@ -360,6 +432,11 @@ const uploadSignFileExceed: UploadProps['onExceed'] = (files) => {
 };
 
 // 获取文件地址
+/**
+ * 查询或读取 userCenter 所需的 get File Url 数据，并按调用约定返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getFileUrl = (row: SysFile): string => {
 	if (row.bucketName == 'Local') {
 		return `/${row.filePath}/${row.id}${row.suffix}`;

@@ -465,6 +465,7 @@ export const ApprovalFlowApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiApprovalFlowAddPost(body?: AddApprovalFlowInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 ApprovalFlowApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await ApprovalFlowApiAxiosParamCreator(configuration).apiApprovalFlowAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -507,6 +508,7 @@ export const ApprovalFlowApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiApprovalFlowInfoGet(code?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultApprovalFlow>>> {
+            // 第2阶段：调用 ApprovalFlowApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await ApprovalFlowApiAxiosParamCreator(configuration).apiApprovalFlowInfoGet(code, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -539,6 +541,7 @@ export const ApprovalFlowApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await ApprovalFlowApiAxiosParamCreator(configuration).apiApprovalFlowListGet(code, name, remark, page, pageSize, field, order, descStr, searchFields, searchKeyword, keyword, filterLogic, filterFilters, filterField, filterOperator, filterValue, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 ApprovalFlowApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -587,6 +590,7 @@ export const ApprovalFlowApiFactory = function (configuration?: Configuration, b
          * @throws {RequiredError}
          */
         async apiApprovalFlowAddPost(body?: AddApprovalFlowInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt64>> {
+            // 第一阶段：整理 ApprovalFlowApiFactory 已计算的数据，并按方法契约返回最终结果。
             return ApprovalFlowApiFp(configuration).apiApprovalFlowAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -617,6 +621,7 @@ export const ApprovalFlowApiFactory = function (configuration?: Configuration, b
          * @throws {RequiredError}
          */
         async apiApprovalFlowInfoGet(code?: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultApprovalFlow>> {
+            // 第2阶段：整理 ApprovalFlowApiFactory 已计算的数据，并按方法契约返回最终结果。
             return ApprovalFlowApiFp(configuration).apiApprovalFlowInfoGet(code, options).then((request) => request(axios, basePath));
         },
         /**
@@ -642,6 +647,7 @@ export const ApprovalFlowApiFactory = function (configuration?: Configuration, b
          * @throws {RequiredError}
          */
         async apiApprovalFlowListGet(code?: string, name?: string, remark?: string, page?: number, pageSize?: number, field?: string, order?: string, descStr?: string, searchFields?: Array<string>, searchKeyword?: string, keyword?: string, filterLogic?: FilterLogicEnum, filterFilters?: Array<Filter>, filterField?: string, filterOperator?: FilterOperatorEnum, filterValue?: any, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListApprovalFlowOutput>> {
+            // 第3阶段：整理 ApprovalFlowApiFactory 已计算的数据，并按方法契约返回最终结果。
             return ApprovalFlowApiFp(configuration).apiApprovalFlowListGet(code, name, remark, page, pageSize, field, order, descStr, searchFields, searchKeyword, keyword, filterLogic, filterFilters, filterField, filterOperator, filterValue, options).then((request) => request(axios, basePath));
         },
         /**

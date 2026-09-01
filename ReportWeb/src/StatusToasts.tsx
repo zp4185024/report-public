@@ -20,6 +20,10 @@ interface StatusToastsProps {
   successAutoCloseMilliseconds?: number;
 }
 
+/**
+ * 负责 StatusToasts 的 Toast Item 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function ToastItem({
   message,
   variant,
@@ -62,6 +66,10 @@ function ToastItem({
   );
 }
 
+/**
+ * 负责 StatusToasts 的 Status Toasts 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function StatusToasts({
   error,
   success,

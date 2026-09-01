@@ -233,6 +233,7 @@ export const SysMessageApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysMessageSendAllUserPost(body?: MessageInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysMessageApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysMessageApiAxiosParamCreator(configuration).apiSysMessageSendAllUserPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -261,6 +262,7 @@ export const SysMessageApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysMessageSendUserPost(body?: MessageInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第2阶段：调用 SysMessageApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysMessageApiAxiosParamCreator(configuration).apiSysMessageSendUserPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -289,6 +291,7 @@ export const SysMessageApiFp = function(configuration?: Configuration) {
  * @export
  */
 export const SysMessageApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    // 第一阶段：整理 SysMessageApiFactory 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -318,6 +321,7 @@ export const SysMessageApiFactory = function (configuration?: Configuration, bas
          * @throws {RequiredError}
          */
         async apiSysMessageSendUserPost(body?: MessageInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysMessageApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysMessageApiFp(configuration).apiSysMessageSendUserPost(body, options).then((request) => request(axios, basePath));
         },
         /**

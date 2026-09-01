@@ -32,6 +32,9 @@ public class DataMaskAttribute : Attribute
     /// </summary>
     private bool KeepLength { get; set; } = true;
 
+    /// <summary>初始化 DataMaskAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="startIndex">控制数据范围或位置的数值。</param>
+    /// <param name="length">当前方法执行时使用的 length 输入值。</param>
     public DataMaskAttribute(int startIndex, int length)
     {
         if (startIndex < 0) throw new ArgumentOutOfRangeException(nameof(startIndex));
@@ -41,9 +44,7 @@ public class DataMaskAttribute : Attribute
         Length = length;
     }
 
-    /// <summary>
-    /// 执行脱敏处理
-    /// </summary>
+    /// <summary>根据 DataMaskAttribute 当前输入计算 Mask 结果，并按方法声明的类型返回。</summary>
     public string Mask(string input)
     {
         if (string.IsNullOrEmpty(input) || input.Length <= StartIndex)

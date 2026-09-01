@@ -18,11 +18,9 @@ public class CryptogramUtil
     public static readonly string SM4_key = "0123456789abcdeffedcba9876543210";
     public static readonly string SM4_iv = "595298c7c6fd271f0402f804c33d3f66";
 
-    /// <summary>
-    /// 加密
-    /// </summary>
-    /// <param name="plainText"></param>
-    /// <returns></returns>
+    /// <summary>根据 CryptogramUtil 当前输入计算 Encrypt 结果，并按方法声明的类型返回。</summary>
+    /// <param name="plainText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string Encrypt(string plainText)
     {
         if (CryptoType == CryptogramEnum.MD5.ToString())
@@ -40,11 +38,9 @@ public class CryptogramUtil
         return plainText;
     }
 
-    /// <summary>
-    /// 解密
-    /// </summary>
-    /// <param name="cipherText"></param>
-    /// <returns></returns>
+    /// <summary>根据 CryptogramUtil 当前输入计算 Decrypt 结果，并按方法声明的类型返回。</summary>
+    /// <param name="cipherText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string Decrypt(string cipherText)
     {
         if (CryptoType == CryptogramEnum.SM2.ToString())
@@ -58,21 +54,17 @@ public class CryptogramUtil
         return cipherText;
     }
 
-    /// <summary>
-    /// SM2加密
-    /// </summary>
-    /// <param name="plainText"></param>
-    /// <returns></returns>
+    /// <summary>根据 CryptogramUtil 当前输入计算 SM2 Encrypt 结果，并按方法声明的类型返回。</summary>
+    /// <param name="plainText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM2Encrypt(string plainText)
     {
         return GMUtil.SM2Encrypt(PublicKey, plainText);
     }
 
-    /// <summary>
-    /// SM2解密
-    /// </summary>
-    /// <param name="cipherText"></param>
-    /// <returns></returns>
+    /// <summary>根据 CryptogramUtil 当前输入计算 SM2 Decrypt 结果，并按方法声明的类型返回。</summary>
+    /// <param name="cipherText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM2Decrypt(string cipherText)
     {
         return GMUtil.SM2Decrypt(PrivateKey, cipherText);
@@ -81,8 +73,8 @@ public class CryptogramUtil
     /// <summary>
     /// SM4加密（ECB）
     /// </summary>
-    /// <param name="plainText"></param>
-    /// <returns></returns>
+    /// <param name="plainText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM4EncryptECB(string plainText)
     {
         return GMUtil.SM4EncryptECB(SM4_key, plainText);
@@ -91,8 +83,8 @@ public class CryptogramUtil
     /// <summary>
     /// SM4解密（ECB）
     /// </summary>
-    /// <param name="cipherText"></param>
-    /// <returns></returns>
+    /// <param name="cipherText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM4DecryptECB(string cipherText)
     {
         return GMUtil.SM4DecryptECB(SM4_key, cipherText);
@@ -101,8 +93,8 @@ public class CryptogramUtil
     /// <summary>
     /// SM4加密（CBC）
     /// </summary>
-    /// <param name="plainText"></param>
-    /// <returns></returns>
+    /// <param name="plainText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM4EncryptCBC(string plainText)
     {
         return GMUtil.SM4EncryptCBC(SM4_key, SM4_iv, plainText);
@@ -111,8 +103,8 @@ public class CryptogramUtil
     /// <summary>
     /// SM4解密（CBC）
     /// </summary>
-    /// <param name="cipherText"></param>
-    /// <returns></returns>
+    /// <param name="cipherText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM4DecryptCBC(string cipherText)
     {
         return GMUtil.SM4DecryptCBC(SM4_key, SM4_iv, cipherText);

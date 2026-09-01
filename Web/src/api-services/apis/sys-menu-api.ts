@@ -386,6 +386,7 @@ export const SysMenuApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysMenuAddPost(body?: AddMenuInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 SysMenuApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysMenuApiAxiosParamCreator(configuration).apiSysMenuAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -418,6 +419,7 @@ export const SysMenuApiFp = function(configuration?: Configuration) {
         async apiSysMenuListGet(title?: string, type?: MenuTypeEnum, tenantId?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListSysMenu>>> {
             const localVarAxiosArgs = await SysMenuApiAxiosParamCreator(configuration).apiSysMenuListGet(title, type, tenantId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                // 第2阶段：构造 SysMenuApiFp 当前阶段需要的中间数据和执行参数。
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -456,6 +458,7 @@ export const SysMenuApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysMenuSetStatusPost(body?: MenuStatusInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt32>>> {
+            // 第3阶段：调用 SysMenuApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysMenuApiAxiosParamCreator(configuration).apiSysMenuSetStatusPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -493,6 +496,7 @@ export const SysMenuApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysMenuAddPost(body?: AddMenuInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt64>> {
+            // 第一阶段：整理 SysMenuApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysMenuApiFp(configuration).apiSysMenuAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -533,6 +537,7 @@ export const SysMenuApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysMenuOwnBtnPermListGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListString>> {
+            // 第2阶段：整理 SysMenuApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysMenuApiFp(configuration).apiSysMenuOwnBtnPermListGet(options).then((request) => request(axios, basePath));
         },
         /**

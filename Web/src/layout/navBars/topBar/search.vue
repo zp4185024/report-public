@@ -45,6 +45,10 @@ const state = reactive<SearchState>({
 });
 
 // 搜索弹窗打开
+/**
+ * 准备 search 的 open Search 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openSearch = () => {
 	state.menuQuery = '';
 	state.isShowSearch = true;
@@ -56,15 +60,30 @@ const openSearch = () => {
 	});
 };
 // 搜索弹窗关闭
+/**
+ * 结束 search 的 close Search 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeSearch = () => {
 	state.isShowSearch = false;
 };
 // 菜单搜索数据过滤
+/**
+ * 按 menu Search 规则筛选 search 数据，并返回满足条件的结果。
+ * @param queryString - queryString 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param cb - cb 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const menuSearch = (queryString: string, cb: Function) => {
 	let results = queryString ? state.tagsViewList.filter(createFilter(queryString)) : state.tagsViewList;
 	cb(results);
 };
 // 菜单搜索过滤
+/**
+ * 构建 search 所需的 create Filter 内容，并保证生成结果符合调用约定。
+ * @param queryString - queryString 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const createFilter = (queryString: string) => {
 	return (restaurant: RouteItem) => {
 		return (
@@ -75,6 +94,10 @@ const createFilter = (queryString: string) => {
 	};
 };
 // 初始化菜单数据
+/**
+ * 遍历 search 数据并执行 init Tage View 转换，生成后续流程需要的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initTageView = () => {
 	if (state.tagsViewList.length > 0) return false;
 	tagsViewRoutes.value.map((v: RouteItem) => {
@@ -82,6 +105,11 @@ const initTageView = () => {
 	});
 };
 // 当前菜单选中时
+/**
+ * 响应 search 的 on Handle Select 事件，并协调相关状态和后续操作。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onHandleSelect = (item: RouteItem) => {
 	let { path, redirect } = item;
 	if (item.meta?.isLink && !item.meta?.isIframe) window.open(item.meta?.isLink);

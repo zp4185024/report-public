@@ -42,6 +42,10 @@ const isLayoutTransverse = computed(() => {
 	return layout === 'transverse' || (isClassicSplitMenu && layout === 'classic');
 });
 // 设置/过滤路由（非静态路由/是否显示在菜单中）
+/**
+ * 更新 index 的 set Filter Routes 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setFilterRoutes = () => {
 	let { layout, isClassicSplitMenu } = themeConfig.value;
 	if (layout === 'classic' && isClassicSplitMenu) {
@@ -53,6 +57,11 @@ const setFilterRoutes = () => {
 	}
 };
 // 设置了分割菜单时，删除底下 children
+/**
+ * 遍历 index 数据并执行 del Classic Children 转换，生成后续流程需要的结果。
+ * @param arr - arr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delClassicChildren = <T extends ChilType>(arr: T[]): T[] => {
 	arr.map((v: T) => {
 		if (v.children) delete v.children;
@@ -60,6 +69,11 @@ const delClassicChildren = <T extends ChilType>(arr: T[]): T[] => {
 	return arr;
 };
 // 路由过滤递归函数
+/**
+ * 按 filter Routes Fun 规则筛选 index 数据，并返回满足条件的结果。
+ * @param arr - arr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const filterRoutesFun = <T extends RouteItem>(arr: T[]): T[] => {
 	return arr
 		.filter((item: T) => !item.meta?.isHide)
@@ -70,6 +84,11 @@ const filterRoutesFun = <T extends RouteItem>(arr: T[]): T[] => {
 		});
 };
 // 传送当前子级数据到菜单中
+/**
+ * 更新 index 的 set Send Classic Children 状态，并同步相关业务数据。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setSendClassicChildren = (path: string) => {
 	const currentPathSplit = path.split('/');
 	let currentData: MittMenu = { children: [] };

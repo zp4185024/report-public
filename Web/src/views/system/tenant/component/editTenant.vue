@@ -206,6 +206,11 @@ const state = reactive({
 });
 
 // 通过onChange方法获得文件列表
+/**
+ * 响应 editTenant 的 handle Upload Change 事件，并协调相关状态和后续操作。
+ * @param file - file 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleUploadChange = (file: any) => {
 	uploadRef.value!.clearFiles();
 	state.file = file;
@@ -213,6 +218,11 @@ const handleUploadChange = (file: any) => {
 };
 
 // 打开弹窗
+/**
+ * 准备 editTenant 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = async (row: any) => {
 	state.selectedTabName = '0';
 	ruleFormRef.value?.resetFields();
@@ -223,17 +233,29 @@ const openDialog = async (row: any) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 editTenant 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('handleQuery');
 	state.isShowDialog = false;
 };
 
 // 取消
+/**
+ * 校验 editTenant 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editTenant 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = async () => {
 	// 如果有选择图标，则转换为 base64
 	if (state.file) {

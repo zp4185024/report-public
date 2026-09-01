@@ -8,7 +8,8 @@ import XLSXS from 'xlsx-js-style';
 
 * @param {String} sheetName 导出sheetName名字
 * @return:
-**/
+* * 整理 exportExcel 的 export Excel 数据，并生成可供调用方使用的输出。
+ */
 export function exportExcel(jsonarr: Array<EmptyObjectType>, name: string, header: Array<EmptyObjectType>, sheetName: string) {
 	var data = new Array();
 	var wpxArr = new Array(); //列宽度
@@ -76,6 +77,15 @@ export function exportExcel(jsonarr: Array<EmptyObjectType>, name: string, heade
 	}
 
 	// 递归header
+	/**
+	 * 负责 exportExcel 的 header Rec 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @param rowindex - 控制数据范围或位置的数值。
+	 * @param colindex - 控制数据范围或位置的数值。
+	 * @param childrenindex - 控制数据范围或位置的数值。
+	 * @param col - col 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @param arr - arr 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	function headerRec(rowindex: number, colindex: number, childrenindex: number, col: any, arr: any) {
 		if (rowindex > 0) {
 			if (col.children) {
@@ -241,6 +251,11 @@ export function exportExcel(jsonarr: Array<EmptyObjectType>, name: string, heade
 }
 
 // 递归formatter
+/**
+ * 将 exportExcel 中的 formatter Rec 输入转换为调用方需要的稳定格式。
+ * @param itemf - itemf 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function formatterRec(itemf: any) {
 	let r = '';
 	if (itemf.children) {
@@ -258,8 +273,19 @@ function formatterRec(itemf: any) {
 }
 
 // 获取深度
+/**
+ * 查询或读取 exportExcel 所需的 get Max Depth 数据，并按调用约定返回结果。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function getMaxDepth(data: any) {
 	let maxDepth = 1;
+	/**
+	 * 遍历 exportExcel 数据并执行 traverse 转换，生成后续流程需要的结果。
+	 * @param obj - obj 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @param depth - depth 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	function traverse(obj: any, depth: any) {
 		if (obj.children && obj.children.length > 0) {
 			depth++;
@@ -275,8 +301,18 @@ function getMaxDepth(data: any) {
 }
 
 // 获取总列数
+/**
+ * 查询或读取 exportExcel 所需的 get Total Columns 数据，并按调用约定返回结果。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function getTotalColumns(data: any) {
 	let totalColumns = 0;
+	/**
+	 * 遍历 exportExcel 数据并执行 traverse 转换，生成后续流程需要的结果。
+	 * @param obj - obj 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	function traverse(obj: any) {
 		if (obj.children && obj.children.length > 0) {
 			obj.children.forEach((child: any) => traverse(child));
@@ -290,6 +326,12 @@ function getTotalColumns(data: any) {
 }
 
 // 获取子对象
+/**
+ * 查询或读取 exportExcel 所需的 get Property 数据，并按调用约定返回结果。
+ * @param obj - obj 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param property - property 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getProperty = (obj: any, property: any) => {
 	const keys = property.split('.');
 	let value = obj;

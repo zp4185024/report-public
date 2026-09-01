@@ -46,6 +46,11 @@ const state = reactive({
 	],
 });
 
+/**
+ * 根据指针位置更新 PanelNode 的 drag Node 坐标，并限制目标元素不超出可视区域。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const dragNode = (item: any) => {
 	props.lf.dnd.startDrag({
 		type: item.type,

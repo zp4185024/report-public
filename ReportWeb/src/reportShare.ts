@@ -8,6 +8,10 @@ interface CreateReportShareUrlOptions {
   origin?: string;
 }
 
+/**
+ * 构建 reportShare 所需的 create Report Share Url 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function createReportShareUrl({
   reportCode,
   parameters,
@@ -30,6 +34,11 @@ export function createReportShareUrl({
   return url.toString();
 }
 
+/**
+ * 查询或读取 reportShare 所需的 read Report Share Parameters 数据，并按调用约定返回结果。
+ * @param hash - hash 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function readReportShareParameters(hash = window.location.hash): Record<string, string> {
   const result: Record<string, string> = {};
   const fragment = new URLSearchParams(hash.replace(/^#/, ''));
@@ -41,6 +50,11 @@ export function readReportShareParameters(hash = window.location.hash): Record<s
   return result;
 }
 
+/**
+ * 查询或读取 reportShare 所需的 read Report Query Parameters 数据，并按调用约定返回结果。
+ * @param search - search 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function readReportQueryParameters(search = window.location.search): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, value] of new URLSearchParams(search).entries()) {

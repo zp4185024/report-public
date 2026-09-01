@@ -13,6 +13,10 @@ namespace Admin.NET.Core;
 /// </summary>
 public class GetAccessSecretContext : BaseContext<SignatureAuthenticationOptions>
 {
+    /// <summary>初始化 GetAccessSecretContext 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="scheme">scheme 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
     public GetAccessSecretContext(HttpContext context,
         AuthenticationScheme scheme,
         SignatureAuthenticationOptions options)

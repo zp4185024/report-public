@@ -44,11 +44,9 @@ public class TestViewSysUser : EntityBase, ISqlSugarView
     [SugarColumn(ColumnDescription = "职位名称")]
     public string? PosName { get; set; }
 
-    /// <summary>
-    /// 查询实例
-    /// </summary>
-    /// <param name="db"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 TestViewSysUser 所需的 Get Queryable Sql String 数据，并按调用约定返回结果。</summary>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetQueryableSqlString(SqlSugarScopeProvider db)
     {
         return db.Queryable<SysUser>()

@@ -42,6 +42,10 @@ public sealed record PocXlsxImportResult(
 /// <summary>映射缺失、快照损坏或文件内容不受支持时使用的稳定领域异常。</summary>
 public sealed class PocExchangeConversionException : Exception
 {
+    /// <summary>初始化 PocExchangeConversionException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
     public PocExchangeConversionException(string code, string message, string? ruleCode = null)
         : base(message)
     {

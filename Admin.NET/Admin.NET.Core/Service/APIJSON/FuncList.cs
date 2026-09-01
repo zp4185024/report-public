@@ -11,34 +11,28 @@ namespace Admin.NET.Core.Service;
 /// </summary>
 public class FuncList
 {
-    /// <summary>
-    /// 字符串相加
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
+    /// <summary>按照 FuncList 的业务约束完成 Merge 数据合并或复制。</summary>
+    /// <param name="a">当前方法执行时使用的 a 输入值。</param>
+    /// <param name="b">当前方法执行时使用的 b 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string Merge(object a, object b)
     {
         return a.ToString() + b.ToString();
     }
 
-    /// <summary>
-    /// 对象合并
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
+    /// <summary>按照 FuncList 的业务约束完成 Merge Obj 数据合并或复制。</summary>
+    /// <param name="a">当前方法执行时使用的 a 输入值。</param>
+    /// <param name="b">当前方法执行时使用的 b 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public object MergeObj(object a, object b)
     {
         return new { a, b };
     }
 
-    /// <summary>
-    /// 是否包含
-    /// </summary>
-    /// <param name="a"></param>
-    /// <param name="b"></param>
-    /// <returns></returns>
+    /// <summary>校验 FuncList 的 Is Contain 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="a">当前方法执行时使用的 a 输入值。</param>
+    /// <param name="b">当前方法执行时使用的 b 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public bool IsContain(object a, object b)
     {
         return a.ToString().Split(',').Contains(b);
@@ -47,8 +41,8 @@ public class FuncList
     /// <summary>
     /// 根据jtoken的实际类型来转换SugarParameter，避免全转成字符串
     /// </summary>
-    /// <param name="jToken"></param>
-    /// <returns></returns>
+    /// <param name="jToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static dynamic TransJObjectToSugarPara(JToken jToken)
     {
         JTokenType jTokenType = jToken.Type;
@@ -69,8 +63,8 @@ public class FuncList
     /// <summary>
     /// 根据jArray的实际类型来转换SugarParameter，避免全转成字符串
     /// </summary>
-    /// <param name="jToken"></param>
-    /// <returns></returns>
+    /// <param name="jToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static dynamic TransJArrayToSugarPara(JToken jToken)
     {
         if (jToken is not JArray) return jToken;
@@ -96,8 +90,8 @@ public class FuncList
     /// <summary>
     /// 获取字符串里的值的真正类型
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetValueCSharpType(string input)
     {
         if (DateTime.TryParse(input, out _))

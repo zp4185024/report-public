@@ -14,6 +14,8 @@ namespace Admin.NET.Core;
 /// </summary>
 public static class ElasticSearchSetup
 {
+    /// <summary>构建 ElasticSearchSetup 所需的 Add Elastic Search 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="services">当前方法执行时使用的 services 输入值。</param>
     public static void AddElasticSearch(this IServiceCollection services)
     {
         var option = App.GetConfig<ElasticSearchOptions>("Logging:ElasticSearch");

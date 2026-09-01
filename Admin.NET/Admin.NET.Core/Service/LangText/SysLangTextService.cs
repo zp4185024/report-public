@@ -18,6 +18,10 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
     private readonly ISqlSugarClient _sqlSugarClient;
     private readonly SysLangTextCacheService _sysLangTextCacheService;
 
+    /// <summary>初始化 SysLangTextService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysLangTextRep">sysLangTextRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysLangTextCacheService">sysLangTextCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sqlSugarClient">sqlSugarClient 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysLangTextService(
         SqlSugarRepository<SysLangText> sysLangTextRep,
         SysLangTextCacheService sysLangTextCacheService,
@@ -28,11 +32,9 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
         _sysLangTextCacheService = sysLangTextCacheService;
     }
 
-    /// <summary>
-    /// 分页查询翻译表 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysLangTextService 的异步依赖完成 Page 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("分页查询翻译表")]
     [ApiDescriptionSettings(Name = "Page"), HttpPost]
     public async Task<SqlSugarPagedList<SysLangTextOutput>> Page(PageSysLangTextInput input)
@@ -49,6 +51,9 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
         return await query.OrderBuilder(input).ToPagedListAsync(input.Page, input.PageSize);
     }
 
+    /// <summary>调用 SysLangTextService 的异步依赖完成 List 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取翻译表")]
     [ApiDescriptionSettings(Name = "List"), HttpPost]
     public async Task<List<SysLangTextOutput>> List(ListSysLangTextInput input)
@@ -63,8 +68,8 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取翻译表详情 ℹ️
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取翻译表详情")]
     [ApiDescriptionSettings(Name = "Detail"), HttpGet]
     public async Task<SysLangText> Detail([FromQuery] QueryByIdSysLangTextInput input)
@@ -72,11 +77,9 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
         return await _sysLangTextRep.GetFirstAsync(u => u.Id == input.Id);
     }
 
-    /// <summary>
-    /// 增加翻译表 ➕
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysLangTextService 所需的 Add 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("增加翻译表")]
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     public async Task<long> Add(AddSysLangTextInput input)
@@ -85,11 +88,9 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
         return await _sysLangTextRep.InsertAsync(entity) ? entity.Id : 0;
     }
 
-    /// <summary>
-    /// 更新翻译表 ✏️
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysLangTextService 的 Update 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("更新翻译表")]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     public async Task Update(UpdateSysLangTextInput input)
@@ -100,11 +101,9 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
         _sysLangTextCacheService.UpdateCache(entity.EntityName, entity.FieldName, entity.EntityId, entity.LangCode, entity.Content);
     }
 
-    /// <summary>
-    /// 删除翻译表 ❌
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysLangTextService 中与 Delete 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("删除翻译表")]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     public async Task Delete(DeleteSysLangTextInput input)
@@ -115,11 +114,9 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
         _sysLangTextCacheService.DeleteCache(entity.EntityName, entity.FieldName, entity.EntityId, entity.LangCode);
     }
 
-    /// <summary>
-    /// 批量删除翻译表 ❌
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysLangTextService 的异步依赖完成 Batch Delete 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("批量删除翻译表")]
     [ApiDescriptionSettings(Name = "BatchDelete"), HttpPost]
     public async Task BatchDelete([Required(ErrorMessage = "主键列表不能为空")] List<DeleteSysLangTextInput> input)
@@ -137,11 +134,9 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
 
     private static readonly object _sysLangTextBatchSaveLock = new object();
 
-    /// <summary>
-    /// 批量保存翻译表 ✏️
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>遍历 SysLangTextService 当前数据并执行 Batch Save 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("批量保存翻译表")]
     [ApiDescriptionSettings(Name = "BatchSave"), HttpPost]
     public void BatchSave([Required(ErrorMessage = "列表不能为空")] List<ImportSysLangTextInput> input)
@@ -151,6 +146,7 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
             // 校验并过滤必填基本类型为null的字段
             var rows = input.Where(x =>
             {
+                // 第一阶段：检查 BatchSave 当前条件，并按匹配分支执行对应处理。
                 if (!string.IsNullOrWhiteSpace(x.Error)) return false;
                 if (x.EntityId == null)
                 {
@@ -174,6 +170,7 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
                 .ToStorage();
 
             storageable.AsInsertable.ExecuteCommand();// 不存在插入
+            // 第2阶段：根据 BatchSave 当前分支转换输入数据，并保存该阶段产生的中间结果。
             storageable.AsUpdateable.UpdateColumns(it => new
             {
                 it.EntityName,
@@ -193,11 +190,9 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 导出翻译表记录 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>整理 SysLangTextService 的 Export 数据，并生成可供调用方使用的输出。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("导出翻译表记录")]
     [ApiDescriptionSettings(Name = "Export"), HttpPost, NonUnify]
     public async Task<IActionResult> Export(PageSysLangTextInput input)
@@ -210,7 +205,7 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
     /// <summary>
     /// 下载翻译表数据导入模板 ⬇️
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("下载翻译表数据导入模板")]
     [ApiDescriptionSettings(Name = "Import"), HttpGet, NonUnify]
     public IActionResult DownloadTemplate()
@@ -220,10 +215,8 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
 
     private static readonly object _sysLangTextImportLock = new object();
 
-    /// <summary>
-    /// 导入翻译表记录 💾
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>接收并校验 SysLangTextService 的 Import Data 输入，随后写入目标状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("导入翻译表记录")]
     [ApiDescriptionSettings(Name = "Import"), HttpPost, NonUnify, UnitOfWork]
     public IActionResult ImportData([Required] IFormFile file)
@@ -286,7 +279,7 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
     /// <summary>
     /// DEEPSEEK 翻译接口
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("DEEPSEEK 翻译接口")]
     [ApiDescriptionSettings(Name = "AiTranslateText"), HttpPost]
     public async Task<string> AiTranslateText(AiTranslateTextInput input)
@@ -380,14 +373,14 @@ public partial class SysLangTextService : IDynamicApiController, ITransient
         public string message { get; set; }
     }
 
-    /// <summary>
-    /// 生成提示词
-    /// </summary>
-    /// <param name="sourceLang"></param>
-    /// <param name="targetLang"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysLangTextService 所需的 Build System Prompt 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="sourceLang">sourceLang 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="targetLang">targetLang 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string BuildSystemPrompt(string sourceLang, string targetLang)
     {
+        // 第一阶段：整理 BuildSystemPrompt 已计算的数据，并按方法契约返回最终结果。
+        // 第一阶段：整理 BuildSystemPrompt 已计算的数据，并按方法契约返回最终结果。
         return $@"作为企业软件系统专业翻译，严格遵守以下铁律：
 
 ■ 核心原则

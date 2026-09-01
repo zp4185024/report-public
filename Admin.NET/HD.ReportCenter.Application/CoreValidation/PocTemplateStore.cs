@@ -23,11 +23,18 @@ public sealed record PocStoredTemplateSummary(
 /// </summary>
 public sealed class PocTemplateRevisionConflictException : Exception
 {
+    /// <summary>初始化 PocTemplateRevisionConflictException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="expectedRevision">expectedRevision 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocTemplateRevisionConflictException(string reportCode, int expectedRevision)
         : base($"Template '{reportCode}' is no longer at revision {expectedRevision}.")
     {
     }
 
+    /// <summary>初始化 PocTemplateRevisionConflictException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="expectedRevision">expectedRevision 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="innerException">innerException 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocTemplateRevisionConflictException(
         string reportCode,
         int expectedRevision,
@@ -44,11 +51,15 @@ public sealed class PocTemplateStore : ITransient
 {
     private readonly ISqlSugarClient _database;
 
+    /// <summary>初始化 PocTemplateStore 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="database">database 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocTemplateStore(ISqlSugarClient database)
     {
         _database = database;
     }
 
+    /// <summary>调用 PocTemplateStore 的异步依赖完成 List Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocStoredTemplateSummary>> ListAsync()
     {
         var templates = await _database.Queryable<PocReportTemplate>()
@@ -126,9 +137,15 @@ public sealed class PocTemplateStore : ITransient
         return new PocStoredTemplate(reportCode, snapshotJson, bindingJson, revision);
     }
 
+    /// <summary>将 PocTemplateStore 的 To Stored Template 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="entity">entity 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocStoredTemplate ToStoredTemplate(PocReportTemplate entity) =>
         new(entity.ReportCode, entity.SnapshotJson, entity.BindingJson, entity.Revision);
 
+    /// <summary>校验 PocTemplateStore 的 Is Report Code Duplicate 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="exception">exception 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool IsReportCodeDuplicate(Exception exception)
     {
         // SQL Server 与 SQLite 的唯一键异常编码不同；POC 同时支持生产型数据库和本地验证数据库。
@@ -180,6 +197,9 @@ public sealed class PocTemplateStore : ITransient
         return false;
     }
 
+    /// <summary>校验 PocTemplateStore 的 Is Report Code Constraint 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool IsReportCodeConstraint(string message) =>
         message.Contains("uk_RcReportTemplate_ReportCode", StringComparison.OrdinalIgnoreCase) ||
         message.Contains("RcReportTemplate.ReportCode", StringComparison.OrdinalIgnoreCase) ||

@@ -11,6 +11,11 @@ namespace Admin.NET.Core;
 /// </summary>
 public class RetryEventHandlerExecutor : IEventHandlerExecutor
 {
+    /// <summary>执行 RetryEventHandlerExecutor 的 Execute Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="handler">处理完成或状态变化时调用的回调。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ExecuteAsync(EventHandlerExecutingContext context, Func<EventHandlerExecutingContext, Task> handler, CancellationToken cancellationToken)
     {
         var eventSubscribeAttribute = context.Attribute;

@@ -29,6 +29,10 @@ const state = reactive({
 });
 
 // 页面初始化
+/**
+ * 初始化 index 的 initialize Page 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initializePage = () => {
 	state.data = JSON.parse(decodeURIComponent(route.query.code || '{}' as any));
 	state.token = route.query.token;
@@ -39,6 +43,11 @@ onMounted(() => {
 });
 
 // 点击事件
+/**
+ * 响应 index 的 handle Click 事件，并协调相关状态和后续操作。
+ * @param success - success 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleClick = (success: boolean) => {
 	if (success) location.href = 'tel:' + state.data.number;
 };

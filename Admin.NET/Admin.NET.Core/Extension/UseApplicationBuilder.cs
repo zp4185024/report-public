@@ -15,6 +15,8 @@ namespace Admin.NET.Core;
 public static class UseApplicationBuilder
 {
     // 配置限流中间件策略
+    /// <summary>根据 UseApplicationBuilder 当前输入执行 Use Policy Rate Limit 规则，更新关联状态并返回该操作产生的结果。</summary>
+    /// <param name="app">当前方法执行时使用的 app 输入值。</param>
     public static void UsePolicyRateLimit(this IApplicationBuilder app)
     {
         var ipPolicyStore = app.ApplicationServices.GetRequiredService<IIpPolicyStore>();

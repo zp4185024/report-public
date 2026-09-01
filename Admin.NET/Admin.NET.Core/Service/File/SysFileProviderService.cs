@@ -21,6 +21,12 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     private readonly IOSSServiceManager _ossServiceManager;
     private static readonly string CacheKey = "sys_file_provider";
 
+    /// <summary>初始化 SysFileProviderService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">当前方法执行时使用的 userManager 输入值。</param>
+    /// <param name="sysFileProviderRep">当前方法执行时使用的 sysFileProviderRep 输入值。</param>
+    /// <param name="sysCacheService">当前方法执行时使用的 sysCacheService 输入值。</param>
+    /// <param name="ossServiceFactory">当前方法执行时使用的 ossServiceFactory 输入值。</param>
+    /// <param name="ossServiceManager">当前方法执行时使用的 ossServiceManager 输入值。</param>
     public SysFileProviderService(UserManager userManager,
         SqlSugarRepository<SysFileProvider> sysFileProviderRep,
         SysCacheService sysCacheService,
@@ -37,8 +43,8 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取文件存储提供者分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取文件存储提供者分页列表")]
     [NonAction]
     public async Task<SqlSugarPagedList<SysFileProvider>> GetFileProviderPage([FromQuery] PageFileProviderInput input)
@@ -55,7 +61,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取文件存储提供者列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取文件存储提供者列表")]
     [NonAction]
     public async Task<List<SysFileProvider>> GetFileProviderList()
@@ -70,8 +76,8 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 增加文件存储提供者 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加文件存储提供者")]
     [NonAction]
@@ -116,8 +122,8 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新文件存储提供者 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新文件存储提供者")]
     [NonAction]
@@ -152,8 +158,8 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除文件存储提供者 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除文件存储提供者")]
     [NonAction]
@@ -195,8 +201,8 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取文件存储提供者详情 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取文件存储提供者详情")]
     [NonAction]
     public async Task<SysFileProvider> GetFileProvider([FromQuery] QueryFileProviderInput input)
@@ -207,9 +213,9 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据提供者和存储桶获取配置
     /// </summary>
-    /// <param name="provider"></param>
-    /// <param name="bucketName"></param>
-    /// <returns></returns>
+    /// <param name="provider">当前方法执行时使用的 provider 输入值。</param>
+    /// <param name="bucketName">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<SysFileProvider?> GetFileProviderByBucket(string provider, string bucketName)
     {
@@ -220,8 +226,8 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据ID获取配置
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <param name="id">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<SysFileProvider?> GetFileProviderById(long id)
     {
@@ -233,7 +239,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// 根据存储桶名称获取存储提供者
     /// </summary>
     /// <param name="bucketName">存储桶名称</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<SysFileProvider?> GetProviderByBucketName(string bucketName)
     {
@@ -247,7 +253,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取默认存储提供者
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<SysFileProvider?> GetDefaultProvider()
     {
@@ -265,7 +271,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取默认存储提供者信息 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取默认存储提供者信息")]
     [NonAction]
     public async Task<SysFileProvider?> GetDefaultProviderInfo()
@@ -276,8 +282,8 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 设置默认存储提供者 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "SetDefault"), HttpPost]
     [DisplayName("设置默认存储提供者")]
     [NonAction]
@@ -324,7 +330,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取缓存的文件提供者列表
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<SysFileProvider>> GetCachedFileProviders()
     {
@@ -338,10 +344,8 @@ public class SysFileProviderService : IDynamicApiController, ITransient
         }, TimeSpan.FromMinutes(30));
     }
 
-    /// <summary>
-    /// 清除缓存
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>移除 SysFileProviderService 中与 Clear Cache 对应的数据，并清理关联状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task ClearCache()
     {
@@ -352,7 +356,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取所有可用的存储桶列表
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<string>> GetAvailableBuckets()
     {
@@ -363,7 +367,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取存储桶和提供者的映射关系
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<Dictionary<string, List<SysFileProvider>>> GetBucketProviderMapping()
     {
@@ -388,7 +392,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// 验证存储提供者配置
     /// </summary>
     /// <param name="provider">存储提供者配置</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     private async Task ValidateProviderConfiguration(SysFileProvider provider)
     {
@@ -443,7 +447,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// </summary>
     /// <param name="provider">存储提供者类型</param>
     /// <param name="bucketName">存储桶名称</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     private async Task ValidateBucketName(string provider, string bucketName)
     {
@@ -487,7 +491,7 @@ public class SysFileProviderService : IDynamicApiController, ITransient
     /// 处理默认提供者逻辑
     /// </summary>
     /// <param name="provider">存储提供者配置</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     private async Task HandleDefaultProviderLogic(SysFileProvider provider)
     {

@@ -10,12 +10,10 @@ namespace Admin.NET.Core;
 
 public class ExcelHelper
 {
-    /// <summary>
-    /// 数据导入
-    /// </summary>
-    /// <param name="file"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <summary>接收并校验 ExcelHelper 的 Import Data 输入，随后写入目标状态。</summary>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="action">action 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IActionResult ImportData<IN, T>(IFormFile file, Action<List<IN>, Action<StorageableResult<T>, List<IN>, List<T>>> action) where IN : BaseImportInput, new() where T : EntityBaseId, new()
     {
         try
@@ -59,9 +57,9 @@ public class ExcelHelper
     /// <summary>
     /// 导出Xlsx数据
     /// </summary>
-    /// <param name="list"></param>
-    /// <param name="fileName"></param>
-    /// <returns></returns>
+    /// <param name="list">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="fileName">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IActionResult ExportData(dynamic list, string fileName = "导入记录")
     {
         var exporter = new ExcelExporter();
@@ -72,10 +70,10 @@ public class ExcelHelper
     /// <summary>
     /// 根据类型导出Xlsx模板
     /// </summary>
-    /// <param name="list"></param>
-    /// <param name="filename"></param>
-    /// <param name="addListValidationFun"></param>
-    /// <returns></returns>
+    /// <param name="list">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="filename">需要读取、校验或转换的业务值。</param>
+    /// <param name="addListValidationFun">addListValidationFun 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IActionResult ExportTemplate<T>(IEnumerable<T> list, string filename = "导入模板", Func<ExcelWorksheet, PropertyInfo, IEnumerable<string>> addListValidationFun = null)
     {
         using var package = new ExcelPackage((ExportData(list, filename) as XlsxFileResult)!.Stream);

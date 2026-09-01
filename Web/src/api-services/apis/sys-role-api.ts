@@ -545,6 +545,7 @@ export const SysRoleApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysRoleAddPost(body?: AddRoleInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysRoleApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysRoleApiAxiosParamCreator(configuration).apiSysRoleAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -576,6 +577,7 @@ export const SysRoleApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysRoleApiAxiosParamCreator(configuration).apiSysRoleGrantDataScopePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysRoleApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -616,6 +618,7 @@ export const SysRoleApiFp = function(configuration?: Configuration) {
          */
         async apiSysRoleOwnMenuListGet(id: number, status?: StatusEnum, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListInt64>>> {
             const localVarAxiosArgs = await SysRoleApiAxiosParamCreator(configuration).apiSysRoleOwnMenuListGet(id, status, options);
+            // 第3阶段：整理 SysRoleApiFp 已计算的数据，并按方法契约返回最终结果。
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
@@ -647,6 +650,7 @@ export const SysRoleApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysRoleApiAxiosParamCreator(configuration).apiSysRolePagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysRoleApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -695,6 +699,7 @@ export const SysRoleApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysRoleAddPost(body?: AddRoleInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysRoleApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysRoleApiFp(configuration).apiSysRoleAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -725,6 +730,7 @@ export const SysRoleApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysRoleGrantMenuPost(body?: RoleMenuInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysRoleApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysRoleApiFp(configuration).apiSysRoleGrantMenuPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -766,6 +772,7 @@ export const SysRoleApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysRolePagePost(body?: PageRoleInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysRole>> {
+            // 第3阶段：整理 SysRoleApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysRoleApiFp(configuration).apiSysRolePagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

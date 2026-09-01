@@ -4,19 +4,37 @@ import type { App } from 'vue';
  * 按钮波浪指令
  * @directive 默认方式：v-waves，如 `<div v-waves></div>`
  * @directive 参数方式：v-waves=" |light|red|orange|purple|green|teal"，如 `<div v-waves="'light'"></div>`
- */
+   * 初始化 customDirective 的 waves Directive 监听流程，并在状态变化时同步执行相关操作。
+  */
 export function wavesDirective(app: App) {
 	app.directive('waves', {
+		/**
+		 * 在元素挂载后初始化 customDirective 指令行为，并注册所需事件或界面状态。
+		 * @param el - el 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @param binding - 模板字段与工作簿坐标之间的绑定定义。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		mounted(el, binding) {
 			el.classList.add('waves-effect');
 			binding.value && el.classList.add(`waves-${binding.value}`);
+			/**
+			 * 更新 customDirective 的 set Convert Style 状态，并同步相关业务数据。
+			 * @param obj - obj 对应的业务输入；具体类型和空值范围以方法签名为准。
+			 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+			 */
 			function setConvertStyle(obj: { [key: string]: unknown }) {
+				// 第一阶段：构造 wavesDirective 当前阶段需要的中间数据和执行参数。
 				let style: string = '';
 				for (let i in obj) {
 					if (obj.hasOwnProperty(i)) style += `${i}:${obj[i]};`;
 				}
 				return style;
 			}
+			/**
+			 * 响应 customDirective 的 on Current Click 事件，并协调相关状态和后续操作。
+			 * @param e - 触发当前处理流程的界面或业务事件。
+			 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+			 */
 			function onCurrentClick(e: { [key: string]: unknown }) {
 				let elDiv = document.createElement('div');
 				elDiv.classList.add('waves-ripple');
@@ -31,6 +49,7 @@ export function wavesDirective(app: App) {
 				};
 				elDiv.setAttribute('style', setConvertStyle(styles));
 				setTimeout(() => {
+					// 第2阶段：根据 wavesDirective 当前分支转换输入数据，并保存该阶段产生的中间结果。
 					elDiv.setAttribute(
 						'style',
 						setConvertStyle({
@@ -47,6 +66,11 @@ export function wavesDirective(app: App) {
 			}
 			el.addEventListener('mousedown', onCurrentClick, false);
 		},
+		/**
+		 * 在元素卸载时释放 customDirective 指令创建的监听器和临时资源。
+		 * @param el - el 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		unmounted(el) {
 			el.addEventListener('mousedown', () => {});
 		},
@@ -62,14 +86,27 @@ export function wavesDirective(app: App) {
  */
 export function dragDirective(app: App) {
 	app.directive('drag', {
+		/**
+		 * 在元素挂载后初始化 customDirective 指令行为，并注册所需事件或界面状态。
+		 * @param el - el 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @param binding - 模板字段与工作簿坐标之间的绑定定义。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		mounted(el, binding) {
 			if (!binding.value) return false;
 
 			const dragDom = document.querySelector(binding.value[0]) as HTMLElement;
 			const dragHeader = document.querySelector(binding.value[1]) as HTMLElement;
 
+			/** 鼠标进入拖动区域时切换为移动光标，提示当前元素支持拖拽。 */
 			dragHeader.onmouseover = () => (dragHeader.style.cursor = `move`);
 
+			/**
+			 * 创建并返回 customDirective 的 down 配置对象，集中提供相关状态和操作入口。
+			 * @param e - 触发当前处理流程的界面或业务事件。
+			 * @param type - type 对应的业务输入；具体类型和空值范围以方法签名为准。
+			 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+			 */
 			function down(e: any, type: string) {
 				// 鼠标按下，计算当前元素距离可视区的距离
 				const disX = type === 'pc' ? e.clientX - dragHeader.offsetLeft : e.touches[0].clientX - dragHeader.offsetLeft;
@@ -116,6 +153,13 @@ export function dragDirective(app: App) {
 				};
 			}
 
+			/**
+			 * 根据指针位置更新 customDirective 的 move 坐标，并限制目标元素不超出可视区域。
+			 * @param e - 触发当前处理流程的界面或业务事件。
+			 * @param type - type 对应的业务输入；具体类型和空值范围以方法签名为准。
+			 * @param obj - obj 对应的业务输入；具体类型和空值范围以方法签名为准。
+			 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+			 */
 			function move(e: any, type: string, obj: any) {
 				let { disX, disY, minDragDomLeft, maxDragDomLeft, minDragDomTop, maxDragDomTop, styL, styT } = obj;
 
@@ -148,9 +192,11 @@ export function dragDirective(app: App) {
 			 */
 			dragHeader.onmousedown = (e) => {
 				const obj = down(e, 'pc');
+				/** 根据鼠标当前位置持续更新对话框坐标，并限制在可视区域内。 */
 				document.onmousemove = (e) => {
 					move(e, 'pc', obj);
 				};
+				/** 鼠标释放后移除本次拖动注册的全局移动与释放处理器。 */
 				document.onmouseup = () => {
 					document.onmousemove = null;
 					document.onmouseup = null;
@@ -165,9 +211,11 @@ export function dragDirective(app: App) {
 			 */
 			dragHeader.ontouchstart = (e) => {
 				const obj = down(e, 'app');
+				/** 根据触摸点当前位置持续更新对话框坐标，并限制在可视区域内。 */
 				document.ontouchmove = (e) => {
 					move(e, 'app', obj);
 				};
+				/** 手指离开后移除本次拖动注册的全局触摸处理器。 */
 				document.ontouchend = () => {
 					document.ontouchmove = null;
 					document.ontouchend = null;
@@ -184,6 +232,12 @@ export function dragDirective(app: App) {
  */
  export function reclickDirective(app: App) {
 	app.directive('reclick', {
+		/**
+		 * 在元素挂载后初始化 customDirective 指令行为，并注册所需事件或界面状态。
+		 * @param el - el 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @param time - time 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		mounted(el, time) {
 			el.addEventListener('click', () => {
 				if (!el.disabled) {
@@ -197,6 +251,11 @@ export function dragDirective(app: App) {
 				}
 			});
 		},
+		/**
+		 * 在元素卸载时释放 customDirective 指令创建的监听器和临时资源。
+		 * @param el - el 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		unmounted(el) {
 			el.disabled = false;
 		},

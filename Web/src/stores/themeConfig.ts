@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia';
 
 export const useThemeConfig = defineStore('themeConfig', {
+	/**
+	 * 创建并返回 themeConfig 状态仓库的初始数据，供页面和操作方法共享。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	state: (): ThemeConfigState => ({
 		themeConfig: {
 			// 是否开启布局配置抽屉
@@ -166,6 +170,11 @@ export const useThemeConfig = defineStore('themeConfig', {
 		},
 	}),
 	actions: {
+		/**
+		 * 更新 themeConfig 的 set Theme Config 状态，并同步相关业务数据。
+		 * @param data - 本次操作使用的输入数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		setThemeConfig(data: ThemeConfigState) {
 			this.themeConfig = data.themeConfig;
 		},

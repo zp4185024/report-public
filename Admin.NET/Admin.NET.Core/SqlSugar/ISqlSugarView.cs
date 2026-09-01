@@ -14,7 +14,7 @@ public interface ISqlSugarView
     /// <summary>
     /// 获取视图查询sql语句
     /// </summary>
-    /// <param name="db"></param>
-    /// <returns></returns>
+    /// <param name="db">db 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetQueryableSqlString(SqlSugarScopeProvider db);
 }

@@ -6,7 +6,13 @@ export const saveBeforeDataExportMessage =
 export interface SavedRevisionGate {
   revision: number;
   dirty: boolean;
+  /**
+   * 负责 dataExportFlow 的 confirm Save 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+   */
   confirmSave(): boolean;
+  /**
+   * 更新 dataExportFlow 的 save 状态，并同步相关业务数据。
+   */
   save(): Promise<number>;
 }
 

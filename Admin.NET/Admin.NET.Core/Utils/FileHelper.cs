@@ -14,8 +14,8 @@ public static class FileHelper
     /// <summary>
     /// 尝试删除文件/目录
     /// </summary>
-    /// <param name="path"></param>
-    /// <returns></returns>
+    /// <param name="path">path 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool TryDelete(string path)
     {
         try
@@ -32,12 +32,10 @@ public static class FileHelper
         }
     }
 
-    /// <summary>
-    /// 复制目录
-    /// </summary>
-    /// <param name="sourceDir"></param>
-    /// <param name="destinationDir"></param>
-    /// <param name="overwrite"></param>
+    /// <summary>按照 FileHelper 的业务约束完成 Copy Directory 数据合并或复制。</summary>
+    /// <param name="sourceDir">sourceDir 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="destinationDir">destinationDir 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="overwrite">overwrite 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public static void CopyDirectory(string sourceDir, string destinationDir, bool overwrite = false)
     {
         // 检查源目录是否存在
@@ -108,11 +106,9 @@ public static class FileHelper
         await WriteToFileAsync(filePath, sb);
     }
 
-    /// <summary>
-    /// 写入文件内容
-    /// </summary>
-    /// <param name="filePath"></param>
-    /// <param name="sb"></param>
+    /// <summary>更新 FileHelper 的 Write To File Async 状态，并同步相关业务数据。</summary>
+    /// <param name="filePath">filePath 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sb">sb 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public static async Task WriteToFileAsync(string filePath, StringBuilder sb)
     {
         Console.ForegroundColor = ConsoleColor.DarkGreen;

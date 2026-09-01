@@ -9,6 +9,11 @@ import request from '/@/utils/request';
  */
 export function useLoginApi() {
 	return {
+		/**
+		 * 构造并发送 index 的 sign In 网络请求，随后按接口类型返回响应结果。
+		 * @param data - 本次操作使用的输入数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		signIn: (data: object) => {
 			return request({
 				url: '/user/signIn',
@@ -16,6 +21,11 @@ export function useLoginApi() {
 				data,
 			});
 		},
+		/**
+		 * 构造并发送 index 的 sign Out 网络请求，随后按接口类型返回响应结果。
+		 * @param data - 本次操作使用的输入数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		signOut: (data: object) => {
 			return request({
 				url: '/user/signOut',

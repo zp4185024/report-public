@@ -28,11 +28,9 @@ public class SysOpenAccessService : IDynamicApiController, ITransient
         _sysCacheService = sysCacheService;
     }
 
-    /// <summary>
-    /// 生成签名
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysOpenAccessService 所需的 Generate Signature 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("生成签名")]
     public string GenerateSignature(GenerateSignatureInput input)
     {
@@ -51,8 +49,8 @@ public class SysOpenAccessService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取开放接口身份分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取开放接口身份分页列表")]
     public async Task<SqlSugarPagedList<OpenAccessOutput>> Page(OpenAccessInput input)
     {
@@ -72,8 +70,8 @@ public class SysOpenAccessService : IDynamicApiController, ITransient
     /// <summary>
     /// 增加开放接口身份 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加开放接口身份")]
     public async Task AddOpenAccess(AddOpenAccessInput input)
@@ -88,8 +86,8 @@ public class SysOpenAccessService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新开放接口身份 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新开放接口身份")]
     public async Task UpdateOpenAccess(UpdateOpenAccessInput input)
@@ -106,8 +104,8 @@ public class SysOpenAccessService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除开放接口身份 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除开放接口身份")]
     public async Task DeleteOpenAccess(DeleteOpenAccessInput input)
@@ -119,10 +117,8 @@ public class SysOpenAccessService : IDynamicApiController, ITransient
         await _sysOpenAccessRep.DeleteAsync(u => u.Id == input.Id);
     }
 
-    /// <summary>
-    /// 创建密钥 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>构建 SysOpenAccessService 所需的 Create Secret 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("创建密钥")]
     public async Task<string> CreateSecret()
     {
@@ -132,8 +128,8 @@ public class SysOpenAccessService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据 Key 获取对象
     /// </summary>
-    /// <param name="accessKey"></param>
-    /// <returns></returns>
+    /// <param name="accessKey">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<SysOpenAccess> GetByKey(string accessKey)
     {

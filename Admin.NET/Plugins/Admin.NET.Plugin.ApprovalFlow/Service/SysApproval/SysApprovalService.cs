@@ -14,6 +14,10 @@ public class SysApprovalService : ITransient
     private readonly SqlSugarRepository<ApprovalFormRecord> _approvalFormRep;
     private readonly ApprovalFlowService _approvalFlowService;
 
+    /// <summary>初始化 SysApprovalService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="approvalFlowRep">approvalFlowRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="approvalFormRep">approvalFormRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="approvalFlowService">approvalFlowService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysApprovalService(SqlSugarRepository<ApprovalFlowRecord> approvalFlowRep, SqlSugarRepository<ApprovalFormRecord> approvalFormRep, ApprovalFlowService approvalFlowService)
     {
         _approvalFlowRep = approvalFlowRep;
@@ -21,11 +25,9 @@ public class SysApprovalService : ITransient
         _approvalFlowService = approvalFlowService;
     }
 
-    /// <summary>
-    /// 匹配审批流程
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>尝试或判断 SysApprovalService 的 Match Approval 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task MatchApproval(HttpContext context)
     {

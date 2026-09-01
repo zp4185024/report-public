@@ -74,10 +74,19 @@ const state = reactive({
 	content: '',
 });
 // 前往通知中心点击
+/**
+ * 负责 userNews 的 go To Notice 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const goToNotice = () => {
 	router.push('/dashboard/notice');
 };
 // 查看消息详情
+/**
+ * 负责 userNews 的 view Notice Detail 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param notice - notice 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const viewNoticeDetail = async (notice: any) => {
 	state.content = notice.content;
 	state.dialogVisible = true;

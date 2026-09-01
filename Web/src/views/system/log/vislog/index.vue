@@ -116,6 +116,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	if (state.queryParams.startTime == null) state.queryParams.startTime = undefined;
 	if (state.queryParams.endTime == null) state.queryParams.endTime = undefined;
@@ -134,6 +138,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.startTime = undefined;
 	state.queryParams.endTime = undefined;
@@ -146,6 +154,10 @@ const resetQuery = () => {
 };
 
 // 清空日志
+/**
+ * 移除 index 中与 clear Log 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clearLog = async () => {
 	state.loading = true;
 	await getAPI(SysLogVisApi).apiSysLogVisClearPost();
@@ -156,12 +168,22 @@ const clearLog = async () => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();
@@ -174,6 +196,10 @@ const shortcuts = [
 	},
 	{
 		text: '昨天',
+		/**
+		 * 计算并返回 index 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const date = new Date();
 			date.setTime(date.getTime() - 3600 * 1000 * 24);
@@ -182,6 +208,10 @@ const shortcuts = [
 	},
 	{
 		text: '上周',
+		/**
+		 * 计算并返回 index 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const date = new Date();
 			date.setTime(date.getTime() - 3600 * 1000 * 24 * 7);

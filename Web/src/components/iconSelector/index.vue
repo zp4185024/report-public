@@ -42,36 +42,64 @@ const props = defineProps({
 	// 输入框前置内容
 	prepend: {
 		type: String,
+		/**
+		 * 为 prepend 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => 'ele-Pointer',
 	},
 	// 输入框占位文本
 	placeholder: {
 		type: String,
+		/**
+		 * 为 placeholder 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '请输入内容搜索图标或者选择图标',
 	},
 	// 输入框占位文本
 	size: {
 		type: String,
+		/**
+		 * 为 size 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => 'default',
 	},
 	// 弹窗标题
 	title: {
 		type: String,
+		/**
+		 * 为 title 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '请选择图标',
 	},
 	// 禁用
 	disabled: {
 		type: Boolean,
+		/**
+		 * 为 disabled 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => false,
 	},
 	// 是否可清空
 	clearable: {
 		type: Boolean,
+		/**
+		 * 为 clearable 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => true,
 	},
 	// 自定义空状态描述文字
 	emptyDescription: {
 		type: String,
+		/**
+		 * 为 emptyDescription 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '无相关图标',
 	},
 	// 双向绑定值，默认为 modelValue，
@@ -111,6 +139,10 @@ const fontIconSheetsFilterList = computed(() => {
 	});
 });
 // 根据 tab name 类型设置图标
+/**
+ * 负责 index 的 font Icon Tab Name List 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const fontIconTabNameList = () => {
 	let iconList: any = [];
 	if (state.fontIconTabActive === 'ali') iconList = state.fontIconList.ali;
@@ -119,12 +151,20 @@ const fontIconTabNameList = () => {
 	return iconList;
 };
 // 处理 icon 双向绑定数值回显
+/**
+ * 初始化 index 的 init Mode Value Echo 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initModeValueEcho = () => {
 	if (props.modelValue === '') return ((<string | undefined>state.fontIconPlaceholder) = props.placeholder);
 	(<string | undefined>state.fontIconPlaceholder) = props.modelValue;
 	(<string | undefined>state.fontIconPrefix) = props.modelValue;
 };
 // 处理 icon 类型，用于回显时，tab 高亮与初始化数据
+/**
+ * 初始化 index 的 init Font Icon Name 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initFontIconName = () => {
 	let name = 'ali';
 	if (props.modelValue == undefined) name = 'ele';
@@ -136,6 +176,11 @@ const initFontIconName = () => {
 	return name;
 };
 // 初始化数据
+/**
+ * 遍历 index 数据并执行 init Font Icon Data 转换，生成后续流程需要的结果。
+ * @param name - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initFontIconData = async (name: string) => {
 	if (name === 'ali') {
 		// 阿里字体图标使用 `iconfont xxx`
@@ -163,11 +208,21 @@ const initFontIconData = async (name: string) => {
 	initModeValueEcho();
 };
 // 图标点击切换
+/**
+ * 响应 index 的 on Icon Click 事件，并协调相关状态和后续操作。
+ * @param pane - pane 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onIconClick = (pane: TabsPaneContext) => {
 	initFontIconData(pane.paneName as string);
 	inputWidthRef.value.focus();
 };
 // 获取当前点击的 icon 图标
+/**
+ * 响应 index 的 on Col Click 事件，并协调相关状态和后续操作。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColClick = (v: string) => {
 	state.fontIconPlaceholder = v;
 	state.fontIconPrefix = v;
@@ -176,18 +231,30 @@ const onColClick = (v: string) => {
 	inputWidthRef.value.focus();
 };
 // 清空当前点击的 icon 图标
+/**
+ * 响应 index 的 on Clear Font Icon 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onClearFontIcon = () => {
 	state.fontIconPrefix = '';
 	emit('clear', state.fontIconPrefix);
 	emit('update:modelValue', state.fontIconPrefix);
 };
 // 获取 input 的宽度
+/**
+ * 查询或读取 index 所需的 get Input Width 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getInputWidth = () => {
 	nextTick(() => {
 		state.fontIconWidth = inputWidthRef.value.$el.offsetWidth;
 	});
 };
 // 监听页面宽度改变
+/**
+ * 初始化 index 的 init Resize 监听流程，并在状态变化时同步执行相关操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initResize = () => {
 	window.addEventListener('resize', () => {
 		getInputWidth();

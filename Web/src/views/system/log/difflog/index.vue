@@ -115,6 +115,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	if (state.queryParams.startTime == null) state.queryParams.startTime = undefined;
 	if (state.queryParams.endTime == null) state.queryParams.endTime = undefined;
@@ -132,6 +136,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.startTime = undefined;
 	state.queryParams.endTime = undefined;
@@ -139,18 +147,33 @@ const resetQuery = () => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();
 };
 
 // 合并差异表格表名列
+/**
+ * 创建并返回 index 的 diff Table Span Method 配置对象，集中提供相关状态和操作入口。
+ * @param itme - itme 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const diffTableSpanMethod = ({columnIndex, rowIndex}: any, itme: any) => {
   if (columnIndex === 0) {
     if (rowIndex === 0) {
@@ -167,6 +190,11 @@ const diffTableSpanMethod = ({columnIndex, rowIndex}: any, itme: any) => {
   }
 }
 
+/**
+ * 将 index 中的 format Sql 输入转换为调用方需要的稳定格式。
+ * @param sql - sql 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const formatSql = (sql: string) => {
   // 移除多余的空格
   let formatted = sql.replace(/\s+/g, ' ').trim();
@@ -194,6 +222,12 @@ const formatSql = (sql: string) => {
   return formatted;
 };
 
+/**
+ * 负责 index 的 lcs 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param s1 - s1 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param s2 - s2 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function lcs(s1: string, s2: string): number[][] {
   const m = s1.length;
   const n = s2.length;
@@ -211,6 +245,13 @@ function lcs(s1: string, s2: string): number[][] {
   return dp;
 }
 
+/**
+ * 遍历 index 数据并执行 mark Diff 转换，生成后续流程需要的结果。
+ * @param oldData - 本次操作使用的输入数据。
+ * @param newData - 本次操作使用的输入数据。
+ * @param returnOld - returnOld 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function markDiff(oldData: any, newData: any, returnOld: boolean): string {
   if (typeof oldData !== 'string' || typeof newData !== 'string') {
     return `<span class="diff-${returnOld ? 'delete' : 'add'}">${returnOld ? oldData : newData}</span>`;
@@ -254,6 +295,10 @@ const shortcuts = [
 	},
 	{
 		text: '昨天',
+		/**
+		 * 计算并返回 index 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const date = new Date();
 			date.setTime(date.getTime() - 3600 * 1000 * 24);
@@ -262,6 +307,10 @@ const shortcuts = [
 	},
 	{
 		text: '上周',
+		/**
+		 * 计算并返回 index 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const date = new Date();
 			date.setTime(date.getTime() - 3600 * 1000 * 24 * 7);

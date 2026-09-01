@@ -5,6 +5,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocTemplateValidatorTests
 {
+    /// <summary>验证 Scan Returns Canonical Bindings For Valid Minimal Snapshot 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_ReturnsCanonicalBindingsForValidMinimalSnapshot()
     {
@@ -30,6 +31,7 @@ public sealed class PocTemplateValidatorTests
             detail.Fields);
     }
 
+    /// <summary>验证 Scan Accepts Dataset Field Codes Containing Underscores 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_AcceptsDatasetFieldCodesContainingUnderscores()
     {
@@ -50,6 +52,7 @@ public sealed class PocTemplateValidatorTests
             Assert.IsType<PocDetailBinding>(binding.DetailBinding).Fields);
     }
 
+    /// <summary>验证 Scan Preserves Parameter Bindings When Detail Tokens Are Absent 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_PreservesParameterBindingsWhenDetailTokensAreAbsent()
     {
@@ -83,9 +86,11 @@ public sealed class PocTemplateValidatorTests
         Assert.Null(binding.DetailBinding);
     }
 
+    /// <summary>验证 Scan Sorts Parameter Bindings By Canonical Location And Code 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_SortsParameterBindingsByCanonicalLocationAndCode()
     {
+        // 第一阶段：构造 Scan_SortsParameterBindingsByCanonicalLocationAndCode 当前步骤需要的中间数据和执行参数。
         var snapshot = new JObject
         {
             ["sheets"] = new JObject
@@ -121,6 +126,7 @@ public sealed class PocTemplateValidatorTests
             }
         };
 
+        // 第2阶段：构造 Scan_SortsParameterBindingsByCanonicalLocationAndCode 当前步骤需要的中间数据和执行参数。
         var binding = PocTemplateValidator.Scan(snapshot.ToString());
 
         Assert.Equal(
@@ -134,6 +140,11 @@ public sealed class PocTemplateValidatorTests
             binding.ParameterBindings);
     }
 
+    /// <summary>验证 Scan Rejects Unknown Binding Codes 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="column">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="address">address 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData(1, 0, "{{params.unknown}}", "A2")]
     [InlineData(5, 0, "{{detail.unknown}}", "A6")]
@@ -149,6 +160,7 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains(address, exception.Message);
     }
 
+    /// <summary>验证 Scan Rejects Detail Token Mixed With Literal Text 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_RejectsDetailTokenMixedWithLiteralText()
     {
@@ -162,6 +174,8 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A6", exception.Message);
     }
 
+    /// <summary>验证 Scan Accepts Ascii Whitespace Inside Tokens And Around Detail 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="whitespace">whitespace 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData(" ")]
     [InlineData("\t")]
@@ -187,6 +201,8 @@ public sealed class PocTemplateValidatorTests
         Assert.NotNull(binding.DetailBinding);
     }
 
+    /// <summary>验证 Scan Rejects Non Ascii Whitespace Inside Token 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="whitespace">whitespace 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("\uFEFF")]
     [InlineData("\u0085")]
@@ -202,6 +218,8 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A2", exception.Message);
     }
 
+    /// <summary>验证 Scan Rejects Non Ascii Whitespace Around Detail Token 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="whitespace">whitespace 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("\uFEFF")]
     [InlineData("\u0085")]
@@ -217,6 +235,7 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A6", exception.Message);
     }
 
+    /// <summary>验证 Scan Allows Non Ascii Whitespace In Ordinary Text Without Tokens 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_AllowsNonAsciiWhitespaceInOrdinaryTextWithoutTokens()
     {
@@ -229,6 +248,7 @@ public sealed class PocTemplateValidatorTests
         Assert.NotNull(binding.DetailBinding);
     }
 
+    /// <summary>验证 Scan Rejects Detail Tokens On Different Rows 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_RejectsDetailTokensOnDifferentRows()
     {
@@ -247,6 +267,7 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("D7", exception.Message);
     }
 
+    /// <summary>验证 Scan Reports Existing Detail Region When Another Sheet Contains Detail Tokens 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_ReportsExistingDetailRegionWhenAnotherSheetContainsDetailTokens()
     {
@@ -273,6 +294,7 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A1", exception.Message);
     }
 
+    /// <summary>验证 Scan Rejects Merge That Touches Detail Template Row 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_RejectsMergeThatTouchesDetailTemplateRow()
     {
@@ -295,6 +317,8 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A6", exception.Message);
     }
 
+    /// <summary>验证 Scan Rejects Malformed Token Syntax 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     [Theory]
     [InlineData("{{params.hospitalId}")]
     [InlineData("{params.hospitalId}}")]
@@ -312,6 +336,9 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A2", exception.Message);
     }
 
+    /// <summary>验证 Scan Rejects Invalid Coordinate Keys 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="coordinate">coordinate 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="invalidKey">需要读取、校验或转换的业务值。</param>
     [Theory]
     [InlineData("row", "not-a-row")]
     [InlineData("row", "-1")]
@@ -337,6 +364,9 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains(invalidKey, exception.Message);
     }
 
+    /// <summary>验证 Scan Rejects Primitive Snapshot Nodes 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="target">本次转换或写入使用的数据对象。</param>
+    /// <param name="expectedContext">本次操作共享的运行上下文。</param>
     [Theory]
     [InlineData("sheets", "sheets")]
     [InlineData("sheet", "report-sheet")]
@@ -372,6 +402,8 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains(expectedContext, exception.Message);
     }
 
+    /// <summary>验证 Scan Rejects Malformed Merge Data Nodes 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="target">本次转换或写入使用的数据对象。</param>
     [Theory]
     [InlineData("mergeData")]
     [InlineData("mergeEntry")]
@@ -399,6 +431,8 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A6", exception.Message);
     }
 
+    /// <summary>验证 Scan Allows Missing Or Empty Sheets And Cell Data 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="scenario">scenario 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("missing-sheets")]
     [InlineData("empty-sheets")]
@@ -428,6 +462,8 @@ public sealed class PocTemplateValidatorTests
         Assert.Null(binding.DetailBinding);
     }
 
+    /// <summary>验证 Scan Rejects Token Adjacent To Extra Brace 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     [Theory]
     [InlineData("{{{params.hospitalId}}")]
     [InlineData("{{params.hospitalId}}}")]
@@ -443,6 +479,7 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("A2", exception.Message);
     }
 
+    /// <summary>验证 Scan Allows Ordinary Single Brace Text Around Parameter Token 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_AllowsOrdinarySingleBraceTextAroundParameterToken()
     {
@@ -456,6 +493,7 @@ public sealed class PocTemplateValidatorTests
             binding.ParameterBindings);
     }
 
+    /// <summary>验证 Scan Rejects Snapshot Larger Than Four Mebibytes Before Parsing 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Scan_RejectsSnapshotLargerThanFourMebibytesBeforeParsing()
     {
@@ -467,6 +505,8 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains("4 MiB", exception.Message);
     }
 
+    /// <summary>构建 PocTemplateValidatorTests 所需的 Create Snapshot 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject CreateSnapshot() =>
         new()
         {
@@ -496,6 +536,11 @@ public sealed class PocTemplateValidatorTests
             }
         };
 
+    /// <summary>更新 PocTemplateValidatorTests 的 Set Cell Value 状态，并同步相关业务数据。</summary>
+    /// <param name="snapshot">包含工作簿结构、单元格和样式信息的快照数据。</param>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="column">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void SetCellValue(JObject snapshot, int row, int column, string value) =>
         snapshot["sheets"]!["report-sheet"]!["cellData"]![row.ToString()]![column.ToString()]!["v"] = value;
 }

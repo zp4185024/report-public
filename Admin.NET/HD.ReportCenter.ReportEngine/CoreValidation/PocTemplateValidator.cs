@@ -23,6 +23,10 @@ public static partial class PocTemplateValidator
         return Scan(snapshotJson, PocReportCatalog.GetDefinition());
     }
 
+    /// <summary>扫描 PocTemplateValidator 接收的结构化输入，校验业务标记并返回稳定排序的结果。</summary>
+    /// <param name="snapshotJson">snapshotJson 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="definition">描述字段、参数或业务约束的定义对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static PocTemplateBinding Scan(
         string snapshotJson,
         PocReportDefinition definition)
@@ -197,6 +201,10 @@ public static partial class PocTemplateValidator
         return new PocTemplateBinding(1, orderedParameters, detailBinding);
     }
 
+    /// <summary>校验 PocTemplateValidator 的 Ensure Detail Row Is Not Merged 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="snapshot">包含工作簿结构、单元格和样式信息的快照数据。</param>
+    /// <param name="sheetId">需要定位的业务记录标识。</param>
+    /// <param name="detailRow">需要遍历、筛选或写入的业务数据集合。</param>
     private static void EnsureDetailRowIsNotMerged(JObject snapshot, string sheetId, int detailRow)
     {
         var mergeDataToken = snapshot["sheets"]?[sheetId]?["mergeData"];
@@ -229,11 +237,19 @@ public static partial class PocTemplateValidator
         }
     }
 
+    /// <summary>构建 PocTemplateValidator 所需的 Create Merge Data Exception 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="sheetId">需要定位的业务记录标识。</param>
+    /// <param name="detailRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocTemplateValidationException CreateMergeDataException(string sheetId, int detailRow) =>
         new(
             $"mergeData at sheet '{sheetId}' must contain valid row coordinates near " +
             $"cell {GetCellAddress(detailRow, 0)}.");
 
+    /// <summary>尝试或判断 PocTemplateValidator 的 Try Read Coordinate 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="coordinate">coordinate 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool TryReadCoordinate(JToken? token, out int coordinate)
     {
         // 后台只接受真正的 JSON 整数。浏览器在保存前会归一化旧版 Univer 返回的数字字符串。
@@ -242,6 +258,12 @@ public static partial class PocTemplateValidator
                int.TryParse(token.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out coordinate);
     }
 
+    /// <summary>将 PocTemplateValidator 中的 Parse Coordinate 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <param name="coordinateName">需要读取、校验或转换的业务值。</param>
+    /// <param name="sheetId">需要定位的业务记录标识。</param>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int ParseCoordinate(
         string key,
         string coordinateName,
@@ -258,6 +280,13 @@ public static partial class PocTemplateValidator
             $"Invalid {coordinateName} key '{key}' at sheet '{sheetId}'{rowContext}.");
     }
 
+    /// <summary>校验 PocTemplateValidator 的 Ensure Known Code 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="knownCodes">knownCodes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="scope">scope 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="sheetId">需要定位的业务记录标识。</param>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="column">参与映射、显示或数据写入的字段集合。</param>
     private static void EnsureKnownCode(
         HashSet<string> knownCodes,
         string scope,
@@ -273,6 +302,10 @@ public static partial class PocTemplateValidator
         }
     }
 
+    /// <summary>查询或读取 PocTemplateValidator 所需的 Get Sheet Display Name 数据，并按调用约定返回结果。</summary>
+    /// <param name="sheet">当前读取或修改的工作表对象。</param>
+    /// <param name="sheetId">需要定位的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetSheetDisplayName(JObject sheet, string sheetId)
     {
         // name 对应用户看到的页签；缺失或空白时退回稳定的内部 ID。
@@ -281,11 +314,19 @@ public static partial class PocTemplateValidator
     }
 
     // 同时展示名称和 ID，既方便设计人员定位页签，也保留服务端排查所需的快照标识。
+    /// <summary>将 PocTemplateValidator 中的 Format Sheet Label 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="sheetName">需要读取、校验或转换的业务值。</param>
+    /// <param name="sheetId">需要定位的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string FormatSheetLabel(string sheetName, string sheetId) =>
         string.Equals(sheetName, sheetId, StringComparison.Ordinal)
             ? $"'{sheetId}'"
             : $"'{sheetName}'（ID: {sheetId}）";
 
+    /// <summary>查询或读取 PocTemplateValidator 所需的 Get Cell Address 数据，并按调用约定返回结果。</summary>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="column">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetCellAddress(int row, int column)
     {
         // 错误消息使用用户熟悉的 A1 地址，而内部绑定继续使用便于计算的零基行列坐标。
@@ -300,6 +341,8 @@ public static partial class PocTemplateValidator
 
     // GeneratedRegex 在编译期生成匹配器，避免运行时构造正则；仅允许 params/detail 两种作用域。
     // 字段编码与数据集定义保持一致，允许首字母后的下划线，例如 VISIT_ID。
+    /// <summary>负责 PocTemplateValidator 的 Token Regex 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [GeneratedRegex(@"\{\{[ \t\r\n\f\v]*(params|detail)\.([A-Za-z][A-Za-z0-9_]*)[ \t\r\n\f\v]*\}\}", RegexOptions.CultureInvariant)]
     private static partial Regex TokenRegex();
 }

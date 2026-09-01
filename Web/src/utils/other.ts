@@ -76,6 +76,7 @@ export const lazyImg = (el: string, arr: EmptyArrayType) => {
 			if (v.isIntersecting) {
 				const { img, key } = v.target.dataset;
 				v.target.src = img;
+				/** 图片加载完成后停止观察该元素，并关闭对应记录的加载状态。 */
 				v.target.onload = () => {
 					io.unobserve(v.target);
 					arr[key]['loading'] = false;
@@ -176,30 +177,73 @@ export function handleOpenLink(val: RouteItem) {
  * @method handleOpenLink 打开外部链接
  */
 const other = {
+	/**
+	 * 负责 other 的 el Svg 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @param app - app 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	elSvg: (app: App) => {
 		elSvg(app);
 	},
+	/**
+	 * 创建 other 的 use Title 组合式能力，集中暴露状态和操作入口。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	useTitle: () => {
 		useTitle();
 	},
+	/**
+	 * 更新 other 的 set Tags View Name I18n 状态，并同步相关业务数据。
+	 * @param route - route 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	setTagsViewNameI18n(route: RouteToFrom) {
 		return setTagsViewNameI18n(route);
 	},
+	/**
+	 * 负责 other 的 lazy Img 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @param el - el 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @param arr - arr 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	lazyImg: (el: string, arr: EmptyArrayType) => {
 		lazyImg(el, arr);
 	},
+	/**
+	 * 负责 other 的 global Component Size 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	globalComponentSize: () => {
 		return globalComponentSize();
 	},
+	/**
+	 * 负责 other 的 deep Clone 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @param obj - obj 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	deepClone: (obj: EmptyObjectType) => {
 		return deepClone(obj);
 	},
+	/**
+	 * 校验 other 的 is Mobile 条件，并返回可供后续流程判断的结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	isMobile: () => {
 		return isMobile();
 	},
+	/**
+	 * 响应 other 的 handle Empty 事件，并协调相关状态和后续操作。
+	 * @param list - 需要遍历、筛选或写入的业务数据集合。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	handleEmpty: (list: EmptyArrayType) => {
 		return handleEmpty(list);
 	},
+	/**
+	 * 响应 other 的 handle Open Link 事件，并协调相关状态和后续操作。
+	 * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	handleOpenLink: (val: RouteItem) => {
 		handleOpenLink(val);
 	},

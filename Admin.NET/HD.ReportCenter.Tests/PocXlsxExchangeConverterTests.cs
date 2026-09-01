@@ -7,6 +7,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocXlsxExchangeConverterTests
 {
+    /// <summary>验证 Export writes the current template as a valid xlsx workbook 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Export_writes_the_current_template_as_a_valid_xlsx_workbook()
     {
@@ -43,6 +44,9 @@ public sealed class PocXlsxExchangeConverterTests
         Assert.InRange(sheet.Column(1).Width, 9d, 10d);
     }
 
+    /// <summary>验证 Export accepts css rgb colors 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="cssColor">cssColor 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="expectedColor">expectedColor 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("rgb(5,80,92)", "#05505C")]
     [InlineData("rgb(50, 54, 57)", "#323639")]
@@ -64,6 +68,7 @@ public sealed class PocXlsxExchangeConverterTests
             $"#{color.R:X2}{color.G:X2}{color.B:X2}");
     }
 
+    /// <summary>验证 Export writes univer rich text cells 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Export_writes_univer_rich_text_cells()
     {
@@ -77,6 +82,7 @@ public sealed class PocXlsxExchangeConverterTests
             ["ht"] = "2",
             ["vt"] = "2"
         };
+        // 第一阶段：根据 Export_writes_univer_rich_text_cells 当前分支转换输入数据，并保存该阶段产生的中间结果。
         snapshot["sheets"]!["report-sheet"]!["mergeData"] = new JArray
         {
             new JObject
@@ -107,6 +113,7 @@ public sealed class PocXlsxExchangeConverterTests
                 }
             }
         };
+        // 第2阶段：根据 Export_writes_univer_rich_text_cells 当前分支转换输入数据，并保存该阶段产生的中间结果。
         cellData["4"]!["0"] = new JObject
         {
             ["p"] = new JObject
@@ -128,6 +135,7 @@ public sealed class PocXlsxExchangeConverterTests
         Assert.Equal("               项目\n\n医疗类别", sheet.Cell("A5").GetString());
     }
 
+    /// <summary>验证 Import creates a sparse univer 0251 snapshot 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Import_creates_a_sparse_univer_0251_snapshot()
     {
@@ -167,8 +175,10 @@ public sealed class PocXlsxExchangeConverterTests
         Assert.Equal(14d, titleStyle.Value<double>("fs"), 3);
         Assert.Equal(1, titleStyle.Value<int>("bl"));
         Assert.Equal(2, titleStyle.Value<int>("ht"));
+        Assert.Equal(1, titleStyle.Value<int>("tb"));
     }
 
+    /// <summary>验证 Current template round trip preserves supported semantics 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Current_template_round_trip_preserves_supported_semantics()
     {
@@ -203,6 +213,7 @@ public sealed class PocXlsxExchangeConverterTests
         Assert.Equal(1, titleStyle.Value<int>("bl"));
     }
 
+    /// <summary>验证 Import uses database target paths and scale factors 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Import_uses_database_target_paths_and_scale_factors()
     {
@@ -229,6 +240,8 @@ public sealed class PocXlsxExchangeConverterTests
         Assert.Equal(60d, sheet["rowData"]!["0"]!["h"]!.Value<double>(), 3);
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverterTests 所需的 Load Seed Snapshot 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject LoadSeedSnapshot()
     {
         const string resourceName =
@@ -239,6 +252,8 @@ public sealed class PocXlsxExchangeConverterTests
         return JObject.Parse(reader.ReadToEnd());
     }
 
+    /// <summary>根据 PocXlsxExchangeConverterTests 当前输入计算 Current Rules 结果，并按方法声明的类型返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExchangeRuleSet CurrentRules()
     {
         var rules = PocExchangeMappingDefaults.Create()
@@ -261,6 +276,8 @@ public sealed class PocXlsxExchangeConverterTests
             rules);
     }
 
+    /// <summary>构建 PocXlsxExchangeConverterTests 所需的 Create Import Workbook 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static MemoryStream CreateImportWorkbook()
     {
         using var workbook = new XLWorkbook();

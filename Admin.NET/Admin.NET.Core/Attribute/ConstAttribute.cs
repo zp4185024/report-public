@@ -15,6 +15,8 @@ public class ConstAttribute : Attribute
 {
     public string Name { get; set; }
 
+    /// <summary>初始化 ConstAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="name">需要读取、校验或转换的业务值。</param>
     public ConstAttribute(string name)
     {
         Name = name;

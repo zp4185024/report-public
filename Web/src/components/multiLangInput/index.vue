@@ -54,7 +54,16 @@ const props = defineProps<{
 }>();
 
 const inputModelValue = computed({
+    /**
+     * 查询或读取 index 所需的 get 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     get: () => props.modelValue,
+    /**
+     * 更新 index 的 set 状态，并同步相关业务数据。
+     * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     set: (val) => emit("update:modelValue", val),
 });
 const langStore = useLangStore();
@@ -72,6 +81,10 @@ const currentLangLabel = computed(() => {
     );
 });
 
+/**
+ * 查询或读取 index 所需的 fetch Multi Lang 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const fetchMultiLang = async () => {
     const result = await getAPI(SysLangTextApi)
         .apiSysLangTextListPost({
@@ -106,6 +119,10 @@ onMounted(async () => {
     }
 });
 
+/**
+ * 负责 index 的 ai Translation 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const aiTranslation = async () => {
     for (const element of languages.value) {
         if (element.code === currentLang.value) continue;
@@ -126,6 +143,10 @@ const aiTranslation = async () => {
     }
 };
 
+/**
+ * 准备 index 的 open Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = async () => {
     if (!props.entityId) {
         ElMessage.warning("请先保存数据！");
@@ -147,12 +168,20 @@ const openDialog = async () => {
     ruleFormRef.value?.resetFields();
 };
 
+/**
+ * 结束 index 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
     dialogVisible.value = false;
     multiLangValue.value = {};
     ruleFormRef.value?.resetFields();
 };
 
+/**
+ * 按 confirm Dialog 规则筛选 index 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const confirmDialog = async () => {
     const langItems = Object.entries(multiLangValue.value)
         .filter(([_, content]) => content && content.trim() !== "")

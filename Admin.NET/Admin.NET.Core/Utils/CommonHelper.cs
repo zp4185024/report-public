@@ -20,8 +20,8 @@ public static class CommonHelper
     /// <summary>
     /// 根据字符串获取固定整型哈希值
     /// </summary>
-    /// <param name="str"></param>
-    /// <returns></returns>
+    /// <param name="str">str 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int GetFixedHashCode(string str)
     {
         if (string.IsNullOrWhiteSpace(str)) return 0;
@@ -44,7 +44,7 @@ public static class CommonHelper
     /// 将版本号转换为长整型，版本格式要求 x.xx.xxxxxx，比如 v1.2.5=>102000005 V3.10.42=>310000042
     /// </summary>
     /// <param name="version">x.xx.xxxxxx</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <exception cref="ArgumentException"></exception>
     public static long ConvertVersionToLong(string version)
     {
@@ -84,12 +84,10 @@ public static class CommonHelper
         }
     }
 
-    /// <summary>
-    /// 生成百分数
-    /// </summary>
-    /// <param name="passCount"></param>
-    /// <param name="allCount"></param>
-    /// <returns></returns>
+    /// <summary>根据 CommonHelper 当前输入计算 Exec Percent 结果，并按方法声明的类型返回。</summary>
+    /// <param name="passCount">控制数据范围或位置的数值。</param>
+    /// <param name="allCount">控制数据范围或位置的数值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ExecPercent(decimal passCount, decimal allCount)
     {
         string res = "";
@@ -105,10 +103,8 @@ public static class CommonHelper
         return res + "%";
     }
 
-    /// <summary>
-    /// 获取服务地址
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 CommonHelper 所需的 Get Localhost 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetLocalhost()
     {
         string result = $"{App.HttpContext.Request.Scheme}://{App.HttpContext.Request.Host.Value}";
@@ -125,11 +121,9 @@ public static class CommonHelper
         return result;
     }
 
-    /// <summary>
-    /// 获取请求地址源
-    /// </summary>
-    /// <param name="request"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 CommonHelper 所需的 Get Origin 数据，并按调用约定返回结果。</summary>
+    /// <param name="request">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetOrigin(this HttpRequest request)
     {
         string scheme = request.Scheme;
@@ -146,8 +140,8 @@ public static class CommonHelper
     /// 对象序列化XML
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="obj">obj 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SerializeObjectToXml<T>(T obj)
     {
         if (obj == null) return string.Empty;
@@ -171,8 +165,8 @@ public static class CommonHelper
     /// <summary>
     /// 字符串转XML格式
     /// </summary>
-    /// <param name="xmlStr"></param>
-    /// <returns></returns>
+    /// <param name="xmlStr">xmlStr 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static XElement SerializeStringToXml(string xmlStr)
     {
         try
@@ -188,7 +182,7 @@ public static class CommonHelper
     /// <summary>
     /// 导出模板Excel
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IActionResult> ExportExcelTemplate<T>(string fileName = null) where T : class, new()
     {
         var res = await new ExcelImporter().GenerateTemplateBytes<T>();
@@ -198,7 +192,7 @@ public static class CommonHelper
     /// <summary>
     /// 导出数据excel
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IActionResult> ExportExcelData<T>(ICollection<T> data, string fileName = null) where T : class, new()
     {
         var res = await new ExcelExporter().ExportAsByteArray<T>(data);
@@ -208,7 +202,7 @@ public static class CommonHelper
     /// <summary>
     /// 导出数据excel,包括字典转换
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IActionResult> ExportExcelData<TSource, TTarget>(ISugarQueryable<TSource> query, Func<TSource, TTarget, TTarget> action = null)
         where TSource : class, new() where TTarget : class, new()
     {
@@ -217,6 +211,7 @@ public static class CommonHelper
         // 相同属性复制值，字典值转换
         var result = new List<TTarget>();
         foreach (var item in data)
+        // 第一阶段：根据 ExportExcelData 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             var newData = new TTarget();
             foreach (var dict in propMappings)
@@ -240,6 +235,7 @@ public static class CommonHelper
                     {
                         if (targetProp.PropertyType.FullName == propertyInfo.PropertyType.FullName)
                         {
+                            // 第2阶段：根据 ExportExcelData 当前分支转换输入数据，并保存该阶段产生的中间结果。
                             targetProp.SetValue(newData, sourceVal);
                         }
                         else
@@ -264,8 +260,8 @@ public static class CommonHelper
     /// <summary>
     /// 导入数据Excel
     /// </summary>
-    /// <param name="file"></param>
-    /// <returns></returns>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<ICollection<T>> ImportExcelData<T>([Required] IFormFile file) where T : class, new()
     {
         var res = await new ExcelImporter().Import<T>(file.OpenReadStream());
@@ -288,9 +284,9 @@ public static class CommonHelper
     /// 导入Excel数据并错误标记
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="file"></param>
-    /// <param name="importResultCallback"></param>
-    /// <returns></returns>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="importResultCallback">处理完成或状态变化时调用的回调。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<ICollection<T>> ImportExcelData<T>([Required] IFormFile file, Func<ImportResult<T>, ImportResult<T>> importResultCallback = null) where T : class, new()
     {
         var resultStream = new MemoryStream();
@@ -323,8 +319,8 @@ public static class CommonHelper
     /// 导入数据Excel
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="file"></param>
-    /// <returns></returns>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<List<T>> ImportExcelDataAsync<T>([Required] IFormFile file) where T : class, new()
     {
         using MemoryStream stream = new();
@@ -347,9 +343,9 @@ public static class CommonHelper
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
     /// <typeparam name="TTarget"></typeparam>
-    /// <param name="data"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <param name="action">action 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static List<TTarget> ParseList<TSource, TTarget>(IEnumerable<TSource> data, Func<TSource, TTarget, TTarget> action = null) where TTarget : new()
     {
         var propMappings = GetImportPropertMap<TSource, TTarget>();
@@ -357,6 +353,7 @@ public static class CommonHelper
         var result = new List<TTarget>();
         foreach (var item in data)
         {
+            // 第一阶段：构造 ParseList 当前步骤需要的中间数据和执行参数。
             var newData = new TTarget();
             foreach (var dict in propMappings)
             {
@@ -378,6 +375,7 @@ public static class CommonHelper
                     {
                         if (targeProp.PropertyType.FullName == propertyInfo.PropertyType.FullName)
                         {
+                            // 第2阶段：根据 ParseList 当前分支转换输入数据，并保存该阶段产生的中间结果。
                             targeProp.SetValue(newData, sourceVal);
                         }
                         else
@@ -481,9 +479,7 @@ public static class CommonHelper
         return propMappings;
     }
 
-    /// <summary>
-    /// 获取属性映射
-    /// </summary>
+    /// <summary>查询或读取 CommonHelper 所需的 Get Export Dict Map 数据，并按调用约定返回结果。</summary>
     /// <typeparam name="TTarget"></typeparam>
     /// <returns>整理导入对象的 属性名称， 字典数据，原属性信息，目标属性信息 </returns>
     private static Dictionary<string, Tuple<string, string>> GetExportDictMap<TTarget>() where TTarget : new()
@@ -503,11 +499,9 @@ public static class CommonHelper
         return propMappings;
     }
 
-    /// <summary>
-    /// 解析IP地址
-    /// </summary>
-    /// <param name="ip"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 CommonHelper 所需的 Get Ip Address 数据，并按调用约定返回结果。</summary>
+    /// <param name="ip">ip 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static (string ipLocation, double? longitude, double? latitude) GetIpAddress(string ip)
     {
         try
@@ -556,8 +550,8 @@ public static class CommonHelper
     /// <summary>
     /// 从日志消息中获取用户信息
     /// </summary>
-    /// <param name="loggingMonitor"></param>
-    /// <returns></returns>
+    /// <param name="loggingMonitor">loggingMonitor 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static LoggingUserInfo GetUserInfo(LoggingMonitorDto loggingMonitor)
     {
         LoggingUserInfo result = new();
@@ -593,8 +587,8 @@ public static class CommonHelper
     /// <summary>
     /// 判断是否为移动端UA
     /// </summary>
-    /// <param name="userAgent"></param>
-    /// <returns></returns>
+    /// <param name="userAgent">userAgent 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool IsMobile(string userAgent)
     {
         var mobilePatterns = new[] { "android.*mobile", "iphone", "ipod", "windows phone", "blackberry", "nokia", "mobile", "opera mini", "opera mobi", "palm", "webos", "bb\\d+", "meego" };
@@ -607,7 +601,7 @@ public static class CommonHelper
     /// <param name="oldEntity">旧实体</param>
     /// <param name="newEntity">新实体</param>
     /// <param name="ignoreNull">忽略空值</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static (Dictionary<string, object> oldValues, Dictionary<string, object> newValues) GetChangedDictionary<T>(T oldEntity, T newEntity, bool ignoreNull = false) where T : class
     {
         var newValues = new Dictionary<string, object>();

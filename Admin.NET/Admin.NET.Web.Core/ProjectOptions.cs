@@ -16,8 +16,8 @@ public static class ProjectOptions
     /// <summary>
     /// 注册项目配置选项
     /// </summary>
-    /// <param name="services"></param>
-    /// <returns></returns>
+    /// <param name="services">services 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IServiceCollection AddProjectOptions(this IServiceCollection services)
     {
         services.AddConfigurableOptions<DbConnectionOptions>();

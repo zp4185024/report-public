@@ -53,6 +53,11 @@ interface ReportConfigurationDialogProps {
   onSaved: (document: ReportConfigurationDocument) => void;
 }
 
+/**
+ * 按 to Draft 规则筛选 ReportConfigurationDialog 数据，并返回满足条件的结果。
+ * @param document - document 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function toDraft(document: ReportConfigurationDocument): SaveReportConfigurationRequest {
   const dataset = document.datasets.find((item) => item.code === document.datasetCode);
   const parameters = dataset === undefined
@@ -86,6 +91,11 @@ function toDraft(document: ReportConfigurationDocument): SaveReportConfiguration
   };
 }
 
+/**
+ * 遍历 ReportConfigurationDialog 数据并执行 to Save Request 转换，生成后续流程需要的结果。
+ * @param draft - draft 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function toSaveRequest(draft: SaveReportConfigurationRequest): SaveReportConfigurationRequest {
   return {
     ...draft,
@@ -106,6 +116,11 @@ function toSaveRequest(draft: SaveReportConfigurationRequest): SaveReportConfigu
   };
 }
 
+/**
+ * 构建 ReportConfigurationDialog 所需的 create Parameter 内容，并保证生成结果符合调用约定。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function createParameter(index: number): ParameterDefinition {
   return {
     code: `parameter${index + 1}`,
@@ -127,11 +142,21 @@ function createParameter(index: number): ParameterDefinition {
   };
 }
 
+/**
+ * 校验 ReportConfigurationDialog 的 is Choice Control 条件，并返回可供后续流程判断的结果。
+ * @param controlType - controlType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isChoiceControl(controlType: string): boolean {
   const normalized = controlType.toLowerCase();
   return normalized === 'select' || normalized === 'multiselect';
 }
 
+/**
+ * 按 invalid Value Options 规则筛选 ReportConfigurationDialog 数据，并返回满足条件的结果。
+ * @param options - 控制本次处理行为的配置选项。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function invalidValueOptions(options: readonly ValueOption[]): boolean {
   const values = new Set<string>();
   return options.length === 0 || options.some((option) => {
@@ -142,6 +167,11 @@ function invalidValueOptions(options: readonly ValueOption[]): boolean {
   });
 }
 
+/**
+ * 负责 ReportConfigurationDialog 的 control Type For Data Type 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param dataType - dataType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function controlTypeForDataType(dataType: string): string {
   switch (dataType.toLowerCase()) {
     case 'int':
@@ -172,6 +202,12 @@ const dateDefaultPresets = [
   { value: 'endOfYear(today())', label: '今年最后一天' },
 ];
 
+/**
+ * 校验 ReportConfigurationDialog 的 is Date Parameter 条件，并返回可供后续流程判断的结果。
+ * @param dataType - dataType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param controlType - controlType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isDateParameter(dataType: string, controlType?: string): boolean {
   const normalizedDataType = dataType.toLowerCase();
   return normalizedDataType === 'date'
@@ -179,6 +215,11 @@ function isDateParameter(dataType: string, controlType?: string): boolean {
     || (controlType !== undefined && isTemporalControlType(controlType));
 }
 
+/**
+ * 按 date Default Options 规则筛选 ReportConfigurationDialog 数据，并返回满足条件的结果。
+ * @param current - current 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function dateDefaultOptions(current: string | null): typeof dateDefaultPresets {
   if (!current || dateDefaultPresets.some((option) => option.value.toLowerCase() === current.toLowerCase())) {
     return dateDefaultPresets;
@@ -189,6 +230,12 @@ function dateDefaultOptions(current: string | null): typeof dateDefaultPresets {
   ];
 }
 
+/**
+ * 按 calendar Default Options 规则筛选 ReportConfigurationDialog 数据，并返回满足条件的结果。
+ * @param controlType - controlType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param current - current 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function calendarDefaultOptions(
   controlType: string,
   current: string | null,
@@ -221,6 +268,13 @@ function calendarDefaultOptions(
   return dateDefaultOptions(current);
 }
 
+/**
+ * 根据指针位置更新 ReportConfigurationDialog 的 move Item 坐标，并限制目标元素不超出可视区域。
+ * @param items - 需要遍历、筛选或写入的业务数据集合。
+ * @param index - 控制数据范围或位置的数值。
+ * @param offset - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1): T[] {
   const target = index + offset;
   if (target < 0 || target >= items.length) return [...items];
@@ -229,6 +283,10 @@ function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1): T[] {
   return next;
 }
 
+/**
+ * 初始化 ReportConfigurationDialog 的 Report Configuration Dialog 监听流程，并在状态变化时同步执行相关操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function ReportConfigurationDialog({
   open,
   document,
@@ -245,6 +303,7 @@ export function ReportConfigurationDialog({
 
   useEffect(() => {
     if (!open) {
+      // 第一阶段：根据 ReportConfigurationDialog 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setDraft(null);
       setTab('basic');
       setError(null);
@@ -259,6 +318,11 @@ export function ReportConfigurationDialog({
     if (!open) return undefined;
     const previousOverflow = globalThis.document.documentElement.style.overflow;
     globalThis.document.documentElement.style.overflow = 'hidden';
+    /**
+     * 结束 ReportConfigurationDialog 的 close On Escape 交互并清理临时状态。
+     * @param event - 触发当前处理流程的界面或业务事件。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !saving) onClose();
     };
@@ -285,6 +349,7 @@ export function ReportConfigurationDialog({
     const parameter = draft?.parameters.find(
       (item) => item.code.toLowerCase() === variable.code.toLowerCase(),
     );
+    // 第2阶段：整理 ReportConfigurationDialog 已计算的数据，并按方法契约返回最终结果。
     return parameter !== undefined && (
       parameter.dataType !== variable.dataType ||
       (variable.required && !parameter.required)
@@ -297,6 +362,12 @@ export function ReportConfigurationDialog({
 
   if (!open) return null;
 
+  /**
+   * 更新 ReportConfigurationDialog 的 update Parameter 状态，并同步相关业务数据。
+   * @param index - 控制数据范围或位置的数值。
+   * @param patch - patch 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const updateParameter = (index: number, patch: Partial<ParameterDefinition>) => {
     setDraft((current) => {
       if (current === null) return current;
@@ -306,6 +377,10 @@ export function ReportConfigurationDialog({
     });
   };
 
+  /**
+   * 校验 ReportConfigurationDialog 的 validate Draft 条件，并返回可供后续流程判断的结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const validateDraft = (): string | null => {
     if (draft === null) return '配置尚未加载完成。';
     if (!draft.name.trim() || !draft.sheetName.trim()) return '报表名称和工作表名称不能为空。';
@@ -313,6 +388,7 @@ export function ReportConfigurationDialog({
     if (!selectedDataset.enabled) return '当前数据集已停用，不能用于报表。';
     if (draft.parameters.some((parameter) => !parameter.code.trim())) return '查询参数编码不能为空。';
     if (parameterCodes.size !== draft.parameters.length) return '查询参数编码不能重复。';
+    // 第一阶段：检查 validateDraft 当前条件，并按匹配分支执行对应处理。
     if (draft.parameters.some((parameter) => (
       isLocalFilterSource(parameter.sourceType) &&
       !isLocalFilterParameter(parameter, selectedDataset.fields)
@@ -325,6 +401,7 @@ export function ReportConfigurationDialog({
       const field = source?.fields.find((item) => item.code === parameter.sourceFieldCode);
       return source === undefined || field === undefined || field.dataType !== parameter.dataType;
     });
+    // 第3阶段：检查 ReportConfigurationDialog 当前条件，并按匹配分支执行对应处理。
     if (invalidExternalParameter !== undefined) {
       return `参数 '${invalidExternalParameter.displayName}' 需要选择数据类型一致的接口返回字段。`;
     }
@@ -338,6 +415,7 @@ export function ReportConfigurationDialog({
       (presentation) => invalidValueOptions(presentation.valueMappings),
     );
     if (invalidPresentation !== undefined) {
+      // 第2阶段：整理 validateDraft 已计算的数据，并按方法契约返回最终结果。
       return `返回字段 '${invalidPresentation.code}' 的显示映射不能为空、重复或缺少显示文字。`;
     }
     if (missingParameters.length > 0) {
@@ -360,10 +438,15 @@ export function ReportConfigurationDialog({
     return null;
   };
 
+  /**
+   * 更新 ReportConfigurationDialog 的 save 状态，并同步相关业务数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const save = async () => {
     const validationError = validateDraft();
     if (validationError !== null || draft === null) {
       setError(validationError);
+      // 第4阶段：整理 ReportConfigurationDialog 已计算的数据，并按方法契约返回最终结果。
       return;
     }
     setSaving(true);
@@ -425,7 +508,9 @@ export function ReportConfigurationDialog({
                   <label>
                     <span>数据集</span>
                     <select value={draft.datasetCode} onChange={(event) => {
+                      // 第5阶段：构造 ReportConfigurationDialog 当前阶段需要的中间数据和执行参数。
                       const nextDataset = document?.datasets.find((dataset) => dataset.code === event.target.value);
+                      // 第6阶段：根据 ReportConfigurationDialog 当前分支转换输入数据，并保存该阶段产生的中间结果。
                       setDraft({
                         ...draft,
                         datasetCode: event.target.value,
@@ -524,7 +609,9 @@ export function ReportConfigurationDialog({
                     {externalSources.map((source) => <option key={source.code} value={source.code}>{source.name}</option>)}
                   </select>
                   <button type="button" className="button" disabled={!externalSourceToImport} onClick={() => {
+                    // 第7阶段：构造 ReportConfigurationDialog 当前阶段需要的中间数据和执行参数。
                     const source = externalSources.find((item) => item.code === externalSourceToImport);
+                    // 第8阶段：检查 ReportConfigurationDialog 当前条件，并按匹配分支执行对应处理。
                     if (source !== undefined) {
                       setDraft({ ...draft, parameters: importExternalSourceFields(draft.parameters, source) });
                     }
@@ -564,6 +651,7 @@ export function ReportConfigurationDialog({
                               const field = selectedDataset?.fields.find(
                                 (item) => item.code === event.target.value,
                               );
+                              // 第9阶段：检查 ReportConfigurationDialog 当前条件，并按匹配分支执行对应处理。
                               if (field === undefined) {
                                 updateParameter(index, {
                                   code: '',
@@ -609,6 +697,7 @@ export function ReportConfigurationDialog({
                           defaultExpression: isDateParameter(event.target.value) ? parameter.defaultExpression : null,
                         })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td>
                         <td><select aria-label={`参数来源 ${index + 1}`} disabled={datasetOwnsExternalBinding} value={parameter.sourceType} onChange={(event) => {
+                          // 第10阶段：构造 ReportConfigurationDialog 当前阶段需要的中间数据和执行参数。
                           const sourceType = event.target.value;
                           const currentField = selectedDataset?.fields.find(
                             (field) => field.code.toLowerCase() === parameter.code.toLowerCase(),
@@ -644,6 +733,7 @@ export function ReportConfigurationDialog({
                             if (source !== undefined && field !== undefined) {
                               updateParameter(index, bindExternalField(parameter, source, field));
                             } else {
+                              // 第11阶段：根据 ReportConfigurationDialog 当前分支转换输入数据，并保存该阶段产生的中间结果。
                               updateParameter(index, {
                                 sourceType: 'External',
                                 sourceCode: null,
@@ -677,6 +767,7 @@ export function ReportConfigurationDialog({
                             return;
                           }
                           const fallback = createParameter(index);
+                          // 第12阶段：根据 ReportConfigurationDialog 当前分支转换输入数据，并保存该阶段产生的中间结果。
                           updateParameter(index, {
                             sourceType,
                             sourceCode: null,
@@ -724,6 +815,7 @@ export function ReportConfigurationDialog({
                             </select>
                             <select aria-label={`接口字段 ${index + 1}`} value={parameter.sourceFieldCode ?? ''} disabled={datasetOwnsExternalBinding} onChange={(event) => {
                               const field = selectableExternalFields.find((item) => item.code === event.target.value);
+                              // 第13阶段：检查 ReportConfigurationDialog 当前条件，并按匹配分支执行对应处理。
                               if (selectedExternalSource !== undefined && field !== undefined) {
                                 updateParameter(index, bindExternalField(parameter, selectedExternalSource, field));
                               }
@@ -785,6 +877,7 @@ export function ReportConfigurationDialog({
                           </select>
                         ) : (
                           (() => {
+                            // 第14阶段：构造 ReportConfigurationDialog 当前阶段需要的中间数据和执行参数。
                             const inputAttributes = parameterInputAttributes(parameter);
                             return <input
                             type={inputAttributes.type}
@@ -813,6 +906,7 @@ export function ReportConfigurationDialog({
                 <table className="configuration-table column-table">
                   <thead><tr><th>顺序</th><th>字段编码</th><th>业务名称</th><th>数据类型</th><th>显示映射</th></tr></thead>
                   <tbody>{selectedDataset?.fields.map((field, index) => {
+                    // 第15阶段：构造 ReportConfigurationDialog 当前阶段需要的中间数据和执行参数。
                     const mappingCount = (draft.fieldPresentations ?? []).find(
                       (presentation) => presentation.code.toLowerCase() === field.code.toLowerCase(),
                     )?.valueMappings.length ?? 0;
@@ -844,6 +938,7 @@ export function ReportConfigurationDialog({
             options={editorOptions}
             onClose={() => setValueEditorTarget(null)}
             onChange={(options) => {
+              // 第16阶段：检查 ReportConfigurationDialog 当前条件，并按匹配分支执行对应处理。
               if (valueEditorTarget.kind === 'parameter') {
                 updateParameter(valueEditorTarget.index, { options });
                 return;

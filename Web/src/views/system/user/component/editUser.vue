@@ -271,6 +271,11 @@ onMounted(async () => {
 });
 
 // 打开弹窗
+/**
+ * 准备 editUser 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = async (row: any) => {
 	state.orgTreeData = (row.tenantId ? props.orgTreeData?.filter((e) => e.tenantId === row.tenantId) : props.orgTreeData) ?? [];
 	state.posData = (row.tenantId ? state.posData?.filter((e) => e.tenantId === row.tenantId) : state.posData) ?? [];
@@ -288,17 +293,29 @@ const openDialog = async (row: any) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 editUser 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('handleQuery');
 	state.isShowDialog = false;
 };
 
 // 取消
+/**
+ * 校验 editUser 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editUser 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;
@@ -312,12 +329,21 @@ const submit = () => {
 };
 
 // 增加附属机构行
+/**
+ * 构建 editUser 所需的 add Ext Org Row 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const addExtOrgRow = () => {
 	if (state.ruleForm.extOrgIdList == undefined) state.ruleForm.extOrgIdList = [];
 	state.ruleForm.extOrgIdList?.push({});
 };
 
 // 删除附属机构行
+/**
+ * 移除 editUser 中与 delete Ext Org Row 对应的数据，并清理关联状态。
+ * @param k - k 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const deleteExtOrgRow = (k: number) => {
 	state.ruleForm.extOrgIdList?.splice(k, 1);
 };

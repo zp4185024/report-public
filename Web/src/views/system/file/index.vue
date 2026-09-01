@@ -205,6 +205,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	if (state.queryParams.startTime == null) state.queryParams.startTime = undefined;
 	if (state.queryParams.endTime == null) state.queryParams.endTime = undefined;
@@ -218,6 +222,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.fileName = undefined;
 	state.queryParams.startTime = undefined;
@@ -226,6 +234,10 @@ const resetQuery = () => {
 };
 
 // 打开上传页面
+/**
+ * 准备 index 的 open Upload Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openUploadDialog = () => {
 	state.fileList = [];
 	state.dialogUploadVisible = true;
@@ -233,11 +245,21 @@ const openUploadDialog = () => {
 };
 
 // 通过onChanne方法获得文件列表
+/**
+ * 响应 index 的 handle Change 事件，并协调相关状态和后续操作。
+ * @param file - file 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param fileList - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleChange = (file: any, fileList: []) => {
 	state.fileList = fileList;
 };
 
 // 上传
+/**
+ * 接收并校验 index 的 upload File 输入，随后写入目标状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const uploadFile = async () => {
 	if (state.fileList.length < 1) return;
 	await getAPI(SysFileApi).apiSysFileUploadFilePostForm(state.fileList[0].raw, state.fileType, state.isPublic, undefined);
@@ -247,6 +269,11 @@ const uploadFile = async () => {
 };
 
 // 下载
+/**
+ * 整理 index 的 download File 数据，并生成可供调用方使用的输出。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const downloadFile = async (row: any) => {
 	// var res = await getAPI(SysFileApi).sysFileDownloadPost({ id: row.id });
 	var fileUrl = getFileUrl(row);
@@ -254,6 +281,11 @@ const downloadFile = async (row: any) => {
 };
 
 // 删除
+/**
+ * 从 index 移除 del File 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delFile = (row: any) => {
 	ElMessageBox.confirm(`确定删除文件：【${row.fileName}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -269,6 +301,11 @@ const delFile = (row: any) => {
 };
 
 // 打开文件预览页面
+/**
+ * 准备 index 的 open File Preview Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openFilePreviewDialog = async (row: any) => {
 	if (row.suffix == '.pdf') {
 		state.fileName = `【${row.fileName}${row.suffix}】`;
@@ -291,18 +328,33 @@ const openFilePreviewDialog = async (row: any) => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();
 };
 
 // 获取文件地址
+/**
+ * 查询或读取 index 所需的 get File Url 数据，并按调用约定返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getFileUrl = (row: SysFile): string => {
 	if (row.bucketName == 'Local') {
 		return `/${row.filePath}/${row.id}${row.suffix}`;
@@ -312,13 +364,26 @@ const getFileUrl = (row: SysFile): string => {
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Sys File 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditSysFile = (row: any) => {
 	editSysFileRef.value?.openDialog(row);
 };
 
 // 文件渲染完成
+/**
+ * 根据 index 当前数据渲染 rendered Handler 内容，并同步所需样式和交互状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const renderedHandler = () => {};
 // 文件渲染失败
+/**
+ * 负责 index 的 error Handler 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const errorHandler = () => {};
 </script>
 

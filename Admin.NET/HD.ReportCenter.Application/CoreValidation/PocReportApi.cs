@@ -35,6 +35,14 @@ public sealed class PocReportApi : IDynamicApiController
     private readonly PocSqlDatasetExecutor? _datasetExecutor;
     private readonly PocTemplateDataExporter _templateDataExporter = new();
 
+    /// <summary>初始化 PocReportApi 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="templateService">templateService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="templateExchangeService">templateExchangeService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="templateDataExportService">templateDataExportService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="configurationService">configurationService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="datasetExecutor">datasetExecutor 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dataAssetService">dataAssetService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="externalParameterSourceService">externalParameterSourceService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocReportApi(
         PocTemplateService templateService,
         PocTemplateExchangeService templateExchangeService,
@@ -293,6 +301,7 @@ public sealed class PocReportApi : IDynamicApiController
         var stream = new MemoryStream();
         try
         {
+            // 第一阶段：调用 NormalExport 依赖的异步能力，等待并校验返回数据。
             var prepared = await HandleDataExportOperation(
                 () => _templateDataExportService.CreatePreparedAsync(
                     reportCode,
@@ -315,6 +324,7 @@ public sealed class PocReportApi : IDynamicApiController
                     prepared.TemplatePlan,
                     pages,
                     cancellationToken);
+                // 第2阶段：整理 NormalExport 已计算的数据，并按方法契约返回最终结果。
                 return true;
             });
             stream.Position = 0;
@@ -382,6 +392,9 @@ public sealed class PocReportApi : IDynamicApiController
         };
     }
 
+    /// <summary>构建 PocReportApi 所需的 Build Export File Name 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string BuildExportFileName(PocTemplateDataExportPlan plan)
     {
         var reportName = plan.Definition?.Name ?? plan.Definition?.SheetName ?? "科室工作量";
@@ -401,6 +414,9 @@ public sealed class PocReportApi : IDynamicApiController
         return $"{reportName}.xlsx";
     }
 
+    /// <summary>校验 PocReportApi 的 Ensure Report Code 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string EnsureReportCode(string reportCode)
     {
         if (string.IsNullOrWhiteSpace(reportCode) ||
@@ -416,6 +432,9 @@ public sealed class PocReportApi : IDynamicApiController
             : reportCode.Trim();
     }
 
+    /// <summary>响应 PocReportApi 的 Handle Job Operation 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="operation">operation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static T HandleJobOperation<T>(Func<T> operation)
     {
         try
@@ -428,6 +447,9 @@ public sealed class PocReportApi : IDynamicApiController
         }
     }
 
+    /// <summary>响应 PocReportApi 的 Handle Template Operation 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="operation">operation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<T> HandleTemplateOperation<T>(Func<Task<T>> operation)
     {
         // 在一个入口集中转换领域异常，确保前端不依赖数据库/JSON 库的具体异常文本。
@@ -464,6 +486,9 @@ public sealed class PocReportApi : IDynamicApiController
         }
     }
 
+    /// <summary>响应 PocReportApi 的 Handle Data Export Operation 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="operation">operation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<T> HandleDataExportOperation<T>(Func<Task<T>> operation)
     {
         try
@@ -480,23 +505,35 @@ public sealed class PocReportApi : IDynamicApiController
         }
     }
 
+    /// <summary>查询或读取 PocReportApi 所需的 Get Definition Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private Task<PocReportDefinition> GetDefinitionAsync(string reportCode) =>
         _configurationService is null
             ? Task.FromResult(PocReportCatalog.GetDefinition())
             : _configurationService.GetDefinitionAsync(reportCode);
 
+    /// <summary>执行 PocReportApi 的 Require Configuration Service 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private PocReportConfigurationService RequireConfigurationService() =>
         _configurationService
         ?? throw Oops.Oh("REPORT_CONFIGURATION_NOT_AVAILABLE").StatusCode(503);
 
+    /// <summary>执行 PocReportApi 的 Require Data Asset Service 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private PocDataAssetService RequireDataAssetService() =>
         _dataAssetService
         ?? throw Oops.Oh("DATA_ASSET_SERVICE_NOT_AVAILABLE").StatusCode(503);
 
+    /// <summary>执行 PocReportApi 的 Require External Parameter Source Service 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private PocExternalParameterSourceService RequireExternalParameterSourceService() =>
         _externalParameterSourceService
         ?? throw Oops.Oh("EXTERNAL_PARAMETER_SOURCE_SERVICE_NOT_AVAILABLE").StatusCode(503);
 
+    /// <summary>响应 PocReportApi 的 Handle Configuration Operation 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="operation">operation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<T> HandleConfigurationOperation<T>(Func<Task<T>> operation)
     {
         try
@@ -529,6 +566,9 @@ public sealed class PocReportApi : IDynamicApiController
         }
     }
 
+    /// <summary>响应 PocReportApi 的 Handle Dataset Operation 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="operation">operation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<T> HandleDatasetOperation<T>(Func<Task<T>> operation)
     {
         try

@@ -288,6 +288,7 @@ export const APIJSONApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiAPIJSONAddPost(body?: { [key: string]: JToken; }, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultJObject>>> {
+            // 第一阶段：调用 APIJSONApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await APIJSONApiAxiosParamCreator(configuration).apiAPIJSONAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -319,6 +320,7 @@ export const APIJSONApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await APIJSONApiAxiosParamCreator(configuration).apiAPIJSONGetPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 APIJSONApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -368,6 +370,7 @@ export const APIJSONApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiAPIJSONAddPost(body?: { [key: string]: JToken; }, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultJObject>> {
+            // 第一阶段：整理 APIJSONApiFactory 已计算的数据，并按方法契约返回最终结果。
             return APIJSONApiFp(configuration).apiAPIJSONAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -388,6 +391,7 @@ export const APIJSONApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiAPIJSONGetPost(body?: { [key: string]: JToken; }, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultJObject>> {
+            // 第2阶段：整理 APIJSONApiFactory 已计算的数据，并按方法契约返回最终结果。
             return APIJSONApiFp(configuration).apiAPIJSONGetPost(body, options).then((request) => request(axios, basePath));
         },
         /**

@@ -22,6 +22,11 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
+          /**
+           * 按依赖包路径划分 vite.config 的构建分包，减少入口产物体积并保持缓存稳定。
+           * @param moduleId - 需要定位的业务记录标识。
+           * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+           */
           manualChunks(moduleId) {
             // Univer 体积较大且变化频率低，拆为独立 chunk 便于生产环境长期缓存和单独观察包体积。
             return moduleId.includes('@univerjs') ? 'univer' : undefined;

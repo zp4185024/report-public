@@ -58,6 +58,10 @@ const props = defineProps({
 	},
 	queryParams: {
 		type: Object,
+		/**
+		 * 为 queryParams 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => {
 			return {
 				page: 1,
@@ -105,6 +109,11 @@ const remoteMethod = debounce((query: string = '') => {
 }, 500);
 
 // 选择值改变事件
+/**
+ * 响应 index 的 handle Change 事件，并协调相关状态和后续操作。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleChange = (row: any) => {
 	if (props.multiple && !state.selectedValues) state.selectedValues = [];
 	if (typeof row[props.valueField] === 'string') row[props.valueField] = row[props.valueField]?.trim();

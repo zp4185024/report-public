@@ -15,11 +15,20 @@ namespace Admin.NET.Core;
 [SuppressSniffer]
 public class MaskSystemTextJsonConverter : JsonConverter<string>
 {
+    /// <summary>查询或读取 MaskSystemTextJsonConverter 所需的 Read 数据，并按调用约定返回结果。</summary>
+    /// <param name="reader">当前方法执行时使用的 reader 输入值。</param>
+    /// <param name="typeToConvert">当前方法执行时使用的 typeToConvert 输入值。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return reader.GetString();
     }
 
+    /// <summary>更新 MaskSystemTextJsonConverter 的 Write 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">当前方法执行时使用的 writer 输入值。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
     public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
     {
         writer.WriteStringValue(value?.ToString().Mask());
@@ -32,11 +41,20 @@ public class MaskSystemTextJsonConverter : JsonConverter<string>
 [SuppressSniffer]
 public class MaskIdCardSystemTextJsonConverter : JsonConverter<string>
 {
+    /// <summary>查询或读取 MaskSystemTextJsonConverter 所需的 Read 数据，并按调用约定返回结果。</summary>
+    /// <param name="reader">当前方法执行时使用的 reader 输入值。</param>
+    /// <param name="typeToConvert">当前方法执行时使用的 typeToConvert 输入值。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return reader.GetString();
     }
 
+    /// <summary>更新 MaskSystemTextJsonConverter 的 Write 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">当前方法执行时使用的 writer 输入值。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
     public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
     {
         writer.WriteStringValue(value?.ToString().MaskIdCard());
@@ -49,11 +67,20 @@ public class MaskIdCardSystemTextJsonConverter : JsonConverter<string>
 [SuppressSniffer]
 public class MaskEmailSystemTextJsonConverter : JsonConverter<string>
 {
+    /// <summary>查询或读取 MaskSystemTextJsonConverter 所需的 Read 数据，并按调用约定返回结果。</summary>
+    /// <param name="reader">当前方法执行时使用的 reader 输入值。</param>
+    /// <param name="typeToConvert">当前方法执行时使用的 typeToConvert 输入值。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return reader.GetString();
     }
 
+    /// <summary>更新 MaskSystemTextJsonConverter 的 Write 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">当前方法执行时使用的 writer 输入值。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
     public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
     {
         writer.WriteStringValue(value?.ToString().MaskEmail());

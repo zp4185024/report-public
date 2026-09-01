@@ -30,6 +30,20 @@ public class SysAuthService : IDynamicApiController, ITransient
     private readonly IEventPublisher _eventPublisher;
     private readonly SysCacheService _sysCacheService;
 
+    /// <summary>初始化 SysAuthService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysUserRep">当前方法执行时使用的 sysUserRep 输入值。</param>
+    /// <param name="httpContextAccessor">当前方法执行时使用的 httpContextAccessor 输入值。</param>
+    /// <param name="sysOnlineUserService">当前方法执行时使用的 sysOnlineUserService 输入值。</param>
+    /// <param name="sysConfigService">当前方法执行时使用的 sysConfigService 输入值。</param>
+    /// <param name="sysLdapService">当前方法执行时使用的 sysLdapService 输入值。</param>
+    /// <param name="eventPublisher">当前方法执行时使用的 eventPublisher 输入值。</param>
+    /// <param name="sysSmsService">当前方法执行时使用的 sysSmsService 输入值。</param>
+    /// <param name="sysCacheService">当前方法执行时使用的 sysCacheService 输入值。</param>
+    /// <param name="sysMenuService">当前方法执行时使用的 sysMenuService 输入值。</param>
+    /// <param name="sysUserService">当前方法执行时使用的 sysUserService 输入值。</param>
+    /// <param name="sysTenantService">当前方法执行时使用的 sysTenantService 输入值。</param>
+    /// <param name="userManager">当前方法执行时使用的 userManager 输入值。</param>
+    /// <param name="captcha">当前方法执行时使用的 captcha 输入值。</param>
     public SysAuthService(
         SqlSugarRepository<SysUser> sysUserRep,
         IHttpContextAccessor httpContextAccessor,
@@ -60,12 +74,10 @@ public class SysAuthService : IDynamicApiController, ITransient
         _sysLdapService = sysLdapService;
     }
 
-    /// <summary>
-    /// 账号密码登录 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>调用 SysAuthService 的异步依赖完成 Login 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     /// <remarks>用户名/密码：superadmin/123456</remarks>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("账号密码登录")]
     public virtual async Task<LoginOutput> Login([Required] LoginInput input)
@@ -113,10 +125,10 @@ public class SysAuthService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取登录租户和用户
     /// </summary>
-    /// <param name="tenantId"></param>
-    /// <param name="account"></param>
-    /// <param name="phone"></param>
-    /// <returns></returns>
+    /// <param name="tenantId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="account">控制数据范围、数量或工作簿坐标的数值。</param>
+    /// <param name="phone">当前方法执行时使用的 phone 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<(SysTenant tenant, SysUser user)> GetLoginUserAndTenant(long? tenantId, string account = null, string phone = null)
     {
@@ -139,13 +151,11 @@ public class SysAuthService : IDynamicApiController, ITransient
         return (tenant, user);
     }
 
-    /// <summary>
-    /// 验证用户密码
-    /// </summary>
-    /// <param name="password"></param>
-    /// <param name="keyPasswordErrorTimes"></param>
-    /// <param name="passwordErrorTimes"></param>
-    /// <param name="user"></param>
+    /// <summary>校验 SysAuthService 的 Verify Password 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="password">当前方法执行时使用的 password 输入值。</param>
+    /// <param name="keyPasswordErrorTimes">当前方法执行时使用的 keyPasswordErrorTimes 输入值。</param>
+    /// <param name="passwordErrorTimes">当前方法执行时使用的 passwordErrorTimes 输入值。</param>
+    /// <param name="user">当前方法执行时使用的 user 输入值。</param>
     private void VerifyPassword(string password, string keyPasswordErrorTimes, int passwordErrorTimes, SysUser user)
     {
         try
@@ -170,11 +180,9 @@ public class SysAuthService : IDynamicApiController, ITransient
         throw Oops.Oh(ErrorCodeEnum.D1000);
     }
 
-    /// <summary>
-    /// 验证锁屏密码 🔖
-    /// </summary>
-    /// <param name="password"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysAuthService 的异步依赖完成 Un Lock Screen 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="password">当前方法执行时使用的 password 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("验证锁屏密码")]
     public virtual async Task<bool> UnLockScreen([Required, FromQuery] string password)
     {
@@ -205,11 +213,9 @@ public class SysAuthService : IDynamicApiController, ITransient
         return true;
     }
 
-    /// <summary>
-    /// 手机号登录 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysAuthService 的异步依赖完成 Login Phone 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("手机号登录")]
     public virtual async Task<LoginOutput> LoginPhone([Required] LoginPhoneInput input)
@@ -226,9 +232,9 @@ public class SysAuthService : IDynamicApiController, ITransient
     /// <summary>
     /// 生成Token令牌 🔖
     /// </summary>
-    /// <param name="user"></param>\
-    /// <param name="sysUserEventTypeEnum"></param>\
-    /// <returns></returns>
+    /// <param name="user">需要同步缓存和在线状态的用户实体。</param>
+    /// <param name="sysUserEventTypeEnum">说明新增、更新、删除或解锁等用户变更类型。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     internal virtual async Task<LoginOutput> CreateToken(SysUser user, SysUserEventTypeEnum sysUserEventTypeEnum = SysUserEventTypeEnum.Login)
     {
@@ -292,10 +298,8 @@ public class SysAuthService : IDynamicApiController, ITransient
         return payload.Output;
     }
 
-    /// <summary>
-    /// 获取登录账号 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysAuthService 所需的 Get User Info 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取登录账号")]
     public virtual async Task<LoginUserOutput> GetUserInfo()
     {
@@ -369,9 +373,7 @@ public class SysAuthService : IDynamicApiController, ITransient
         return await CreateToken(user, SysUserEventTypeEnum.RefreshToken);
     }
 
-    /// <summary>
-    /// 退出系统 🔖
-    /// </summary>
+    /// <summary>调用 SysAuthService 的异步依赖完成 Logout 操作，并按当前返回类型传递处理结果。</summary>
     [DisplayName("退出系统")]
     public async Task Logout()
     {
@@ -398,10 +400,8 @@ public class SysAuthService : IDynamicApiController, ITransient
         httpContext.SignoutToSwagger();
     }
 
-    /// <summary>
-    /// 获取验证码 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysAuthService 所需的 Get Captcha 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [SuppressMonitor]
     [DisplayName("获取验证码")]
@@ -413,11 +413,9 @@ public class SysAuthService : IDynamicApiController, ITransient
         return new { Id = codeId, Img = captcha.Base64, ExpirySeconds = expirySeconds };
     }
 
-    /// <summary>
-    /// 用户注册 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysAuthService 的异步依赖完成 User Registration 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [AllowAnonymous]
     [HttpPost, ApiDescriptionSettings(Description = "用户注册", DisableInherite = true)]
@@ -454,7 +452,7 @@ public class SysAuthService : IDynamicApiController, ITransient
     /// <summary>
     /// Swagger登录检查 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [HttpPost("/api/swagger/checkUrl"), NonUnify]
     [ApiDescriptionSettings(Description = "Swagger登录检查", DisableInherite = true)]
@@ -466,8 +464,8 @@ public class SysAuthService : IDynamicApiController, ITransient
     /// <summary>
     /// Swagger登录提交 🔖
     /// </summary>
-    /// <param name="auth"></param>
-    /// <returns></returns>
+    /// <param name="auth">当前方法执行时使用的 auth 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [HttpPost("/api/swagger/submitUrl"), NonUnify]
     [ApiDescriptionSettings(Description = "Swagger登录提交", DisableInherite = true)]

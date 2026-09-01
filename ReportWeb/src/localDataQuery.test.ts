@@ -34,6 +34,11 @@ const choiceParameter: ParameterDefinition = {
   ],
 };
 
+/**
+ * 验证 definition 场景下的预期行为，并防止相关逻辑回归。
+ * @param mode - mode 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function definition(mode: 'Full' | 'Paged' = 'Full'): ReportDefinition {
   return {
     code: 'test2',
@@ -64,6 +69,10 @@ function definition(mode: 'Full' | 'Paged' = 'Full'): ReportDefinition {
   };
 }
 
+/**
+ * 验证 result 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function result(): ExecuteResult {
   return {
     page: 1,
@@ -78,6 +87,11 @@ function result(): ExecuteResult {
   };
 }
 
+/**
+ * 验证 request 场景下的预期行为，并防止相关逻辑回归。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function request(value: string | null): ExecuteRequest {
   return { page: 1, parameters: { GENDER_CODE: value } };
 }

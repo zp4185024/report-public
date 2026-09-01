@@ -24,6 +24,9 @@ public class PathTreeBuilder
 {
     private int _nextId = 1;
 
+    /// <summary>构建 PathTreeBuilder 所需的 Build Tree 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="paths">paths 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public TreeNode BuildTree(List<string> paths)
     {
         var root = new TreeNode { Id = 1, Pid = 0, Name = "文件目录" }; // 根节点

@@ -330,6 +330,7 @@ export const SysOpenAccessApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysOpenAccessAddPost(body?: AddOpenAccessInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysOpenAccessApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysOpenAccessApiAxiosParamCreator(configuration).apiSysOpenAccessAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -358,6 +359,7 @@ export const SysOpenAccessApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysOpenAccessGenerateSignaturePost(body?: GenerateSignatureInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultString>>> {
+            // 第2阶段：调用 SysOpenAccessApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysOpenAccessApiAxiosParamCreator(configuration).apiSysOpenAccessGenerateSignaturePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -385,6 +387,7 @@ export const SysOpenAccessApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysOpenAccessSecretPost(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultString>>> {
+            // 第3阶段：调用 SysOpenAccessApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysOpenAccessApiAxiosParamCreator(configuration).apiSysOpenAccessSecretPost(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -422,6 +425,7 @@ export const SysOpenAccessApiFactory = function (configuration?: Configuration, 
          * @throws {RequiredError}
          */
         async apiSysOpenAccessAddPost(body?: AddOpenAccessInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysOpenAccessApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysOpenAccessApiFp(configuration).apiSysOpenAccessAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -452,6 +456,7 @@ export const SysOpenAccessApiFactory = function (configuration?: Configuration, 
          * @throws {RequiredError}
          */
         async apiSysOpenAccessPagePost(body?: OpenAccessInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListOpenAccessOutput>> {
+            // 第2阶段：整理 SysOpenAccessApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysOpenAccessApiFp(configuration).apiSysOpenAccessPagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

@@ -225,6 +225,7 @@ export const SysUserMenuApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserMenuAddPost(body?: UserMenuInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysUserMenuApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserMenuApiAxiosParamCreator(configuration).apiSysUserMenuAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -252,6 +253,7 @@ export const SysUserMenuApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserMenuUserMenuIdListGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListInt64>>> {
+            // 第2阶段：调用 SysUserMenuApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserMenuApiAxiosParamCreator(configuration).apiSysUserMenuUserMenuIdListGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -279,6 +281,7 @@ export const SysUserMenuApiFp = function(configuration?: Configuration) {
  * @export
  */
 export const SysUserMenuApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    // 第一阶段：整理 SysUserMenuApiFactory 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -307,6 +310,7 @@ export const SysUserMenuApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysUserMenuUserMenuIdListGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListInt64>> {
+            // 第2阶段：整理 SysUserMenuApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserMenuApiFp(configuration).apiSysUserMenuUserMenuIdListGet(options).then((request) => request(axios, basePath));
         },
         /**

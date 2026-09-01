@@ -8,31 +8,23 @@ namespace Admin.NET.Core;
 
 public interface IOnlineUserHub
 {
-    /// <summary>
-    /// 在线用户列表
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>响应 IOnlineUserHub 的 Online User List 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     Task OnlineUserList(OnlineUserList context);
 
-    /// <summary>
-    /// 强制下线
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>根据 IOnlineUserHub 当前输入执行 Force Offline 规则，更新关联状态并返回该操作产生的结果。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     Task ForceOffline(object context);
 
-    /// <summary>
-    /// 发布站内消息
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>根据 IOnlineUserHub 当前输入执行 Public Notice 规则，更新关联状态并返回该操作产生的结果。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     Task PublicNotice(SysNotice context);
 
-    /// <summary>
-    /// 接收消息
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>根据 IOnlineUserHub 当前输入执行 Receive Message 规则，更新关联状态并返回该操作产生的结果。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     Task ReceiveMessage(object context);
 }

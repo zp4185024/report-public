@@ -10,6 +10,8 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocLargeExportJobStoreTests
 {
+    /// <summary>验证 Start Completes Streaming Job And Publishes File 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Start_CompletesStreamingJobAndPublishesFile()
     {
@@ -43,6 +45,8 @@ public sealed class PocLargeExportJobStoreTests
         }
     }
 
+    /// <summary>验证 Cancel Removes The Partial Template File 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Cancel_RemovesThePartialTemplateFile()
     {
@@ -68,6 +72,10 @@ public sealed class PocLargeExportJobStoreTests
         }
     }
 
+    /// <summary>调用 PocLargeExportJobStoreTests 的异步依赖完成 Wait For Terminal Status 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="store">store 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="jobNo">jobNo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<PocExportJobSnapshot> WaitForTerminalStatus(
         PocLargeExportJobStore store,
         string jobNo)
@@ -86,6 +94,8 @@ public sealed class PocLargeExportJobStoreTests
         }
     }
 
+    /// <summary>查询或读取 PocLargeExportJobStoreTests 所需的 Load Seed Snapshot 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject LoadSeedSnapshot()
     {
         const string resourceName =
@@ -96,6 +106,9 @@ public sealed class PocLargeExportJobStoreTests
         return JObject.Parse(reader.ReadToEnd());
     }
 
+    /// <summary>构建 PocLargeExportJobStoreTests 所需的 Create Plan 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="request">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocTemplateDataExportPlan CreatePlan(PocExecuteRequest request)
     {
         var snapshot = LoadSeedSnapshot();
@@ -109,6 +122,8 @@ public sealed class PocLargeExportJobStoreTests
             CurrentRules());
     }
 
+    /// <summary>根据 PocLargeExportJobStoreTests 当前输入计算 Current Rules 结果，并按方法声明的类型返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExchangeRuleSet CurrentRules()
     {
         var rules = PocExchangeMappingDefaults.Create()

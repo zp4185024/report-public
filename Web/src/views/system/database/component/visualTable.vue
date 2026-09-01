@@ -89,10 +89,15 @@ onMounted(async () => {
 });
 
 // 获取可视化表和字段
+/**
+ * 准备 visualTable 的 show Graph 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const showGraph = async () => {
 	var res = await getAPI(SysDatabaseApi).apiSysDatabaseVisualDbTableGet();
 	const visualTableList: any = res.data.result?.visualTableList;
 	const visualColumnList: any = res.data.result?.visualColumnList;
+	// 第一阶段：构造 showGraph 当前阶段需要的中间数据和执行参数。
 	const columnRelationList: any = res.data.result?.columnRelationList;
 
 	const graphNodes = visualTableList.map((table: any) => {
@@ -120,6 +125,7 @@ const showGraph = async () => {
 			lineWidth: 3,
 		};
 	});
+	// 第2阶段：构造 showGraph 当前阶段需要的中间数据和执行参数。
 	const graphJsonData: RGJsonData = {
 		nodes: graphNodes,
 		lines: [],
@@ -133,10 +139,23 @@ const showGraph = async () => {
 	}
 };
 
+/**
+ * 响应 visualTable 的 on Node Click 事件，并协调相关状态和后续操作。
+ * @param nodeObject - nodeObject 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param $event - $event 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onNodeClick = (nodeObject: RGNode, $event: RGUserEvent) => {
 	console.log('onNodeClick:', nodeObject);
 };
 
+/**
+ * 响应 visualTable 的 on Line Click 事件，并协调相关状态和后续操作。
+ * @param lineObject - lineObject 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param linkObject - linkObject 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param $event - $event 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onLineClick = (lineObject: RGLine, linkObject: RGLink, $event: RGUserEvent) => {
 	console.log('onLineClick:', lineObject);
 };

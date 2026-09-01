@@ -15,6 +15,10 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
     private readonly IOSSServiceManager _ossServiceManager;
     private readonly OSSProviderOptions _ossProviderOptions;
 
+    /// <summary>初始化 MultiOSSFileProvider 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="fileProviderService">当前方法执行时使用的 fileProviderService 输入值。</param>
+    /// <param name="ossServiceManager">当前方法执行时使用的 ossServiceManager 输入值。</param>
+    /// <param name="ossProviderOptions">控制本次处理行为的配置选项。</param>
     public MultiOSSFileProvider(SysFileProviderService fileProviderService,
         IOSSServiceManager ossServiceManager,
         IOptions<OSSProviderOptions> ossProviderOptions)
@@ -24,14 +28,12 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
         _ossProviderOptions = ossProviderOptions.Value;
     }
 
-    /// <summary>
-    /// 上传文件
-    /// </summary>
+    /// <summary>接收并校验 MultiOSSFileProvider 的 Upload File Async 输入，随后写入目标状态。</summary>
     /// <param name="file">文件</param>
     /// <param name="sysFile">系统文件信息</param>
     /// <param name="path">文件存储位置</param>
     /// <param name="finalName">文件最终名称</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<SysFile> UploadFileAsync(IFormFile file, SysFile sysFile, string path, string finalName)
     {
         // 获取OSS配置（传入文件信息用于策略选择）
@@ -55,11 +57,9 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
         return sysFile;
     }
 
-    /// <summary>
-    /// 删除文件
-    /// </summary>
+    /// <summary>移除 MultiOSSFileProvider 中与 Delete File Async 对应的数据，并清理关联状态。</summary>
     /// <param name="sysFile">系统文件信息</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task DeleteFileAsync(SysFile sysFile)
     {
         // 获取OSS配置（统一方法）
@@ -70,12 +70,10 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
         await ossService.RemoveObjectAsync(provider.BucketName, filePath);
     }
 
-    /// <summary>
-    /// 获取文件流
-    /// </summary>
+    /// <summary>查询或读取 MultiOSSFileProvider 所需的 Get File Stream Result Async 数据，并按调用约定返回结果。</summary>
     /// <param name="sysFile">系统文件信息</param>
     /// <param name="fileName">文件名</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<FileStreamResult> GetFileStreamResultAsync(SysFile sysFile, string fileName)
     {
         // 获取OSS配置（统一方法）
@@ -93,7 +91,7 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
     /// 下载文件Base64格式
     /// </summary>
     /// <param name="sysFile">系统文件信息</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<string> DownloadFileBase64Async(SysFile sysFile)
     {
         using var httpClient = new HttpClient();
@@ -111,7 +109,7 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
     /// </summary>
     /// <param name="sysFile">系统文件信息</param>
     /// <param name="file">上传的文件（可选，仅上传时传入）</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<SysFileProvider?> GetFileProvider(SysFile sysFile, IFormFile? file = null)
     {
         // 1. 如果已指定存储桶，直接使用
@@ -149,7 +147,7 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
     /// </summary>
     /// <param name="file">上传的文件</param>
     /// <param name="input">上传输入参数</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<SysFileProvider?> SelectProviderAsync(IFormFile file, UploadFileInput input)
     {
         // 1. 优先使用指定的提供者ID
@@ -181,7 +179,7 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
     /// <param name="provider">存储提供者配置</param>
     /// <param name="bucketName">存储桶名称</param>
     /// <param name="filePath">文件路径</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GenerateFileUrl(SysFileProvider provider, string bucketName, string filePath)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -209,7 +207,7 @@ public class MultiOSSFileProvider : ICustomFileProvider, ITransient
     /// <summary>
     /// 从配置文件创建默认提供者（兜底机制）
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private Task<SysFileProvider?> CreateProviderFromConfiguration()
     {
         try

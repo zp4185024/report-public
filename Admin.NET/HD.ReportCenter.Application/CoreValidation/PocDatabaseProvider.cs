@@ -42,6 +42,9 @@ internal static class PocDatabaseProvider
     public static readonly IReadOnlyList<string> SupportedTypes =
         [SqlServer, Oracle, MySql, PostgreSql];
 
+    /// <summary>将 PocDatabaseProvider 中的 Normalize Type 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string NormalizeType(string dbType)
     {
         var matched = SupportedTypes.FirstOrDefault(item =>
@@ -51,6 +54,9 @@ internal static class PocDatabaseProvider
             $"暂不支持数据库类型 '{dbType}'。");
     }
 
+    /// <summary>创建并返回 PocDatabaseProvider 的 Default Port 初始数据，避免不同调用方共享可变对象。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int DefaultPort(string dbType) => NormalizeType(dbType) switch
     {
         SqlServer => 1433,
@@ -60,6 +66,10 @@ internal static class PocDatabaseProvider
         _ => throw new UnreachableException()
     };
 
+    /// <summary>将 PocDatabaseProvider 中的 Parse Endpoint 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="connectionString">connectionString 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static PocDataSourceEndpoint ParseEndpoint(string dbType, string connectionString)
     {
         try
@@ -79,6 +89,15 @@ internal static class PocDatabaseProvider
         }
     }
 
+    /// <summary>构建 PocDatabaseProvider 所需的 Build Connection String 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="server">server 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="port">port 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="database">database 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userName">需要读取、校验或转换的业务值。</param>
+    /// <param name="password">password 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="timeoutSeconds">timeoutSeconds 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string BuildConnectionString(
         string dbType,
         string server,
@@ -134,6 +153,12 @@ internal static class PocDatabaseProvider
             _ => throw new UnreachableException()
         };
 
+    /// <summary>构建 PocDatabaseProvider 所需的 Create Client 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="connectionString">connectionString 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="timeoutSeconds">timeoutSeconds 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static SqlSugarClient CreateClient(
         string dbType,
         string connectionString,
@@ -152,6 +177,11 @@ internal static class PocDatabaseProvider
         return client;
     }
 
+    /// <summary>构建 PocDatabaseProvider 所需的 Create Parameter 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static SugarParameter CreateParameter(string code, string dataType, object? value)
     {
         var parameter = new SugarParameter(
@@ -179,6 +209,10 @@ internal static class PocDatabaseProvider
         return parameter;
     }
 
+    /// <summary>构建 PocDatabaseProvider 所需的 Build Paged Query 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string BuildPagedQuery(string dbType, string queryText) =>
         NormalizeType(dbType) switch
         {
@@ -191,6 +225,9 @@ internal static class PocDatabaseProvider
             _ => throw new UnreachableException()
         };
 
+    /// <summary>校验 PocDatabaseProvider 的 Is Timeout 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="exception">exception 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool IsTimeout(Exception exception) =>
         exception is SqlException { Number: -2 } ||
         exception is TimeoutException ||
@@ -198,6 +235,9 @@ internal static class PocDatabaseProvider
         exception.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase) ||
         exception.Message.Contains("超时", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>校验 PocDatabaseProvider 的 Is Database Exception 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="exception">exception 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool IsDatabaseException(Exception exception)
     {
         for (var current = exception; current is not null; current = current.InnerException)
@@ -211,6 +251,9 @@ internal static class PocDatabaseProvider
         return false;
     }
 
+    /// <summary>查询或读取 PocDatabaseProvider 所需的 Get Safe Connection Error 数据，并按调用约定返回结果。</summary>
+    /// <param name="exception">exception 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetSafeConnectionError(Exception exception)
     {
         if (IsTimeout(exception))
@@ -251,6 +294,9 @@ internal static class PocDatabaseProvider
         return "数据库拒绝连接，未返回可识别的错误说明。";
     }
 
+    /// <summary>将 PocDatabaseProvider 的 To Sql Sugar Type 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static SqlSugarDbType ToSqlSugarType(string dbType) => NormalizeType(dbType) switch
     {
         SqlServer => SqlSugarDbType.SqlServer,
@@ -260,6 +306,9 @@ internal static class PocDatabaseProvider
         _ => throw new UnreachableException()
     };
 
+    /// <summary>将 PocDatabaseProvider 中的 Parse Sql Server 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="connectionString">connectionString 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDataSourceEndpoint ParseSqlServer(string connectionString)
     {
         var builder = new SqlConnectionStringBuilder(connectionString);
@@ -272,6 +321,9 @@ internal static class PocDatabaseProvider
             builder.Password);
     }
 
+    /// <summary>将 PocDatabaseProvider 中的 Parse Oracle 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="connectionString">connectionString 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDataSourceEndpoint ParseOracle(string connectionString)
     {
         var builder = new OracleConnectionStringBuilder(connectionString);
@@ -293,6 +345,9 @@ internal static class PocDatabaseProvider
             builder.Password);
     }
 
+    /// <summary>将 PocDatabaseProvider 中的 Parse My Sql 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="connectionString">connectionString 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDataSourceEndpoint ParseMySql(string connectionString)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString);
@@ -304,6 +359,9 @@ internal static class PocDatabaseProvider
             builder.Password);
     }
 
+    /// <summary>将 PocDatabaseProvider 中的 Parse Postgre Sql 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="connectionString">connectionString 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDataSourceEndpoint ParsePostgreSql(string connectionString)
     {
         var builder = new NpgsqlConnectionStringBuilder(connectionString);
@@ -315,6 +373,9 @@ internal static class PocDatabaseProvider
             builder.Password ?? string.Empty);
     }
 
+    /// <summary>根据 PocDatabaseProvider 当前输入计算 Invalid Connection String 结果，并按方法声明的类型返回。</summary>
+    /// <param name="inner">inner 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDatasetConfigurationException InvalidConnectionString(Exception inner)
     {
         _ = inner;
@@ -323,11 +384,17 @@ internal static class PocDatabaseProvider
             "数据库连接配置无效。");
     }
 
+    /// <summary>负责 PocDatabaseProvider 的 First Line 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string FirstLine(string value) =>
         value.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .FirstOrDefault()
         ?? "数据库连接失败。";
 
+    /// <summary>根据 PocDatabaseProvider 当前输入计算 Sanitize Connection Error 结果，并按方法声明的类型返回。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string SanitizeConnectionError(string value)
     {
         var sanitized = ConnectionSecretRegex.Replace(value, "$1=[已隐藏]").Trim();

@@ -138,6 +138,11 @@ onMounted(async () => {
 });
 
 // 增加表
+/**
+ * 构建 index 所需的 add Table Submitted 内容，并保证生成结果符合调用约定。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const addTableSubmitted = (e: any) => {
 	handleQueryTable();
 	state.tableName = e;
@@ -145,6 +150,10 @@ const addTableSubmitted = (e: any) => {
 };
 
 // 表查询操作
+/**
+ * 响应 index 的 handle Query Table 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQueryTable = async () => {
 	state.tableName = '';
 	state.columnData = [];
@@ -163,6 +172,10 @@ const handleQueryTable = async () => {
 };
 
 // 列查询操作
+/**
+ * 响应 index 的 handle Query Column 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQueryColumn = async () => {
 	state.columnData = [];
 	if (state.tableName == '' || typeof state.tableName == 'undefined') return;
@@ -174,6 +187,10 @@ const handleQueryColumn = async () => {
 };
 
 // 打开表编辑页面
+/**
+ * 准备 index 的 open Edit Table 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditTable = () => {
 	if (state.configId == '' || state.tableName == '') {
 		ElMessage({
@@ -193,6 +210,10 @@ const openEditTable = () => {
 };
 
 // 打开实体生成页面
+/**
+ * 准备 index 的 open Gen Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openGenDialog = () => {
 	if (state.configId == '' || state.tableName == '') {
 		ElMessage({
@@ -211,6 +232,10 @@ const openGenDialog = () => {
 };
 
 // 生成种子数据页面
+/**
+ * 准备 index 的 open Gen Seed Data Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openGenSeedDataDialog = () => {
 	if (state.configId == '' || state.tableName == '') {
 		ElMessage({
@@ -228,6 +253,10 @@ const openGenSeedDataDialog = () => {
 };
 
 // 打开表增加页面
+/**
+ * 准备 index 的 open Add Table 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddTable = () => {
 	if (state.configId == '') {
 		ElMessage({
@@ -246,6 +275,11 @@ const openAddTable = () => {
 };
 
 // 打开列编辑页面
+/**
+ * 准备 index 的 open Edit Column 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditColumn = (row: any) => {
 	var column: any = {
 		configId: state.configId,
@@ -259,6 +293,10 @@ const openEditColumn = (row: any) => {
 };
 
 // 打开列增加页面
+/**
+ * 准备 index 的 open Add Column 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddColumn = () => {
 	if (state.configId == '' || state.tableName == '') {
 		ElMessage({
@@ -286,6 +324,10 @@ const openAddColumn = () => {
 };
 
 // 删除表
+/**
+ * 从 index 移除 del Table 对应数据，并清理相关缓存、选中项或临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delTable = () => {
 	if (state.tableName == '') {
 		ElMessage({
@@ -312,6 +354,11 @@ const delTable = () => {
 };
 
 // 删除列
+/**
+ * 从 index 移除 del Column 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delColumn = (row: any) => {
 	ElMessageBox.confirm(`确定删除列：【${row.dbColumnName}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -331,6 +378,12 @@ const delColumn = (row: any) => {
 		.catch(() => {});
 };
 
+/**
+ * 根据指针位置更新 index 的 move Column 坐标，并限制目标元素不超出可视区域。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param direction - direction 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const moveColumn = (row: any, direction: 'up' | 'down') => {
 	const { columnData, tableName, configId } = state;
 	const currentIndex = columnData.findIndex((item) => item.dbColumnName === row.dbColumnName);
@@ -377,6 +430,10 @@ const moveColumn = (row: any, direction: 'up' | 'down') => {
 };
 
 // 可视化表
+/**
+ * 负责 index 的 visual Table 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const visualTable = () => {
 	if (state.configId == '') {
 		ElMessage({

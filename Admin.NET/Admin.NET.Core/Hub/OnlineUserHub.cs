@@ -23,6 +23,12 @@ public class OnlineUserHub : Hub<IOnlineUserHub>
     private readonly SysCacheService _sysCacheService;
     private readonly SysConfigService _sysConfigService;
 
+    /// <summary>初始化 OnlineUserHub 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysOnlineUerRep">当前方法执行时使用的 sysOnlineUerRep 输入值。</param>
+    /// <param name="sysMessageService">当前方法执行时使用的 sysMessageService 输入值。</param>
+    /// <param name="onlineUserHubContext">本次操作共享的运行上下文。</param>
+    /// <param name="sysCacheService">当前方法执行时使用的 sysCacheService 输入值。</param>
+    /// <param name="sysConfigService">当前方法执行时使用的 sysConfigService 输入值。</param>
     public OnlineUserHub(SqlSugarRepository<SysOnlineUser> sysOnlineUerRep,
         SysMessageService sysMessageService,
         IHubContext<OnlineUserHub, IOnlineUserHub> onlineUserHubContext,
@@ -36,10 +42,8 @@ public class OnlineUserHub : Hub<IOnlineUserHub>
         _sysConfigService = sysConfigService;
     }
 
-    /// <summary>
-    /// 连接
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>响应 OnlineUserHub 的 On Connected Async 事件，并协调相关状态和后续操作。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task OnConnectedAsync()
     {
         var httpContext = Context.GetHttpContext();
@@ -89,11 +93,9 @@ public class OnlineUserHub : Hub<IOnlineUserHub>
             });
     }
 
-    /// <summary>
-    /// 断开
-    /// </summary>
-    /// <param name="exception"></param>
-    /// <returns></returns>
+    /// <summary>响应 OnlineUserHub 的 On Disconnected Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="exception">需要记录、展示或继续传递的错误上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task OnDisconnectedAsync(Exception exception)
     {
         if (string.IsNullOrEmpty(Context.ConnectionId)) return;
@@ -130,11 +132,9 @@ public class OnlineUserHub : Hub<IOnlineUserHub>
             });
     }
 
-    /// <summary>
-    /// 强制下线
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 OnlineUserHub 的异步依赖完成 Force Offline 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ForceOffline(OnlineUserHubInput input)
     {
         await _onlineUserHubContext.Clients.Client(input.ConnectionId).ForceOffline("强制下线");
@@ -143,8 +143,8 @@ public class OnlineUserHub : Hub<IOnlineUserHub>
     /// <summary>
     /// 发送信息给某个人
     /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="message">需要记录、展示或继续传递的错误上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ClientsSendMessage(MessageInput message)
     {
         await _sysMessageService.SendUser(message);
@@ -153,8 +153,8 @@ public class OnlineUserHub : Hub<IOnlineUserHub>
     /// <summary>
     /// 发送信息给所有人
     /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="message">需要记录、展示或继续传递的错误上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ClientsSendMessageToAll(MessageInput message)
     {
         await _sysMessageService.SendAllUser(message);
@@ -163,8 +163,8 @@ public class OnlineUserHub : Hub<IOnlineUserHub>
     /// <summary>
     /// 发送消息给某些人（除了本人）
     /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="message">需要记录、展示或继续传递的错误上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ClientsSendMessageToOther(MessageInput message)
     {
         await _sysMessageService.SendOtherUser(message);
@@ -173,8 +173,8 @@ public class OnlineUserHub : Hub<IOnlineUserHub>
     /// <summary>
     /// 发送消息给某些人
     /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="message">需要记录、展示或继续传递的错误上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ClientsSendMessageToUsers(MessageInput message)
     {
         await _sysMessageService.SendUsers(message);

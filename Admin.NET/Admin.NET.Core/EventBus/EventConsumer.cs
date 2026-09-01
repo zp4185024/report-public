@@ -32,15 +32,11 @@ public class EventConsumer<T> : IDisposable
     /// </summary>
     public event EventHandler<T> Received;
 
-    /// <summary>
-    /// 构造函数
-    /// </summary>
-    /// <param name="consumer"></param>
+    /// <summary>初始化 EventConsumer 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="consumer">当前方法执行时使用的 consumer 输入值。</param>
     public EventConsumer(IProducerConsumer<T> consumer) => Consumer = consumer;
 
-    /// <summary>
-    /// 启动
-    /// </summary>
+    /// <summary>启动 EventConsumer 的 Start 流程，并建立运行期间所需状态。</summary>
     /// <exception cref="InvalidOperationException"></exception>
     public void Start()
     {
@@ -73,10 +69,8 @@ public class EventConsumer<T> : IDisposable
         }, ct, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     }
 
-    /// <summary>
-    /// 停止
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>停止 EventConsumer 的 Stop 流程，并完成必要的状态收尾。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task Stop()
     {
         if (_consumerCts == null || _consumerTask == null) return;
@@ -92,19 +86,15 @@ public class EventConsumer<T> : IDisposable
         }
     }
 
-    /// <summary>
-    /// 释放
-    /// </summary>
+    /// <summary>释放 EventConsumer 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         Dispose(true);
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// 释放
-    /// </summary>
-    /// <param name="disposing"></param>
+    /// <summary>释放 EventConsumer 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
+    /// <param name="disposing">当前方法执行时使用的 disposing 输入值。</param>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)

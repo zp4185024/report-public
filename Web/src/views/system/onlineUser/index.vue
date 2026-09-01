@@ -131,12 +131,20 @@ const notificationThrottle = throttle(
 );
 
 // 打开页面
+/**
+ * 准备 index 的 open Drawer 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDrawer = () => {
 	state.isVisible = true;
 	handleQuery();
 };
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -147,6 +155,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.userName = undefined;
 	state.queryParams.realName = undefined;
@@ -154,6 +166,11 @@ const resetQuery = () => {
 };
 
 // 强制下线
+/**
+ * 负责 index 的 force Offline 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const forceOffline = async (row: any) => {
 	ElMessageBox.confirm(`确定踢掉账号：【${row.realName}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -169,12 +186,22 @@ const forceOffline = async (row: any) => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();

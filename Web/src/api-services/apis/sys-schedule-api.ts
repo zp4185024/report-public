@@ -337,6 +337,7 @@ export const SysScheduleApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysScheduleAddPost(body?: AddScheduleInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysScheduleApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysScheduleApiAxiosParamCreator(configuration).apiSysScheduleAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -365,6 +366,7 @@ export const SysScheduleApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysScheduleDetailIdGet(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysSchedule>>> {
+            // 第2阶段：调用 SysScheduleApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysScheduleApiAxiosParamCreator(configuration).apiSysScheduleDetailIdGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -393,6 +395,7 @@ export const SysScheduleApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysScheduleSetStatusPost(body?: ScheduleInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt32>>> {
+            // 第3阶段：调用 SysScheduleApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysScheduleApiAxiosParamCreator(configuration).apiSysScheduleSetStatusPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -430,6 +433,7 @@ export const SysScheduleApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysScheduleAddPost(body?: AddScheduleInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysScheduleApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysScheduleApiFp(configuration).apiSysScheduleAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -460,6 +464,7 @@ export const SysScheduleApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysSchedulePagePost(body?: ListScheduleInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListSysSchedule>> {
+            // 第2阶段：整理 SysScheduleApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysScheduleApiFp(configuration).apiSysSchedulePagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

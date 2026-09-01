@@ -19,6 +19,13 @@ public class SysOrgService : IDynamicApiController, ITransient
     private readonly SysRoleOrgService _sysRoleOrgService;
     private readonly SqlSugarRepository<SysOrg> _sysOrgRep;
 
+    /// <summary>初始化 SysOrgService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserExtOrgService">sysUserExtOrgService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRoleService">sysUserRoleService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysRoleOrgService">sysRoleOrgService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysOrgRep">sysOrgRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysOrgService(UserManager userManager,
         SysCacheService sysCacheService,
         SysUserExtOrgService sysUserExtOrgService,
@@ -34,10 +41,8 @@ public class SysOrgService : IDynamicApiController, ITransient
         _sysOrgRep = sysOrgRep;
     }
 
-    /// <summary>
-    /// 获取机构列表 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysOrgService 所需的 Get List 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取机构列表")]
     public async Task<List<SysOrg>> GetList([FromQuery] OrgInput input)
     {
@@ -78,8 +83,8 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 递归禁用没权限的机构
     /// </summary>
-    /// <param name="orgTree"></param>
-    /// <param name="userOrgIdList"></param>
+    /// <param name="orgTree">orgTree 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userOrgIdList">需要遍历、筛选或写入的业务数据集合。</param>
     private static void HandlerOrgTree(List<SysOrg> orgTree, List<long> userOrgIdList)
     {
         foreach (var org in orgTree)
@@ -90,11 +95,9 @@ public class SysOrgService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 获取机构树 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysOrgService 所需的 Get Tree 数据，并按调用约定返回结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取机构树")]
     public async Task<List<OrgTreeOutput>> GetTree([FromQuery] OrgInput input)
     {
@@ -125,8 +128,8 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 递归禁用没权限的机构
     /// </summary>
-    /// <param name="orgTree"></param>
-    /// <param name="userOrgIdList"></param>
+    /// <param name="orgTree">orgTree 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userOrgIdList">需要遍历、筛选或写入的业务数据集合。</param>
     private static void HandlerOrgTree(List<OrgTreeOutput> orgTree, List<long> userOrgIdList)
     {
         foreach (var org in orgTree)
@@ -137,11 +140,9 @@ public class SysOrgService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 增加机构 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysOrgService 所需的 Add Org 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加机构")]
     public async Task<long> AddOrg(AddOrgInput input)
@@ -177,11 +178,9 @@ public class SysOrgService : IDynamicApiController, ITransient
         return newOrg.Id;
     }
 
-    /// <summary>
-    /// 批量增加机构
-    /// </summary>
-    /// <param name="orgs"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysOrgService 的异步依赖完成 Batch Add Orgs 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="orgs">orgs 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task BatchAddOrgs(List<SysOrg> orgs)
     {
@@ -190,11 +189,9 @@ public class SysOrgService : IDynamicApiController, ITransient
         await _sysOrgRep.AsInsertable(orgs).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 更新机构 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysOrgService 的 Update Org 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新机构")]
@@ -238,11 +235,9 @@ public class SysOrgService : IDynamicApiController, ITransient
         await _sysOrgRep.AsUpdateable(input.Adapt<SysOrg>()).IgnoreColumns(true).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除机构 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysOrgService 中与 Delete Org 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除机构")]
@@ -304,8 +299,8 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除与此机构、父机构有关的用户机构缓存
     /// </summary>
-    /// <param name="orgId"></param>
-    /// <param name="orgPid"></param>
+    /// <param name="orgId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="orgPid">需要查询、更新或删除的业务记录标识。</param>
     private void DeleteAllUserOrgCache(long orgId, long orgPid)
     {
         var userOrgKeyList = _sysCacheService.GetKeysByPrefixKey(CacheConst.KeyUserOrg);
@@ -329,7 +324,7 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取当前用户机构Id集合
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<long>> GetUserOrgIdList()
     {
@@ -340,7 +335,7 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据指定用户Id获取机构Id集合
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<long>> GetUserOrgIdList(long userId, long userOrgId)
     {
@@ -369,9 +364,9 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取用户角色机构Id集合
     /// </summary>
-    /// <param name="userId"></param>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
     /// <param name="userOrgId">用户的机构Id</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<List<long>> GetUserRoleOrgIdList(long userId, long userOrgId)
     {
         var roleList = await _sysUserRoleService.GetUserRoleList(userId);
@@ -384,9 +379,9 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 判定用户是否有某角色权限
     /// </summary>
-    /// <param name="userId"></param>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
     /// <param name="role">角色代码</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<bool> GetUserHasRole(long userId, SysRole role)
     {
@@ -404,10 +399,10 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据角色Id集合获取机构Id集合
     /// </summary>
-    /// <param name="roleList"></param>
-    /// <param name="userId"></param>
+    /// <param name="roleList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
     /// <param name="userOrgId">用户的机构Id</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<List<long>> GetUserOrgIdList(List<SysRole> roleList, long userId, long userOrgId)
     {
         // 按最大范围策略设定(若同时拥有ALL和SELF权限，则结果ALL)
@@ -452,8 +447,8 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// 根据数据范围获取机构Id集合
     /// </summary>
     /// <param name="userOrgId">用户的机构Id</param>
-    /// <param name="dataScope"></param>
-    /// <returns></returns>
+    /// <param name="dataScope">dataScope 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<List<long>> GetOrgIdListByDataScope(long userOrgId, int dataScope)
     {
         var orgId = userOrgId;//var orgId = _userManager.OrgId;
@@ -479,8 +474,8 @@ public class SysOrgService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据节点Id获取子节点Id集合(包含自己)
     /// </summary>
-    /// <param name="pid"></param>
-    /// <returns></returns>
+    /// <param name="pid">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<long>> GetChildIdListWithSelfById(long pid)
     {

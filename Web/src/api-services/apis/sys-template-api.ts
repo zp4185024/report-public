@@ -430,6 +430,7 @@ export const SysTemplateApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTemplateAddPost(body?: AddTemplateInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysTemplateApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTemplateApiAxiosParamCreator(configuration).apiSysTemplateAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -471,6 +472,7 @@ export const SysTemplateApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTemplatePagePost(body?: PageTemplateInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSqlSugarPagedListSysTemplate>>> {
+            // 第2阶段：调用 SysTemplateApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTemplateApiAxiosParamCreator(configuration).apiSysTemplatePagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -502,6 +504,7 @@ export const SysTemplateApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysTemplateApiAxiosParamCreator(configuration).apiSysTemplateRenderPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysTemplateApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -550,6 +553,7 @@ export const SysTemplateApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysTemplateAddPost(body?: AddTemplateInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysTemplateApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTemplateApiFp(configuration).apiSysTemplateAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -569,6 +573,7 @@ export const SysTemplateApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysTemplateGroupListGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListString>> {
+            // 第2阶段：整理 SysTemplateApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTemplateApiFp(configuration).apiSysTemplateGroupListGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -599,6 +604,7 @@ export const SysTemplateApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysTemplateRenderPost(body?: RenderTemplateInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultString>> {
+            // 第3阶段：整理 SysTemplateApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTemplateApiFp(configuration).apiSysTemplateRenderPost(body, options).then((request) => request(axios, basePath));
         },
         /**

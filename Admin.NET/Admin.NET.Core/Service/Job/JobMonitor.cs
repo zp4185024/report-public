@@ -15,6 +15,10 @@ public class JobMonitor : IJobMonitor
     private readonly IEventPublisher _eventPublisher;
     private readonly ILogger<JobMonitor> _logger;
 
+    /// <summary>初始化 JobMonitor 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="serviceScopeFactory">serviceScopeFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="eventPublisher">eventPublisher 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="logger">logger 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public JobMonitor(IServiceScopeFactory serviceScopeFactory, IEventPublisher eventPublisher, ILogger<JobMonitor> logger)
     {
         _serviceScopeFactory = serviceScopeFactory;
@@ -22,11 +26,19 @@ public class JobMonitor : IJobMonitor
         _logger = logger;
     }
 
+    /// <summary>响应 JobMonitor 的 On Executing Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task OnExecutingAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
         return Task.CompletedTask;
     }
 
+    /// <summary>响应 JobMonitor 的 On Executed Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task OnExecutedAsync(JobExecutedContext context, CancellationToken stoppingToken)
     {
         if (context.Exception == null) return;

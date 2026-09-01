@@ -11,12 +11,10 @@ namespace Admin.NET.Core;
 /// </summary>
 public static class ReflectionUtil
 {
-    /// <summary>
-    /// 获取字段特性
-    /// </summary>
-    /// <param name="field"></param>
+    /// <summary>查询或读取 ReflectionUtil 所需的 Get Description Value 数据，并按调用约定返回结果。</summary>
+    /// <param name="field">参与映射、显示或数据写入的字段集合。</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static T GetDescriptionValue<T>(this FieldInfo field) where T : Attribute
     {
         // 获取字段的指定特性，不包含继承中的特性

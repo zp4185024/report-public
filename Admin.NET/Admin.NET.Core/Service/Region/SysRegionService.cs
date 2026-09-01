@@ -18,6 +18,9 @@ public class SysRegionService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysRegion> _sysRegionRep;
     private readonly SysConfigService _sysConfigService;
 
+    /// <summary>初始化 SysRegionService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysRegionRep">sysRegionRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysConfigService">sysConfigService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysRegionService(SqlSugarRepository<SysRegion> sysRegionRep, SysConfigService sysConfigService)
     {
         _sysRegionRep = sysRegionRep;
@@ -27,8 +30,8 @@ public class SysRegionService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取行政区域分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取行政区域分页列表")]
     public async Task<SqlSugarPagedList<SysRegion>> Page(PageRegionInput input)
     {
@@ -42,29 +45,25 @@ public class SysRegionService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取行政区域列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取行政区域列表")]
     public async Task<List<SysRegion>> GetList([FromQuery] RegionInput input)
     {
         return await _sysRegionRep.GetListAsync(u => u.Pid == input.Id);
     }
 
-    /// <summary>
-    /// 获取行政区域树 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysRegionService 所需的 Get Tree 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取行政区域树")]
     public async Task<List<SysRegion>> GetTree()
     {
         return await _sysRegionRep.AsQueryable().ToTreeAsync(u => u.Children, u => u.Pid, null);
     }
 
-    /// <summary>
-    /// 增加行政区域 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysRegionService 所需的 Add Region 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加行政区域")]
     public async Task<long> AddRegion(AddRegionInput input)
@@ -88,11 +87,9 @@ public class SysRegionService : IDynamicApiController, ITransient
         return newRegion.Id;
     }
 
-    /// <summary>
-    /// 更新行政区域 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysRegionService 的 Update Region 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新行政区域")]
     public async Task UpdateRegion(UpdateRegionInput input)
@@ -123,11 +120,9 @@ public class SysRegionService : IDynamicApiController, ITransient
         await _sysRegionRep.AsUpdateable(input.Adapt<SysRegion>()).IgnoreColumns(true).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除行政区域 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysRegionService 中与 Delete Region 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除行政区域")]
     public async Task DeleteRegion(DeleteRegionInput input)
@@ -137,10 +132,8 @@ public class SysRegionService : IDynamicApiController, ITransient
         await _sysRegionRep.DeleteAsync(u => regionIdList.Contains(u.Id));
     }
 
-    /// <summary>
-    /// 同步行政区域 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>调用 SysRegionService 的异步依赖完成 Sync 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("同步行政区域")]
     public async Task Sync()
     {
@@ -160,7 +153,7 @@ public class SysRegionService : IDynamicApiController, ITransient
     /// <summary>
     /// 从统计局地图页面同步
     /// </summary>
-    /// <param name="syncLevel"></param>
+    /// <param name="syncLevel">syncLevel 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private async Task SyncByMap(int syncLevel)
     {
         var client = new HttpClient();

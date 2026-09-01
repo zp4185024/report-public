@@ -41,6 +41,11 @@ public class GM
      * @return r||s，直接拼接byte数组的rs
      */
 
+    /// <summary>根据 GM 当前输入计算 Sign Sm3 With Sm2 结果，并按方法声明的类型返回。</summary>
+    /// <param name="msg">msg 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userId">需要定位的业务记录标识。</param>
+    /// <param name="privateKey">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] SignSm3WithSm2(byte[] msg, byte[] userId, AsymmetricKeyParameter privateKey)
     {
         return RsAsn1ToPlainByteArray(SignSm3WithSm2Asn1Rs(msg, userId, privateKey));
@@ -53,6 +58,11 @@ public class GM
       * @return rs in <b>asn1 format</b>
       */
 
+    /// <summary>根据 GM 当前输入计算 Sign Sm3 With Sm2 Asn1 Rs 结果，并按方法声明的类型返回。</summary>
+    /// <param name="msg">msg 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userId">需要定位的业务记录标识。</param>
+    /// <param name="privateKey">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] SignSm3WithSm2Asn1Rs(byte[] msg, byte[] userId, AsymmetricKeyParameter privateKey)
     {
         ISigner signer = SignerUtilities.GetSigner("SM3withSM2");
@@ -71,6 +81,12 @@ public class GM
     * @return
     */
 
+    /// <summary>校验 GM 的 Verify Sm3 With Sm2 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="msg">msg 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userId">需要定位的业务记录标识。</param>
+    /// <param name="rs">rs 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="publicKey">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool VerifySm3WithSm2(byte[] msg, byte[] userId, byte[] rs, AsymmetricKeyParameter publicKey)
     {
         if (rs == null || msg == null || userId == null) return false;
@@ -87,6 +103,12 @@ public class GM
      * @return
      */
 
+    /// <summary>校验 GM 的 Verify Sm3 With Sm2 Asn1 Rs 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="msg">msg 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userId">需要定位的业务记录标识。</param>
+    /// <param name="sign">sign 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="publicKey">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool VerifySm3WithSm2Asn1Rs(byte[] msg, byte[] userId, byte[] sign, AsymmetricKeyParameter publicKey)
     {
         ISigner signer = SignerUtilities.GetSigner("SM3withSM2");
@@ -101,6 +123,9 @@ public class GM
      * @return
      */
 
+    /// <summary>更新 GM 的 Change C1 C2 C3 To C1 C3 C2 状态，并同步相关业务数据。</summary>
+    /// <param name="c1c2c3">c1c2c3 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] ChangeC1C2C3ToC1C3C2(byte[] c1c2c3)
     {
         int c1Len = (x9ECParameters.Curve.FieldSize + 7) / 8 * 2 + 1; //sm2p256v1的这个固定65。可看GMNamedCurves、ECCurve代码。
@@ -118,6 +143,9 @@ public class GM
      * @return
      */
 
+    /// <summary>更新 GM 的 Change C1 C3 C2 To C1 C2 C3 状态，并同步相关业务数据。</summary>
+    /// <param name="c1c3c2">c1c3c2 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] ChangeC1C3C2ToC1C2C3(byte[] c1c3c2)
     {
         int c1Len = (x9ECParameters.Curve.FieldSize + 7) / 8 * 2 + 1; //sm2p256v1的这个固定65。可看GMNamedCurves、ECCurve代码。
@@ -136,6 +164,10 @@ public class GM
      * @return
      */
 
+    /// <summary>根据 GM 当前输入计算 Sm2 Decrypt 结果，并按方法声明的类型返回。</summary>
+    /// <param name="data">本次操作使用的输入数据。</param>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm2Decrypt(byte[] data, AsymmetricKeyParameter key)
     {
         return Sm2DecryptOld(ChangeC1C3C2ToC1C2C3(data), key);
@@ -148,6 +180,10 @@ public class GM
      * @return
      */
 
+    /// <summary>根据 GM 当前输入计算 Sm2 Encrypt 结果，并按方法声明的类型返回。</summary>
+    /// <param name="data">本次操作使用的输入数据。</param>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm2Encrypt(byte[] data, AsymmetricKeyParameter key)
     {
         return ChangeC1C2C3ToC1C3C2(Sm2EncryptOld(data, key));
@@ -160,6 +196,10 @@ public class GM
      * @return
      */
 
+    /// <summary>根据 GM 当前输入计算 Sm2 Encrypt Old 结果，并按方法声明的类型返回。</summary>
+    /// <param name="data">本次操作使用的输入数据。</param>
+    /// <param name="pubkey">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm2EncryptOld(byte[] data, AsymmetricKeyParameter pubkey)
     {
         SM2Engine sm2Engine = new SM2Engine();
@@ -174,6 +214,10 @@ public class GM
      * @return
      */
 
+    /// <summary>根据 GM 当前输入计算 Sm2 Decrypt Old 结果，并按方法声明的类型返回。</summary>
+    /// <param name="data">本次操作使用的输入数据。</param>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm2DecryptOld(byte[] data, AsymmetricKeyParameter key)
     {
         SM2Engine sm2Engine = new SM2Engine();
@@ -186,6 +230,9 @@ public class GM
      * @return
      */
 
+    /// <summary>根据 GM 当前输入计算 Sm3 结果，并按方法声明的类型返回。</summary>
+    /// <param name="bytes">bytes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm3(byte[] bytes)
     {
         SM3Digest digest = new();
@@ -196,6 +243,9 @@ public class GM
 
     private const int RS_LEN = 32;
 
+    /// <summary>检查 GM 的 Big Int To Fixex Length Bytes 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="rOrS">rOrS 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] BigIntToFixexLengthBytes(BigInteger rOrS)
     {
         // for sm2p256v1, n is 00fffffffeffffffffffffffffffffffff7203df6b21c6052b53bbf40939d54123,
@@ -222,6 +272,9 @@ public class GM
      * @return sign result in plain byte array
      */
 
+    /// <summary>根据 GM 当前输入计算 Rs Asn1 To Plain Byte Array 结果，并按方法声明的类型返回。</summary>
+    /// <param name="rsDer">rsDer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] RsAsn1ToPlainByteArray(byte[] rsDer)
     {
         Asn1Sequence seq = Asn1Sequence.GetInstance(rsDer);
@@ -239,6 +292,9 @@ public class GM
      * @return rs result in asn1 format
      */
 
+    /// <summary>检查 GM 的 Rs Plain Byte Array To Asn1 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="sign">sign 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] RsPlainByteArrayToAsn1(byte[] sign)
     {
         if (sign.Length != RS_LEN * 2) throw new ArgumentException("err rs. ");
@@ -254,6 +310,8 @@ public class GM
     }
 
     // 生成公私匙对
+    /// <summary>构建 GM 所需的 Generate Key Pair 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static AsymmetricCipherKeyPair GenerateKeyPair()
     {
         ECKeyPairGenerator kpGen = new();
@@ -261,16 +319,26 @@ public class GM
         return kpGen.GenerateKeyPair();
     }
 
+    /// <summary>查询或读取 GM 所需的 Get Privatekey From D 数据，并按调用约定返回结果。</summary>
+    /// <param name="d">d 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ECPrivateKeyParameters GetPrivatekeyFromD(BigInteger d)
     {
         return new ECPrivateKeyParameters(d, ecDomainParameters);
     }
 
+    /// <summary>查询或读取 GM 所需的 Get Publickey From XY 数据，并按调用约定返回结果。</summary>
+    /// <param name="x">x 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="y">y 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ECPublicKeyParameters GetPublickeyFromXY(BigInteger x, BigInteger y)
     {
         return new ECPublicKeyParameters(x9ECParameters.Curve.CreatePoint(x, y), ecDomainParameters);
     }
 
+    /// <summary>查询或读取 GM 所需的 Get Publickey From X509 File 数据，并按调用约定返回结果。</summary>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static AsymmetricKeyParameter GetPublickeyFromX509File(FileInfo file)
     {
         FileStream fileStream = null;
@@ -300,6 +368,9 @@ public class GM
         public string certId;
     }
 
+    /// <summary>根据 GM 当前输入计算 To Byte Array 结果，并按方法声明的类型返回。</summary>
+    /// <param name="i">i 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] ToByteArray(int i)
     {
         byte[] byteArray = new byte[4];
@@ -317,6 +388,9 @@ public class GM
      * @return
      */
 
+    /// <summary>根据 GM 当前输入计算 Join 结果，并按方法声明的类型返回。</summary>
+    /// <param name="byteArrays">byteArrays 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] Join(params byte[][] byteArrays)
     {
         List<byte> byteSource = new();
@@ -337,6 +411,10 @@ public class GM
      * @return
      */
 
+    /// <summary>根据 GM 当前输入计算 KDF 结果，并按方法声明的类型返回。</summary>
+    /// <param name="Z">Z 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="klen">klen 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] KDF(byte[] Z, int klen)
     {
         int ct = 1;
@@ -358,6 +436,12 @@ public class GM
         return byteSource.ToArray();
     }
 
+    /// <summary>检查 GM 的 Sm4 Decrypt CBC 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="keyBytes">keyBytes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cipher">cipher 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="iv">iv 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="algo">algo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm4DecryptCBC(byte[] keyBytes, byte[] cipher, byte[] iv, string algo)
     {
         if (keyBytes.Length != 16) throw new ArgumentException("err key length");
@@ -370,6 +454,12 @@ public class GM
         return c.DoFinal(cipher);
     }
 
+    /// <summary>检查 GM 的 Sm4 Encrypt CBC 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="keyBytes">keyBytes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="plain">plain 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="iv">iv 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="algo">algo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm4EncryptCBC(byte[] keyBytes, byte[] plain, byte[] iv, string algo)
     {
         if (keyBytes.Length != 16) throw new ArgumentException("err key length");
@@ -382,6 +472,11 @@ public class GM
         return c.DoFinal(plain);
     }
 
+    /// <summary>检查 GM 的 Sm4 Encrypt ECB 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="keyBytes">keyBytes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="plain">plain 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="algo">algo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm4EncryptECB(byte[] keyBytes, byte[] plain, string algo)
     {
         if (keyBytes.Length != 16) throw new ArgumentException("err key length");
@@ -394,6 +489,11 @@ public class GM
         return c.DoFinal(plain);
     }
 
+    /// <summary>检查 GM 的 Sm4 Decrypt ECB 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="keyBytes">keyBytes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cipher">cipher 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="algo">algo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] Sm4DecryptECB(byte[] keyBytes, byte[] cipher, string algo)
     {
         if (keyBytes.Length != 16) throw new ArgumentException("err key length");
@@ -417,6 +517,10 @@ public class GM
      * @return
      */
 
+    /// <summary>查询或读取 GM 所需的 Read Sm2 File 数据，并按调用约定返回结果。</summary>
+    /// <param name="pem">pem 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="pwd">pwd 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Sm2Cert ReadSm2File(byte[] pem, string pwd)
     {
         Sm2Cert sm2Cert = new();
@@ -450,6 +554,9 @@ public class GM
      * @return
      */
 
+    /// <summary>查询或读取 GM 所需的 Read Sm2 X509 Cert 数据，并按调用约定返回结果。</summary>
+    /// <param name="cert">cert 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Sm2Cert ReadSm2X509Cert(byte[] cert)
     {
         Sm2Cert sm2Cert = new();
@@ -460,6 +567,9 @@ public class GM
         return sm2Cert;
     }
 
+    /// <summary>根据 GM 当前输入计算 Zero Iv 结果，并按方法声明的类型返回。</summary>
+    /// <param name="algo">algo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte[] ZeroIv(string algo)
     {
         IBufferedCipher cipher = CipherUtilities.GetCipher(algo);

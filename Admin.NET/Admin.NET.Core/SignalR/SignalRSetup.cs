@@ -16,8 +16,8 @@ public static class SignalRSetup
     /// <summary>
     /// 即时消息SignalR注册
     /// </summary>
-    /// <param name="services"></param>
-    /// <param name="SetNewtonsoftJsonSetting"></param>
+    /// <param name="services">services 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="SetNewtonsoftJsonSetting">控制本次处理行为的配置选项。</param>
     public static void AddSignalR(this IServiceCollection services, Action<JsonSerializerSettings> SetNewtonsoftJsonSetting)
     {
         var signalRBuilder = services.AddSignalR(options =>

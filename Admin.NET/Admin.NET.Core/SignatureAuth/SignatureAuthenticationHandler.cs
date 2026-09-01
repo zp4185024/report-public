@@ -28,6 +28,10 @@ public sealed class SignatureAuthenticationHandler : AuthenticationHandler<Signa
 
 #else
 
+    /// <summary>初始化 SignatureAuthenticationHandler 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <param name="logger">logger 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="encoder">encoder 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SignatureAuthenticationHandler(IOptionsMonitor<SignatureAuthenticationOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder)
@@ -48,9 +52,11 @@ public sealed class SignatureAuthenticationHandler : AuthenticationHandler<Signa
     /// <summary>
     /// 确保创建的 Event 类型是 DigestEvents
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     protected override Task<object> CreateEventsAsync() => throw new NotImplementedException($"{nameof(SignatureAuthenticationOptions)}.{nameof(SignatureAuthenticationOptions.Events)} 需要提供一个实例");
 
+    /// <summary>响应 SignatureAuthenticationHandler 的 Handle Authenticate Async 事件，并协调相关状态和后续操作。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var accessKey = Request.Headers["accessKey"].FirstOrDefault();
@@ -115,6 +121,9 @@ public sealed class SignatureAuthenticationHandler : AuthenticationHandler<Signa
         return signatureValidatedContext.Result;
     }
 
+    /// <summary>响应 SignatureAuthenticationHandler 的 Handle Challenge Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="properties">properties 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         var authResult = await HandleAuthenticateOnceSafeAsync();
@@ -132,7 +141,7 @@ public sealed class SignatureAuthenticationHandler : AuthenticationHandler<Signa
     /// <summary>
     /// 获取用于签名的消息
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetMessageForSign(HttpContext context)
     {
         var method = context.Request.Method; // 请求方法（大写）
@@ -144,12 +153,10 @@ public sealed class SignatureAuthenticationHandler : AuthenticationHandler<Signa
         return $"{method}&{url}&{accessKey}&{timestamp}&{nonce}";
     }
 
-    /// <summary>
-    /// 对数据进行签名
-    /// </summary>
-    /// <param name="secret"></param>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <summary>检查 SignatureAuthenticationHandler 的 Sign Data 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="secret">secret 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string SignData(byte[] secret, string data)
     {
         if (secret == null)
@@ -166,8 +173,8 @@ public sealed class SignatureAuthenticationHandler : AuthenticationHandler<Signa
     /// <summary>
     /// 返回验证失败结果，并在 Items 中增加 <see cref="SignatureAuthenticationDefaults.AuthenticateFailMsgKey"/>，记录身份验证失败消息
     /// </summary>
-    /// <param name="message"></param>
-    /// <returns></returns>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private Task<AuthenticateResult> AuthenticateResultFailAsync(string message)
     {
         // 写入身份验证失败消息

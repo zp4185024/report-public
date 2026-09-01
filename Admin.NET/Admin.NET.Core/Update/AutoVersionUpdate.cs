@@ -34,8 +34,8 @@ public static class AutoVersionUpdate
     /// <summary>
     /// 使用自动版本更新中间件
     /// </summary>
-    /// <param name="app"></param>
-    /// <returns></returns>
+    /// <param name="app">app 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IApplicationBuilder UseAutoVersionUpdate(this IApplicationBuilder app)
     {
         LogHelper.Info("AutoVersionUpdate 中间件运行");
@@ -131,7 +131,7 @@ public static class AutoVersionUpdate
     /// <summary>
     /// 获取入口程序集当前版本信息
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetEntryAssemblyCurrentVersion()
     {
         var entryAssemblyVersion = ReflectionHelper.GetEntryAssemblyVersion();
@@ -141,8 +141,8 @@ public static class AutoVersionUpdate
     /// <summary>
     /// 设置入口程序集当前版本信息
     /// </summary>
-    /// <param name="version"></param>
-    /// <param name="isRunScript"></param>
+    /// <param name="version">version 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="isRunScript">isRunScript 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void SetEntryAssemblyCurrentVersion(string version, bool isRunScript)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "version.txt");
@@ -153,7 +153,7 @@ public static class AutoVersionUpdate
     /// <summary>
     /// 获取入口程序集上一次运行版本信息
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static HistoryVersionInfo GetEntryAssemblyHistoryVersionInfo()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "version.txt");
@@ -182,7 +182,7 @@ public static class AutoVersionUpdate
     /// <summary>
     /// 获取程序目录下的脚本 SQL 文件版本
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static List<SqlFileInfo> GetScriptSqlVersions()
     {
         // 获取所有脚本文件
@@ -198,9 +198,9 @@ public static class AutoVersionUpdate
     /// <summary>
     /// 保存当前版本信息
     /// </summary>
-    /// <param name="app"></param>
-    /// <param name="sql"></param>
-    /// <param name="sqlVersion"></param>
+    /// <param name="app">app 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sql">sql 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sqlVersion">sqlVersion 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void HandleSqlScript(IApplicationBuilder app, string sql, string sqlVersion)
     {
         using var scope = App.GetRequiredService<IServiceScopeFactory>().CreateScope();

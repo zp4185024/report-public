@@ -229,6 +229,6 @@ public class CodeGenConfig
     /// </summary>
     /// <param name="tableAlias">表别名</param>
     /// <param name="separator">多字段时的连接符</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetDisplayColumn(string tableAlias, string separator = "-") => "$\"" + string.Join(separator, FkDisplayColumnList?.Select(name => $"{{{tableAlias}.{name}}}") ?? new List<string>()) + "\"";
 }

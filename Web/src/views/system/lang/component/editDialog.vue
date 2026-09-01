@@ -39,6 +39,12 @@ onMounted(async () => {
 });
 
 // 打开弹窗
+/**
+ * 准备 editDialog 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param title - title 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = async (row: any, title: string) => {
 	state.title = title;
 	row = row ?? { direction: 1, weekStart: 7, active: false };
@@ -47,12 +53,20 @@ const openDialog = async (row: any, title: string) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 editDialog 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emit("reloadTable");
 	state.showDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editDialog 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = async () => {
 	ruleFormRef.value.validate(async (isValid: boolean, fields?: any) => {
 		if (isValid) {

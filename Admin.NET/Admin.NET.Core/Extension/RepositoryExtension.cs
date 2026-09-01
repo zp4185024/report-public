@@ -14,9 +14,9 @@ public static class RepositoryExtension
     /// 实体假删除 _rep.FakeDelete(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="repository"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int FakeDelete<T>(this ISugarRepository repository, T entity) where T : EntityBaseDel, new()
     {
         return repository.Context.FakeDelete(entity);
@@ -26,9 +26,9 @@ public static class RepositoryExtension
     /// 实体假删除 db.FakeDelete(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="db"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int FakeDelete<T>(this ISqlSugarClient db, T entity) where T : EntityBaseDel, new()
     {
         return db.Updateable(entity).AS().ReSetValue(x => { x.IsDelete = true; })
@@ -42,9 +42,9 @@ public static class RepositoryExtension
     /// 实体集合批量假删除 _rep.FakeDelete(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="repository"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int FakeDelete<T>(this ISugarRepository repository, List<T> entity) where T : EntityBaseDel, new()
     {
         return repository.Context.FakeDelete(entity);
@@ -54,9 +54,9 @@ public static class RepositoryExtension
     /// 实体集合批量假删除 db.FakeDelete(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="db"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int FakeDelete<T>(this ISqlSugarClient db, List<T> entity) where T : EntityBaseDel, new()
     {
         return db.Updateable(entity).AS().ReSetValue(x => { x.IsDelete = true; })
@@ -70,9 +70,9 @@ public static class RepositoryExtension
     /// 实体假删除异步 _rep.FakeDeleteAsync(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="repository"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Task<int> FakeDeleteAsync<T>(this ISugarRepository repository, T entity) where T : EntityBaseDel, new()
     {
         return repository.Context.FakeDeleteAsync(entity);
@@ -82,9 +82,9 @@ public static class RepositoryExtension
     /// 实体假删除 db.FakeDelete(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="db"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Task<int> FakeDeleteAsync<T>(this ISqlSugarClient db, T entity) where T : EntityBaseDel, new()
     {
         return db.Updateable(entity).AS().ReSetValue(x => { x.IsDelete = true; })
@@ -98,9 +98,9 @@ public static class RepositoryExtension
     /// 实体集合批量假删除异步 _rep.FakeDeleteAsync(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="repository"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Task<int> FakeDeleteAsync<T>(this ISugarRepository repository, List<T> entity) where T : EntityBaseDel, new()
     {
         return repository.Context.FakeDeleteAsync(entity);
@@ -110,9 +110,9 @@ public static class RepositoryExtension
     /// 实体集合批量假删除 db.FakeDelete(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="db"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Task<int> FakeDeleteAsync<T>(this ISqlSugarClient db, List<T> entity) where T : EntityBaseDel, new()
     {
         return db.Updateable(entity).AS().ReSetValue(x => { x.IsDelete = true; })
@@ -125,7 +125,7 @@ public static class RepositoryExtension
     /// <summary>
     /// 排序方式(默认降序)
     /// </summary>
-    /// <param name="queryable"></param>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
     /// <param name="pageInput"> </param>
     /// <param name="prefix"> </param>
     /// <param name="defaultSortField"> 默认排序字段 </param>
@@ -156,10 +156,10 @@ public static class RepositoryExtension
     /// 更新实体并记录差异日志 _rep.UpdateWithDiffLog(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="repository"></param>
-    /// <param name="entity"></param>
-    /// <param name="ignoreAllNullColumns"></param>
-    /// <returns></returns>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <param name="ignoreAllNullColumns">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int UpdateWithDiffLog<T>(this ISugarRepository repository, T entity, bool ignoreAllNullColumns = true) where T : EntityBase, new()
     {
         return repository.Context.UpdateWithDiffLog(entity, ignoreAllNullColumns);
@@ -169,10 +169,10 @@ public static class RepositoryExtension
     /// 更新实体并记录差异日志 _rep.UpdateWithDiffLog(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="db"></param>
-    /// <param name="entity"></param>
-    /// <param name="ignoreAllNullColumns"></param>
-    /// <returns></returns>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <param name="ignoreAllNullColumns">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int UpdateWithDiffLog<T>(this ISqlSugarClient db, T entity, bool ignoreAllNullColumns = true) where T : EntityBase, new()
     {
         return db.Updateable(entity).AS()
@@ -185,10 +185,10 @@ public static class RepositoryExtension
     /// 更新实体并记录差异日志 _rep.UpdateWithDiffLogAsync(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="repository"></param>
-    /// <param name="entity"></param>
-    /// <param name="ignoreAllNullColumns"></param>
-    /// <returns></returns>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <param name="ignoreAllNullColumns">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Task<int> UpdateWithDiffLogAsync<T>(this ISugarRepository repository, T entity, bool ignoreAllNullColumns = true) where T : EntityBase, new()
     {
         return repository.Context.UpdateWithDiffLogAsync(entity, ignoreAllNullColumns);
@@ -198,10 +198,10 @@ public static class RepositoryExtension
     /// 更新实体并记录差异日志 _rep.UpdateWithDiffLogAsync(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="db"></param>
-    /// <param name="entity"></param>
-    /// <param name="ignoreAllNullColumns"></param>
-    /// <returns></returns>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <param name="ignoreAllNullColumns">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Task<int> UpdateWithDiffLogAsync<T>(this ISqlSugarClient db, T entity, bool ignoreAllNullColumns = true) where T : EntityBase, new()
     {
         return db.Updateable(entity)
@@ -214,9 +214,9 @@ public static class RepositoryExtension
     /// 新增实体并记录差异日志 _rep.InsertWithDiffLog(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="repository"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int InsertWithDiffLog<T>(this ISugarRepository repository, T entity) where T : EntityBase, new()
     {
         return repository.Context.InsertWithDiffLog(entity);
@@ -226,9 +226,9 @@ public static class RepositoryExtension
     /// 新增实体并记录差异日志 _rep.InsertWithDiffLog(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="db"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int InsertWithDiffLog<T>(this ISqlSugarClient db, T entity) where T : EntityBase, new()
     {
         return db.Insertable(entity).AS().EnableDiffLogEvent().ExecuteCommand();
@@ -238,9 +238,9 @@ public static class RepositoryExtension
     /// 新增实体并记录差异日志 _rep.InsertWithDiffLogAsync(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="repository"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Task<int> InsertWithDiffLogAsync<T>(this ISugarRepository repository, T entity) where T : EntityBase, new()
     {
         return repository.Context.InsertWithDiffLogAsync(entity);
@@ -250,18 +250,16 @@ public static class RepositoryExtension
     /// 新增实体并记录差异日志 _rep.InsertWithDiffLog(entity)
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="db"></param>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Task<int> InsertWithDiffLogAsync<T>(this ISqlSugarClient db, T entity) where T : EntityBase, new()
     {
         return db.Insertable(entity).AS().EnableDiffLogEvent().ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 多库查询
-    /// </summary>
-    /// <param name="queryable"></param>
+    /// <summary>根据 RepositoryExtension 当前输入计算 AS 结果，并按方法声明的类型返回。</summary>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
     /// <returns> </returns>
     public static ISugarQueryable<T> AS<T>(this ISugarQueryable<T> queryable)
     {
@@ -269,23 +267,19 @@ public static class RepositoryExtension
         return queryable.AS<T>($"{info.Item1}.{info.Item2}");
     }
 
-    /// <summary>
-    /// 多库查询
-    /// </summary>
+    /// <summary>根据 RepositoryExtension 当前输入计算 AS 结果，并按方法声明的类型返回。</summary>
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="T2"></typeparam>
-    /// <param name="queryable"></param>
-    /// <returns></returns>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ISugarQueryable<T, T2> AS<T, T2>(this ISugarQueryable<T, T2> queryable)
     {
         var info = GetTableInfo<T2>();
         return queryable.AS<T2>($"{info.Item1}.{info.Item2}");
     }
 
-    /// <summary>
-    /// 多库更新
-    /// </summary>
-    /// <param name="updateable"></param>
+    /// <summary>根据 RepositoryExtension 当前输入计算 AS 结果，并按方法声明的类型返回。</summary>
+    /// <param name="updateable">当前方法执行时使用的 updateable 输入值。</param>
     /// <returns> </returns>
     public static IUpdateable<T> AS<T>(this IUpdateable<T> updateable) where T : EntityBase, new()
     {
@@ -293,10 +287,8 @@ public static class RepositoryExtension
         return updateable.AS($"{info.Item1}.{info.Item2}");
     }
 
-    /// <summary>
-    /// 多库新增
-    /// </summary>
-    /// <param name="insertable"></param>
+    /// <summary>根据 RepositoryExtension 当前输入计算 AS 结果，并按方法声明的类型返回。</summary>
+    /// <param name="insertable">当前方法执行时使用的 insertable 输入值。</param>
     /// <returns> </returns>
     public static IInsertable<T> AS<T>(this IInsertable<T> insertable) where T : EntityBase, new()
     {
@@ -304,10 +296,8 @@ public static class RepositoryExtension
         return insertable.AS($"{info.Item1}.{info.Item2}");
     }
 
-    /// <summary>
-    /// 多库删除
-    /// </summary>
-    /// <param name="deleteable"></param>
+    /// <summary>根据 RepositoryExtension 当前输入计算 AS 结果，并按方法声明的类型返回。</summary>
+    /// <param name="deleteable">当前方法执行时使用的 deleteable 输入值。</param>
     /// <returns> </returns>
     public static IDeleteable<T> AS<T>(this IDeleteable<T> deleteable) where T : EntityBase, new()
     {
@@ -319,7 +309,7 @@ public static class RepositoryExtension
     /// 根据实体类型获取表信息
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Tuple<string, string> GetTableInfo<T>()
     {
         var entityType = typeof(T);
@@ -332,9 +322,9 @@ public static class RepositoryExtension
     /// <summary>
     /// 禁用过滤器-适用于更新和删除操作（只对当前请求有效，禁止使用异步）
     /// </summary>
-    /// <param name="repository"></param>
+    /// <param name="repository">当前方法执行时使用的 repository 输入值。</param>
     /// <param name="action">禁止异步</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static void RunWithoutFilter(this ISugarRepository repository, Action action)
     {
         repository.Context.QueryFilter.ClearAndBackup(); // 清空并备份过滤器
@@ -349,10 +339,8 @@ public static class RepositoryExtension
         //});
     }
 
-    /// <summary>
-    /// 忽略租户
-    /// </summary>
-    /// <param name="queryable"></param>
+    /// <summary>根据 RepositoryExtension 当前输入计算 Ignore Tenant 结果，并按方法声明的类型返回。</summary>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
     /// <param name="ignore">是否忽略 默认true</param>
     /// <returns> </returns>
     public static ISugarQueryable<T> IgnoreTenant<T>(this ISugarQueryable<T> queryable, bool ignore = true)
@@ -360,13 +348,11 @@ public static class RepositoryExtension
         return ignore ? queryable.ClearFilter<ITenantIdFilter>() : queryable;
     }
 
-    /// <summary>
-    /// 只更新某些列
-    /// </summary>
+    /// <summary>响应 RepositoryExtension 的 Only Update Column 事件，并协调相关状态和后续操作。</summary>
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="R"></typeparam>
-    /// <param name="updateable"></param>
-    /// <returns></returns>
+    /// <param name="updateable">当前方法执行时使用的 updateable 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IUpdateable<T> OnlyUpdateColumn<T, R>(this IUpdateable<T> updateable) where T : EntityBase, new() where R : class, new()
     {
         if (updateable.UpdateBuilder.UpdateColumns == null)
@@ -386,9 +372,9 @@ public static class RepositoryExtension
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <typeparam name="R"></typeparam>
-    /// <param name="t"></param>
-    /// <param name="r"></param>
-    /// <returns></returns>
+    /// <param name="t">当前方法执行时使用的 t 输入值。</param>
+    /// <param name="r">当前方法执行时使用的 r 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static UpdateNavRootOptions OnlyNavUpdateColumn<T, R>(this T t, R r)
     {
         UpdateNavRootOptions uNOption = new UpdateNavRootOptions();
@@ -411,11 +397,11 @@ public static class RepositoryExtension
     /// </summary>
     /// <typeparam name="T1"></typeparam>
     /// <typeparam name="T2"></typeparam>
-    /// <param name="queryable"></param>
-    /// <param name="exp"></param>
-    /// <param name="queryList"></param>
-    /// <param name="stoppingToken"></param>
-    /// <returns></returns>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
+    /// <param name="exp">当前方法执行时使用的 exp 输入值。</param>
+    /// <param name="queryList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<List<T1>> BulkListQuery<T1, T2>(this ISugarQueryable<T1> queryable,
             Expression<Func<T1, SingleColumnEntity<T2>, bool>> exp,
             IEnumerable<T2> queryList,

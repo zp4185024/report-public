@@ -5,6 +5,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocReportContractsTests
 {
+    /// <summary>验证 Execute Request Deserializes Dynamic Parameter Dictionary 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void ExecuteRequest_DeserializesDynamicParameterDictionary()
     {

@@ -35,16 +35,28 @@ const props = defineProps({
 	// 刷新 iframe
 	refreshKey: {
 		type: String,
+		/**
+		 * 为 refreshKey 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '',
 	},
 	// 过渡动画 name
 	name: {
 		type: String,
+		/**
+		 * 为 name 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => 'slide-right',
 	},
 	// iframe 列表
 	list: {
 		type: Array,
+		/**
+		 * 为 list 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
 	},
 });
@@ -66,11 +78,18 @@ const getRoutePath = computed(() => {
 	return route.path;
 });
 // 关闭 iframe loading
+/**
+ * 结束 iframes 的 close Iframe Loading 交互并清理临时状态。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeIframeLoading = (val: string, item: RouteItem) => {
 	nextTick(() => {
 		if (!iframeRef.value) return false;
 		iframeRef.value.forEach((v: HTMLElement) => {
 			if (v.dataset.url === val) {
+				/** iframe 加载完成后关闭当前路由记录对应的加载状态。 */
 				v.onload = () => {
 					if (item.meta?.isIframeOpen && item.meta.loading) item.meta.loading = false;
 				};

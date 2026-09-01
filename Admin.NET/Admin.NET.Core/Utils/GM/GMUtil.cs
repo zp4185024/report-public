@@ -15,12 +15,10 @@ namespace Admin.NET.Core;
 /// </summary>
 public class GMUtil
 {
-    /// <summary>
-    /// SM2加密
-    /// </summary>
-    /// <param name="publicKeyHex"></param>
-    /// <param name="data_string"></param>
-    /// <returns></returns>
+    /// <summary>根据 GMUtil 当前输入计算 SM2 Encrypt 结果，并按方法声明的类型返回。</summary>
+    /// <param name="publicKeyHex">publicKeyHex 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="data_string">data_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM2Encrypt(string publicKeyHex, string data_string)
     {
         // 如果是130位公钥，.NET使用的话，把开头的04截取掉
@@ -41,12 +39,10 @@ public class GMUtil
         return strSM2;
     }
 
-    /// <summary>
-    /// SM2解密
-    /// </summary>
-    /// <param name="privateKey_string"></param>
-    /// <param name="encryptedData_string"></param>
-    /// <returns></returns>
+    /// <summary>根据 GMUtil 当前输入计算 SM2 Decrypt 结果，并按方法声明的类型返回。</summary>
+    /// <param name="privateKey_string">privateKey_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="encryptedData_string">encryptedData_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM2Decrypt(string privateKey_string, string encryptedData_string)
     {
         if (!encryptedData_string.StartsWith("04"))
@@ -64,9 +60,9 @@ public class GMUtil
     /// <summary>
     /// SM4加密（ECB）
     /// </summary>
-    /// <param name="key_string"></param>
-    /// <param name="plainText"></param>
-    /// <returns></returns>
+    /// <param name="key_string">key_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="plainText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM4EncryptECB(string key_string, string plainText)
     {
         byte[] key = Hex.Decode(key_string);
@@ -77,9 +73,9 @@ public class GMUtil
     /// <summary>
     /// SM4解密（ECB）
     /// </summary>
-    /// <param name="key_string"></param>
-    /// <param name="cipherText"></param>
-    /// <returns></returns>
+    /// <param name="key_string">key_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cipherText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM4DecryptECB(string key_string, string cipherText)
     {
         byte[] key = Hex.Decode(key_string);
@@ -90,10 +86,10 @@ public class GMUtil
     /// <summary>
     /// SM4加密（CBC）
     /// </summary>
-    /// <param name="key_string"></param>
-    /// <param name="iv_string"></param>
-    /// <param name="plainText"></param>
-    /// <returns></returns>
+    /// <param name="key_string">key_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="iv_string">iv_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="plainText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM4EncryptCBC(string key_string, string iv_string, string plainText)
     {
         byte[] key = Hex.Decode(key_string);
@@ -105,10 +101,10 @@ public class GMUtil
     /// <summary>
     /// SM4解密（CBC）
     /// </summary>
-    /// <param name="key_string"></param>
-    /// <param name="iv_string"></param>
-    /// <param name="cipherText"></param>
-    /// <returns></returns>
+    /// <param name="key_string">key_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="iv_string">iv_string 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cipherText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SM4DecryptCBC(string key_string, string iv_string, string cipherText)
     {
         byte[] key = Hex.Decode(key_string);
@@ -120,9 +116,9 @@ public class GMUtil
     /// <summary>
     /// 补足 16 进制字符串的 0 字符，返回不带 0x 的16进制字符串
     /// </summary>
-    /// <param name="input"></param>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     /// <param name="mode">1表示加密，0表示解密</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static byte[] HandleSm4Padding(byte[] input, int mode)
     {
         if (input == null)

@@ -15,7 +15,7 @@ public static class DataTypeExtension
     /// <remarks></remarks>
     /// <param name="value">待转换对象</param>
     /// <param name="defaultValue">默认值。待转换对象无效时使用</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static sbyte ToSByte(this object value, sbyte defaultValue = default)
     {
         if (value is sbyte num) return num;
@@ -31,7 +31,7 @@ public static class DataTypeExtension
     /// <remarks></remarks>
     /// <param name="value">待转换对象</param>
     /// <param name="defaultValue">默认值。待转换对象无效时使用</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static byte ToByte(this object value, byte defaultValue = default)
     {
         if (value is byte num) return num;
@@ -47,7 +47,7 @@ public static class DataTypeExtension
     /// <remarks></remarks>
     /// <param name="value">待转换对象</param>
     /// <param name="defaultValue">默认值。待转换对象无效时使用</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static short ToInt16(this object value, short defaultValue = default)
     {
         if (value is short num) return num;
@@ -63,7 +63,7 @@ public static class DataTypeExtension
     /// <remarks></remarks>
     /// <param name="value">待转换对象</param>
     /// <param name="defaultValue">默认值。待转换对象无效时使用</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ushort ToUInt16(this object value, ushort defaultValue = default)
     {
         if (value is ushort num) return num;
@@ -79,7 +79,7 @@ public static class DataTypeExtension
     /// <remarks></remarks>
     /// <param name="value">待转换对象</param>
     /// <param name="defaultValue">默认值。待转换对象无效时使用</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static uint ToUInt32(this object value, uint defaultValue = default)
     {
         if (value is uint num) return num;
@@ -95,7 +95,7 @@ public static class DataTypeExtension
     /// <remarks></remarks>
     /// <param name="value">待转换对象</param>
     /// <param name="defaultValue">默认值。待转换对象无效时使用</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ulong ToUInt64(this object value, ulong defaultValue = default)
     {
         if (value is ulong num) return num;

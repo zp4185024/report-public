@@ -18,6 +18,11 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     private readonly SysFileService _sysFileService;
     private readonly WechatApiClientFactory _wechatApiClientFactory;
 
+    /// <summary>初始化 SysWxOpenService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysWechatUserRep">sysWechatUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysConfigService">sysConfigService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="wechatApiClientFactory">wechatApiClientFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysFileService">sysFileService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysWxOpenService(SqlSugarRepository<SysWechatUser> sysWechatUserRep,
         SysConfigService sysConfigService,
         WechatApiClientFactory wechatApiClientFactory,
@@ -33,7 +38,7 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取微信用户OpenId 🔖
     /// </summary>
-    /// <param name="input"></param>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [AllowAnonymous]
     [DisplayName("获取微信用户OpenId")]
     public async Task<WxOpenIdOutput> GetWxOpenId([FromQuery] JsCode2SessionInput input)
@@ -72,7 +77,7 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取微信用户电话号码 🔖
     /// </summary>
-    /// <param name="input"></param>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [AllowAnonymous]
     [DisplayName("获取微信用户电话号码")]
     public async Task<WxPhoneOutput> GetWxPhone([FromQuery] WxPhoneInput input)
@@ -113,8 +118,8 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     /// <summary>
     /// 微信小程序登录OpenId 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("微信小程序登录OpenId")]
     public async Task<dynamic> WxOpenIdLogin(WxOpenIdLoginInput input)
@@ -136,11 +141,9 @@ public class SysWxOpenService : IDynamicApiController, ITransient
         };
     }
 
-    /// <summary>
-    /// 上传小程序头像
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>接收并校验 SysWxOpenService 的 Upload Avatar 输入，随后写入目标状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("上传小程序头像")]
     public async Task<SysFile> UploadAvatar([FromForm] UploadAvatarInput input)
@@ -159,8 +162,8 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     /// <summary>
     /// 设置小程序用户昵称
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [HttpPost]
     public async Task SetNickName(SetNickNameInput input)
@@ -176,8 +179,8 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取小程序用户信息
     /// </summary>
-    /// <param name="openid"></param>
-    /// <returns></returns>
+    /// <param name="openid">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     public async Task<dynamic> GetUserInfo(string openid)
     {
@@ -205,11 +208,9 @@ public class SysWxOpenService : IDynamicApiController, ITransient
         return resTemplate.TemplateList;
     }
 
-    /// <summary>
-    /// 发送订阅消息 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>执行 SysWxOpenService 的 Send Subscribe Message 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("发送订阅消息")]
     public async Task<dynamic> SendSubscribeMessage(SendSubscribeMessageInput input)
     {
@@ -231,8 +232,8 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     /// <summary>
     /// 增加订阅消息模板 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "AddSubscribeMessageTemplate"), HttpPost]
     [DisplayName("增加订阅消息模板")]
     public async Task<dynamic> AddSubscribeMessageTemplate(AddSubscribeMessageTemplateInput input)
@@ -253,7 +254,7 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     /// 生成带参数小程序二维码(总共生成的码数量限制为 100,000)
     /// </summary>
     /// <param name="input"> 扫码进入的小程序页面路径，最大长度 128 个字符，不能为空； eg: pages / index ? id = AY000001 </param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("生成小程序二维码")]
     [ApiDescriptionSettings(Name = "GenerateQRImage")]
     public async Task<GenerateQRImageOutput> GenerateQRImageAsync(GenerateQRImageInput input)
@@ -324,7 +325,7 @@ public class SysWxOpenService : IDynamicApiController, ITransient
     /// 生成二维码(获取不受限制的小程序码)
     /// </summary>
     /// <param name="input">入参</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("生成小程序二维码")]
     [ApiDescriptionSettings(Name = "GenerateQRImageUnlimit")]
     public async Task<GenerateQRImageOutput> GenerateQRImageUnlimitAsync(GenerateQRImageUnLimitInput input)

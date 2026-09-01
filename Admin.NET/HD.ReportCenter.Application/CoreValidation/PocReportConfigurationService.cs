@@ -149,6 +149,8 @@ public sealed record PocRuntimeReportConfiguration(
 
 public sealed class PocReportAlreadyExistsException : Exception
 {
+    /// <summary>初始化 PocReportAlreadyExistsException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
     public PocReportAlreadyExistsException(string reportCode)
         : base($"报表编码 '{reportCode}' 已存在。")
     {
@@ -175,6 +177,12 @@ public sealed class PocReportConfigurationService : ITransient
     private readonly PocTemplateStore? _templates;
     private readonly PocExternalParameterSourceService? _externalParameters;
 
+    /// <summary>初始化 PocReportConfigurationService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="store">store 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dataAssets">dataAssets 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="database">database 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="templates">templates 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="externalParameters">externalParameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocReportConfigurationService(
         PocReportConfigurationStore store,
         PocDataAssetStore dataAssets,
@@ -189,12 +197,15 @@ public sealed class PocReportConfigurationService : ITransient
         _externalParameters = externalParameters;
     }
 
+    /// <summary>调用 PocReportConfigurationService 的异步依赖完成 List Reports Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocReportSummaryDocument>> ListReportsAsync()
     {
         var reports = await _store.ListReportsAsync();
         IReadOnlyList<PocStoredTemplateSummary> templates = _templates is null
             ? []
             : await _templates.ListAsync();
+        // 第一阶段：构造 ListReportsAsync 当前步骤需要的中间数据和执行参数。
         var templateByReport = templates.ToDictionary(
             item => item.ReportCode,
             StringComparer.OrdinalIgnoreCase);
@@ -216,6 +227,7 @@ public sealed class PocReportConfigurationService : ITransient
 
         return reports.Select(report =>
         {
+            // 第2阶段：根据 ListReportsAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
             templateByReport.TryGetValue(report.Code, out var template);
             var reportUpdatedAt = report.UpdateTime ?? report.CreateTime;
             var updatedAt = template?.UpdatedAt is DateTime templateUpdatedAt &&
@@ -234,6 +246,8 @@ public sealed class PocReportConfigurationService : ITransient
         }).ToArray();
     }
 
+    /// <summary>查询或读取 PocReportConfigurationService 所需的 Get Create Options Async 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocReportCreateOptionsDocument> GetCreateOptionsAsync()
     {
         var datasets = await _dataAssets.ListDatasetsAsync();
@@ -244,6 +258,9 @@ public sealed class PocReportConfigurationService : ITransient
                 .ToArray());
     }
 
+    /// <summary>构建 PocReportConfigurationService 所需的 Create Async 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="request">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocReportConfigurationDocument> CreateAsync(
         PocCreateReportRequest request)
     {
@@ -252,6 +269,7 @@ public sealed class PocReportConfigurationService : ITransient
         var datasetCode = request.DatasetCode?.Trim() ?? string.Empty;
         ValidateCode(datasetCode, "DATASET_DEFINITION_INVALID");
         if (await _store.ReportExistsAsync(reportCode))
+        // 第一阶段：根据 CreateAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             throw new PocReportAlreadyExistsException(reportCode);
         }
@@ -278,6 +296,7 @@ public sealed class PocReportConfigurationService : ITransient
             SourceCode: variable.SourceCode,
             SourceFieldCode: variable.SourceFieldCode)).ToArray();
 
+        // 第2阶段：整理 CreateAsync 已计算的数据，并按方法契约返回最终结果。
         return await SaveAsync(
             reportCode,
             new PocSaveReportConfigurationRequest(
@@ -297,6 +316,10 @@ public sealed class PocReportConfigurationService : ITransient
                 0));
     }
 
+    /// <summary>查询或读取 PocReportConfigurationService 所需的 Get Document Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="now">now 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocReportConfigurationDocument> GetDocumentAsync(
         string reportCode,
         DateTimeOffset? now = null)
@@ -316,6 +339,10 @@ public sealed class PocReportConfigurationService : ITransient
         throw new KeyNotFoundException($"不存在报表 '{normalizedCode}'。");
     }
 
+    /// <summary>查询或读取 PocReportConfigurationService 所需的 Get Definition Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="now">now 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocReportDefinition> GetDefinitionAsync(
         string reportCode,
         DateTimeOffset? now = null)
@@ -324,6 +351,10 @@ public sealed class PocReportConfigurationService : ITransient
         return ToDefinition(document);
     }
 
+    /// <summary>校验 PocReportConfigurationService 的 Verify Share Protection Password Async 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="password">password 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> VerifyShareProtectionPasswordAsync(
         string reportCode,
         string? password)
@@ -340,6 +371,10 @@ public sealed class PocReportConfigurationService : ITransient
             PocShareProtectionPassword.Verify(protection, password);
     }
 
+    /// <summary>查询或读取 PocReportConfigurationService 所需的 Get Runtime Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="now">now 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocRuntimeReportConfiguration> GetRuntimeAsync(
         string reportCode,
         DateTimeOffset? now = null)
@@ -348,6 +383,7 @@ public sealed class PocReportConfigurationService : ITransient
         var stored = await _store.GetAsync(normalizedCode);
         if (stored is null)
         {
+            // 第一阶段：检查 GetRuntimeAsync 当前条件，并按匹配分支执行对应处理。
             if (!normalizedCode.Equals(PocReportCatalog.ReportCode, StringComparison.OrdinalIgnoreCase))
             {
                 throw new KeyNotFoundException($"不存在报表 '{normalizedCode}'。");
@@ -369,6 +405,7 @@ public sealed class PocReportConfigurationService : ITransient
                 "DATA_ASSET_DISABLED",
                 "报表引用的数据集或数据源已停用。");
         }
+        // 第2阶段：调用 GetRuntimeAsync 依赖的异步能力，等待并校验返回数据。
         var document = CreateDocument(
             stored,
             [stored.Dataset],
@@ -385,6 +422,10 @@ public sealed class PocReportConfigurationService : ITransient
             false);
     }
 
+    /// <summary>更新 PocReportConfigurationService 的 Save Async 状态，并同步相关业务数据。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="request">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocReportConfigurationDocument> SaveAsync(
         string reportCode,
         PocSaveReportConfigurationRequest request)
@@ -396,6 +437,7 @@ public sealed class PocReportConfigurationService : ITransient
         var existing = await _store.GetAsync(normalizedCode);
         var storedProtection = PocShareProtectionPassword.Read(
             existing?.Report.PreviewSettingsJson);
+        // 第一阶段：构造 SaveAsync 当前步骤需要的中间数据和执行参数。
         var nextProtection = ResolveShareProtection(
             request.ShareProtection,
             storedProtection);
@@ -425,6 +467,7 @@ public sealed class PocReportConfigurationService : ITransient
             datasetSchema.Variables.Select(item => item.Code),
             request.Preview.Mode);
 
+        // 第2阶段：遍历 SaveAsync 当前数据集合，逐项转换并维护处理结果。
         var parameterEntities = request.Parameters.Select((parameter, index) =>
             new PocReportParameter
             {
@@ -462,6 +505,11 @@ public sealed class PocReportConfigurationService : ITransient
         return await GetDocumentAsync(reportCode);
     }
 
+    /// <summary>构建 PocReportConfigurationService 所需的 Create Fallback Document 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="now">now 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="storedDatasets">storedDatasets 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="externalSources">externalSources 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private PocReportConfigurationDocument CreateFallbackDocument(
         DateTimeOffset? now,
         IReadOnlyList<PocReportDataset> storedDatasets,
@@ -497,6 +545,12 @@ public sealed class PocReportConfigurationService : ITransient
             externalSources);
     }
 
+    /// <summary>构建 PocReportConfigurationService 所需的 Create Document 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="stored">stored 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="datasets">datasets 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="externalSources">externalSources 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="now">now 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private PocReportConfigurationDocument CreateDocument(
         PocStoredReportConfiguration stored,
         IReadOnlyList<PocReportDataset> datasets,
@@ -508,6 +562,7 @@ public sealed class PocReportConfigurationService : ITransient
         var export = Deserialize<PocExportSettings>(stored.Report.ExportSettingsJson);
         var datasetSchema = PocDataAssetService.ReadSchema(stored.Dataset);
         var storedParameters = stored.Parameters.Select(parameter =>
+        // 第一阶段：根据 CreateDocument 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             var defaultValue = PocDefaultExpressionEvaluator.Evaluate(
                 parameter.DefaultExpression,
@@ -531,6 +586,7 @@ public sealed class PocReportConfigurationService : ITransient
                 parameter.SourceCode,
                 parameter.SourceFieldCode);
         }).ToArray();
+        // 第2阶段：构造 CreateDocument 当前步骤需要的中间数据和执行参数。
         var parameters = AlignExternalParameters(
             storedParameters,
             datasetSchema.Variables,
@@ -553,6 +609,9 @@ public sealed class PocReportConfigurationService : ITransient
             externalSources);
     }
 
+    /// <summary>将 PocReportConfigurationService 的 To Definition 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="document">document 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocReportDefinition ToDefinition(PocReportConfigurationDocument document) =>
         new(
             document.ReportCode,
@@ -566,12 +625,20 @@ public sealed class PocReportConfigurationService : ITransient
             document.ShareProtection ?? new PocShareProtectionSettings(false, false),
             document.ExternalSources ?? []);
 
+    /// <summary>负责 PocReportConfigurationService 的 External Source Definitions Async 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<IReadOnlyList<PocExternalParameterSourceDefinition>> ExternalSourceDefinitionsAsync() =>
         _externalParameters is null ? [] : await _externalParameters.ListDefinitionsAsync();
 
+    /// <summary>负责 PocReportConfigurationService 的 External Source Documents Async 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<IReadOnlyList<PocExternalParameterSourceDocument>> ExternalSourceDocumentsAsync() =>
         _externalParameters is null ? [] : await _externalParameters.ListAsync();
 
+    /// <summary>解析并计算 PocReportConfigurationService 的 Resolve Share Protection 结果，处理必要的边界条件。</summary>
+    /// <param name="request">本次操作使用的输入数据。</param>
+    /// <param name="existing">existing 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocStoredShareProtection? ResolveShareProtection(
         PocSaveShareProtectionRequest? request,
         PocStoredShareProtection? existing)
@@ -594,6 +661,9 @@ public sealed class PocReportConfigurationService : ITransient
         return next is null ? null : next with { Enabled = request.Enabled };
     }
 
+    /// <summary>根据 PocReportConfigurationService 当前输入计算 To Dataset Option 结果，并按方法声明的类型返回。</summary>
+    /// <param name="dataset">dataset 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDatasetOption ToDatasetOption(PocReportDataset dataset)
     {
         var schema = PocDataAssetService.ReadSchema(dataset);
@@ -606,6 +676,9 @@ public sealed class PocReportConfigurationService : ITransient
             dataset.IsEnabled);
     }
 
+    /// <summary>校验 PocReportConfigurationService 的 Validate Dataset Variable Bindings 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="variables">variables 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ValidateDatasetVariableBindings(
         IReadOnlyList<PocDatasetVariableDefinition> variables,
         IReadOnlyList<PocParameterDefinition> parameters)
@@ -637,6 +710,11 @@ public sealed class PocReportConfigurationService : ITransient
         }
     }
 
+    /// <summary>遍历 PocReportConfigurationService 当前数据并执行 Align External Parameters 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="variables">variables 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sources">sources 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     internal static IReadOnlyList<PocParameterDefinition> AlignExternalParameters(
         IReadOnlyList<PocParameterDefinition> parameters,
         IReadOnlyList<PocDatasetVariableDefinition> variables,
@@ -646,6 +724,7 @@ public sealed class PocReportConfigurationService : ITransient
         var sourceByCode = sources.ToDictionary(source => source.Code, StringComparer.OrdinalIgnoreCase);
         foreach (var variable in variables.Where(variable =>
             variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase)))
+        // 第一阶段：根据 AlignExternalParameters 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             if (string.IsNullOrWhiteSpace(variable.SourceCode) ||
                 string.IsNullOrWhiteSpace(variable.SourceFieldCode))
@@ -668,6 +747,7 @@ public sealed class PocReportConfigurationService : ITransient
 
             foreach (var sourceField in source.Fields)
             {
+                // 第2阶段：检查 AlignExternalParameters 当前条件，并按匹配分支执行对应处理。
                 if (result.Any(parameter =>
                     parameter.Code.Equals(sourceField.Code, StringComparison.OrdinalIgnoreCase)))
                 {
@@ -686,6 +766,14 @@ public sealed class PocReportConfigurationService : ITransient
         return result;
     }
 
+    /// <summary>负责 PocReportConfigurationService 的 Upsert External Parameter 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="displayName">需要读取、校验或转换的业务值。</param>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="required">required 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sourceCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="sourceFieldCode">需要读取、校验或转换的业务值。</param>
     private static void UpsertExternalParameter(
         IList<PocParameterDefinition> parameters,
         string code,
@@ -722,6 +810,9 @@ public sealed class PocReportConfigurationService : ITransient
         }
     }
 
+    /// <summary>校验 PocReportConfigurationService 的 Validate External Parameter Bindings 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sources">sources 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ValidateExternalParameterBindings(
         IReadOnlyList<PocParameterDefinition> parameters,
         IReadOnlyList<PocExternalParameterSourceDocument> sources)
@@ -749,6 +840,8 @@ public sealed class PocReportConfigurationService : ITransient
         }
     }
 
+    /// <summary>校验 PocReportConfigurationService 的 Validate Request 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="request">本次操作使用的输入数据。</param>
     private static void ValidateRequest(PocSaveReportConfigurationRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Name) ||
@@ -757,6 +850,7 @@ public sealed class PocReportConfigurationService : ITransient
             request.SheetName.Length > 31 ||
             request.SheetName.IndexOfAny(['[', ']', ':', '*', '?', '/', '\\']) >= 0)
         {
+            // 第一阶段：根据 ValidateRequest 当前分支转换输入数据，并保存该阶段产生的中间结果。
             throw new PocDatasetConfigurationException("REPORT_DEFINITION_INVALID", "报表名称或工作表名称无效。");
         }
         if (!Enum.IsDefined(request.Preview.Mode) ||
@@ -786,6 +880,7 @@ public sealed class PocReportConfigurationService : ITransient
         }
 
         var parameterCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // 第2阶段：遍历 ValidateRequest 当前数据集合，逐项转换并维护处理结果。
         foreach (var parameter in request.Parameters)
         {
             ValidateCode(parameter.Code, "PARAM_DEFINITION_INVALID");
@@ -814,6 +909,7 @@ public sealed class PocReportConfigurationService : ITransient
                 (!string.IsNullOrWhiteSpace(parameter.DefaultExpression) &&
                  !IsDateParameter(parameter.DataType, parameter.ControlType)))
             {
+                // 第3阶段：根据 ValidateRequest 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 throw new PocDatasetConfigurationException("PARAM_DEFINITION_INVALID", $"参数 '{parameter.Code}' 的定义无效。");
             }
             var choiceControl =
@@ -838,6 +934,9 @@ public sealed class PocReportConfigurationService : ITransient
 
     }
 
+    /// <summary>校验 PocReportConfigurationService 的 Validate Field Presentations 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="presentations">presentations 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
     private static void ValidateFieldPresentations(
         IReadOnlyList<PocFieldPresentationDefinition> presentations,
         IReadOnlyList<PocDatasetFieldDefinition> fields)
@@ -867,6 +966,10 @@ public sealed class PocReportConfigurationService : ITransient
         }
     }
 
+    /// <summary>校验 PocReportConfigurationService 的 Validate Value Options 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <param name="errorCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="ownerCode">需要读取、校验或转换的业务值。</param>
     private static void ValidateValueOptions(
         IReadOnlyList<PocValueOption> options,
         string errorCode,
@@ -890,6 +993,9 @@ public sealed class PocReportConfigurationService : ITransient
         }
     }
 
+    /// <summary>校验 PocReportConfigurationService 的 Validate Code 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="errorCode">需要读取、校验或转换的业务值。</param>
     private static void ValidateCode(string code, string errorCode)
     {
         if (string.IsNullOrWhiteSpace(code) ||
@@ -902,18 +1008,30 @@ public sealed class PocReportConfigurationService : ITransient
         }
     }
 
+    /// <summary>将 PocReportConfigurationService 中的 Deserialize 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="json">json 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static T Deserialize<T>(string json) =>
         JsonConvert.DeserializeObject<T>(json)
         ?? throw new InvalidDataException($"Stored configuration JSON '{typeof(T).Name}' is null.");
 
+    /// <summary>将 PocReportConfigurationService 中的 Deserialize List 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="json">json 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IReadOnlyList<T> DeserializeList<T>(string? json) =>
         string.IsNullOrWhiteSpace(json)
             ? []
             : JsonConvert.DeserializeObject<IReadOnlyList<T>>(json) ?? [];
 
+    /// <summary>负责 PocReportConfigurationService 的 Null If White Space 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>负责 PocReportConfigurationService 的 Control Type For 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ControlTypeFor(string dataType) =>
         dataType.ToLowerInvariant() switch
         {
@@ -924,6 +1042,10 @@ public sealed class PocReportConfigurationService : ITransient
             _ => "text"
         };
 
+    /// <summary>校验 PocReportConfigurationService 的 Is Date Parameter 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="controlType">controlType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool IsDateParameter(string dataType, string controlType) =>
         dataType.Equals("date", StringComparison.OrdinalIgnoreCase) ||
         dataType.Equals("datetime", StringComparison.OrdinalIgnoreCase) ||
@@ -932,6 +1054,10 @@ public sealed class PocReportConfigurationService : ITransient
         controlType.Equals("month", StringComparison.OrdinalIgnoreCase) ||
         controlType.Equals("year", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>创建并返回 PocReportConfigurationService 的 Default Expression Data Type 初始数据，避免不同调用方共享可变对象。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="controlType">controlType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string DefaultExpressionDataType(string dataType, string controlType) =>
         controlType.Trim().ToLowerInvariant() switch
         {
@@ -943,6 +1069,9 @@ public sealed class PocReportConfigurationService : ITransient
                 : "date"
         };
 
+    /// <summary>将 PocReportConfigurationService 中的 Normalize Report Code 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string NormalizeReportCode(string reportCode)
     {
         if (string.IsNullOrWhiteSpace(reportCode) ||

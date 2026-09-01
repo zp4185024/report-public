@@ -109,6 +109,11 @@ export class TemplatePreviewError extends Error {
   column?: number;
   cellAddress?: string;
 
+  /**
+   * 初始化 templatePreview 实例，保存依赖并建立组件所需的初始状态。
+   * @param message - message 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+   */
   constructor(message: string, location: ErrorLocation = {}) {
     const { sheetId, row, column } = location;
     const cellAddress = isCoordinate(row) && isCoordinate(column)
@@ -161,6 +166,7 @@ export function createDetailValueBatches(
 
   const firstRow = rows[0];
   const columns = firstRow.values.map(({ column }) => column);
+  // 第一阶段：遍历 createDetailValueBatches 当前数据集合，逐项转换并维护处理结果。
   for (let index = 0; index < columns.length; index += 1) {
     ensureCoordinate(columns[index], '明细批量写入列坐标无效。', {
       row: firstRow.row,
@@ -193,6 +199,7 @@ export function createDetailValueBatches(
     }
   }
 
+  // 第2阶段：构造 createDetailValueBatches 当前阶段需要的中间数据和执行参数。
   const batches: DetailValueBatch[] = [];
   let startIndex = 0;
   for (let columnIndex = 1; columnIndex <= columns.length; columnIndex += 1) {
@@ -215,6 +222,13 @@ export function createDetailValueBatches(
   return batches;
 }
 
+/**
+ * 构建 templatePreview 所需的 create Parameter Writes 内容，并保证生成结果符合调用约定。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param binding - 模板字段与工作簿坐标之间的绑定定义。
+ * @param result - 上一步或远程调用返回的处理结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function createParameterWrites(
   snapshot: ValidatedSnapshot,
   binding: ValidatedTemplateBinding,
@@ -267,6 +281,13 @@ function createParameterWrites(
     });
 }
 
+/**
+ * 按 replace Parameter Tokens 规则筛选 templatePreview 数据，并返回满足条件的结果。
+ * @param originalValue - 需要读取、校验或转换的业务值。
+ * @param group - group 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param parameters - parameters 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function replaceParameterTokens(
   originalValue: string,
   group: ParameterCellGroup,
@@ -317,6 +338,14 @@ function replaceParameterTokens(
   return value;
 }
 
+/**
+ * 构建 templatePreview 所需的 create Detail Plan 内容，并保证生成结果符合调用约定。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param binding - 模板字段与工作簿坐标之间的绑定定义。
+ * @param result - 上一步或远程调用返回的处理结果。
+ * @param definition - 描述字段、参数或业务约束的定义对象。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function createDetailPlan(
   snapshot: ValidatedSnapshot,
   binding: ValidatedTemplateBinding,
@@ -376,6 +405,15 @@ function createDetailPlan(
   };
 }
 
+/**
+ * 构建 templatePreview 所需的 create Detail Rows 内容，并保证生成结果符合调用约定。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @param templateRow - 需要遍历、筛选或写入的业务数据集合。
+ * @param fields - 参与映射、显示或数据写入的字段集合。
+ * @param resultRows - 需要遍历、筛选或写入的业务数据集合。
+ * @param columnTypes - columnTypes 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function createDetailRows(
   sheetId: string,
   templateRow: number,
@@ -418,6 +456,14 @@ function createDetailRows(
   });
 }
 
+/**
+ * 查询或读取 templatePreview 所需的 get Detail Field Value 数据，并按调用约定返回结果。
+ * @param resultRow - 需要遍历、筛选或写入的业务数据集合。
+ * @param code - 需要读取、校验或转换的业务值。
+ * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param dataType - dataType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function getDetailFieldValue(
   resultRow: JsonObject,
   code: string,
@@ -456,11 +502,17 @@ function getDetailFieldValue(
   return value as DataRowValue;
 }
 
+/**
+ * 校验 templatePreview 的 validate Template Binding 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function validateTemplateBinding(value: unknown): ValidatedTemplateBinding {
   // 本函数刻意不直接返回传入对象；重建最小内部结构可以丢弃原型、访问器和未声明属性。
   if (!isJsonObject(value)) {
     throw new TemplatePreviewError('模板绑定必须是对象。');
   }
+  // 第一阶段：检查 validateTemplateBinding 当前条件，并按匹配分支执行对应处理。
   if (value.version !== 1) {
     throw new TemplatePreviewError('模板绑定 version 必须为 1。');
   }
@@ -481,6 +533,7 @@ function validateTemplateBinding(value: unknown): ValidatedTemplateBinding {
       throw new TemplatePreviewError('参数绑定 code 必须是字符串。', location);
     }
     ensureCoordinate(parameterBinding.row, '参数绑定行坐标无效。', location);
+    // 第2阶段：根据 validateTemplateBinding 当前分支转换输入数据，并保存该阶段产生的中间结果。
     ensureCoordinate(parameterBinding.column, '参数绑定列坐标无效。', location);
 
     return {
@@ -498,6 +551,11 @@ function validateTemplateBinding(value: unknown): ValidatedTemplateBinding {
   };
 }
 
+/**
+ * 校验 templatePreview 的 validate Snapshot 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function validateSnapshot(value: unknown): ValidatedSnapshot {
   // 快照可能来自 structured clone、HTTP 或测试伪造，只接受普通对象以避免访问器执行副作用。
   if (!isPlainObject(value)) {
@@ -509,6 +567,11 @@ function validateSnapshot(value: unknown): ValidatedSnapshot {
   return { sheets: value.sheets };
 }
 
+/**
+ * 校验 templatePreview 的 validate Detail Binding 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function validateDetailBinding(value: unknown): ValidatedDetailBinding | null {
   if (value === null) {
     return null;
@@ -517,6 +580,7 @@ function validateDetailBinding(value: unknown): ValidatedDetailBinding | null {
     throw new TemplatePreviewError('明细绑定必须是对象或 null。');
   }
 
+  // 第一阶段：构造 validateDetailBinding 当前阶段需要的中间数据和执行参数。
   const baseLocation = runtimeLocation(value, 0);
   if (value.datasetCode !== 'detail') {
     throw new TemplatePreviewError("明细绑定 datasetCode 必须为 'detail'。", baseLocation);
@@ -545,6 +609,7 @@ function validateDetailBinding(value: unknown): ValidatedDetailBinding | null {
       });
     }
 
+    // 第2阶段：构造 validateDetailBinding 当前阶段需要的中间数据和执行参数。
     const location = runtimeLocation(field, undefined, sheetId, templateRow);
     if (typeof field.code !== 'string') {
       throw new TemplatePreviewError('明细字段 code 必须是字符串。', location);
@@ -564,6 +629,11 @@ function validateDetailBinding(value: unknown): ValidatedDetailBinding | null {
   };
 }
 
+/**
+ * 校验 templatePreview 的 validate Execute Result 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function validateExecuteResult(value: unknown): ValidatedExecuteResult {
   // ExecuteResult 是 HTTP 数据，在真正写入工作簿之前再次检查所有必需参数和 rows 数组。
   if (!isJsonObject(value)) {
@@ -587,6 +657,13 @@ function validateExecuteResult(value: unknown): ValidatedExecuteResult {
   };
 }
 
+/**
+ * 校验 templatePreview 的 ensure Parameter Code 条件，并返回可供后续流程判断的结果。
+ * @param code - 需要读取、校验或转换的业务值。
+ * @param parameters - parameters 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function ensureParameterCode(
   code: string,
   parameters: ResolvedParameters,
@@ -602,6 +679,12 @@ function ensureParameterCode(
   return code;
 }
 
+/**
+ * 查询或读取 templatePreview 所需的 get Parameter Cell Value 数据，并按调用约定返回结果。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param group - group 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function getParameterCellValue(
   snapshot: ValidatedSnapshot,
   group: ParameterCellGroup,
@@ -630,6 +713,14 @@ function getParameterCellValue(
   return cell.v;
 }
 
+/**
+ * 校验 templatePreview 的 ensure Detail Template Cell 条件，并返回可供后续流程判断的结果。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @param rowIndex - 控制数据范围或位置的数值。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @param code - 需要读取、校验或转换的业务值。
+ */
 function ensureDetailTemplateCell(
   snapshot: ValidatedSnapshot,
   sheetId: string,
@@ -668,6 +759,12 @@ function ensureDetailTemplateCell(
   }
 }
 
+/**
+ * 校验 templatePreview 的 ensure Sheet Exists 条件，并返回可供后续流程判断的结果。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+ */
 function ensureSheetExists(
   snapshot: ValidatedSnapshot,
   sheetId: string,
@@ -676,6 +773,13 @@ function ensureSheetExists(
   getSheet(snapshot, sheetId, location);
 }
 
+/**
+ * 查询或读取 templatePreview 所需的 get Sheet 数据，并按调用约定返回结果。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function getSheet(
   snapshot: ValidatedSnapshot,
   sheetId: string,
@@ -692,6 +796,12 @@ function getSheet(
   return sheets[sheetId];
 }
 
+/**
+ * 按 compare Parameter Cells 条件比较、筛选或整理 templatePreview 数据，并返回顺序稳定的结果。
+ * @param left - left 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param right - right 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function compareParameterCells(left: ParameterCellGroup, right: ParameterCellGroup): number {
   // 稳定排序让计划可测试、可比较，也使错误和写入顺序不受对象枚举顺序影响。
   return compareOrdinal(left.sheetId, right.sheetId) ||
@@ -699,6 +809,12 @@ function compareParameterCells(left: ParameterCellGroup, right: ParameterCellGro
     left.column - right.column;
 }
 
+/**
+ * 按 compare Ordinal 条件比较、筛选或整理 templatePreview 数据，并返回顺序稳定的结果。
+ * @param left - left 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param right - right 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function compareOrdinal(left: string, right: string): number {
   if (left === right) {
     return 0;
@@ -706,6 +822,13 @@ function compareOrdinal(left: string, right: string): number {
   return left < right ? -1 : 1;
 }
 
+/**
+ * 校验 templatePreview 的 ensure Coordinate 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param message - message 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function ensureCoordinate(
   value: unknown,
   message: string,
@@ -716,6 +839,11 @@ function ensureCoordinate(
   }
 }
 
+/**
+ * 校验 templatePreview 的 is Coordinate 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isCoordinate(value: unknown): value is number {
   return typeof value === 'number' &&
     Number.isSafeInteger(value) &&
@@ -723,6 +851,14 @@ function isCoordinate(value: unknown): value is number {
     value <= MAX_TEMPLATE_COORDINATE;
 }
 
+/**
+ * 执行 templatePreview 的 runtime Location 核心流程，并保持错误和结果语义稳定。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param defaultColumn - 参与映射、显示或数据写入的字段集合。
+ * @param defaultSheetId - 需要定位的业务记录标识。
+ * @param defaultRow - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function runtimeLocation(
   value: JsonObject,
   defaultColumn?: number,
@@ -741,10 +877,20 @@ function runtimeLocation(
   };
 }
 
+/**
+ * 校验 templatePreview 的 is Json Object 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * 校验 templatePreview 的 is Plain Object 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isPlainObject(value: unknown): value is JsonObject {
   if (!isJsonObject(value)) {
     return false;
@@ -753,10 +899,21 @@ function isPlainObject(value: unknown): value is JsonObject {
   return prototype === Object.prototype || prototype === null;
 }
 
+/**
+ * 将 templatePreview 的 trim Ascii Whitespace 输入转换为稳定格式，保留后续计算或展示需要的信息。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function trimAsciiWhitespace(value: string): string {
   return value.replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, '');
 }
 
+/**
+ * 将 templatePreview 的 to Cell Address 输入转换为稳定格式，保留后续计算或展示需要的信息。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function toCellAddress(row: number, column: number): string {
   // 预览计划内部使用零基坐标，面向用户的错误统一转换为电子表格常用 A1 地址。
   let columnNumber = column + 1;

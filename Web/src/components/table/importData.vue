@@ -78,12 +78,20 @@ const props = defineProps(['import', 'download']);
 const emit = defineEmits(['refresh']);
 
 // 打开弹窗
+/**
+ * 准备 importData 的 open Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = () => {
   resetDialog();
   state.isShowDialog = true;
 };
 
 // 重置对话框状态
+/**
+ * 重置或刷新 importData 的 reset Dialog 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetDialog = () => {
   state.isCompleted = false;
   state.hasError = false;
@@ -94,6 +102,10 @@ const resetDialog = () => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 importData 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
   state.isShowDialog = false;
   if (state.importResultUrl) {
@@ -102,6 +114,11 @@ const closeDialog = () => {
 };
 
 // 选择文件超出上限事件
+/**
+ * 响应 importData 的 handle Exceed 事件，并协调相关状态和后续操作。
+ * @param files - files 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleExceed: UploadProps['onExceed'] = (files) => {
   uploadRef.value!.clearFiles();
   const file = files[0] as UploadRawFile;
@@ -110,11 +127,20 @@ const handleExceed: UploadProps['onExceed'] = (files) => {
 }
 
 // 文件选择变更事件
+/**
+ * 响应 importData 的 handle File Change 事件，并协调相关状态和后续操作。
+ * @param file - file 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleFileChange = (file: UploadFile) => {
   state.selectedFile = file.raw as File;
 };
 
 // 提交导入
+/**
+ * 执行 importData 的 submit Import 核心流程，并保持错误和结果语义稳定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submitImport = async () => {
   if (!state.selectedFile) return;
   
@@ -178,6 +204,10 @@ const submitImport = async () => {
 };
 
 // 下载导入结果
+/**
+ * 整理 importData 的 download Import Result 数据，并生成可供调用方使用的输出。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const downloadImportResult = () => {
   if (!state.importResultUrl) return;
   
@@ -193,6 +223,10 @@ const downloadImportResult = () => {
 };
 
 // 下载模板
+/**
+ * 整理 importData 的 download 数据，并生成可供调用方使用的输出。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const download = () => {
   props.download()
     .then((res: any) => downloadStreamFile(res))

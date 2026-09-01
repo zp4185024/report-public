@@ -16,7 +16,7 @@ public static class OAuthSetup
     /// <summary>
     /// 三方授权登录OAuth注册
     /// </summary>
-    /// <param name="services"></param>
+    /// <param name="services">services 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public static void AddOAuth(this IServiceCollection services)
     {
         var authOpt = App.GetConfig<OAuthOptions>("OAuth", true);
@@ -43,6 +43,8 @@ public static class OAuthSetup
             });
     }
 
+    /// <summary>负责 OAuthSetup 的 Use OAuth 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="app">app 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public static void UseOAuth(this IApplicationBuilder app)
     {
         app.UseCookiePolicy(new CookiePolicyOptions { MinimumSameSitePolicy = SameSiteMode.Lax });

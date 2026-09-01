@@ -89,16 +89,29 @@ const rules = ref<FormRules>({});
 
 onMounted(() => {});
 
+/**
+ * 准备 detailDialog 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	state.ruleForm = JSON.parse(JSON.stringify(row));
 	state.isShowDialog = true;
 };
 
+/**
+ * 结束 detailDialog 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emit('reloadTable');
 	state.isShowDialog = false;
 };
 
+/**
+ * 校验 detailDialog 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };

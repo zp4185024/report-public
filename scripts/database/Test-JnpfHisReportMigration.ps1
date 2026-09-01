@@ -2,12 +2,14 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot 'JnpfHisReportMigration.psm1') -Force
 
 $script:passed = 0
+# 校验 Test-JnpfHisReportMigration 的 Assert True 条件，并返回可供后续流程判断的结果。
 function Assert-True {
     param([bool]$Condition, [string]$Message)
     if (-not $Condition) { throw "断言失败：$Message" }
     $script:passed++
 }
 
+# 校验 Test-JnpfHisReportMigration 的 Assert Equal 条件，并返回可供后续流程判断的结果。
 function Assert-Equal {
     param([object]$Actual, [object]$Expected, [string]$Message)
     if ([string]$Actual -cne [string]$Expected) {

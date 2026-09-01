@@ -13,16 +13,16 @@ public class SysRoleOrgService : ITransient
 {
     private readonly SqlSugarRepository<SysRoleOrg> _sysRoleOrgRep;
 
+    /// <summary>初始化 SysRoleOrgService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysRoleOrgRep">sysRoleOrgRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysRoleOrgService(SqlSugarRepository<SysRoleOrg> sysRoleOrgRep)
     {
         _sysRoleOrgRep = sysRoleOrgRep;
     }
 
-    /// <summary>
-    /// 授权角色机构
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysRoleOrgService 的异步依赖完成 Grant Role Org 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task GrantRoleOrg(RoleOrgInput input)
     {
         await _sysRoleOrgRep.DeleteAsync(u => u.RoleId == input.Id);
@@ -40,8 +40,8 @@ public class SysRoleOrgService : ITransient
     /// <summary>
     /// 根据角色Id集合获取角色机构Id集合
     /// </summary>
-    /// <param name="roleIdList"></param>
-    /// <returns></returns>
+    /// <param name="roleIdList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<List<long>> GetRoleOrgIdList(List<long> roleIdList)
     {
         if (roleIdList?.Count > 0)
@@ -56,8 +56,8 @@ public class SysRoleOrgService : ITransient
     /// <summary>
     /// 根据机构Id集合删除角色机构
     /// </summary>
-    /// <param name="orgIdList"></param>
-    /// <returns></returns>
+    /// <param name="orgIdList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task DeleteRoleOrgByOrgIdList(List<long> orgIdList)
     {
         await _sysRoleOrgRep.DeleteAsync(u => orgIdList.Contains(u.OrgId));
@@ -66,8 +66,8 @@ public class SysRoleOrgService : ITransient
     /// <summary>
     /// 根据角色Id删除角色机构
     /// </summary>
-    /// <param name="roleId"></param>
-    /// <returns></returns>
+    /// <param name="roleId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task DeleteRoleOrgByRoleId(long roleId)
     {
         await _sysRoleOrgRep.DeleteAsync(u => u.RoleId == roleId);

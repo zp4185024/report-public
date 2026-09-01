@@ -72,12 +72,20 @@ const state = reactive({
 	columnData: [] as any,
 });
 
+/**
+ * 负责 joinTableDialog 的 Db Changed 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const DbChanged = async () => {
 	state.tableData = [];
 	state.columnData = [];
 	await getTableInfoList();
 };
 
+/**
+ * 按 Table Changed 规则筛选 joinTableDialog 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const TableChanged = async () => {
 	state.columnData = [];
 	await getColumnInfoList();
@@ -86,10 +94,18 @@ const TableChanged = async () => {
   state.ruleForm.fkLinkColumnName = state.columnData.find(x => "True" === x.columnKey)?.columnName;
 };
 
+/**
+ * 查询或读取 joinTableDialog 所需的 get Db List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getDbList = async () => {
   state.dbData = await getAPI(SysCodeGenApi).apiSysCodeGenDatabaseListGet().then(res => res.data.result ?? []);
 };
 
+/**
+ * 查询或读取 joinTableDialog 所需的 get Table Info List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getTableInfoList = async () => {
 	if (!state.ruleForm.fkConfigId) return;
   state.tableData = await getAPI(SysCodeGenApi)
@@ -97,6 +113,10 @@ const getTableInfoList = async () => {
       .then(res => res.data.result ?? []);
 };
 
+/**
+ * 查询或读取 joinTableDialog 所需的 get Column Info List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getColumnInfoList = async () => {
 	if (!state.ruleForm.fkConfigId || !state.ruleForm.fkTableName) return;
   state.columnData = await getAPI(SysCodeGenApi)
@@ -105,6 +125,12 @@ const getColumnInfoList = async () => {
 };
 
 // 打开弹窗
+/**
+ * 准备 joinTableDialog 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param title - title 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = async (row: any, title: string) => {
   await getDbList();
   state.dialogTitle = title;
@@ -120,6 +146,10 @@ const openDialog = async (row: any, title: string) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 joinTableDialog 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
   state.ruleForm.fkColumnNetType = state.columnData.find(x => x.columnName == state.ruleForm.fkLinkColumnName)?.netType;
   state.ruleForm.fkEntityName = state.tableData.find(x => x.tableName == state.ruleForm.fkTableName)?.entityName;
@@ -129,6 +159,10 @@ const closeDialog = () => {
 };
 
 // 取消
+/**
+ * 校验 joinTableDialog 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 	state.dbData.value = [];
@@ -137,6 +171,10 @@ const cancel = () => {
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 joinTableDialog 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;

@@ -1,6 +1,10 @@
 ﻿import {useBaseApi} from '/@/api/base';
 
 // 翻译接口服务
+/**
+ * 创建 sysLangText 的 use Sys Lang Text Api 组合式能力，集中暴露状态和操作入口。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const useSysLangTextApi = () => {
 	const baseApi = useBaseApi("sysLangText");
 	return {

@@ -8,12 +8,20 @@ namespace Admin.NET.Core;
 
 public class EventHandlerMonitor : IEventHandlerMonitor
 {
+    /// <summary>响应 EventHandlerMonitor 的 On Executing Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task OnExecutingAsync(EventHandlerExecutingContext context, CancellationToken cancellationToken)
     {
         //_logger.LogInformation("执行之前：{EventId}", context.Source.EventId);
         return Task.CompletedTask;
     }
 
+    /// <summary>响应 EventHandlerMonitor 的 On Executed Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task OnExecutedAsync(EventHandlerExecutedContext context, CancellationToken cancellationToken)
     {
         //_logger.LogInformation("执行之后：{EventId}", context.Source.EventId);

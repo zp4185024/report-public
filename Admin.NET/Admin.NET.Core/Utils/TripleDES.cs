@@ -13,9 +13,7 @@ namespace Admin.NET.Core;
 /// </summary>
 public static class TripleDES
 {
-    /// <summary>
-    /// 加密文件
-    /// </summary>
+    /// <summary>负责 TripleDES 的 Encrypt File 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
     /// <param name="inputFile">待加密文件路径</param>
     /// <param name="outputFile">加密后的文件路径</param>
     /// <param name="password">密码 （24位长度）</param>
@@ -32,9 +30,7 @@ public static class TripleDES
         inputFileStream.CopyTo(cryptoStream);
     }
 
-    /// <summary>
-    /// 加密文件
-    /// </summary>
+    /// <summary>负责 TripleDES 的 Decrypt File 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
     /// <param name="inputFile">加密的文件路径</param>
     /// <param name="outputFile">解密后的文件路径</param>
     /// <param name="password">密码 （24位长度）</param>

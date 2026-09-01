@@ -11,6 +11,7 @@ namespace Admin.NET.Core;
 /// </summary>
 public class SignatureAuthenticationEvent
 {
+    /// <summary>初始化 SignatureAuthenticationEvent 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public SignatureAuthenticationEvent()
     {
     }
@@ -33,21 +34,17 @@ public class SignatureAuthenticationEvent
     /// <summary>
     /// 获取 AccessKey 的 AccessSecret
     /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual Task<string> GetAccessSecret(GetAccessSecretContext context) => OnGetAccessSecret?.Invoke(context) ?? throw new NotImplementedException($"需要提供 {nameof(OnGetAccessSecret)} 实现");
 
-    /// <summary>
-    /// 质询
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>负责 SignatureAuthenticationEvent 的 Challenge 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual Task Challenge(SignatureChallengeContext context) => OnChallenge?.Invoke(context) ?? Task.CompletedTask;
 
-    /// <summary>
-    /// 已验证成功
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>校验 SignatureAuthenticationEvent 的 Validated 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual Task Validated(SignatureValidatedContext context) => OnValidated?.Invoke(context) ?? Task.CompletedTask;
 }

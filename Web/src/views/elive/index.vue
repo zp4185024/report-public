@@ -84,11 +84,21 @@ const defaultProps = {
 	label: 'label',
 };
 
+/**
+ * 响应 index 的 handle Node Click 事件，并协调相关状态和后续操作。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleNodeClick = (data: Tree) => {
 	console.log(data);
 };
 
 // 更新token
+/**
+ * 验证 update Token 场景下的预期行为，并防止相关逻辑回归。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function update_Token(e) {
 	//ezviz_video.ezvizToken=e.target.value;
 	console.log(e.target.value);
@@ -114,6 +124,11 @@ const ezviz_video = reactive({
 // });
 
 // 监控1，参数https://blog.csdn.net/weixin_53791978/article/details/126489296
+/**
+ * 负责 index 的 auto Video One 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param params - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function autoVideoOne(params) {
 	// 获取父节点的宽高
 	let divW = viewtoolOne.value.clientWidth;
@@ -148,6 +163,11 @@ function autoVideoOne(params) {
 		// getOSDTimeCallBack: data => console.log("获取OSDTime回调", data),
 		width: divW,
 		height: divH,
+		/**
+		 * 响应 index 的 handle Error 事件，并协调相关状态和后续操作。
+		 * @param err - err 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		handleError: (err: any) => {
 			if (err.type === 'handleRunTimeInfoError' && err.data.nErrorCode === 5) {
 				console.log('加密设备密码错误');

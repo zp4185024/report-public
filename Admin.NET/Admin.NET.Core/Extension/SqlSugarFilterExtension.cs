@@ -12,8 +12,8 @@ public static class SqlSugarFilterExtension
     /// 根据指定Attribute获取属性
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static List<string> GetPropertyNames<T>(this Type type) where T : Attribute
     {
         return type.GetProperties()
@@ -21,13 +21,11 @@ public static class SqlSugarFilterExtension
             .Select(x => x.Name).ToList();
     }
 
-    /// <summary>
-    /// 获取过滤表达式
-    /// </summary>
+    /// <summary>查询或读取 SqlSugarFilterExtension 所需的 Get Condition Expression 数据，并按调用约定返回结果。</summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="type"></param>
-    /// <param name="owners"></param>
-    /// <returns></returns>
+    /// <param name="type">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <param name="owners">当前方法执行时使用的 owners 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static LambdaExpression GetConditionExpression<T>(this Type type, List<long> owners) where T : Attribute
     {
         var fieldNames = type.GetPropertyNames<T>();

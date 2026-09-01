@@ -16,7 +16,7 @@ public class EnumAttribute : ValidationAttribute, ITransient
     /// <summary>
     /// 枚举值合规性校验特性
     /// </summary>
-    /// <param name="errorMessage"></param>
+    /// <param name="errorMessage">需要记录、展示或继续传递的错误上下文。</param>
     public EnumAttribute(string errorMessage = "枚举值不合法！")
     {
         ErrorMessage = errorMessage;
@@ -25,9 +25,9 @@ public class EnumAttribute : ValidationAttribute, ITransient
     /// <summary>
     /// 枚举值合规性校验
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="validationContext"></param>
-    /// <returns></returns>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="validationContext">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     protected override ValidationResult IsValid(object value, ValidationContext validationContext)
     {
         // 获取属性的类型

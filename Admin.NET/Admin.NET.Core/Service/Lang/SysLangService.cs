@@ -14,16 +14,16 @@ public partial class SysLangService : IDynamicApiController, ITransient
 {
     private readonly SqlSugarRepository<SysLang> _sysLangRep;
 
+    /// <summary>初始化 SysLangService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysLangRep">sysLangRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysLangService(SqlSugarRepository<SysLang> sysLangRep)
     {
         _sysLangRep = sysLangRep;
     }
 
-    /// <summary>
-    /// 分页查询语言 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysLangService 的异步依赖完成 Page 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("分页查询语言")]
     [ApiDescriptionSettings(Name = "Page"), HttpPost]
     public async Task<SqlSugarPagedList<SysLangOutput>> Page(PageSysLangInput input)
@@ -39,11 +39,9 @@ public partial class SysLangService : IDynamicApiController, ITransient
         return await query.OrderBuilder(input).ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 获取语言详情 ℹ️
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysLangService 的异步依赖完成 Detail 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取语言详情")]
     [ApiDescriptionSettings(Name = "Detail"), HttpGet]
     public async Task<SysLang> Detail([FromQuery] QueryByIdSysLangInput input)
@@ -51,11 +49,9 @@ public partial class SysLangService : IDynamicApiController, ITransient
         return await _sysLangRep.GetFirstAsync(u => u.Id == input.Id);
     }
 
-    /// <summary>
-    /// 增加语言 ➕
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysLangService 所需的 Add 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("增加语言")]
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     public async Task<long> Add(AddSysLangInput input)
@@ -64,11 +60,9 @@ public partial class SysLangService : IDynamicApiController, ITransient
         return await _sysLangRep.InsertAsync(entity) ? entity.Id : 0;
     }
 
-    /// <summary>
-    /// 更新语言 ✏️
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysLangService 的 Update 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("更新语言")]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     public async Task Update(UpdateSysLangInput input)
@@ -78,11 +72,9 @@ public partial class SysLangService : IDynamicApiController, ITransient
         .ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除语言 ❌
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysLangService 中与 Delete 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("删除语言")]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     public async Task Delete(DeleteSysLangInput input)
@@ -94,7 +86,7 @@ public partial class SysLangService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取下拉列表数据 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("获取下拉列表数据")]
     [ApiDescriptionSettings(Name = "DropdownData"), HttpPost]

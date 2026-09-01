@@ -11,6 +11,10 @@ import { SysAuthApi, SysConstApi, SysDictTypeApi } from '/@/api-services/api';
  * @methods setUserInfos 设置用户信息
  */
 export const useUserInfo = defineStore('userInfo', {
+	/**
+	 * 创建并返回 userInfo 状态仓库的初始数据，供页面和操作方法共享。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	state: (): UserInfosState => ({
 		userInfos: {} as any,
 		constList: [] as any,
@@ -26,17 +30,29 @@ export const useUserInfo = defineStore('userInfo', {
 	},
 	actions: {
 		// 存储用户信息到浏览器缓存
+		/**
+		 * 更新 userInfo 的 set User Infos 状态，并同步相关业务数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		async setUserInfos() {
 			this.userInfos = Session.get('userInfo') ?? <UserInfos>await this.getApiUserInfo();
 		},
 
 		// 存储常量信息到浏览器缓存
+		/**
+		 * 更新 userInfo 的 set Const List 状态，并同步相关业务数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		async setConstList() {
 			this.constList = Session.get('constList') ?? <any[]>await this.getSysConstList();
 			if (!Session.get('constList')) Session.set('constList', this.constList);
 		},
 
 		// 存储字典信息到浏览器缓存
+		/**
+		 * 更新 userInfo 的 set Dict List 状态，并同步相关业务数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		async setDictList() {
 			var dictList = await getAPI(SysDictTypeApi).apiSysDictTypeAllDictListGet().then(res => res.data.result ?? {});
 			var dictListTemp = JSON.parse(JSON.stringify(dictList));
@@ -54,6 +70,10 @@ export const useUserInfo = defineStore('userInfo', {
 		},
 
 		// 获取当前用户信息
+		/**
+		 * 查询或读取 userInfo 所需的 get Api User Info 数据，并按调用约定返回结果。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		getApiUserInfo() {
 			return new Promise((resolve) => {
 				getAPI(SysAuthApi)
@@ -102,6 +122,10 @@ export const useUserInfo = defineStore('userInfo', {
 		},
 
 		// 获取常量集合
+		/**
+		 * 查询或读取 userInfo 所需的 get Sys Const List 数据，并按调用约定返回结果。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		getSysConstList() {
 			return new Promise((resolve) => {
 				getAPI(SysConstApi)
@@ -113,17 +137,33 @@ export const useUserInfo = defineStore('userInfo', {
 		},
 
 		// 根据常量类名获取常量数据
+		/**
+		 * 查询或读取 userInfo 所需的 get Const Data By Type Code 数据，并按调用约定返回结果。
+		 * @param typeCode - 需要读取、校验或转换的业务值。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		getConstDataByTypeCode(typeCode: string) {
 			return this.constList.find((item: any) => item.code === typeCode)?.data?.result || [];
 		},
 
 		// 根据常量类名和编码获取常量值
+		/**
+		 * 查询或读取 userInfo 所需的 get Const Item Name By Type 数据，并按调用约定返回结果。
+		 * @param typeCode - 需要读取、校验或转换的业务值。
+		 * @param itemCode - 需要读取、校验或转换的业务值。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		getConstItemNameByType(typeCode: string, itemCode: string) {
 			const data = this.getConstDataByTypeCode(typeCode);
 			return data.find((item: any) => item.code === itemCode)?.name;
 		},
 
 		// 根据字典类型获取字典数据
+		/**
+		 * 查询或读取 userInfo 所需的 get Dict Data By Code 数据，并按调用约定返回结果。
+		 * @param dictTypeCode - 需要读取、校验或转换的业务值。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		getDictDataByCode(dictTypeCode: string) {
 			return this.dictList[dictTypeCode] || [];
 		}

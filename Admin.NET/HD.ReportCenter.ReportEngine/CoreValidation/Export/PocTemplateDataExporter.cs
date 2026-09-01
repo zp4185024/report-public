@@ -7,6 +7,9 @@ namespace HD.ReportCenter.ReportEngine.CoreValidation.Export;
 /// <summary>普通导出超过模板阈值或超时时抛出，调用方应提示用户改用大文件导出。</summary>
 public sealed class PocNormalExportLimitException : Exception
 {
+    /// <summary>初始化 PocNormalExportLimitException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocNormalExportLimitException(string code, string message)
         : base(message)
     {
@@ -23,11 +26,14 @@ public sealed class PocTemplateDataExporter
 {
     private readonly PocXlsxExchangeConverter _exchangeConverter;
 
+    /// <summary>初始化 PocTemplateDataExporter 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocTemplateDataExporter()
         : this(new PocXlsxExchangeConverter())
     {
     }
 
+    /// <summary>初始化 PocTemplateDataExporter 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="exchangeConverter">exchangeConverter 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocTemplateDataExporter(PocXlsxExchangeConverter exchangeConverter)
     {
         _exchangeConverter = exchangeConverter;
@@ -79,6 +85,12 @@ public sealed class PocTemplateDataExporter
         }
     }
 
+    /// <summary>调用 PocTemplateDataExporter 的异步依赖完成 Materialize Rows Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="pages">pages 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="timeoutToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="callerToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<IReadOnlyList<PocDataRow>> MaterializeRowsAsync(
         PocTemplateDataExportPlan plan,
         IAsyncEnumerable<IReadOnlyList<PocDataRow>> pages,
@@ -120,6 +132,9 @@ public sealed class PocTemplateDataExporter
         return rows;
     }
 
+    /// <summary>遍历 PocTemplateDataExporter 当前数据并执行 Replace Parameter Bindings 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="workbook">包含工作簿结构、单元格和样式信息的快照数据。</param>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ReplaceParameterBindings(
         XLWorkbook workbook,
         PocTemplateDataExportPlan plan)
@@ -139,6 +154,11 @@ public sealed class PocTemplateDataExporter
         }
     }
 
+    /// <summary>遍历 PocTemplateDataExporter 当前数据并执行 Expand Detail Rows 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="workbook">包含工作簿结构、单元格和样式信息的快照数据。</param>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="rows">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
     private static void ExpandDetailRows(
         XLWorkbook workbook,
         PocTemplateDataExportPlan plan,
@@ -152,6 +172,7 @@ public sealed class PocTemplateDataExporter
             {
                 throw new InvalidOperationException("模板没有明细绑定，不能写入导出数据。");
             }
+            // 第一阶段：整理 ExpandDetailRows 已计算的数据，并按方法契约返回最终结果。
             return;
         }
 
@@ -186,6 +207,7 @@ public sealed class PocTemplateDataExporter
         if (rows.Count == 0)
         {
             // 保留一条有完整样式和公式的空模板行，清除数据 token，避免导出文件残留模板占位符。
+            // 第2阶段：遍历 ExpandDetailRows 当前数据集合，逐项转换并维护处理结果。
             foreach (var field in detail.Fields)
             {
                 worksheet.Cell(templateRow, field.Column + 1).Clear(XLClearOptions.Contents);
@@ -216,6 +238,7 @@ public sealed class PocTemplateDataExporter
                 worksheet.Row(targetRow).Height = sourceHeight;
                 foreach (var merge in sourceMerges)
                 {
+                    // 第3阶段：根据 ExpandDetailRows 当前分支转换输入数据，并保存该阶段产生的中间结果。
                     worksheet.Range(
                         targetRow,
                         merge.StartColumn,
@@ -246,6 +269,11 @@ public sealed class PocTemplateDataExporter
         }
     }
 
+    /// <summary>解析并计算 PocTemplateDataExporter 的 Resolve Worksheet 结果，处理必要的边界条件。</summary>
+    /// <param name="workbook">包含工作簿结构、单元格和样式信息的快照数据。</param>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sheetId">需要定位的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IXLWorksheet ResolveWorksheet(
         XLWorkbook workbook,
         PocTemplateDataExportPlan plan,
@@ -259,6 +287,12 @@ public sealed class PocTemplateDataExporter
         return worksheet;
     }
 
+    /// <summary>遍历 PocTemplateDataExporter 当前数据并执行 Adjust Formulas After Row Insertion 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="workbook">包含工作簿结构、单元格和样式信息的快照数据。</param>
+    /// <param name="formulas">formulas 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="insertedSheet">当前读取或修改的工作表对象。</param>
+    /// <param name="insertAfterRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="insertedRowCount">控制数据范围或位置的数值。</param>
     private static void AdjustFormulasAfterRowInsertion(
         XLWorkbook workbook,
         IReadOnlyList<WorkbookFormula> formulas,
@@ -289,11 +323,19 @@ public sealed class PocTemplateDataExporter
         }
     }
 
+    /// <summary>解析并计算 PocTemplateDataExporter 的 Resolve Parameter 结果，处理必要的边界条件。</summary>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ResolveParameter(PocResolvedParameters parameters, string code) =>
         parameters.TryGetValue(code, out var value)
             ? value
             : throw new InvalidOperationException($"导出模板包含未知参数绑定 '{code}'。");
 
+    /// <summary>更新 PocTemplateDataExporter 的 Write Detail Value 状态，并同步相关业务数据。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
     private static void WriteDetailValue(IXLCell cell, string code, PocDataRow row)
     {
         if (!row.TryGetValue(code, out var value))
@@ -301,6 +343,7 @@ public sealed class PocTemplateDataExporter
             throw new InvalidOperationException($"导出数据缺少明细字段 '{code}'。");
         }
 
+        // 第一阶段：检查 WriteDetailValue 当前条件，并按匹配分支执行对应处理。
         switch (value)
         {
             case null:
@@ -333,6 +376,7 @@ public sealed class PocTemplateDataExporter
                 break;
             case int number:
                 cell.Value = number;
+                // 第2阶段：根据 WriteDetailValue 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 break;
             case uint number:
                 cell.Value = number;
@@ -358,6 +402,8 @@ public sealed class PocTemplateDataExporter
         }
     }
 
+    /// <summary>负责 PocTemplateDataExporter 的 Timeout Exceeded 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocNormalExportLimitException TimeoutExceeded() =>
         new(
             "NORMAL_EXPORT_TIMEOUT",

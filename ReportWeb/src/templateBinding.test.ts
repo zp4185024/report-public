@@ -31,6 +31,11 @@ const definition: ReportDefinition = {
   ],
 };
 
+/**
+ * 验证 workbook 场景下的预期行为，并防止相关逻辑回归。
+ * @param sheets - sheets 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function workbook(sheets: IWorkbookData['sheets'] = {}): IWorkbookData {
   return {
     id: 'template-workbook',
@@ -43,6 +48,12 @@ function workbook(sheets: IWorkbookData['sheets'] = {}): IWorkbookData {
   };
 }
 
+/**
+ * 验证 one Sheet 场景下的预期行为，并防止相关逻辑回归。
+ * @param cellData - 本次操作使用的输入数据。
+ * @param mergeData - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function oneSheet(
   cellData: NonNullable<IWorkbookData['sheets'][string]['cellData']>,
   mergeData: NonNullable<IWorkbookData['sheets'][string]['mergeData']> = [],
@@ -57,6 +68,13 @@ function oneSheet(
   });
 }
 
+/**
+ * 验证 expect Binding Error 场景下的预期行为，并防止相关逻辑回归。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param expected - expected 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param reportDefinition - 描述字段、参数或业务约束的定义对象。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function expectBindingError(
   snapshot: IWorkbookData,
   expected: { sheetId?: string; row?: number; column?: number; cellAddress?: string },

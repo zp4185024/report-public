@@ -11,12 +11,10 @@ namespace Admin.NET.Plugin.WorkWeixin.Proxy.AppChat;
 /// </summary>
 public interface IWorkWeixinAuthHttp : IHttpDeclarative
 {
-    /// <summary>
-    /// 获取接口凭证
-    /// </summary>
+    /// <summary>查询或读取 IWorkWeixinAuthHttp 所需的 Get Token 数据，并按调用约定返回结果。</summary>
     /// <param name="corpId">企业ID</param>
     /// <param name="corpSecret">应用的凭证密钥</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <see href="https://developer.work.weixin.qq.com/document/path/91039"/>
     [Post("https://qyapi.weixin.qq.com/cgi-bin/gettoken")]
     Task<AuthAccessTokenHttpOutput> GetToken([QueryParam("corpid")] string corpId, [QueryParam("corpsecret")] string corpSecret);

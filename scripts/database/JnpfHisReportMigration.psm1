@@ -1,6 +1,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# 查询或读取 JnpfHisReportMigration 所需的 Get Map Value 数据，并按调用约定返回结果。
 function Get-MapValue {
     param(
         [object]$InputObject,
@@ -33,6 +34,7 @@ function Get-MapValue {
     return $DefaultValue
 }
 
+# 将 JnpfHisReportMigration 中的 Convert From Optional Json 输入转换为调用方需要的稳定格式。
 function ConvertFrom-OptionalJson {
     param(
         [AllowNull()]
@@ -52,6 +54,7 @@ function ConvertFrom-OptionalJson {
     }
 }
 
+# 将 JnpfHisReportMigration 中的 Convert To Target Code 输入转换为调用方需要的稳定格式。
 function ConvertTo-TargetCode {
     param(
         [AllowNull()]
@@ -79,6 +82,7 @@ function ConvertTo-TargetCode {
     return ($candidate.Substring(0, $MaximumLength - $suffix.Length - 1).TrimEnd('_', '-') + '_' + $suffix).ToLowerInvariant()
 }
 
+# 将 JnpfHisReportMigration 中的 Convert To Target Data Type 输入转换为调用方需要的稳定格式。
 function ConvertTo-TargetDataType {
     param([AllowNull()][string]$Value)
 
@@ -91,11 +95,13 @@ function ConvertTo-TargetDataType {
     }
 }
 
+# 将 JnpfHisReportMigration 中的 Convert Jnpf Field Definitions 输入转换为调用方需要的稳定格式。
 function Convert-JnpfFieldDefinitions {
     param([Parameter(Mandatory)][string]$FieldJson)
 
     $sourceFields = @(ConvertFrom-OptionalJson $FieldJson @())
     if ($sourceFields.Count -eq 0) {
+        # 第一阶段：根据 Convert-JnpfFieldDefinitions 当前分支转换输入数据，并保存该阶段产生的中间结果。
         throw 'JNPF 数据接口没有返回字段定义。'
     }
 
@@ -119,6 +125,7 @@ function Convert-JnpfFieldDefinitions {
             'field_{0:d2}' -f ($index + 1)
         }
         $code = $codeCandidate
+        # 第2阶段：构造 Convert-JnpfFieldDefinitions 当前步骤需要的中间数据和执行参数。
         $sequence = 2
         while (-not $usedCodes.Add($code)) {
             $code = "${codeCandidate}_$sequence"
@@ -138,6 +145,7 @@ function Convert-JnpfFieldDefinitions {
     return $result.ToArray()
 }
 
+# 将 JnpfHisReportMigration 中的 Convert Jnpf Sql Parameter Markers 输入转换为调用方需要的稳定格式。
 function Convert-JnpfSqlParameterMarkers {
     param([Parameter(Mandatory)][string]$QueryText)
 
@@ -147,8 +155,10 @@ function Convert-JnpfSqlParameterMarkers {
     $markers = [System.Collections.Generic.List[string]]::new()
     $unsupported = [System.Collections.Generic.List[string]]::new()
     $length = $QueryText.Length
+    # 第一阶段：构造 Convert-JnpfSqlParameterMarkers 当前步骤需要的中间数据和执行参数。
     $index = 0
 
+    # 构建 JnpfHisReportMigration 所需的 Add Parameter 内容，并保证生成结果符合调用约定。
     function Add-Parameter {
         param([string]$Name, [string]$Syntax)
         [void]$builder.Append('@').Append($Name)
@@ -183,6 +193,7 @@ function Convert-JnpfSqlParameterMarkers {
         }
         if ($current -eq '"' -or $current -eq '[') {
             $closing = if ($current -eq '[') { ']' } else { '"' }
+            # 第2阶段：根据 Convert-JnpfSqlParameterMarkers 当前分支转换输入数据，并保存该阶段产生的中间结果。
             [void]$builder.Append($current)
             $index++
             while ($index -lt $length) {
@@ -218,6 +229,7 @@ function Convert-JnpfSqlParameterMarkers {
                     $index += 2
                     break
                 }
+                # 第3阶段：构造 Convert-JnpfSqlParameterMarkers 当前步骤需要的中间数据和执行参数。
                 $index++
             }
             continue
@@ -253,6 +265,7 @@ function Convert-JnpfSqlParameterMarkers {
         elseif ($remaining -match '^:([A-Za-z][A-Za-z0-9_]*)' -and
             ($index -eq 0 -or $QueryText[$index - 1] -notmatch '[A-Za-z0-9_:$]')) {
             $match = $Matches
+            # 第4阶段：构造 Convert-JnpfSqlParameterMarkers 当前步骤需要的中间数据和执行参数。
             $syntax = 'colon'
         }
         elseif ($remaining -match '^@([A-Za-z][A-Za-z0-9_]*)' -and
@@ -283,6 +296,7 @@ function Convert-JnpfSqlParameterMarkers {
     }
 }
 
+# 查询或读取 JnpfHisReportMigration 所需的 Get Jnpf Sql Parameter Names 数据，并按调用约定返回结果。
 function Get-JnpfSqlParameterNames {
     param([AllowNull()][string]$QueryText)
 
@@ -292,6 +306,7 @@ function Get-JnpfSqlParameterNames {
     return @((Convert-JnpfSqlParameterMarkers $QueryText).ParameterNames)
 }
 
+# 将 JnpfHisReportMigration 中的 Quote Sql Identifier 输入转换为调用方需要的稳定格式。
 function Quote-SqlIdentifier {
     param(
         [Parameter(Mandatory)][string]$Value,
@@ -305,6 +320,7 @@ function Quote-SqlIdentifier {
     }
 }
 
+# 将 JnpfHisReportMigration 中的 Convert Jnpf Sql Text 输入转换为调用方需要的稳定格式。
 function Convert-JnpfSqlText {
     param(
         [Parameter(Mandatory)][string]$QueryText,
@@ -312,6 +328,7 @@ function Convert-JnpfSqlText {
         [Parameter(Mandatory)][string]$DbType
     )
 
+    # 第一阶段：检查 Convert-JnpfSqlText 当前条件，并按匹配分支执行对应处理。
     if ([string]::IsNullOrWhiteSpace($QueryText)) {
         throw 'JNPF 数据接口没有 SQL。'
     }
@@ -333,6 +350,7 @@ function Convert-JnpfSqlText {
     }
 
     $requiresAlias = @($Fields | Where-Object { $_.Source -cne $_.Code }).Count -gt 0
+    # 第2阶段：检查 Convert-JnpfSqlText 当前条件，并按匹配分支执行对应处理。
     if ($requiresAlias) {
         $selectList = @($Fields | ForEach-Object {
             $sourceIdentifier = Quote-SqlIdentifier $_.Source $DbType
@@ -352,10 +370,12 @@ function Convert-JnpfSqlText {
     }
 }
 
+# 查询或读取 JnpfHisReportMigration 所需的 Get All Maps 数据，并按调用约定返回结果。
 function Get-AllMaps {
     param([AllowNull()][object]$Value)
 
     $result = [System.Collections.Generic.List[object]]::new()
+    # 执行 JnpfHisReportMigration 的 Visit Value 核心流程，并保持错误和结果语义稳定。
     function Visit-Value {
         param([AllowNull()][object]$Current)
         if ($null -eq $Current -or $Current -is [string]) {
@@ -378,6 +398,7 @@ function Get-AllMaps {
     return $result.ToArray()
 }
 
+# 查询或读取 JnpfHisReportMigration 所需的 Find Parameter Metadata 数据，并按调用约定返回结果。
 function Find-ParameterMetadata {
     param(
         [Parameter(Mandatory)][string]$Code,
@@ -398,6 +419,7 @@ function Find-ParameterMetadata {
     return $null
 }
 
+# 将 JnpfHisReportMigration 中的 Convert To Bool Value 输入转换为调用方需要的稳定格式。
 function ConvertTo-BoolValue {
     param([AllowNull()][object]$Value)
     if ($Value -is [bool]) {
@@ -409,6 +431,7 @@ function ConvertTo-BoolValue {
     return ([string]$Value) -match '^(1|true|yes)$'
 }
 
+# 将 JnpfHisReportMigration 中的 Convert To Control Type 输入转换为调用方需要的稳定格式。
 function ConvertTo-ControlType {
     param(
         [AllowNull()][string]$Value,
@@ -424,6 +447,7 @@ function ConvertTo-ControlType {
     return 'text'
 }
 
+# 将 JnpfHisReportMigration 中的 Convert Jnpf Parameters 输入转换为调用方需要的稳定格式。
 function Convert-JnpfParameters {
     param(
         [Parameter(Mandatory)][string[]]$ParameterNames,
@@ -432,6 +456,7 @@ function Convert-JnpfParameters {
         [AllowNull()][string]$InterfaceParameterJson
     )
 
+    # 第一阶段：构造 Convert-JnpfParameters 当前步骤需要的中间数据和执行参数。
     $documents = @(
         (ConvertFrom-OptionalJson $QueryListJson @{}),
         (ConvertFrom-OptionalJson $DatasetParameterJson @()),
@@ -461,6 +486,7 @@ function Convert-JnpfParameters {
         }
         $controlType = ConvertTo-ControlType $rawType $code
         $dataType = if ($controlType -eq 'number') { 'number' } else { 'string' }
+        # 第2阶段：构造 Convert-JnpfParameters 当前步骤需要的中间数据和执行参数。
         $parameters.Add([pscustomobject]@{
             Code = $code
             DisplayName = if ([string]::IsNullOrWhiteSpace($displayName)) { $code } else { $displayName }
@@ -487,6 +513,7 @@ function Convert-JnpfParameters {
     }
 }
 
+# 将 JnpfHisReportMigration 中的 Convert Jnpf Field Presentations 输入转换为调用方需要的稳定格式。
 function Convert-JnpfFieldPresentations {
     param(
         [AllowNull()][string]$ConvertConfigJson,
@@ -527,6 +554,7 @@ function Convert-JnpfFieldPresentations {
     return $presentations | ConvertTo-Json -Depth 20 -Compress
 }
 
+# 将 JnpfHisReportMigration 中的 Convert Jnpf Snapshot 输入转换为调用方需要的稳定格式。
 function Convert-JnpfSnapshot {
     param(
         [Parameter(Mandatory)][string]$SnapshotJson,
@@ -535,6 +563,7 @@ function Convert-JnpfSnapshot {
     )
 
     $snapshot = ConvertFrom-OptionalJson $SnapshotJson @{}
+    # 第一阶段：检查 Convert-JnpfSnapshot 当前条件，并按匹配分支执行对应处理。
     if (-not $snapshot.Contains('sheets') -or -not $snapshot.Contains('sheetOrder')) {
         throw 'JNPF 模板快照缺少 sheets 或 sheetOrder。'
     }
@@ -568,6 +597,7 @@ function Convert-JnpfSnapshot {
             }
         }
         if (-not $sheet.Contains('cellData')) {
+            # 第2阶段：根据 Convert-JnpfSnapshot 当前分支转换输入数据，并保存该阶段产生的中间结果。
             continue
         }
 
@@ -600,6 +630,7 @@ function Convert-JnpfSnapshot {
                 if ($cell.Contains('f') -and $cell.f -is [string]) {
                     $sumMatch = [regex]::Match($cell.f, '^=SUM\(([A-Za-z]+[0-9]+)\)$')
                     if ($sumMatch.Success) {
+                        # 第3阶段：构造 Convert-JnpfSnapshot 当前步骤需要的中间数据和执行参数。
                         $reference = $sumMatch.Groups[1].Value
                         $cell.f = "=SUM($reference`:$reference)"
                         $formulaRangeFixCount++
@@ -633,6 +664,7 @@ function Convert-JnpfSnapshot {
         }
     }
 
+    # 第4阶段：构造 Convert-JnpfSnapshot 当前步骤需要的中间数据和执行参数。
     $binding = [ordered]@{
         version = 1
         parameterBindings = @()
@@ -659,6 +691,7 @@ function Convert-JnpfSnapshot {
     }
 }
 
+# 查询或读取 JnpfHisReportMigration 所需的 Find My Sql Connector Assembly 数据，并按调用约定返回结果。
 function Find-MySqlConnectorAssembly {
     $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
     $candidates = @(
@@ -675,6 +708,7 @@ function Find-MySqlConnectorAssembly {
     return $assembly
 }
 
+# 执行 JnpfHisReportMigration 的 Invoke Reader Rows 核心流程，并保持错误和结果语义稳定。
 function Invoke-ReaderRows {
     param(
         [Parameter(Mandatory)][System.Data.Common.DbConnection]$Connection,
@@ -682,6 +716,7 @@ function Invoke-ReaderRows {
         [hashtable]$Parameters = @{}
     )
 
+    # 第一阶段：构造 Invoke-ReaderRows 当前步骤需要的中间数据和执行参数。
     $command = $Connection.CreateCommand()
     try {
         $command.CommandText = $CommandText
@@ -702,6 +737,7 @@ function Invoke-ReaderRows {
                         $null
                     }
                     else {
+                        # 第2阶段：构造 Invoke-ReaderRows 当前步骤需要的中间数据和执行参数。
                         $reader.GetValue($index)
                     }
                 }
@@ -718,6 +754,7 @@ function Invoke-ReaderRows {
     }
 }
 
+# 构建 JnpfHisReportMigration 所需的 New Jnpf Source Connection 内容，并保证生成结果符合调用约定。
 function New-JnpfSourceConnection {
     param(
         [Parameter(Mandatory)][string]$Server,
@@ -744,6 +781,7 @@ function New-JnpfSourceConnection {
     return $connection
 }
 
+# 查询或读取 JnpfHisReportMigration 所需的 Get Single Source Row 数据，并按调用约定返回结果。
 function Get-SingleSourceRow {
     param(
         [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Rows,
@@ -759,9 +797,11 @@ function Get-SingleSourceRow {
     return $null
 }
 
+# 查询或读取 JnpfHisReportMigration 所需的 Get Jnpf Source Packages 数据，并按调用约定返回结果。
 function Get-JnpfSourcePackages {
     param([Parameter(Mandatory)][System.Data.Common.DbConnection]$Connection)
 
+    # 第一阶段：构造 Get-JnpfSourcePackages 当前步骤需要的中间数据和执行参数。
     $reportRows = @(Invoke-ReaderRows $Connection @'
 SELECT
     t.f_id AS report_id,
@@ -804,6 +844,7 @@ ORDER BY f_id;
         $datasets = [System.Collections.Generic.List[object]]::new()
         foreach ($dataset in $datasetRows) {
             $interfaceId = [string]$dataset.interface_id
+            # 第2阶段：检查 Get-JnpfSourcePackages 当前条件，并按匹配分支执行对应处理。
             if (-not $interfaceCache.ContainsKey($interfaceId)) {
                 $interfaceCache[$interfaceId] = Get-SingleSourceRow @(
                     Invoke-ReaderRows $Connection @'
@@ -841,6 +882,7 @@ WHERE f_id = @databaseLinkId
 LIMIT 2;
 '@ @{ databaseLinkId = $databaseLinkId }) "JNPF 数据库连接 '$databaseLinkId'"
                 }
+                # 第3阶段：构造 Get-JnpfSourcePackages 当前步骤需要的中间数据和执行参数。
                 $databaseLink = $databaseLinkCache[$databaseLinkId]
             }
             $datasets.Add([pscustomobject]@{
@@ -869,6 +911,7 @@ LIMIT 2;
     return $packages.ToArray()
 }
 
+# 构建 JnpfHisReportMigration 所需的 New Jnpf Migration Candidate 内容，并保证生成结果符合调用约定。
 function New-JnpfMigrationCandidate {
     param(
         [Parameter(Mandatory)][object]$Package,
@@ -877,6 +920,7 @@ function New-JnpfMigrationCandidate {
     )
 
     $blockers = [System.Collections.Generic.List[string]]::new()
+    # 第一阶段：构造 New-JnpfMigrationCandidate 当前步骤需要的中间数据和执行参数。
     $markers = [System.Collections.Generic.List[string]]::new()
     $migration = $null
     if ($Package.ActiveVersionCount -ne 1) {
@@ -910,6 +954,7 @@ function New-JnpfMigrationCandidate {
             $parameters = Convert-JnpfParameters @($sql.ParameterNames) $Package.QueryListJson `
                 $dataset.ParameterJson ([string]$dataset.Interface.f_parameter_json)
             foreach ($marker in $parameters.Markers) { $markers.Add($marker) }
+            # 第2阶段：构造 New-JnpfMigrationCandidate 当前步骤需要的中间数据和执行参数。
             $template = Convert-JnpfSnapshot $Package.SnapshotJson $dataset.Name $fields
             foreach ($marker in $template.Markers) { $markers.Add($marker) }
             $markers.Add('SOURCE_SQL_NOT_EXECUTED')
@@ -944,6 +989,7 @@ function New-JnpfMigrationCandidate {
             else {
                 "$($Package.ReportName)（JNPF迁移）"
             }
+            # 第3阶段：构造 New-JnpfMigrationCandidate 当前步骤需要的中间数据和执行参数。
             $migration = [pscustomobject]@{
                 SourceReportId = $Package.ReportId
                 SourceVersionId = $Package.VersionId
@@ -982,6 +1028,7 @@ function New-JnpfMigrationCandidate {
             }
         }
         catch {
+            # 第4阶段：构造 New-JnpfMigrationCandidate 当前步骤需要的中间数据和执行参数。
             $blockers.Add("CONVERSION_FAILED:$($_.Exception.Message)")
         }
     }
@@ -1002,6 +1049,7 @@ function New-JnpfMigrationCandidate {
     }
 }
 
+# 将 JnpfHisReportMigration 中的 Convert To Jnpf Inventory Record 输入转换为调用方需要的稳定格式。
 function ConvertTo-JnpfInventoryRecord {
     param([Parameter(Mandatory)][object]$Candidate)
 
@@ -1028,6 +1076,7 @@ function ConvertTo-JnpfInventoryRecord {
     }
 }
 
+# 构建 JnpfHisReportMigration 所需的 New Stable Int64 Id 内容，并保证生成结果符合调用约定。
 function New-StableInt64Id {
     param(
         [Parameter(Mandatory)][string]$Namespace,
@@ -1041,6 +1090,7 @@ function New-StableInt64Id {
     return $id
 }
 
+# 构建 JnpfHisReportMigration 所需的 Add Db Parameter 内容，并保证生成结果符合调用约定。
 function Add-DbParameter {
     param(
         [Parameter(Mandatory)][System.Data.SqlClient.SqlCommand]$Command,
@@ -1059,6 +1109,7 @@ function Add-DbParameter {
     $parameter.Value = if ($null -eq $Value) { [DBNull]::Value } else { $Value }
 }
 
+# 构建 JnpfHisReportMigration 所需的 New Jnpf Target Connection 内容，并保证生成结果符合调用约定。
 function New-JnpfTargetConnection {
     param(
         [Parameter(Mandatory)][string]$ConnectionString,
@@ -1079,6 +1130,7 @@ function New-JnpfTargetConnection {
     return $connection
 }
 
+# 将 JnpfHisReportMigration 中的 Convert To Jnpf Legacy Sql Connection String 输入转换为调用方需要的稳定格式。
 function ConvertTo-JnpfLegacySqlConnectionString {
     param([Parameter(Mandatory)][string]$ConnectionString)
 
@@ -1087,6 +1139,7 @@ function ConvertTo-JnpfLegacySqlConnectionString {
     return $ConnectionString -replace '(?i)\bTrust\s+Server\s+Certificate\b', 'TrustServerCertificate'
 }
 
+# 检查目标数据库的报表中心表结构是否完整，并在缺少必要对象时阻止迁移写入。
 function Test-JnpfTargetSchema {
     param([Parameter(Mandatory)][System.Data.SqlClient.SqlConnection]$Connection)
 
@@ -1112,6 +1165,7 @@ IF COL_LENGTH(N'dbo.RcReport', N'FieldPresentationsJson') IS NULL
     }
 }
 
+# 执行 JnpfHisReportMigration 的 Invoke Jnpf Target Insert 核心流程，并保持错误和结果语义稳定。
 function Invoke-JnpfTargetInsert {
     param(
         [Parameter(Mandatory)][System.Data.SqlClient.SqlConnection]$Connection,
@@ -1122,6 +1176,7 @@ function Invoke-JnpfTargetInsert {
 
     $transaction = $Connection.BeginTransaction()
     try {
+        # 第一阶段：构造 Invoke-JnpfTargetInsert 当前步骤需要的中间数据和执行参数。
         $collision = $Connection.CreateCommand()
         $collision.Transaction = $transaction
         $collision.CommandText = @'
@@ -1161,6 +1216,7 @@ SELECT
             throw '目标存在孤立的同编码数据集或模板，拒绝自动处理。'
         }
 
+        # 第2阶段：构造 Invoke-JnpfTargetInsert 当前步骤需要的中间数据和执行参数。
         $dataSourceCheck = $Connection.CreateCommand()
         $dataSourceCheck.Transaction = $transaction
         $dataSourceCheck.CommandText = 'SELECT DbType FROM dbo.RcDataSource WHERE Code = @Code;'
@@ -1198,6 +1254,7 @@ VALUES
         $now = [DateTime]::Now
         $dataset = $Connection.CreateCommand()
         $dataset.Transaction = $transaction
+        # 第3阶段：构造 Invoke-JnpfTargetInsert 当前步骤需要的中间数据和执行参数。
         $dataset.CommandText = @'
 INSERT INTO dbo.RcDataset
     (Id, DataSourceCode, Code, Name, QueryText, FieldSchemaJson,
@@ -1235,6 +1292,7 @@ VALUES
         Add-DbParameter $report '@ExportSettingsJson' NVarChar $Migration.ExportSettingsJson -1
         Add-DbParameter $report '@FieldPresentationsJson' NVarChar $Migration.FieldPresentationsJson -1
         Add-DbParameter $report '@Now' DateTime $now
+        # 第4阶段：构造 Invoke-JnpfTargetInsert 当前步骤需要的中间数据和执行参数。
         $report.ExecuteNonQuery() | Out-Null
         $report.Dispose()
 
@@ -1274,6 +1332,7 @@ VALUES
             Add-DbParameter $parameter '@DisplayOrder' Int $definition.DisplayOrder
             Add-DbParameter $parameter '@Now' DateTime $now
             $parameter.ExecuteNonQuery() | Out-Null
+            # 第5阶段：构造 Invoke-JnpfTargetInsert 当前步骤需要的中间数据和执行参数。
             $parameter.Dispose()
         }
 
@@ -1311,6 +1370,7 @@ SELECT
                 throw '目标写后校验没有返回结果。'
             }
             $actual = @(
+                # 第6阶段：构造 Invoke-JnpfTargetInsert 当前步骤需要的中间数据和执行参数。
                 $verifyReader.GetInt64(0),
                 $verifyReader.GetInt64(1),
                 $verifyReader.GetInt64(2),

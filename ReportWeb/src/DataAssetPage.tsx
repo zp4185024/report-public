@@ -43,20 +43,41 @@ const DATABASE_TYPES: ReadonlyArray<{
   { value: 'PostgreSQL', label: 'PostgreSQL', defaultPort: 5432, databaseLabel: '数据库' },
 ];
 
+/**
+ * 按 database Type 规则筛选 DataAssetPage 数据，并返回满足条件的结果。
+ * @param dbType - dbType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function databaseType(dbType: DataSourceDbType) {
   return DATABASE_TYPES.find((item) => item.value === dbType) ?? DATABASE_TYPES[0];
 }
 
+/**
+ * 创建并返回 DataAssetPage 的 source Draft 配置对象，集中提供相关状态和操作入口。
+ * @param document - document 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function sourceDraft(document: DataSourceDocument): DataSourceInput {
   return { ...document, password: null };
 }
 
+/**
+ * 负责 DataAssetPage 的 next Code 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param prefix - prefix 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param codes - codes 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function nextCode(prefix: string, codes: readonly string[]): string {
   let index = codes.length + 1;
   while (codes.includes(`${prefix}_${index}`)) index += 1;
   return `${prefix}_${index}`;
 }
 
+/**
+ * 构建 DataAssetPage 所需的 new Data Source 内容，并保证生成结果符合调用约定。
+ * @param existing - existing 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function newDataSource(existing: readonly DataSourceDocument[]): DataSourceInput {
   return {
     code: nextCode('data_source', existing.map((item) => item.code)),
@@ -75,6 +96,12 @@ function newDataSource(existing: readonly DataSourceDocument[]): DataSourceInput
   };
 }
 
+/**
+ * 构建 DataAssetPage 所需的 new Dataset 内容，并保证生成结果符合调用约定。
+ * @param existing - existing 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param sources - sources 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function newDataset(
   existing: readonly DatasetDocument[],
   sources: readonly DataSourceDocument[],
@@ -93,6 +120,11 @@ function newDataset(
   };
 }
 
+/**
+ * 负责 DataAssetPage 的 sql Variable Codes 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param queryText - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function sqlVariableCodes(queryText: string): string[] {
   const result: string[] = [];
   const seen = new Set<string>();
@@ -107,6 +139,12 @@ function sqlVariableCodes(queryText: string): string[] {
   return result;
 }
 
+/**
+ * 按 materialize Variables 规则筛选 DataAssetPage 数据，并返回满足条件的结果。
+ * @param queryText - 需要读取、校验或转换的业务值。
+ * @param current - current 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function materializeVariables(
   queryText: string,
   current: readonly DatasetVariableDefinition[],
@@ -124,12 +162,22 @@ function materializeVariables(
   });
 }
 
+/**
+ * 负责 DataAssetPage 的 preview Url 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param datasetCode - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function previewUrl(datasetCode: string): string {
   const search = new URLSearchParams(window.location.search);
   search.set('datasetCode', datasetCode);
   return `/data-assets/preview?${search.toString()}`;
 }
 
+/**
+ * 负责 DataAssetPage 的 template Url 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param reportCode - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function templateUrl(reportCode: string): string {
   const search = new URLSearchParams(window.location.search);
   search.delete('datasetCode');
@@ -137,6 +185,10 @@ function templateUrl(reportCode: string): string {
   return `/reports/${encodeURIComponent(reportCode)}${suffix}`;
 }
 
+/**
+ * 按 Data Asset Page 规则筛选 DataAssetPage 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
   const [kind, setKind] = useState<AssetKind>(initialKind);
   const [dataSources, setDataSources] = useState<DataSourceDocument[]>([]);
@@ -145,7 +197,9 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
   const [dataSourceDraft, setDataSourceDraft] = useState<DataSourceInput | null>(null);
   const [datasetDraft, setDatasetDraft] = useState<DatasetDocument | null>(null);
   const [loading, setLoading] = useState(true);
+  // 第一阶段：构造 DataAssetPage 当前阶段需要的中间数据和执行参数。
   const [saving, setSaving] = useState(false);
+  // 第一阶段：构造 DataAssetPage 当前阶段需要的中间数据和执行参数。
   const [testing, setTesting] = useState(false);
   const [referencesOpen, setReferencesOpen] = useState(false);
   const [referencesLoading, setReferencesLoading] = useState(false);
@@ -157,6 +211,10 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
 
   useEffect(() => {
     let active = true;
+    /**
+     * 查询或读取 DataAssetPage 所需的 load 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const load = async () => {
       try {
         const [nextSources, nextDatasets, nextExternalSources] = await Promise.all([
@@ -177,9 +235,11 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
       }
     };
     void load();
+    // 第2阶段：整理 DataAssetPage 已计算的数据，并按方法契约返回最终结果。
     return () => { active = false; };
   }, []);
 
+  // 第2阶段：构造 DataAssetPage 当前阶段需要的中间数据和执行参数。
   const datasetVariables = useMemo(
     () => datasetDraft === null
       ? []
@@ -194,17 +254,29 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     category: variable.sourceType === 'External' ? 'external' : 'form',
   })), [datasetVariables]);
 
+  /**
+   * 负责 DataAssetPage 的 select Source 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+   * @param source - 本次转换或写入使用的数据对象。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const selectSource = (source: DataSourceDocument) => {
     setDataSourceDraft(sourceDraft(source));
     setError(null);
     setStatus(null);
   };
 
+  /**
+   * 更新 DataAssetPage 的 update Source Connection 状态，并同步相关业务数据。
+   * @param patch - patch 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @param clearPassword - clearPassword 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const updateSourceConnection = (
     patch: Partial<Pick<DataSourceInput, 'dbType' | 'server' | 'port' | 'database' | 'userName'>>,
     clearPassword = false,
   ) => {
     setDataSourceDraft((current) => {
+      // 第3阶段：检查 DataAssetPage 当前条件，并按匹配分支执行对应处理。
       if (current === null) return current;
       const next = { ...current, ...patch, password: clearPassword ? null : current.password };
       const stored = dataSources.find((item) => item.code === next.code);
@@ -218,7 +290,13 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     });
   };
 
+  /**
+   * 遍历 DataAssetPage 数据并执行 select Dataset 转换，生成后续流程需要的结果。
+   * @param dataset - dataset 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const selectDataset = (dataset: DatasetDocument) => {
+    // 第3阶段：遍历 DataAssetPage 当前数据集合，逐项转换并维护处理结果。
     setDatasetDraft({
       ...dataset,
       variables: dataset.variables.map((variable) => ({ ...variable })),
@@ -230,9 +308,14 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     setStatus(null);
   };
 
+  /**
+   * 准备 DataAssetPage 的 show References 交互状态并打开对应界面。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const showReferences = async () => {
     if (datasetDraft === null || datasetDraft.revision === 0) return;
     if (referencesOpen) {
+      // 第4阶段：根据 DataAssetPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setReferencesOpen(false);
       return;
     }
@@ -249,12 +332,17 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     }
   };
 
+  /**
+   * 更新 DataAssetPage 的 save Source 状态，并同步相关业务数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const saveSource = async () => {
     if (dataSourceDraft === null) return;
     if (!dataSourceDraft.code.trim() || !dataSourceDraft.name.trim() || !dataSourceDraft.server.trim() || !dataSourceDraft.database.trim() || !dataSourceDraft.userName.trim()) {
       setError('编码、名称、服务器、数据库和用户名不能为空。');
       return;
     }
+    // 第4阶段：根据 DataAssetPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
     setSaving(true);
     setError(null);
     setStatus(null);
@@ -266,12 +354,17 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
       setDataSourceDraft(sourceDraft(saved));
       setStatus(`数据源已保存，当前修订号 ${saved.revision}`);
     } catch (exception) {
+      // 第5阶段：根据 DataAssetPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setError(exception instanceof Error ? exception.message : '数据源保存失败。');
     } finally {
       setSaving(false);
     }
   };
 
+  /**
+   * 负责 DataAssetPage 的 test Source 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const testSource = async () => {
     if (dataSourceDraft === null) return;
     setTesting(true);
@@ -287,18 +380,30 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     }
   };
 
+  /**
+   * 更新 DataAssetPage 的 update Variable 状态，并同步相关业务数据。
+   * @param code - 需要读取、校验或转换的业务值。
+   * @param patch - patch 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const updateVariable = (code: string, patch: Partial<DatasetVariableDefinition>) => {
     setDatasetDraft((current) => {
       if (current === null) return current;
+      // 第5阶段：遍历 DataAssetPage 当前数据集合，逐项转换并维护处理结果。
       const variables = materializeVariables(current.queryText, current.variables).map((variable) =>
         variable.code.toLowerCase() === code.toLowerCase()
           ? { ...variable, ...patch, code: variable.code }
           : variable,
       );
+      // 第6阶段：整理 DataAssetPage 已计算的数据，并按方法契约返回最终结果。
       return { ...current, variables };
     });
   };
 
+  /**
+   * 更新 DataAssetPage 的 save Dataset 状态，并同步相关业务数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const saveDataset = async () => {
     if (datasetDraft === null) return;
     if (!datasetDraft.code.trim() || !datasetDraft.name.trim() || !datasetDraft.dataSourceCode || !datasetDraft.queryText.trim()) {
@@ -327,6 +432,8 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : '数据集保存失败。');
     } finally {
+      // 第6阶段：根据 DataAssetPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
+      // 第7阶段：根据 DataAssetPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setSaving(false);
     }
   };
@@ -353,6 +460,8 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
             <strong>{kind === 'data-sources' ? '数据源' : '数据集'}</strong>
             <button type="button" className="icon-button" title={kind === 'data-sources' ? '新增数据源' : '新增数据集'} aria-label={kind === 'data-sources' ? '新增数据源' : '新增数据集'} onClick={() => {
               setError(null); setStatus(null);
+              // 第7阶段：检查 DataAssetPage 当前条件，并按匹配分支执行对应处理。
+              // 第8阶段：检查 DataAssetPage 当前条件，并按匹配分支执行对应处理。
               if (kind === 'data-sources') setDataSourceDraft(newDataSource(dataSources));
               else setDatasetDraft(newDataset(datasets, dataSources));
             }}><Plus size={17} /></button>
@@ -437,7 +546,11 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
               <div className="dataset-parameter-line"><strong>SQL 输入变量</strong><span className="parameter-legend form">查询输入</span><span className="parameter-legend external">外部接口</span><span>{datasetVariables.length === 0 ? '无' : datasetVariables.map((variable) => `@${variable.code}`).join('、')}</span></div>
               <div className="dataset-columns-header"><div><strong>变量定义</strong><span>{datasetVariables.length} 个变量</span></div></div>
               <div className="configuration-table-scroll asset-column-scroll"><table className="configuration-table dataset-variable-table"><thead><tr><th>SQL 变量</th><th>业务名称</th><th>数据类型</th><th>参数来源</th><th>接口字段</th><th>必填</th></tr></thead><tbody>{datasetVariables.length === 0 ? <tr><td colSpan={6} className="dataset-preview-empty">当前 SQL 没有输入变量</td></tr> : datasetVariables.map((variable) => {
+                // 第8阶段：构造 DataAssetPage 当前阶段需要的中间数据和执行参数。
+                // 第9阶段：构造 DataAssetPage 当前阶段需要的中间数据和执行参数。
                 const source = externalSources.find((item) => item.code === variable.sourceCode);
+                // 第9阶段：遍历 DataAssetPage 当前数据集合，逐项转换并维护处理结果。
+                // 第10阶段：遍历 DataAssetPage 当前数据集合，逐项转换并维护处理结果。
                 return <tr key={variable.code}><td><input disabled value={`@${variable.code}`} /></td><td><input value={variable.displayName} onChange={(event) => updateVariable(variable.code, { displayName: event.target.value })} /></td><td><select disabled={variable.sourceType === 'External'} value={variable.dataType} onChange={(event) => updateVariable(variable.code, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td><td><select value={variable.sourceType === 'External' ? variable.sourceCode ?? '' : 'Form'} onChange={(event) => {
                   const external = externalSources.find((item) => item.code === event.target.value);
                   const field = external?.fields.find((item) =>

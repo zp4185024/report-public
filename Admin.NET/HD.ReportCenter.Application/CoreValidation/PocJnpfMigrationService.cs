@@ -107,6 +107,10 @@ internal sealed record JnpfTemplateConversion(
 
 internal static class PocJnpfMigrationSourceReader
 {
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Read Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="endpoint">endpoint 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IReadOnlyList<JnpfSourcePackage>> ReadAsync(
         PocDataSourceEndpoint endpoint,
         CancellationToken cancellationToken)
@@ -123,6 +127,7 @@ internal static class PocJnpfMigrationSourceReader
             SslMode = MySqlSslMode.Preferred
         };
 
+        // 第一阶段：调用 ReadAsync 依赖的异步能力，等待并校验返回数据。
         await using var connection = new MySqlConnection(builder.ConnectionString);
         await connection.OpenAsync(cancellationToken);
         var reportRows = await QueryAsync(connection, """
@@ -152,6 +157,7 @@ internal static class PocJnpfMigrationSourceReader
 
         foreach (var report in reportRows)
         {
+            // 第2阶段：构造 ReadAsync 当前步骤需要的中间数据和执行参数。
             var versionId = GetString(report, "version_id");
             var datasetRows = await QueryAsync(connection, """
                 SELECT
@@ -187,6 +193,7 @@ internal static class PocJnpfMigrationSourceReader
                               AND COALESCE(f_delete_mark, 0) = 0
                             LIMIT 2;
                             """, new Dictionary<string, object?> { ["interfaceId"] = interfaceId }, cancellationToken);
+                    // 第3阶段：构造 ReadAsync 当前步骤需要的中间数据和执行参数。
                     var row = Single(rows, $"JNPF 数据接口 '{interfaceId}'");
                     sourceInterface = row is null ? null : new JnpfSourceInterface(
                         GetString(row, "f_id"),
@@ -219,6 +226,7 @@ internal static class PocJnpfMigrationSourceReader
                     databaseLinkCache[databaseLinkId] = databaseLink;
                 }
 
+                // 第4阶段：根据 ReadAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 datasets.Add(new JnpfSourceDataset(
                     GetString(dataset, "dataset_id"),
                     GetString(dataset, "dataset_name"),
@@ -245,6 +253,12 @@ internal static class PocJnpfMigrationSourceReader
         return packages;
     }
 
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Query Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="connection">connection 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="commandText">需要读取、校验或转换的业务值。</param>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<List<Dictionary<string, object?>>> QueryAsync(
         MySqlConnection connection,
         string commandText,
@@ -278,6 +292,10 @@ internal static class PocJnpfMigrationSourceReader
         return rows;
     }
 
+    /// <summary>负责 PocJnpfMigrationSourceReader 的 Single 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="rows">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="description">description 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Dictionary<string, object?>? Single(
         IReadOnlyList<Dictionary<string, object?>> rows,
         string description) => rows.Count switch
@@ -287,11 +305,19 @@ internal static class PocJnpfMigrationSourceReader
             _ => throw new InvalidOperationException($"{description} 返回了 {rows.Count} 条，无法确定唯一记录。")
         };
 
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Get String 数据，并按调用约定返回结果。</summary>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetString(IReadOnlyDictionary<string, object?> row, string key) =>
         row.TryGetValue(key, out var value) && value is not null
             ? Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty
             : string.Empty;
 
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Get Int32 数据，并按调用约定返回结果。</summary>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int GetInt32(IReadOnlyDictionary<string, object?> row, string key) =>
         row.TryGetValue(key, out var value) && value is not null
             ? Convert.ToInt32(value, CultureInfo.InvariantCulture)
@@ -333,6 +359,11 @@ internal static class PocJnpfMigrationConverter
         (new Regex(@"\A\$([A-Za-z][A-Za-z0-9_]*)\$", RegexOptions.Compiled), "dollar")
     ];
 
+    /// <summary>构建 PocJnpfMigrationService 所需的 Create Candidate 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="package">package 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="reportDataSourceCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="reportDataSourceType">reportDataSourceType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static JnpfMigrationCandidate CreateCandidate(
         JnpfSourcePackage package,
         string reportDataSourceCode,
@@ -346,6 +377,7 @@ internal static class PocJnpfMigrationConverter
 
         var dataset = package.Datasets.Count == 1 ? package.Datasets[0] : null;
         var databaseLink = dataset?.DatabaseLink;
+        // 第一阶段：检查 CreateCandidate 当前条件，并按匹配分支执行对应处理。
         if (dataset is not null && dataset.Interface is null) blockers.Add("DATA_INTERFACE_NOT_FOUND");
         if (dataset is not null && databaseLink is null) blockers.Add("DATABASE_LINK_NOT_FOUND");
         if (databaseLink is not null && !PocDatabaseProvider.SupportedTypes.Contains(databaseLink.DbType, StringComparer.OrdinalIgnoreCase))
@@ -384,6 +416,7 @@ internal static class PocJnpfMigrationConverter
                 var sourceCode = string.IsNullOrWhiteSpace(package.SourceReportCode)
                     ? $"report_{package.ReportId}"
                     : package.SourceReportCode;
+                // 第2阶段：构造 CreateCandidate 当前步骤需要的中间数据和执行参数。
                 var reportCode = ConvertTargetCode($"jnpf_{sourceCode}", $"jnpf_report_{package.ReportId}");
                 var fieldSchema = new JObject
                 {
@@ -411,6 +444,7 @@ internal static class PocJnpfMigrationConverter
                 var reportName = sourceReportName.Contains("JNPF迁移", StringComparison.Ordinal)
                     ? sourceReportName
                     : $"{sourceReportName}（JNPF迁移）";
+                // 第3阶段：更新 CreateCandidate 当前分支对应的业务状态，并保持关联数据一致。
                 migration = new JnpfMigration(
                     package.ReportId,
                     package.VersionId,
@@ -450,6 +484,9 @@ internal static class PocJnpfMigrationConverter
             migration);
     }
 
+    /// <summary>遍历 PocJnpfMigrationConverter 当前数据并执行 To Inventory 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="candidate">candidate 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static PocJnpfMigrationInventoryItem ToInventory(JnpfMigrationCandidate candidate)
     {
         var links = candidate.Package.Datasets
@@ -473,6 +510,9 @@ internal static class PocJnpfMigrationConverter
             string.Join(" | ", candidate.Markers));
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Fields 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="fieldJson">fieldJson 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IReadOnlyList<JnpfField> ConvertFields(string fieldJson)
     {
         var sourceFields = Enumerate(ParseJson(fieldJson, new JArray())).ToArray();
@@ -505,6 +545,11 @@ internal static class PocJnpfMigrationConverter
         return fields;
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Sql 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static JnpfSqlConversion ConvertSql(
         string queryText,
         IReadOnlyList<JnpfField> fields,
@@ -533,6 +578,12 @@ internal static class PocJnpfMigrationConverter
         return new JnpfSqlConversion(converted, parameterConversion.ParameterNames, markers);
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Snapshot 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="snapshotJson">snapshotJson 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="datasetName">需要读取、校验或转换的业务值。</param>
+    /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static JnpfTemplateConversion ConvertSnapshot(
         string snapshotJson,
         string datasetName,
@@ -547,6 +598,7 @@ internal static class PocJnpfMigrationConverter
         var markers = new List<string>();
         if (snapshot.Remove("resources")) markers.Add("LEGACY_WORKBOOK_RESOURCES_REMOVED");
         var fieldBySource = fields.ToDictionary(field => field.Source, StringComparer.OrdinalIgnoreCase);
+        // 第一阶段：构造 ConvertSnapshot 当前步骤需要的中间数据和执行参数。
         var parameterByCode = (parameters ?? [])
             .ToDictionary(parameter => parameter.Code, StringComparer.OrdinalIgnoreCase);
         var coordinates = new List<(string SheetId, int Row, int Column, string Code)>();
@@ -583,6 +635,7 @@ internal static class PocJnpfMigrationConverter
                 }
             }
             if (sheet["cellData"] is not JObject cellData) continue;
+            // 第2阶段：遍历 ConvertSnapshot 当前数据集合，逐项转换并维护处理结果。
             foreach (var rowProperty in cellData.Properties())
             {
                 if (rowProperty.Value is not JObject row || !int.TryParse(rowProperty.Name, out var rowIndex)) continue;
@@ -618,6 +671,7 @@ internal static class PocJnpfMigrationConverter
                             }
                             else if (Regex.IsMatch(value, @"\$\{[^}]+\}"))
                             {
+                                // 第3阶段：根据 ConvertSnapshot 当前分支转换输入数据，并保存该阶段产生的中间结果。
                                 unconvertedTokenCount++;
                             }
                         }
@@ -651,6 +705,7 @@ internal static class PocJnpfMigrationConverter
                         if (match.Success)
                         {
                             cell["f"] = $"=SUM({match.Groups[1].Value}:{match.Groups[1].Value})";
+                            // 第4阶段：根据 ConvertSnapshot 当前分支转换输入数据，并保存该阶段产生的中间结果。
                             formulaRangeFixCount++;
                         }
                     }
@@ -690,6 +745,7 @@ internal static class PocJnpfMigrationConverter
                 continue;
             }
 
+            // 第5阶段：根据 ConvertSnapshot 当前分支转换输入数据，并保存该阶段产生的中间结果。
             legacyDetail.Cell.Remove("v");
             staleDetailTokenCount++;
         }
@@ -717,6 +773,7 @@ internal static class PocJnpfMigrationConverter
                 throw new InvalidOperationException("明细模板行包含合并单元格，当前报表中心无法安全展开。");
             }
         }
+        // 第6阶段：遍历 ConvertSnapshot 当前数据集合，逐项转换并维护处理结果。
         var binding = new JObject
         {
             ["version"] = 1,
@@ -754,6 +811,11 @@ internal static class PocJnpfMigrationConverter
             markers);
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Target Code 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="fallback">fallback 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="maximumLength">maximumLength 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertTargetCode(string? value, string fallback, int maximumLength = 64)
     {
         var candidate = string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
@@ -765,11 +827,22 @@ internal static class PocJnpfMigrationConverter
         return $"{candidate[..(maximumLength - suffix.Length - 1)].TrimEnd('_', '-')}_{suffix}".ToLowerInvariant();
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Parse Object 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="json">json 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     internal static JObject ParseObject(string? json) => ParseJson(json, new JObject()) as JObject
         ?? throw new InvalidOperationException("JNPF 元数据 JSON 应为对象。");
 
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Get Object 数据，并按调用约定返回结果。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="names">names 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     internal static JObject? GetObject(JToken? token, params string[] names) => GetToken(token, names) as JObject;
 
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Get String 数据，并按调用约定返回结果。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="names">names 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     internal static string GetString(JToken? token, params string[] names)
     {
         var value = GetToken(token, names);
@@ -780,6 +853,12 @@ internal static class PocJnpfMigrationConverter
                 : Convert.ToString(((JValue)value).Value, CultureInfo.InvariantCulture) ?? string.Empty;
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Parameters 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="parameterNames">parameterNames 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <param name="snapshotJson">snapshotJson 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="jsonDocuments">jsonDocuments 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static (IReadOnlyList<JnpfParameter> Parameters, IReadOnlyList<string> Markers) ConvertParameters(
         IReadOnlyList<string> parameterNames,
         string queryText,
@@ -794,6 +873,7 @@ internal static class PocJnpfMigrationConverter
             var code = parameterNames[index];
             var metadata = FindParameterMetadata(code, documents);
             var config = GetObject(metadata, "config") ?? new JObject();
+            // 第一阶段：构造 ConvertParameters 当前步骤需要的中间数据和执行参数。
             var displayName = GetString(metadata, "label", "fullName", "fieldName", "title", "name");
             var rawType = GetString(metadata, "controlType", "jnpfKey", "type", "dataType");
             if (string.IsNullOrWhiteSpace(rawType)) rawType = GetString(config, "controlType", "jnpfKey", "type", "dataType");
@@ -831,6 +911,7 @@ internal static class PocJnpfMigrationConverter
         foreach (Match match in LegacySystemParameterToken.Matches(snapshotJson))
         {
             var code = match.Groups["code"].Value;
+            // 第2阶段：检查 ConvertParameters 当前条件，并按匹配分支执行对应处理。
             if (!LegacySystemParameters.TryGetValue(code, out var mapping))
             {
                 markers.Add($"UNSUPPORTED_SYSTEM_TEMPLATE_PARAMETER:{code}");
@@ -861,6 +942,9 @@ internal static class PocJnpfMigrationConverter
         return (parameters, markers);
     }
 
+    /// <summary>根据 PocJnpfMigrationConverter 当前输入计算 Bind Legacy System Parameter 结果，并按方法声明的类型返回。</summary>
+    /// <param name="parameter">parameter 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JnpfParameter BindLegacySystemParameter(JnpfParameter parameter)
     {
         if (!LegacySystemParameters.TryGetValue(parameter.Code, out var mapping)) return parameter;
@@ -882,6 +966,10 @@ internal static class PocJnpfMigrationConverter
         };
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Field Presentations 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="convertConfigJson">convertConfigJson 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ConvertFieldPresentations(string? convertConfigJson, IReadOnlyList<JnpfField> fields)
     {
         if (string.IsNullOrWhiteSpace(convertConfigJson)) return "[]";
@@ -911,6 +999,9 @@ internal static class PocJnpfMigrationConverter
         return result.ToString(Formatting.None);
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Parameter Markers 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static (string QueryText, IReadOnlyList<string> ParameterNames, IReadOnlyList<string> Markers, IReadOnlyList<string> UnsupportedMarkers) ConvertParameterMarkers(string queryText)
     {
         var builder = new StringBuilder(queryText.Length);
@@ -919,6 +1010,7 @@ internal static class PocJnpfMigrationConverter
         var markers = new List<string>();
         var unsupported = new List<string>();
         for (var index = 0; index < queryText.Length;)
+        // 第一阶段：根据 ConvertParameterMarkers 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             var current = queryText[index];
             if (current == '\'')
@@ -946,6 +1038,7 @@ internal static class PocJnpfMigrationConverter
                 builder.Append("/*");
                 index += 2;
                 while (index < queryText.Length)
+                // 第2阶段：根据 ConvertParameterMarkers 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 {
                     var character = queryText[index++];
                     builder.Append(character);
@@ -973,6 +1066,7 @@ internal static class PocJnpfMigrationConverter
             if (matched is null && current == ':' && IsParameterBoundary(queryText, index, allowDollar: false))
             {
                 var match = Regex.Match(remaining, @"\A:([A-Za-z][A-Za-z0-9_]*)");
+                // 第3阶段：检查 ConvertParameterMarkers 当前条件，并按匹配分支执行对应处理。
                 if (match.Success) { matched = match; syntax = "colon"; }
             }
             if (matched is null && current == '@' && IsParameterBoundary(queryText, index, allowDollar: true))
@@ -996,6 +1090,12 @@ internal static class PocJnpfMigrationConverter
         return (builder.ToString(), names, markers, unsupported);
     }
 
+    /// <summary>按照 PocJnpfMigrationService 的业务约束完成 Copy Quoted 数据合并或复制。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <param name="output">output 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="index">控制数据范围或位置的数值。</param>
+    /// <param name="opening">opening 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="closing">closing 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void CopyQuoted(string input, StringBuilder output, ref int index, char opening, char closing)
     {
         output.Append(input[index++]);
@@ -1013,6 +1113,11 @@ internal static class PocJnpfMigrationConverter
         }
     }
 
+    /// <summary>校验 PocJnpfMigrationService 的 Is Parameter Boundary 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <param name="index">控制数据范围或位置的数值。</param>
+    /// <param name="allowDollar">allowDollar 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool IsParameterBoundary(string queryText, int index, bool allowDollar)
     {
         if (index == 0) return true;
@@ -1020,6 +1125,10 @@ internal static class PocJnpfMigrationConverter
         return !(char.IsAsciiLetterOrDigit(previous) || previous == '_' || previous == ':' || (!allowDollar && previous == '$'));
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Quote Identifier 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string QuoteIdentifier(string value, string dbType) => dbType.ToLowerInvariant() switch
     {
         "sqlserver" => $"[{value.Replace("]", "]]", StringComparison.Ordinal)}]",
@@ -1027,6 +1136,10 @@ internal static class PocJnpfMigrationConverter
         _ => $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\""
     };
 
+    /// <summary>将 PocJnpfMigrationService 中的 Parse Json 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="json">json 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="fallback">fallback 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JToken ParseJson(string? json, JToken fallback)
     {
         if (string.IsNullOrWhiteSpace(json)) return fallback.DeepClone();
@@ -1034,6 +1147,9 @@ internal static class PocJnpfMigrationConverter
         catch (JsonReaderException exception) { throw new InvalidOperationException($"JNPF 元数据 JSON 无法解析：{exception.Message}", exception); }
     }
 
+    /// <summary>负责 PocJnpfMigrationConverter 的 Enumerate 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IEnumerable<JToken> Enumerate(JToken? token) => token switch
     {
         null => [],
@@ -1041,6 +1157,10 @@ internal static class PocJnpfMigrationConverter
         _ => [token]
     };
 
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Get Token 数据，并按调用约定返回结果。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="names">names 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JToken? GetToken(JToken? token, params string[] names)
     {
         if (token is not JObject value) return null;
@@ -1052,6 +1172,10 @@ internal static class PocJnpfMigrationConverter
         return null;
     }
 
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Find Parameter Metadata 数据，并按调用约定返回结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="documents">documents 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject? FindParameterMetadata(string code, IEnumerable<JToken> documents)
     {
         foreach (var document in documents)
@@ -1066,6 +1190,9 @@ internal static class PocJnpfMigrationConverter
         return null;
     }
 
+    /// <summary>遍历 PocJnpfMigrationConverter 当前数据并执行 All Objects 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IEnumerable<JObject> AllObjects(JToken? token)
     {
         if (token is JObject value)
@@ -1079,6 +1206,11 @@ internal static class PocJnpfMigrationConverter
         }
     }
 
+    /// <summary>查询或读取 PocJnpfMigrationService 所需的 Get Int32 数据，并按调用约定返回结果。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="fallback">fallback 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="names">names 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int GetInt32(JToken? token, int fallback, params string[] names)
     {
         var value = GetToken(token, names);
@@ -1087,12 +1219,18 @@ internal static class PocJnpfMigrationConverter
             : Convert.ToInt32(((JValue)value).Value, CultureInfo.InvariantCulture);
     }
 
+    /// <summary>根据 PocJnpfMigrationConverter 当前输入计算 To Boolean 结果，并按方法声明的类型返回。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool ToBoolean(JToken? token)
     {
         if (token?.Type == JTokenType.Boolean) return token.Value<bool>();
         return Regex.IsMatch(token?.ToString() ?? string.Empty, "^(1|true|yes)$", RegexOptions.IgnoreCase);
     }
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Data Type 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ConvertDataType(string value) => value.Trim().ToLowerInvariant() switch
     {
         "int" or "integer" or "long" or "short" or "decimal" or "double" or "float" or "number" or "numeric" or "money" => "number",
@@ -1101,6 +1239,11 @@ internal static class PocJnpfMigrationConverter
         _ => "string"
     };
 
+    /// <summary>将 PocJnpfMigrationService 中的 Convert Control Type 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="format">format 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ConvertControlType(string value, string format, string code)
     {
         var normalized = value.ToLowerInvariant();
@@ -1123,6 +1266,10 @@ internal static class PocJnpfMigrationConverter
         return "text";
     }
 
+    /// <summary>根据 PocJnpfMigrationConverter 当前输入计算 Infer Calendar Control Type 结果，并按方法声明的类型返回。</summary>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string? InferCalendarControlType(string queryText, string code)
     {
         var parameter = Regex.Escape($"@{code}");

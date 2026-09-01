@@ -12,39 +12,31 @@ namespace Admin.NET.Plugin.K3Cloud.Service;
 [HttpClientName("K3Cloud")]
 public interface IK3CloudApi : IHttpDeclarative
 {
-    /// <summary>
-    /// 验证用户
-    /// </summary>
-    /// <param name="input"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <summary>校验 IK3CloudApi 的 Validate User 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <param name="action">action 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Post("Kingdee.BOS.WebApi.ServicesStub.AuthService.ValidateUser.common.kdsvc")]
     Task<K3CloudLoginOutput> ValidateUser([Body] K3CloudLoginInput input, Action<HttpClient, HttpResponseMessage> action = default);
 
-    /// <summary>
-    /// 保存表单
-    /// </summary>
-    /// <param name="input"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <summary>更新 IK3CloudApi 的 Save 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <param name="action">action 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Post("Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.Save.common.kdsvc")]
     Task<K3CloudPushResultOutput> Save<T>([Body] K3CloudBaeInput<T> input, Action<HttpClient, HttpRequestMessage> action = default);
 
-    /// <summary>
-    /// 提交表单
-    /// </summary>
-    /// <param name="input"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <summary>执行 IK3CloudApi 的 Submit 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <param name="action">action 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Post("Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.Submit.common.kdsvc")]
     Task<K3CloudPushResultOutput> Submit<T>([Body] K3CloudBaeInput<T> input, Action<HttpClient, HttpRequestMessage> action = default);
 
-    /// <summary>
-    /// 审核表单
-    /// </summary>
-    /// <param name="input"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <summary>执行 IK3CloudApi 的 Audit 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <param name="action">action 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Post("Kingdee.BOS.WebApi.ServicesStub.DynamicFormService.Audit.common.kdsvc")]
     Task<K3CloudPushResultOutput> Audit<T>([Body] K3CloudBaeInput<T> input, Action<HttpClient, HttpRequestMessage> action = default);
 }

@@ -34,7 +34,7 @@ public static class CodeGenHelper
     /// </summary>
     /// <param name="columnName">字段名</param>
     /// <param name="dbColumnNames">EntityBase 实体属性名称</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string CamelColumnName(string columnName, string[] dbColumnNames)
     {
         if (columnName.Contains('_'))
@@ -64,6 +64,10 @@ public static class CodeGenHelper
     }
 
     // 根据数据库类型来处理对应的数据字段类型
+    /// <summary>将 CodeGenHelper 中的 Convert Data Type 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dbColumnInfo">dbColumnInfo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataType(DbColumnInfo dbColumnInfo, DbType dbType = DbType.Custom)
     {
         if (dbType == DbType.Custom)
@@ -80,14 +84,25 @@ public static class CodeGenHelper
     }
 
     // 达梦(DM)数据类型对应的字段类型
+    /// <summary>验证 Convert Data Type Dm 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="length">length 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="scale">scale 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataType_Dm(string dataType, int? length, int? scale)
     {
         return ConvertDataType_OracleSQL(dataType, length, scale); //达梦兼容Oracle，目前先这样实现
     }
 
     // OracleSQL数据类型对应的字段类型
+    /// <summary>验证 Convert Data Type Oracle SQL 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="length">length 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="scale">scale 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataType_OracleSQL(string dataType, int? length, int? scale)
     {
+        // 第一阶段：检查 ConvertDataType_OracleSQL 当前条件，并按匹配分支执行对应处理。
         switch (dataType.ToLower())
         {
             case "interval year to month": return "int";
@@ -124,6 +139,7 @@ public static class CodeGenHelper
             case "nvarchar2":
             case "varchar2":
             case "rowid":
+                // 第2阶段：整理 ConvertDataType_OracleSQL 已计算的数据，并按方法契约返回最终结果。
                 return "string";
 
             case "timestamp":
@@ -148,6 +164,9 @@ public static class CodeGenHelper
     }
 
     // PostgreSQL数据类型对应的字段类型
+    /// <summary>验证 Convert Data Type Postgre SQL 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataType_PostgreSQL(string dataType)
     {
         return dataType switch
@@ -169,6 +188,9 @@ public static class CodeGenHelper
     }
 
     // 默认数据类型
+    /// <summary>验证 Convert Data Type Default 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataType_Default(string dataType)
     {
         return dataType.ToLower() switch
@@ -234,9 +256,9 @@ public static class CodeGenHelper
     /// <summary>
     /// 获取数据库中真实名称
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="config"></param>
-    /// <returns></returns>
+    /// <param name="name">需要读取、校验或转换的业务值。</param>
+    /// <param name="config">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetRealName(string name, DbConnectionConfig config)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
@@ -245,11 +267,9 @@ public static class CodeGenHelper
         return realName;
     }
 
-    /// <summary>
-    /// 获取前端类型
-    /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>脚本
+    /// <summary>查询或读取 CodeGenHelper 所需的 Get Type Script Type 数据，并按调用约定返回结果。</summary>
+    /// <param name="type">type 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>映射到当前代码生成模板使用的前端字段类型。</returns>
     public static string GetTypeScriptType(string type)
     {
         type = type?.Trim().TrimEnd('?').ToLower();

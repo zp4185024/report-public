@@ -19,6 +19,13 @@ public class SysJobService : IDynamicApiController, ITransient
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly DynamicJobCompiler _dynamicJobCompiler;
 
+    /// <summary>初始化 SysJobService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysJobDetailRep">sysJobDetailRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysJobTriggerRep">sysJobTriggerRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysJobTriggerRecordRep">sysJobTriggerRecordRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysJobClusterRep">sysJobClusterRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="schedulerFactory">schedulerFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dynamicJobCompiler">dynamicJobCompiler 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysJobService(SqlSugarRepository<SysJobDetail> sysJobDetailRep,
         SqlSugarRepository<SysJobTrigger> sysJobTriggerRep,
         SqlSugarRepository<SysJobTriggerRecord> sysJobTriggerRecordRep,
@@ -74,10 +81,8 @@ public class SysJobService : IDynamicApiController, ITransient
         return await _sysJobDetailRep.AsQueryable().Distinct().Select(e => e.GroupName).ToListAsync();
     }
 
-    /// <summary>
-    /// 添加作业 ⏰
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>构建 SysJobService 所需的 Add Job Detail 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "AddJobDetail"), HttpPost]
     [DisplayName("添加作业")]
     public async Task AddJobDetail(AddJobDetailInput input)
@@ -118,10 +123,8 @@ public class SysJobService : IDynamicApiController, ITransient
             .Where(u => u.JobId == input.JobId).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 更新作业 ⏰
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>更新 SysJobService 的 Update Job Detail 状态，并同步相关业务数据。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "UpdateJobDetail"), HttpPost]
     [DisplayName("更新作业")]
     public async Task UpdateJobDetail(UpdateJobDetailInput input)
@@ -163,10 +166,8 @@ public class SysJobService : IDynamicApiController, ITransient
         await _sysJobDetailRep.UpdateAsync(sysJobDetail);
     }
 
-    /// <summary>
-    /// 删除作业 ⏰
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>移除 SysJobService 中与 Delete Job Detail 对应的数据，并清理关联状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "DeleteJobDetail"), HttpPost]
     [DisplayName("删除作业")]
     public async Task DeleteJobDetail(DeleteJobDetailInput input)
@@ -178,9 +179,7 @@ public class SysJobService : IDynamicApiController, ITransient
         await _sysJobTriggerRep.DeleteAsync(u => u.JobId == input.JobId);
     }
 
-    /// <summary>
-    /// 获取触发器列表 ⏰
-    /// </summary>
+    /// <summary>查询或读取 SysJobService 所需的 Get Job Trigger List 数据，并按调用约定返回结果。</summary>
     [DisplayName("获取触发器列表")]
     public async Task<List<SysJobTrigger>> GetJobTriggerList([FromQuery] JobDetailInput input)
     {
@@ -189,10 +188,8 @@ public class SysJobService : IDynamicApiController, ITransient
             .ToListAsync();
     }
 
-    /// <summary>
-    /// 添加触发器 ⏰
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>构建 SysJobService 所需的 Add Job Trigger 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "AddJobTrigger"), HttpPost]
     [DisplayName("添加触发器")]
     public async Task AddJobTrigger(AddJobTriggerInput input)
@@ -207,10 +204,8 @@ public class SysJobService : IDynamicApiController, ITransient
         scheduler?.AddTrigger(Triggers.Create(input.AssemblyName, input.TriggerType).LoadFrom(jobTrigger));
     }
 
-    /// <summary>
-    /// 更新触发器 ⏰
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>更新 SysJobService 的 Update Job Trigger 状态，并同步相关业务数据。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "UpdateJobTrigger"), HttpPost]
     [DisplayName("更新触发器")]
     public async Task UpdateJobTrigger(UpdateJobTriggerInput input)
@@ -233,10 +228,8 @@ public class SysJobService : IDynamicApiController, ITransient
         scheduler?.UpdateTrigger(Triggers.Create(input.AssemblyName, input.TriggerType).LoadFrom(jobTrigger));
     }
 
-    /// <summary>
-    /// 删除触发器 ⏰
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>移除 SysJobService 中与 Delete Job Trigger 对应的数据，并清理关联状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "DeleteJobTrigger"), HttpPost]
     [DisplayName("删除触发器")]
     public async Task DeleteJobTrigger(DeleteJobTriggerInput input)
@@ -248,66 +241,52 @@ public class SysJobService : IDynamicApiController, ITransient
         await _sysJobTriggerRep.DeleteAsync(u => u.JobId == input.JobId && u.TriggerId == input.TriggerId);
     }
 
-    /// <summary>
-    /// 暂停所有作业 ⏰
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>停止 SysJobService 的 Pause All Job 流程，并完成必要的状态收尾。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("暂停所有作业")]
     public void PauseAllJob()
     {
         _schedulerFactory.PauseAll();
     }
 
-    /// <summary>
-    /// 启动所有作业 ⏰
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>启动 SysJobService 的 Start All Job 流程，并建立运行期间所需状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("启动所有作业")]
     public void StartAllJob()
     {
         _schedulerFactory.StartAll();
     }
 
-    /// <summary>
-    /// 暂停作业 ⏰
-    /// </summary>
+    /// <summary>停止 SysJobService 的 Pause Job 流程，并完成必要的状态收尾。</summary>
     [DisplayName("暂停作业")]
     public void PauseJob(JobDetailInput input)
     {
         _schedulerFactory.TryPauseJob(input.JobId, out _);
     }
 
-    /// <summary>
-    /// 启动作业 ⏰
-    /// </summary>
+    /// <summary>启动 SysJobService 的 Start Job 流程，并建立运行期间所需状态。</summary>
     [DisplayName("启动作业")]
     public void StartJob(JobDetailInput input)
     {
         _schedulerFactory.TryStartJob(input.JobId, out _);
     }
 
-    /// <summary>
-    /// 取消作业 ⏰
-    /// </summary>
+    /// <summary>校验 SysJobService 的 Cancel Job 条件，并返回可供后续流程判断的结果。</summary>
     [DisplayName("取消作业")]
     public void CancelJob(JobDetailInput input)
     {
         _schedulerFactory.TryCancelJob(input.JobId, out _);
     }
 
-    /// <summary>
-    /// 执行作业 ⏰
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>执行 SysJobService 的 Run Job 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [DisplayName("执行作业")]
     public void RunJob(JobDetailInput input)
     {
         if (_schedulerFactory.TryRunJob(input.JobId, out _) != ScheduleResult.Succeed) throw Oops.Oh(ErrorCodeEnum.D1705);
     }
 
-    /// <summary>
-    /// 暂停触发器 ⏰
-    /// </summary>
+    /// <summary>停止 SysJobService 的 Pause Trigger 流程，并完成必要的状态收尾。</summary>
     [DisplayName("暂停触发器")]
     public void PauseTrigger(JobTriggerInput input)
     {
@@ -315,9 +294,7 @@ public class SysJobService : IDynamicApiController, ITransient
         scheduler?.PauseTrigger(input.TriggerId);
     }
 
-    /// <summary>
-    /// 启动触发器 ⏰
-    /// </summary>
+    /// <summary>启动 SysJobService 的 Start Trigger 流程，并建立运行期间所需状态。</summary>
     [DisplayName("启动触发器")]
     public void StartTrigger(JobTriggerInput input)
     {
@@ -343,9 +320,7 @@ public class SysJobService : IDynamicApiController, ITransient
         _schedulerFactory.PersistAll();
     }
 
-    /// <summary>
-    /// 获取集群列表 ⏰
-    /// </summary>
+    /// <summary>查询或读取 SysJobService 所需的 Get Job Cluster List 数据，并按调用约定返回结果。</summary>
     [DisplayName("获取集群列表")]
     public async Task<List<SysJobCluster>> GetJobClusterList()
     {
@@ -368,7 +343,7 @@ public class SysJobService : IDynamicApiController, ITransient
     /// <summary>
     /// 清空作业触发器运行记录 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "ClearJobTriggerRecord"), HttpPost]
     [DisplayName("清空作业触发器运行记录")]
     public void ClearJobTriggerRecord()
@@ -379,7 +354,7 @@ public class SysJobService : IDynamicApiController, ITransient
     /// <summary>
     /// 清空不保留的作业触发器运行记录 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     [DisplayName("清空过期的作业触发器运行记录")]
     public async Task ClearExpireJobTriggerRecord(SysJobTriggerRecord input)

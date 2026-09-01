@@ -11,13 +11,13 @@ namespace Admin.NET.Core;
 /// </summary>
 public class SysDictDataSeedData : ISqlSugarEntitySeedData<SysDictData>
 {
-    /// <summary>
-    /// 种子数据
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>校验 SysDictDataSeedData 的 Has Data 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IEnumerable<SysDictData> HasData()
     {
+        // 第2阶段：构造 HasData 当前步骤需要的中间数据和执行参数。
         var typeList = new SysDictTypeSeedData().HasData().ToList();
+        // 第一阶段：整理 HasData 已计算的数据，并按方法契约返回最终结果。
         return new[]
         {
             new SysDictData{ Id=1300000000101, DictTypeId=typeList[0].Id, Label="输入框", Value="Input", OrderNo=100, Remark="输入框", Status=StatusEnum.Enable, CreateTime=DateTime.Parse("2022-02-10 00:00:00") },

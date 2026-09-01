@@ -13,12 +13,17 @@ namespace Admin.NET.Plugin.GoView;
 [AppStartup(100)]
 public class Startup : AppStartup
 {
+    /// <summary>向依赖注入容器注册 Startup 启动所需的服务和运行配置。</summary>
+    /// <param name="services">services 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public void ConfigureServices(IServiceCollection services)
     {
         // 注册 GoView 规范化处理提供器
         services.AddUnifyProvider<GoViewResultProvider>("GoView");
     }
 
+    /// <summary>配置 Startup 的运行管道与启动行为，使后续请求按既定顺序执行。</summary>
+    /// <param name="app">app 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="env">env 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
     }

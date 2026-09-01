@@ -37,6 +37,11 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @param params - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async (params: any = {}) => {
   state.tableLoading = true;
   state.tableParams = Object.assign(state.tableParams, params);
@@ -47,6 +52,11 @@ const handleQuery = async (params: any = {}) => {
 };
 
 // 列排序
+/**
+ * 按 sort Change 条件比较、筛选或整理 index 数据，并返回顺序稳定的结果。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const sortChange = async (column: any) => {
   state.tableParams.field = column.prop;
   state.tableParams.order = column.order;
@@ -54,6 +64,11 @@ const sortChange = async (column: any) => {
 };
 
 // 删除
+/**
+ * 从 index 移除 del Sys Lang Text 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delSysLangText = (row: any) => {
   ElMessageBox.confirm(`确定要删除吗?`, "提示", {
     confirmButtonText: "确定",
@@ -67,6 +82,10 @@ const delSysLangText = (row: any) => {
 };
 
 // 批量删除
+/**
+ * 遍历 index 数据并执行 batch Del Sys Lang Text 转换，生成后续流程需要的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const batchDelSysLangText = () => {
   ElMessageBox.confirm(`确定要删除${state.selectData.length}条记录吗?`, "提示", {
     confirmButtonText: "确定",
@@ -81,6 +100,11 @@ const batchDelSysLangText = () => {
 };
 
 // 导出数据
+/**
+ * 整理 index 的 export Sys Lang Text Command 数据，并生成可供调用方使用的输出。
+ * @param command - command 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const exportSysLangTextCommand = async (command: string) => {
   try {
     state.exportLoading = true;

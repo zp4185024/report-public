@@ -11,6 +11,11 @@ import { visualizer } from 'rollup-plugin-visualizer';
 import { webUpdateNotice } from '@plugin-web-update-notification/vite';
 import vitePluginsAutoI18n, { EmptyTranslator } from 'vite-auto-i18n-plugin';
 
+/**
+ * 负责 vite.config 的 path Resolve 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param dir - dir 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const pathResolve = (dir: string) => {
 	return resolve(__dirname, '.', dir);
 };
@@ -68,6 +73,8 @@ const viteConfig = defineConfig((mode: ConfigEnv) => {
 			vitePluginsAutoI18n({
 				// 是否触发翻译
 				enabled: false,
+				// 基础翻译函数已纳入仓库维护，构建时不得覆盖其中的方法注释。
+				rewriteConfig: false,
 				// 源语言
 				originLang: 'zh-cn',
 				// 目标语言列表
@@ -155,6 +162,11 @@ const viteConfig = defineConfig((mode: ConfigEnv) => {
 					chunkFileNames: 'assets/js/[name]-[hash].js', // 引入文件名的名称
 					entryFileNames: 'assets/js/[name]-[hash].js', // 包的入口文件名称
 					assetFileNames: 'assets/[ext]/[name]-[hash].[ext]', // 资源文件像 字体，图片等
+					/**
+					 * 按 manual Chunks 规则筛选 vite.config 数据，并返回满足条件的结果。
+					 * @param id - 需要定位的业务记录标识。
+					 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+					 */
 					manualChunks(id) {
 						if (!id.includes('node_modules')) return;
 

@@ -124,9 +124,7 @@ public sealed class CustomSMSSettings
     /// </summary>
     public List<SmsTemplate> Templates { get; set; }
 
-    /// <summary>
-    /// 获取模板
-    /// </summary>
+    /// <summary>查询或读取 SMSOptions 所需的 Get Template 数据，并按调用约定返回结果。</summary>
     public SmsTemplate GetTemplate(string id = "0")
     {
         foreach (var template in Templates)

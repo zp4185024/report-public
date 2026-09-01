@@ -4,6 +4,8 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocReadOnlySqlValidatorTests
 {
+    /// <summary>验证 Validate Allows Single Read Only Query 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="query">query 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("SELECT DepartmentName FROM Workload WHERE HospitalId = @hospitalId")]
     [InlineData("WITH source AS (SELECT 1 AS Sequence) SELECT Sequence FROM source")]
@@ -21,6 +23,8 @@ public sealed class PocReadOnlySqlValidatorTests
         Assert.All(parameters, parameter => Assert.Equal("hospitalId", parameter));
     }
 
+    /// <summary>验证 Validate Rejects Unsafe Query 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="query">query 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("SELECT 1; SELECT 2")]
     [InlineData("SELECT * FROM #TemporaryWorkload")]
@@ -36,6 +40,7 @@ public sealed class PocReadOnlySqlValidatorTests
         Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
     }
 
+    /// <summary>验证 Validate Rejects Undefined Sql Parameter 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Validate_RejectsUndefinedSqlParameter()
     {
@@ -48,6 +53,7 @@ public sealed class PocReadOnlySqlValidatorTests
         Assert.Equal("DATASET_PARAMETER_UNDEFINED", exception.Code);
     }
 
+    /// <summary>验证 Validate Rejects Unclosed Block Comment 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Validate_RejectsUnclosedBlockComment()
     {
@@ -60,6 +66,8 @@ public sealed class PocReadOnlySqlValidatorTests
         Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
     }
 
+    /// <summary>验证 Validate Rejects My Sql Executable Comments 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="query">query 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("SELECT 1 /*! UNION SELECT secret FROM users */")]
     [InlineData("SELECT 1 /*M! UNION SELECT secret FROM users */")]
@@ -71,6 +79,7 @@ public sealed class PocReadOnlySqlValidatorTests
         Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
     }
 
+    /// <summary>验证 Validate Requires Stable Order For Paged Preview 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Validate_RequiresStableOrderForPagedPreview()
     {

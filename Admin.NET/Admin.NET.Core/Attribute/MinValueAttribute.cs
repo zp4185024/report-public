@@ -14,26 +14,20 @@ public class MinValueAttribute : ValidationAttribute
 {
     private double MinValue { get; set; }
 
-    /// <summary>
-    /// 最小值
-    /// </summary>
-    /// <param name="value"></param>
+    /// <summary>初始化 MinValueAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
     public MinValueAttribute(double value) => this.MinValue = value;
 
-    /// <summary>
-    /// 最小值校验
-    /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <summary>校验 MinValueAttribute 的 Is Valid 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override bool IsValid(object value)
     {
         return value == null || Convert.ToDouble(value) > this.MinValue;
     }
 
-    /// <summary>
-    /// 错误信息
-    /// </summary>
-    /// <param name="name"></param>
-    /// <returns></returns>
+    /// <summary>将 MinValueAttribute 中的 Format Error Message 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="name">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override string FormatErrorMessage(string name) => base.FormatErrorMessage(name);
 }

@@ -80,6 +80,11 @@ const tb = reactive<TableDemoState>({
 		},
 	},
 });
+/**
+ * 查询或读取 index 所需的 get Data 数据，并按调用约定返回结果。
+ * @param param - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getData = (param: any) => {
 	return getAPI(SysTemplateApi)
 		.apiSysTemplatePagePost(param)
@@ -89,11 +94,21 @@ const getData = (param: any) => {
 };
 
 // 拖动显示列排序回调
+/**
+ * 响应 index 的 on Sort Header 事件，并协调相关状态和后续操作。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSortHeader = (data: object[]) => {
 	tb.tableData.columns = data;
 };
 
 // 搜索点击时表单回调
+/**
+ * 响应 index 的 on Search 事件，并协调相关状态和后续操作。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSearch = (data: EmptyObjectType) => {
 	tb.tableData.param = Object.assign({}, tb.tableData.param, { ...data });
 	nextTick(() => {
@@ -102,6 +117,10 @@ const onSearch = (data: EmptyObjectType) => {
 };
 
 // 获取分组列表
+/**
+ * 查询或读取 index 所需的 get Group List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getGroupList = async () => {
 	const res = await getAPI(SysTemplateApi).apiSysTemplateGroupListGet();
 	const groupSearch = {
@@ -131,24 +150,42 @@ onMounted(async () => {
 });
 
 // 更新数据
+/**
+ * 更新 index 的 update Data 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateData = () => {
 	tableRef.value.handleList();
 	getGroupList();
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Template 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddTemplate = () => {
 	state.editTemplateTitle = '添加模板';
 	editTemplateRef.value?.openDialog({ type: 1, orderNo: 100 });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Template 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditTemplate = (row: any) => {
 	state.editTemplateTitle = '编辑模板';
 	editTemplateRef.value?.openDialog(row);
 };
 
 // 删除
+/**
+ * 从 index 移除 del Template 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delTemplate = (row: any) => {
 	ElMessageBox.confirm(`确定删除模板：【${row.name}】?`, '提示', {
 		confirmButtonText: '确定',

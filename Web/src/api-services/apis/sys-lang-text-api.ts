@@ -639,6 +639,7 @@ export const SysLangTextApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLangTextAddPost(body?: AddSysLangTextInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 SysLangTextApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLangTextApiAxiosParamCreator(configuration).apiSysLangTextAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -670,6 +671,7 @@ export const SysLangTextApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysLangTextApiAxiosParamCreator(configuration).apiSysLangTextBatchDeletePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysLangTextApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -709,6 +711,7 @@ export const SysLangTextApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLangTextDetailGet(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysLangText>>> {
+            // 第3阶段：调用 SysLangTextApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLangTextApiAxiosParamCreator(configuration).apiSysLangTextDetailGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -739,6 +742,7 @@ export const SysLangTextApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysLangTextApiAxiosParamCreator(configuration).apiSysLangTextImportGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysLangTextApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -778,6 +782,7 @@ export const SysLangTextApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLangTextPagePost(body?: PageSysLangTextInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSqlSugarPagedListSysLangTextOutput>>> {
+            // 第5阶段：调用 SysLangTextApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLangTextApiAxiosParamCreator(configuration).apiSysLangTextPagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -815,6 +820,7 @@ export const SysLangTextApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysLangTextAddPost(body?: AddSysLangTextInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt64>> {
+            // 第一阶段：整理 SysLangTextApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLangTextApiFp(configuration).apiSysLangTextAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -845,6 +851,7 @@ export const SysLangTextApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysLangTextBatchSavePost(body: Array<ImportSysLangTextInput>, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysLangTextApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLangTextApiFp(configuration).apiSysLangTextBatchSavePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -875,6 +882,7 @@ export const SysLangTextApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysLangTextExportPost(body?: PageSysLangTextInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第3阶段：整理 SysLangTextApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLangTextApiFp(configuration).apiSysLangTextExportPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -904,6 +912,7 @@ export const SysLangTextApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysLangTextListPost(body?: ListSysLangTextInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListSysLangTextOutput>> {
+            // 第4阶段：整理 SysLangTextApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLangTextApiFp(configuration).apiSysLangTextListPost(body, options).then((request) => request(axios, basePath));
         },
         /**

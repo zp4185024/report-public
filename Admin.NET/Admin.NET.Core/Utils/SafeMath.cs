@@ -15,23 +15,19 @@ using System;
 /// </summary>
 public static class SafeMath
 {
-    /// <summary>
-    /// 安全加法
-    /// </summary>
+    /// <summary>构建 SafeMath 所需的 Add 内容，并保证生成结果符合调用约定。</summary>
     /// <param name="left">左操作数</param>
     /// <param name="right">右操作数</param>
     /// <param name="precision">保留小数位数</param>
     /// <param name="defaultValue">默认值</param>
     /// <param name="throwOnError">是否抛出异常</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static T Add<T>(object left, object right, int precision = 2, T defaultValue = default, bool throwOnError = true) where T : struct, IComparable, IConvertible, IFormattable
     {
         return PerformOperation(left, right, (a, b) => a + b, precision, defaultValue, throwOnError);
     }
 
-    /// <summary>
-    /// 安全减法
-    /// </summary>
+    /// <summary>根据 SafeMath 当前输入计算 Sub 结果，并按方法声明的类型返回。</summary>
     /// <param name="left">左操作数</param>
     /// <param name="right">右操作数</param>
     /// <param name="precision">保留小数位数</param>
@@ -42,9 +38,7 @@ public static class SafeMath
         return PerformOperation(left, right, (a, b) => a - b, precision, defaultValue, throwOnError);
     }
 
-    /// <summary>
-    /// 安全乘法
-    /// </summary>
+    /// <summary>根据 SafeMath 当前输入计算 Mult 结果，并按方法声明的类型返回。</summary>
     /// <param name="left">左操作数</param>
     /// <param name="right">右操作数</param>
     /// <param name="precision">保留小数位数</param>
@@ -55,9 +49,7 @@ public static class SafeMath
         return PerformOperation(left, right, (a, b) => a * b, precision, defaultValue, throwOnError);
     }
 
-    /// <summary>
-    /// 安全除法
-    /// </summary>
+    /// <summary>检查 SafeMath 的 Div 约束；条件不满足时抛出包含业务上下文的异常。</summary>
     /// <param name="left">左操作数</param>
     /// <param name="right">右操作数</param>
     /// <param name="precision">保留小数位数</param>
@@ -73,9 +65,7 @@ public static class SafeMath
         }, precision, defaultValue, throwOnDivideByZero);
     }
 
-    /// <summary>
-    /// 安全类型转换
-    /// </summary>
+    /// <summary>根据 SafeMath 当前输入计算 Safe Convert 结果，并按方法声明的类型返回。</summary>
     /// <param name="value">数据源</param>
     /// <param name="defaultValue">默认值</param>
     public static T SafeConvert<T>(object value, T defaultValue = default) where T : struct, IComparable, IConvertible, IFormattable
@@ -91,9 +81,7 @@ public static class SafeMath
         }
     }
 
-    /// <summary>
-    /// 执行数学运算
-    /// </summary>
+    /// <summary>执行 SafeMath 的 Perform Operation 核心流程，并保持错误和结果语义稳定。</summary>
     private static T PerformOperation<T>(object left, object right, Func<decimal, decimal, decimal> operation, int precision, T defaultValue, bool throwOnError) where T : struct, IComparable, IConvertible, IFormattable
     {
         try

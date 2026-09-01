@@ -3,6 +3,10 @@ import { BezierEdge, BezierEdgeModel } from '@logicflow/core';
 class CustomEdge2 extends BezierEdge { }
 
 class CustomEdgeModel2 extends BezierEdgeModel {
+    /**
+     * 查询或读取 EdgeSql 所需的 get Edge Style 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     getEdgeStyle() {
         const style = super.getEdgeStyle();
         // svg属性

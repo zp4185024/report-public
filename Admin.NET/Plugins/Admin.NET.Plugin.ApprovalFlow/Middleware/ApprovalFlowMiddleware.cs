@@ -15,11 +15,9 @@ namespace Admin.NET.Plugin.ApprovalFlow;
 /// </summary>
 public static class ApprovalFlowMiddlewareExtensions
 {
-    /// <summary>
-    /// 使用审批流
-    /// </summary>
-    /// <param name="builder"></param>
-    /// <returns></returns>
+    /// <summary>根据 ApprovalFlowMiddlewareExtensions 当前输入计算 Use Approval Flow 结果，并按方法声明的类型返回。</summary>
+    /// <param name="builder">builder 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IApplicationBuilder UseApprovalFlow(this IApplicationBuilder builder)
     {
         return builder.UseMiddleware<ApprovalFlowMiddleware>();
@@ -34,12 +32,17 @@ public class ApprovalFlowMiddleware
     private readonly RequestDelegate _next;
     private readonly SysApprovalService _sysApprovalService;
 
+    /// <summary>初始化 ApprovalFlowMiddleware 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="next">next 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public ApprovalFlowMiddleware(RequestDelegate next)
     {
         _next = next;
         _sysApprovalService = App.GetRequiredService<SysApprovalService>();
     }
 
+    /// <summary>执行 ApprovalFlowMiddleware 的 Invoke Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task InvokeAsync(HttpContext context)
     {
         await _sysApprovalService.MatchApproval(context);

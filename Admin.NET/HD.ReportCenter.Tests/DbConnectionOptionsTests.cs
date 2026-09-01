@@ -12,6 +12,7 @@ public sealed class DbConnectionOptionsTests
 {
     private const string InitializationVariable = "HD_REPORT_CENTER_DB_INITIALIZE";
 
+    /// <summary>验证 One time initialization environment switch enables tables and seeds only 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void One_time_initialization_environment_switch_enables_tables_and_seeds_only()
     {
@@ -34,6 +35,7 @@ public sealed class DbConnectionOptionsTests
         }
     }
 
+    /// <summary>验证 Normal runtime keeps all initialization switches disabled 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Normal_runtime_keeps_all_initialization_switches_disabled()
     {
@@ -56,6 +58,7 @@ public sealed class DbConnectionOptionsTests
         }
     }
 
+    /// <summary>验证 Runtime rejects sqlite main database 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Runtime_rejects_sqlite_main_database()
     {
@@ -70,6 +73,8 @@ public sealed class DbConnectionOptionsTests
         Assert.Contains("禁止使用 SQLite", exception.Message);
     }
 
+    /// <summary>构建 DbConnectionOptionsTests 所需的 Create Options 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static DbConnectionOptions CreateOptions() =>
         new()
         {

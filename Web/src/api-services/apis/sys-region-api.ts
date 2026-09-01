@@ -377,6 +377,7 @@ export const SysRegionApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysRegionAddPost(body?: AddRegionInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 SysRegionApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysRegionApiAxiosParamCreator(configuration).apiSysRegionAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -408,6 +409,7 @@ export const SysRegionApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysRegionApiAxiosParamCreator(configuration).apiSysRegionListGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysRegionApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -445,6 +447,7 @@ export const SysRegionApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysRegionTreeGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListSysRegion>>> {
+            // 第3阶段：调用 SysRegionApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysRegionApiAxiosParamCreator(configuration).apiSysRegionTreeGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -482,6 +485,7 @@ export const SysRegionApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysRegionAddPost(body?: AddRegionInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt64>> {
+            // 第一阶段：整理 SysRegionApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysRegionApiFp(configuration).apiSysRegionAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -512,6 +516,7 @@ export const SysRegionApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysRegionPagePost(body?: PageRegionInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysRegion>> {
+            // 第2阶段：整理 SysRegionApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysRegionApiFp(configuration).apiSysRegionPagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

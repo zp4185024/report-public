@@ -16,6 +16,10 @@ public class DingTalkService : IDynamicApiController, IScoped
     private readonly DingTalkOptions _dingTalkOptions;
     private readonly SqlSugarRepository<DingTalkWokerflowLog> _dingTalkWokerflowLogRep;
 
+    /// <summary>初始化 DingTalkService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="dingTalkApi">dingTalkApi 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dingTalkOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="dingTalkWokerflowLogRep">dingTalkWokerflowLogRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public DingTalkService(
         IDingTalkApi dingTalkApi,
         IOptions<DingTalkOptions> dingTalkOptions,
@@ -30,7 +34,7 @@ public class DingTalkService : IDynamicApiController, IScoped
     /// <summary>
     /// 获取企业内部应用的access_token
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取企业内部应用的access_token")]
     public async Task<GetDingTalkTokenOutput> GetDingTalkToken()
     {
@@ -48,9 +52,9 @@ public class DingTalkService : IDynamicApiController, IScoped
     /// <summary>
     /// 获取在职员工列表 🔖
     /// </summary>
-    /// <param name="access_token"></param>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="access_token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost, DisplayName("获取在职员工列表")]
     public async Task<
         DingTalkBaseResponse<GetDingTalkCurrentEmployeesListOutput>
@@ -65,9 +69,9 @@ public class DingTalkService : IDynamicApiController, IScoped
     /// <summary>
     /// 获取员工花名册字段信息 🔖
     /// </summary>
-    /// <param name="access_token"></param>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="access_token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost, DisplayName("获取员工花名册字段信息")]
     public async Task<
         DingTalkBaseResponse<List<DingTalkEmpRosterFieldVo>>
@@ -82,9 +86,9 @@ public class DingTalkService : IDynamicApiController, IScoped
     /// <summary>
     /// 发送钉钉互动卡片 🔖
     /// </summary>
-    /// <param name="token"></param>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("给指定用户发送钉钉互动卡片")]
     [Obsolete]
     public async Task<DingTalkSendInteractiveCardsOutput> DingTalkSendInteractiveCards(
@@ -98,9 +102,9 @@ public class DingTalkService : IDynamicApiController, IScoped
     /// <summary>
     /// 创建并投放钉钉消息卡片 🔖
     /// </summary>
-    /// <param name="token"></param>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("给指定用户发送钉钉消息卡片")]
     public async Task<DingTalkCreateAndDeliverOutput> DingTalkCreateAndDeliver(
         string token,
@@ -110,6 +114,10 @@ public class DingTalkService : IDynamicApiController, IScoped
         return await _dingTalkApi.DingTalkCreateAndDeliver(token, input);
     }
 
+    /// <summary>调用 DingTalkService 的异步依赖完成 Ding Talk Workflow Process Instances 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("用于发起OA审批实例")]
     public async Task<DingTalkWorkflowProcessInstancesOutput> DingTalkWorkflowProcessInstances(
         string token,
@@ -120,6 +128,10 @@ public class DingTalkService : IDynamicApiController, IScoped
         return temp;
     }
 
+    /// <summary>调用 DingTalkService 的异步依赖完成 Ding Talk Workflow Process Instances 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("查询审批实例")]
     public async Task<DingTalkGetProcessInstancesOutput> DingTalkWorkflowProcessInstances(
         string token,

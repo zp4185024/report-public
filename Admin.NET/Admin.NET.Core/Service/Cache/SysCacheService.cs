@@ -17,20 +17,21 @@ public class SysCacheService : IDynamicApiController, ISingleton
     private static ICacheProvider _cacheProvider;
     private readonly CacheOptions _cacheOptions;
 
+    /// <summary>初始化 SysCacheService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="cacheProvider">当前方法执行时使用的 cacheProvider 输入值。</param>
+    /// <param name="cacheOptions">控制本次处理行为的配置选项。</param>
     public SysCacheService(ICacheProvider cacheProvider, IOptions<CacheOptions> cacheOptions)
     {
         _cacheProvider = cacheProvider;
         _cacheOptions = cacheOptions.Value;
     }
 
-    /// <summary>
-    /// 申请分布式锁 🔖
-    /// </summary>
+    /// <summary>根据 SysCacheService 当前输入计算 Begin Cache Lock 结果，并按方法声明的类型返回。</summary>
     /// <param name="key">要锁定的key</param>
     /// <param name="msTimeout">申请锁等待的时间，单位毫秒</param>
     /// <param name="msExpire">锁过期时间，超过该时间没有主动是放则自动是放，必须整数秒，单位毫秒</param>
     /// <param name="throwOnFailure">失败时是否抛出异常,如不抛出异常，可通过判断返回null得知申请锁失败</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("申请分布式锁")]
     public IDisposable? BeginCacheLock(string key, int msTimeout = 500, int msExpire = 10000, bool throwOnFailure = true)
     {
@@ -47,7 +48,7 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// <summary>
     /// 获取缓存键名集合 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取缓存键名集合")]
     public List<string> GetKeyList()
     {
@@ -56,12 +57,10 @@ public class SysCacheService : IDynamicApiController, ISingleton
             : [.. ((FullRedis)_cacheProvider.Cache).Search($"{_cacheOptions.Prefix}*", 0, int.MaxValue).Select(u => u[_cacheOptions.Prefix.Length..]).OrderBy(u => u)];
     }
 
-    /// <summary>
-    /// 增加缓存
-    /// </summary>
-    /// <param name="key"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysCacheService 的 Set 状态，并同步相关业务数据。</summary>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public bool Set(string key, object value)
     {
@@ -71,36 +70,68 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// <summary>
     /// 增加缓存并设置过期时间
     /// </summary>
-    /// <param name="key"></param>
-    /// <param name="value"></param>
-    /// <param name="expire"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="expire">当前方法执行时使用的 expire 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public bool Set(string key, object value, TimeSpan expire)
     {
         return !string.IsNullOrWhiteSpace(key) && _cacheProvider.Cache.Set($"{_cacheOptions.Prefix}{key}", value, expire);
     }
 
+    /// <summary>调用 SysCacheService 的异步依赖完成 Ad Get Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="del">当前方法执行时使用的 del 输入值。</param>
+    /// <param name="expiry">当前方法执行时使用的 expiry 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<TR> AdGetAsync<TR>(String cacheName, Func<Task<TR>> del, TimeSpan? expiry = default) where TR : class
     {
         return await AdGetAsync<TR>(cacheName, del, [], expiry);
     }
 
+    /// <summary>调用 SysCacheService 的异步依赖完成 Ad Get Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="del">当前方法执行时使用的 del 输入值。</param>
+    /// <param name="t1">当前方法执行时使用的 t1 输入值。</param>
+    /// <param name="expiry">当前方法执行时使用的 expiry 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<TR> AdGetAsync<TR, T1>(String cacheName, Func<T1, Task<TR>> del, T1 t1, TimeSpan? expiry = default) where TR : class
     {
         return await AdGetAsync<TR>(cacheName, del, [t1], expiry);
     }
 
+    /// <summary>调用 SysCacheService 的异步依赖完成 Ad Get Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="del">当前方法执行时使用的 del 输入值。</param>
+    /// <param name="t1">当前方法执行时使用的 t1 输入值。</param>
+    /// <param name="t2">当前方法执行时使用的 t2 输入值。</param>
+    /// <param name="expiry">当前方法执行时使用的 expiry 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<TR> AdGetAsync<TR, T1, T2>(String cacheName, Func<T1, T2, Task<TR>> del, T1 t1, T2 t2, TimeSpan? expiry = default) where TR : class
     {
         return await AdGetAsync<TR>(cacheName, del, [t1, t2], expiry);
     }
 
+    /// <summary>调用 SysCacheService 的异步依赖完成 Ad Get Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="del">当前方法执行时使用的 del 输入值。</param>
+    /// <param name="t1">当前方法执行时使用的 t1 输入值。</param>
+    /// <param name="t2">当前方法执行时使用的 t2 输入值。</param>
+    /// <param name="t3">当前方法执行时使用的 t3 输入值。</param>
+    /// <param name="expiry">当前方法执行时使用的 expiry 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<TR> AdGetAsync<TR, T1, T2, T3>(String cacheName, Func<T1, T2, T3, Task<TR>> del, T1 t1, T2 t2, T3 t3, TimeSpan? expiry = default) where TR : class
     {
         return await AdGetAsync<TR>(cacheName, del, [t1, t2, t3], expiry);
     }
 
+    /// <summary>调用 SysCacheService 的异步依赖完成 Ad Get Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="del">当前方法执行时使用的 del 输入值。</param>
+    /// <param name="obs">当前方法执行时使用的 obs 输入值。</param>
+    /// <param name="expiry">当前方法执行时使用的 expiry 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<T> AdGetAsync<T>(string cacheName, Delegate del, Object[] obs, TimeSpan? expiry) where T : class
     {
         var key = Key(cacheName, obs);
@@ -132,27 +163,50 @@ public class SysCacheService : IDynamicApiController, ISingleton
         }
     }
 
+    /// <summary>查询或读取 SysCacheService 所需的 Get 数据，并按调用约定返回结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="t1">当前方法执行时使用的 t1 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public T Get<T>(String cacheName, object t1)
     {
         return Get<T>(cacheName, [t1]);
     }
 
+    /// <summary>查询或读取 SysCacheService 所需的 Get 数据，并按调用约定返回结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="t1">当前方法执行时使用的 t1 输入值。</param>
+    /// <param name="t2">当前方法执行时使用的 t2 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public T Get<T>(String cacheName, object t1, object t2)
     {
         return Get<T>(cacheName, [t1, t2]);
     }
 
+    /// <summary>查询或读取 SysCacheService 所需的 Get 数据，并按调用约定返回结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="t1">当前方法执行时使用的 t1 输入值。</param>
+    /// <param name="t2">当前方法执行时使用的 t2 输入值。</param>
+    /// <param name="t3">当前方法执行时使用的 t3 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public T Get<T>(String cacheName, object t1, object t2, object t3)
     {
         return Get<T>(cacheName, [t1, t2, t3]);
     }
 
+    /// <summary>查询或读取 SysCacheService 所需的 Get 数据，并按调用约定返回结果。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="obs">当前方法执行时使用的 obs 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private T Get<T>(String cacheName, Object[] obs)
     {
         var key = Key(cacheName, obs);
         return Get<T>(key);
     }
 
+    /// <summary>遍历 SysCacheService 当前数据并执行 Key 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="cacheName">需要读取、校验或转换的业务值。</param>
+    /// <param name="obs">当前方法执行时使用的 obs 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string Key(string cacheName, object[] obs)
     {
         if (obs.OfType<TimeSpan>().Any()) throw new Exception("缓存参数类型不能是:TimeSpan类型");
@@ -165,6 +219,9 @@ public class SysCacheService : IDynamicApiController, ISingleton
         return sb.ToString();
     }
 
+    /// <summary>根据 SysCacheService 当前输入计算 Key Single 结果，并按方法声明的类型返回。</summary>
+    /// <param name="t">当前方法执行时使用的 t 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string KeySingle(object t)
     {
         return t.GetType().IsClass && !t.GetType().IsPrimitive ? JsonConvert.SerializeObject(t) : t.ToString();
@@ -173,31 +230,27 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// <summary>
     /// 获取缓存的剩余生存时间
     /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public TimeSpan GetExpire(string key)
     {
         return _cacheProvider.Cache.GetExpire(key);
     }
 
-    /// <summary>
-    /// 获取缓存
-    /// </summary>
+    /// <summary>查询或读取 SysCacheService 所需的 Get 数据，并按调用约定返回结果。</summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public T Get<T>(string key)
     {
         return _cacheProvider.Cache.Get<T>($"{_cacheOptions.Prefix}{key}");
     }
 
-    /// <summary>
-    /// 删除缓存 🔖
-    /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysCacheService 中与 Remove 对应的数据，并清理关联状态。</summary>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除缓存")]
     public int Remove(string key)
@@ -205,10 +258,8 @@ public class SysCacheService : IDynamicApiController, ISingleton
         return _cacheProvider.Cache.Remove($"{_cacheOptions.Prefix}{key}");
     }
 
-    /// <summary>
-    /// 清空所有缓存 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>移除 SysCacheService 中与 Clear 对应的数据，并清理关联状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("清空所有缓存")]
     [ApiDescriptionSettings(Name = "Clear"), HttpPost]
     public void Clear()
@@ -222,7 +273,7 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 检查缓存是否存在
     /// </summary>
     /// <param name="key">键</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public bool ExistKey(string key)
     {
@@ -233,7 +284,7 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 根据键名前缀删除缓存 🔖
     /// </summary>
     /// <param name="prefixKey">键名前缀</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "DeleteByPreKey"), HttpPost]
     [DisplayName("根据键名前缀删除缓存")]
     public int RemoveByPrefixKey(string prefixKey)
@@ -248,7 +299,7 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 根据键名前缀获取键名集合 🔖
     /// </summary>
     /// <param name="prefixKey">键名前缀</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据键名前缀获取键名集合")]
     public List<string> GetKeysByPrefixKey(string prefixKey)
     {
@@ -257,11 +308,9 @@ public class SysCacheService : IDynamicApiController, ISingleton
             : ((FullRedis)_cacheProvider.Cache).Search($"{_cacheOptions.Prefix}{prefixKey}*", 0, int.MaxValue).Select(u => u[_cacheOptions.Prefix.Length..]).ToList();
     }
 
-    /// <summary>
-    /// 获取缓存值 🔖
-    /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysCacheService 所需的 Get Value 数据，并按调用约定返回结果。</summary>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取缓存值")]
     public object GetValue(string key)
     {
@@ -272,6 +321,7 @@ public class SysCacheService : IDynamicApiController, ISingleton
 
         var fullKey = $"{_cacheOptions.Prefix}{key}";
 
+        // 第一阶段：检查 GetValue 当前条件，并按匹配分支执行对应处理。
         if (_cacheProvider.Cache == Cache.Default)
             return _cacheProvider.Cache.Get<object>(fullKey);
 
@@ -304,6 +354,7 @@ public class SysCacheService : IDynamicApiController, ISingleton
                         return sortedSet?.Range(0, -1)?.ToList();
 
                     case "none":
+                        // 第2阶段：整理 GetValue 已计算的数据，并按方法契约返回最终结果。
                         return null;
 
                     default:
@@ -334,10 +385,10 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 获取或添加缓存（在数据不存在时执行委托请求数据）
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <param name="callback"></param>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="callback">操作完成或状态变化时执行的回调函数。</param>
     /// <param name="expire">过期时间，单位秒</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public T GetOrAdd<T>(string key, Func<string, T> callback, int expire = -1)
     {
@@ -345,12 +396,10 @@ public class SysCacheService : IDynamicApiController, ISingleton
         return _cacheProvider.Cache.GetOrAdd($"{_cacheOptions.Prefix}{key}", callback, expire);
     }
 
-    /// <summary>
-    /// Hash匹配
-    /// </summary>
+    /// <summary>查询或读取 SysCacheService 所需的 Get Hash Map 数据，并按调用约定返回结果。</summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public IDictionary<String, T> GetHashMap<T>(string key)
     {
@@ -361,9 +410,9 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 批量添加HASH
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <param name="dic"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="dic">当前方法执行时使用的 dic 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public bool HashSet<T>(string key, Dictionary<string, T> dic)
     {
@@ -379,9 +428,9 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 添加一条HASH
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <param name="hashKey"></param>
-    /// <param name="value"></param>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="hashKey">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
     [NonAction]
     public void HashAdd<T>(string key, string hashKey, T value)
     {
@@ -393,9 +442,9 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 添加或更新一条HASH
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <param name="hashKey"></param>
-    /// <param name="value"></param>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="hashKey">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
     [NonAction]
     public void HashAddOrUpdate<T>(string key, string hashKey, T value)
     {
@@ -410,9 +459,9 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 获取多条HASH
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <param name="fields"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public List<T> HashGet<T>(string key, params string[] fields)
     {
@@ -424,9 +473,9 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 获取一条HASH
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <param name="field"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="field">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public T HashGetOne<T>(string key, string field)
     {
@@ -438,8 +487,8 @@ public class SysCacheService : IDynamicApiController, ISingleton
     /// 根据KEY获取所有HASH
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public IDictionary<string, T> HashGetAll<T>(string key)
     {
@@ -447,13 +496,11 @@ public class SysCacheService : IDynamicApiController, ISingleton
         return hash;
     }
 
-    /// <summary>
-    /// 删除HASH
-    /// </summary>
+    /// <summary>校验 SysCacheService 的 Hash Del 条件，并返回可供后续流程判断的结果。</summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="key"></param>
-    /// <param name="fields"></param>
-    /// <returns></returns>
+    /// <param name="key">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public int HashDel<T>(string key, params string[] fields)
     {

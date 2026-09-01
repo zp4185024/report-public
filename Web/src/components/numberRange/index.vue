@@ -77,6 +77,10 @@ import { CircleClose } from '@element-plus/icons-vue';
 const props = defineProps({
 	modelValue: {
 		type: Array<Number>,
+		/**
+		 * 为 modelValue 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [null, null], // 调用时使用v-model="[min,max]" 绑定
 	},
 	clearable: {
@@ -104,6 +108,11 @@ const props = defineProps({
 	precision: {
 		type: Number,
 		default: 0,
+		/**
+		 * 校验 index 的表单输入，发现不符合约束的值时向调用方返回明确错误。
+		 * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		validator(val: number) {
 			return val >= 0 && val === parseInt(String(val), 10);
 		},
@@ -111,7 +120,16 @@ const props = defineProps({
 	// 限制取值范围
 	valueRange: {
 		type: Array,
+		/**
+		 * 为 valueRange 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
+		/**
+		 * 校验 index 的表单输入，发现不符合约束的值时向调用方返回明确错误。
+		 * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		validator(val: []) {
 			if (val && val.length > 0) {
 				// @ts-ignore
@@ -140,9 +158,18 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'update:minValue', 'update:maxValue', 'change']);
 
 const minValue_ = computed({
+	/**
+	 * 查询或读取 index 所需的 get 数据，并按调用约定返回结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	get() {
 		return props.minValue || props.modelValue[0] || null;
 	},
+	/**
+	 * 更新 index 的 set 状态，并同步相关业务数据。
+	 * @param value - 需要读取、校验或转换的业务值。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	set(value) {
 		if (value === null) {
 			emit('update:minValue', null);
@@ -155,9 +182,18 @@ const minValue_ = computed({
 });
 
 const maxValue_ = computed({
+	/**
+	 * 查询或读取 index 所需的 get 数据，并按调用约定返回结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	get() {
 		return props.maxValue || props.modelValue[1] || null;
 	},
+	/**
+	 * 更新 index 的 set 状态，并同步相关业务数据。
+	 * @param value - 需要读取、校验或转换的业务值。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	set(value) {
 		if (value === null) {
 			emit('update:maxValue', null);
@@ -170,12 +206,21 @@ const maxValue_ = computed({
 });
 
 // 清除值的方法
+/**
+ * 移除 index 中与 clear Values 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clearValues = () => {
 	minValue_.value = null;
 	maxValue_.value = null;
 	emit('update:modelValue', [null, null]);
 };
 
+/**
+ * 响应 index 的 handle Change Min Value 事件，并协调相关状态和后续操作。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleChangeMinValue = (value: number | null) => {
 	// 非数字空返回null
 	if (value === null || isNaN(value)) {
@@ -193,6 +238,11 @@ const handleChangeMinValue = (value: number | null) => {
 	}
 };
 
+/**
+ * 响应 index 的 handle Change Max Value 事件，并协调相关状态和后续操作。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleChangeMaxValue = (value: number | null) => {
 	// 非数字空返回null
 	if (value === null || isNaN(value)) {
@@ -210,15 +260,31 @@ const handleChangeMaxValue = (value: number | null) => {
 	}
 };
 
+/**
+ * 更新 index 的 update Min Value 状态，并同步相关业务数据。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateMinValue = (value: number | null) => {
 	minValue_.value = value;
 };
 
+/**
+ * 更新 index 的 update Max Value 状态，并同步相关业务数据。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateMaxValue = (value: number | null) => {
 	maxValue_.value = value;
 };
 
 // 更新数据
+/**
+ * 更新 index 的 update Value 状态，并同步相关业务数据。
+ * @param min - min 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param max - max 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateValue = (min: number | null, max: number | null) => {
 	emit('update:minValue', min);
 	emit('update:maxValue', max);
@@ -227,6 +293,12 @@ const updateValue = (min: number | null, max: number | null) => {
 };
 
 // 取值范围判定
+/**
+ * 创建并返回 index 的 decide Value Range 配置对象，集中提供相关状态和操作入口。
+ * @param min - min 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param max - max 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const decideValueRange = (min: number | null, max: number | null) => {
 	if (min === null || max === null) {
 		return { min, max };
@@ -244,15 +316,29 @@ const decideValueRange = (min: number | null, max: number | null) => {
 // input焦点事件
 const isFocus = ref();
 
+/**
+ * 响应 index 的 handle Focus 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleFocus = () => {
 	isFocus.value = true;
 };
 
+/**
+ * 响应 index 的 handle Blur 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleBlur = () => {
 	isFocus.value = false;
 };
 
 // 处理数字精度
+/**
+ * 将 index 中的 parse Precision 输入转换为调用方需要的稳定格式。
+ * @param number - number 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param precision - precision 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const parsePrecision = (number: number | null, precision = 0) => {
 	if (number === null) {
 		return null;

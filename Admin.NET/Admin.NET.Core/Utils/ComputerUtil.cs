@@ -8,10 +8,8 @@ namespace Admin.NET.Core;
 
 public static class ComputerUtil
 {
-    /// <summary>
-    /// 内存信息
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 ComputerUtil 所需的 Get Computer Info 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static MemoryMetrics GetComputerInfo()
     {
         MemoryMetrics memoryMetrics;
@@ -43,7 +41,7 @@ public static class ComputerUtil
     /// <summary>
     /// 获取正确的操作系统版本（Linux获取发行版本）
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static String GetOSInfo()
     {
         string operation = string.Empty;
@@ -67,10 +65,8 @@ public static class ComputerUtil
         return operation;
     }
 
-    /// <summary>
-    /// 磁盘信息
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 ComputerUtil 所需的 Get Disk Infos 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static List<DiskInfo> GetDiskInfos()
     {
         var diskInfos = new List<DiskInfo>();
@@ -147,7 +143,7 @@ public static class ComputerUtil
     /// <summary>
     /// 获取外网IP地址
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetIpFromOnline()
     {
         try
@@ -164,16 +160,22 @@ public static class ComputerUtil
         }
     }
 
+    /// <summary>校验 ComputerUtil 的 Is Unix 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool IsUnix()
     {
         return RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
     }
 
+    /// <summary>校验 ComputerUtil 的 Is Mac OS 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool IsMacOS()
     {
         return RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
     }
 
+    /// <summary>查询或读取 ComputerUtil 所需的 Get CPURates 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static List<string> GetCPURates()
     {
         var cpuRates = new List<string>();
@@ -207,7 +209,7 @@ public static class ComputerUtil
     /// <summary>
     /// 获取系统运行时间
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetRunTime()
     {
         string runTime = string.Empty;
@@ -337,7 +339,7 @@ public class MemoryMetricsClient
     /// <summary>
     /// windows系统获取内存信息
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static MemoryMetrics GetWindowsMetrics()
     {
         string output = "";
@@ -375,7 +377,7 @@ public class MemoryMetricsClient
     /// <summary>
     /// Unix系统获取
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static MemoryMetrics GetUnixMetrics()
     {
         string output = ShellUtil.Bash("awk '/MemTotal/ {total=$2} /MemAvailable/ {available=$2} END {print total,available}' /proc/meminfo");
@@ -392,7 +394,7 @@ public class MemoryMetricsClient
     /// <summary>
     /// macOS系统获取
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static MemoryMetrics GetMacOSMetrics()
     {
         var metrics = new MemoryMetrics();
@@ -412,8 +414,8 @@ public class ShellUtil
     /// <summary>
     /// linux 系统命令
     /// </summary>
-    /// <param name="command"></param>
-    /// <returns></returns>
+    /// <param name="command">command 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string Bash(string command)
     {
         var escapedArgs = command.Replace("\"", "\\\"");
@@ -438,9 +440,9 @@ public class ShellUtil
     /// <summary>
     /// windows CMD 系统命令
     /// </summary>
-    /// <param name="fileName"></param>
-    /// <param name="args"></param>
-    /// <returns></returns>
+    /// <param name="fileName">需要读取、校验或转换的业务值。</param>
+    /// <param name="args">args 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string Cmd(string fileName, string args)
     {
         var info = new ProcessStartInfo
@@ -461,8 +463,8 @@ public class ShellUtil
     /// <summary>
     /// Windows POWERSHELL 系统命令
     /// </summary>
-    /// <param name="script"></param>
-    /// <returns></returns>
+    /// <param name="script">script 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string PowerShell(string script)
     {
         using var PowerShellInstance = System.Management.Automation.PowerShell.Create();
@@ -483,8 +485,8 @@ public class ShellHelper
     /// <summary>
     /// Linux 系统命令
     /// </summary>
-    /// <param name="command"></param>
-    /// <returns></returns>
+    /// <param name="command">command 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string Bash(string command)
     {
         var escapedArgs = command.Replace("\"", "\\\"");
@@ -509,9 +511,9 @@ public class ShellHelper
     /// <summary>
     /// Windows CMD 系统命令
     /// </summary>
-    /// <param name="fileName"></param>
-    /// <param name="args"></param>
-    /// <returns></returns>
+    /// <param name="fileName">需要读取、校验或转换的业务值。</param>
+    /// <param name="args">args 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string Cmd(string fileName, string args)
     {
         var info = new ProcessStartInfo
@@ -532,8 +534,8 @@ public class ShellHelper
     /// <summary>
     /// Windows POWERSHELL 系统命令
     /// </summary>
-    /// <param name="script"></param>
-    /// <returns></returns>
+    /// <param name="script">script 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string PowerShell(string script)
     {
         using var PowerShellInstance = System.Management.Automation.PowerShell.Create();

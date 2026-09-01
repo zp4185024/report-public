@@ -87,11 +87,19 @@ type NumberRule =
   | 'positiveNumber';
 type NumberRules = Readonly<Record<string, NumberRule>>;
 
+/**
+ * 将 workbookSnapshot 中的 normalize Workbook Snapshot 输入转换为调用方需要的稳定格式。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function normalizeWorkbookSnapshot(snapshot: IWorkbookData): IWorkbookData {
   const source = snapshot as unknown as JsonObject;
   const rev = source.rev === undefined
     ? undefined
     : normalizeNumber(source.rev, '工作簿修订号 rev', 'nonNegativeInteger');
+  const styles = source.styles === undefined
+    ? undefined
+    : normalizeTextOverflowStyles(source.styles);
 
   // 仅复制包含布局数值的对象；cellData 等业务数据保持原引用，宿主随后 structuredClone 时再完整隔离。
   const sheets = Object.fromEntries(
@@ -104,6 +112,7 @@ export function normalizeWorkbookSnapshot(snapshot: IWorkbookData): IWorkbookDat
   return {
     ...snapshot,
     ...(rev === undefined ? {} : { rev }),
+    ...(styles === undefined ? {} : { styles }),
     sheets,
   } as IWorkbookData;
 }
@@ -119,6 +128,40 @@ export function normalizeUniverRuntimeNumber(value: unknown, label: string): num
   return normalized;
 }
 
+/**
+ * 将未指定的文本溢出策略统一为允许向空白相邻单元格延伸，兼容历史模板的显示语义。
+ * @param value - 工作簿全局样式表，样式值可能来自数据库或 Univer 运行时快照。
+ * @returns 返回复制后的样式表；显式裁剪或换行策略保持不变。
+ */
+function normalizeTextOverflowStyles(value: unknown): unknown {
+  if (!isJsonObject(value)) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([styleId, style]) => {
+      if (!isJsonObject(style)) {
+        return [styleId, style];
+      }
+
+      const wrapStrategy = style.tb === undefined || style.tb === null
+        ? 0
+        : typeof style.tb === 'string' && style.tb.trim() !== ''
+          ? Number(style.tb)
+          : style.tb;
+      return wrapStrategy === 0
+        ? [styleId, { ...style, tb: 1 }]
+        : [styleId, style];
+    }),
+  );
+}
+
+/**
+ * 将 workbookSnapshot 中的 normalize Worksheet 输入转换为调用方需要的稳定格式。
+ * @param sheet - 当前读取或修改的工作表对象。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizeWorksheet(sheet: JsonObject, sheetId: string): JsonObject {
   const normalized = normalizeNumericFields(
     sheet,
@@ -127,6 +170,7 @@ function normalizeWorksheet(sheet: JsonObject, sheetId: string): JsonObject {
   );
 
   if (sheet.freeze !== undefined) {
+    // 第一阶段：更新 normalizeWorksheet 当前分支对应的业务状态，并保持关联数据一致。
     normalized.freeze = normalizeObjectNumericFields(
       sheet.freeze,
       `工作表 '${sheetId}' 的冻结设置`,
@@ -155,6 +199,7 @@ function normalizeWorksheet(sheet: JsonObject, sheetId: string): JsonObject {
     );
   }
   if (sheet.columnHeader !== undefined) {
+    // 第2阶段：更新 normalizeWorksheet 当前分支对应的业务状态，并保持关联数据一致。
     normalized.columnHeader = normalizeObjectNumericFields(
       sheet.columnHeader,
       `工作表 '${sheetId}' 的列表头`,
@@ -184,6 +229,11 @@ function normalizeWorksheet(sheet: JsonObject, sheetId: string): JsonObject {
   return normalized;
 }
 
+/**
+ * 将 workbookSnapshot 中的 normalize Formula Caches 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizeFormulaCaches(value: unknown): unknown {
   if (!isJsonObject(value)) {
     return value;
@@ -212,6 +262,13 @@ function normalizeFormulaCaches(value: unknown): unknown {
   );
 }
 
+/**
+ * 将 workbookSnapshot 中的 normalize Object Numeric Fields 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param label - label 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param rules - rules 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizeObjectNumericFields(
   value: unknown,
   label: string,
@@ -223,6 +280,13 @@ function normalizeObjectNumericFields(
   return normalizeNumericFields(value, label, rules);
 }
 
+/**
+ * 将 workbookSnapshot 中的 normalize Indexed Numeric Fields 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param label - label 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param rules - rules 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizeIndexedNumericFields(
   value: unknown,
   label: string,
@@ -240,6 +304,13 @@ function normalizeIndexedNumericFields(
   );
 }
 
+/**
+ * 将 workbookSnapshot 中的 normalize Numeric Fields 输入转换为调用方需要的稳定格式。
+ * @param source - 本次转换或写入使用的数据对象。
+ * @param label - label 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param rules - rules 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizeNumericFields(
   source: JsonObject,
   label: string,
@@ -254,6 +325,13 @@ function normalizeNumericFields(
   return normalized;
 }
 
+/**
+ * 将 workbookSnapshot 中的 normalize Number 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param label - label 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param rule - rule 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizeNumber(value: unknown, label: string, rule: NumberRule): number {
   const normalized = normalizeUniverRuntimeNumber(value, label);
 
@@ -285,6 +363,14 @@ function normalizeNumber(value: unknown, label: string, rule: NumberRule): numbe
   return normalized;
 }
 
+/**
+ * 将 workbookSnapshot 中的 normalize Coordinate 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @param mergeIndex - 控制数据范围或位置的数值。
+ * @param field - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizeCoordinate(
   value: unknown,
   sheetId: string,
@@ -310,10 +396,20 @@ function normalizeCoordinate(
   return coordinate;
 }
 
+/**
+ * 校验 workbookSnapshot 的 is Merge Coordinate Field 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isMergeCoordinateField(value: string): value is MergeCoordinateField {
   return (mergeCoordinateFields as readonly string[]).includes(value);
 }
 
+/**
+ * 校验 workbookSnapshot 的 is Json Object 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

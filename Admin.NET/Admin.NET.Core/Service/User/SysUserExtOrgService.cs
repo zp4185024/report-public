@@ -13,6 +13,8 @@ public class SysUserExtOrgService : ITransient
 {
     private readonly SqlSugarRepository<SysUserExtOrg> _sysUserExtOrgRep;
 
+    /// <summary>初始化 SysUserExtOrgService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysUserExtOrgRep">sysUserExtOrgRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysUserExtOrgService(SqlSugarRepository<SysUserExtOrg> sysUserExtOrgRep)
     {
         _sysUserExtOrgRep = sysUserExtOrgRep;
@@ -21,8 +23,8 @@ public class SysUserExtOrgService : ITransient
     /// <summary>
     /// 获取用户扩展机构集合
     /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<List<SysUserExtOrg>> GetUserExtOrgList(long userId)
     {
         return await _sysUserExtOrgRep.GetListAsync(u => u.UserId == userId);
@@ -31,9 +33,9 @@ public class SysUserExtOrgService : ITransient
     /// <summary>
     /// 更新用户扩展机构
     /// </summary>
-    /// <param name="userId"></param>
-    /// <param name="extOrgList"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="extOrgList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task UpdateUserExtOrg(long userId, List<SysUserExtOrg> extOrgList)
     {
         await _sysUserExtOrgRep.DeleteAsync(u => u.UserId == userId);
@@ -49,8 +51,8 @@ public class SysUserExtOrgService : ITransient
     /// <summary>
     /// 根据机构Id集合删除扩展机构
     /// </summary>
-    /// <param name="orgIdList"></param>
-    /// <returns></returns>
+    /// <param name="orgIdList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task DeleteUserExtOrgByOrgIdList(List<long> orgIdList)
     {
         await _sysUserExtOrgRep.DeleteAsync(u => orgIdList.Contains(u.OrgId));
@@ -59,8 +61,8 @@ public class SysUserExtOrgService : ITransient
     /// <summary>
     /// 根据用户Id删除扩展机构
     /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task DeleteUserExtOrgByUserId(long userId)
     {
         await _sysUserExtOrgRep.DeleteAsync(u => u.UserId == userId);
@@ -69,8 +71,8 @@ public class SysUserExtOrgService : ITransient
     /// <summary>
     /// 根据机构Id判断是否有用户
     /// </summary>
-    /// <param name="orgId"></param>
-    /// <returns></returns>
+    /// <param name="orgId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> HasUserOrg(long orgId)
     {
         return await _sysUserExtOrgRep.IsAnyAsync(u => u.OrgId == orgId);
@@ -79,8 +81,8 @@ public class SysUserExtOrgService : ITransient
     /// <summary>
     /// 根据职位Id判断是否有用户
     /// </summary>
-    /// <param name="posId"></param>
-    /// <returns></returns>
+    /// <param name="posId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> HasUserPos(long posId)
     {
         return await _sysUserExtOrgRep.IsAnyAsync(u => u.PosId == posId);

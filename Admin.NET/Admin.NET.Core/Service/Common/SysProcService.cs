@@ -14,6 +14,8 @@ public class SysProcService : IDynamicApiController, ITransient
 {
     private readonly ISqlSugarClient _db;
 
+    /// <summary>初始化 SysProcService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
     public SysProcService(ISqlSugarClient db)
     {
         _db = db;
@@ -22,7 +24,7 @@ public class SysProcService : IDynamicApiController, ITransient
     /// <summary>
     /// 导出存储过程数据-指定列，没有指定的字段会被隐藏 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IActionResult> PocExport2(ExportProcInput input)
     {
         var db = _db.AsTenant().GetConnectionScope(input.ConfigId);
@@ -43,8 +45,8 @@ public class SysProcService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据模板导出存储过程数据 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IActionResult> PocExport(ExportProcByTMPInput input)
     {
         var db = _db.AsTenant().GetConnectionScope(input.ConfigId);
@@ -59,8 +61,8 @@ public class SysProcService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取存储过程返回表-Oracle、达梦参数顺序不能错 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<DataSet> ProcTable(BaseProcInput input)
     {
         var db = _db.AsTenant().GetConnectionScope(input.ConfigId);
@@ -72,8 +74,8 @@ public class SysProcService : IDynamicApiController, ITransient
     /// 获取存储过程返回数据集-Oracle、达梦参数顺序不能错
     /// Oracle 返回table、table1，其他返回table1、table2。适用于报表、复杂详细页面等 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost]
     public async Task<DataSet> CommonDataSet(BaseProcInput input)
     {

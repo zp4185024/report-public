@@ -52,11 +52,19 @@ onMounted(() => {
 });
 
 // 残忍拒绝
+/**
+ * 响应 index 的 on Cancel 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCancel = () => {
 	state.isUpgrade = false;
 };
 
 // 马上更新
+/**
+ * 响应 index 的 on Upgrade 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onUpgrade = () => {
 	state.isLoading = true;
 	state.btnTxt = '更新中';
@@ -68,6 +76,10 @@ const onUpgrade = () => {
 };
 
 // 延迟显示，防止刷新时界面显示太快
+/**
+ * 从 index 移除 delay Show 对应数据，并清理相关缓存、选中项或临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delayShow = () => {
 	setTimeout(() => {
 		state.isUpgrade = true;

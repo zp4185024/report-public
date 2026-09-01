@@ -456,6 +456,10 @@ const state = reactive({
 });
 
 // 获取布局配置信息
+/**
+ * 更新 settings 的 update Theme Config 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateThemeConfig = () => {
 	if (!themeConfig.value.columnsMenuWidth) {
 		themeConfig.value.columnsMenuWidth = 70;
@@ -472,6 +476,10 @@ const getThemeConfig = computed(() => {
 	return themeConfig.value;
 });
 // 1、全局主题
+/**
+ * 响应 settings 的 on Color Picker Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColorPickerChange = () => {
 	if (!getThemeConfig.value.primary) return ElMessage.warning('全局主题 primary 颜色值不能为空');
 	// 颜色加深
@@ -484,6 +492,11 @@ const onColorPickerChange = () => {
 	setDispatchThemeConfig();
 };
 // 2、菜单 / 顶栏
+/**
+ * 响应 settings 的 on Bg Color Picker Change 事件，并协调相关状态和后续操作。
+ * @param bg - bg 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onBgColorPickerChange = (bg: string) => {
 	document.documentElement.style.setProperty(`--next-bg-${bg}`, themeConfig.value[bg]);
 	if (bg === 'menuBar') {
@@ -495,18 +508,37 @@ const onBgColorPickerChange = (bg: string) => {
 	setDispatchThemeConfig();
 };
 // 2、菜单 / 顶栏 --> 顶栏背景渐变
+/**
+ * 响应 settings 的 on Top Bar Gradual Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onTopBarGradualChange = () => {
 	setGraduaFun('.layout-navbars-breadcrumb-index', getThemeConfig.value.isTopBarColorGradual, getThemeConfig.value.topBar);
 };
 // 2、菜单 / 顶栏 --> 菜单背景渐变
+/**
+ * 响应 settings 的 on Menu Bar Gradual Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onMenuBarGradualChange = () => {
 	setGraduaFun('.layout-container .el-aside', getThemeConfig.value.isMenuBarColorGradual, getThemeConfig.value.menuBar);
 };
 // 2、菜单 / 顶栏 --> 分栏菜单背景渐变
+/**
+ * 响应 settings 的 on Columns Menu Bar Gradual Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsMenuBarGradualChange = () => {
 	setGraduaFun('.layout-container .layout-columns-aside', getThemeConfig.value.isColumnsMenuBarColorGradual, getThemeConfig.value.columnsMenuBar);
 };
 // 2、菜单 / 顶栏 --> 背景渐变函数
+/**
+ * 更新 settings 的 set Gradua Fun 状态，并同步相关业务数据。
+ * @param el - el 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param bool - bool 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param color - color 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setGraduaFun = (el: string, bool: boolean, color: string) => {
 	nextTick(() => {
 		setTimeout(() => {
@@ -520,47 +552,83 @@ const setGraduaFun = (el: string, bool: boolean, color: string) => {
 	});
 };
 // 2、分栏设置 -> 分栏菜单鼠标悬停预加载
+/**
+ * 响应 settings 的 on Columns Menu Hover Preload Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsMenuHoverPreloadChange = () => {
 	setLocalThemeConfig();
 };
 // 2、分栏设置 -> 分栏Logo高度
+/**
+ * 响应 settings 的 on Columns Logo Height Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsLogoHeightChange = () => {
 	document.documentElement.style.setProperty('--el-columnsLogoHeight', `${themeConfig.value.columnsLogoHeight}px`);
 	setLocalThemeConfig();
 };
 // 2、分栏设置 -> 分栏菜单宽度
+/**
+ * 响应 settings 的 on Columns Menu Width Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsMenuWidthChange = () => {
 	document.documentElement.style.setProperty('--el-columnsMenuWidth', `${themeConfig.value.columnsMenuWidth}px`);
 	document.documentElement.style.setProperty('--el-columnsMenuRoundWidth', `${themeConfig.value.columnsMenuWidth - 5}px`);
 	setLocalThemeConfig();
 };
 // 2、分栏设置 -> 分栏菜单高度
+/**
+ * 响应 settings 的 on Columns Menu Height Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsMenuHeightChange = () => {
 	document.documentElement.style.setProperty('--el-columnsMenuHeight', `${themeConfig.value.columnsMenuHeight}px`);
 	document.documentElement.style.setProperty('--el-columnsMenuRoundHeight', `${themeConfig.value.columnsMenuHeight - 5}px`);
 	setLocalThemeConfig();
 };
 // 3、界面设置 --> 菜单水平折叠
+/**
+ * 响应 settings 的 on Theme Config Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onThemeConfigChange = () => {
 	setDispatchThemeConfig();
 };
 // 3、界面设置 --> 固定 Header
+/**
+ * 响应 settings 的 on Is Fixed Header Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onIsFixedHeaderChange = () => {
 	getThemeConfig.value.isFixedHeaderChange = getThemeConfig.value.isFixedHeader ? false : true;
 	setLocalThemeConfig();
 };
 // 3、界面设置 --> 经典布局分割菜单
+/**
+ * 响应 settings 的 on Classic Split Menu Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onClassicSplitMenuChange = () => {
 	getThemeConfig.value.isBreadcrumb = false;
 	setLocalThemeConfig();
 	mittBus.emit('getBreadcrumbIndexSetFilterRoutes');
 };
 // 4、界面显示 --> 侧边栏 Logo
+/**
+ * 响应 settings 的 on Is Show Logo Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onIsShowLogoChange = () => {
 	getThemeConfig.value.isShowLogoChange = getThemeConfig.value.isShowLogo ? false : true;
 	setLocalThemeConfig();
 };
 // 4、界面显示 --> 面包屑 Breadcrumb
+/**
+ * 响应 settings 的 on Is Breadcrumb Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onIsBreadcrumbChange = () => {
 	if (getThemeConfig.value.layout === 'classic') {
 		getThemeConfig.value.isClassicSplitMenu = false;
@@ -568,16 +636,29 @@ const onIsBreadcrumbChange = () => {
 	setLocalThemeConfig();
 };
 // 4、界面显示 --> 开启 TagsView 拖拽
+/**
+ * 响应 settings 的 on Sortable Tags View Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSortableTagsViewChange = () => {
 	mittBus.emit('openOrCloseSortable');
 	setLocalThemeConfig();
 };
 // 4、界面显示 --> 开启 TagsView 共用
+/**
+ * 响应 settings 的 on Share Tags View Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onShareTagsViewChange = () => {
 	mittBus.emit('openShareTagsView');
 	setLocalThemeConfig();
 };
 // 4、界面显示 --> 灰色模式/色弱模式
+/**
+ * 响应 settings 的 on Add Filter Change 事件，并协调相关状态和后续操作。
+ * @param attr - attr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onAddFilterChange = (attr: string) => {
 	if (attr === 'grayscale') {
 		if (getThemeConfig.value.isGrayscale) getThemeConfig.value.isInvert = false;
@@ -590,17 +671,30 @@ const onAddFilterChange = (attr: string) => {
 	setLocalThemeConfig();
 };
 // 4、界面显示 --> 深色模式
+/**
+ * 响应 settings 的 on Add Dark Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onAddDarkChange = () => {
 	const body = document.documentElement as HTMLElement;
 	if (getThemeConfig.value.isIsDark) body.setAttribute('data-theme', 'dark');
 	else body.setAttribute('data-theme', '');
 };
 // 4、界面显示 --> 开启水印
+/**
+ * 响应 settings 的 on Watermark Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onWatermarkChange = () => {
 	getThemeConfig.value.isWatermark ? Watermark.set(getThemeConfig.value.watermarkText) : Watermark.del();
 	setLocalThemeConfig();
 };
 // 4、界面显示 --> 水印文案
+/**
+ * 响应 settings 的 on Watermark Text Input 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onWatermarkTextInput = (val: string) => {
 	getThemeConfig.value.watermarkText = verifyAndSpace(val);
 	if (getThemeConfig.value.watermarkText === '') return false;
@@ -608,6 +702,11 @@ const onWatermarkTextInput = (val: string) => {
 	setLocalThemeConfig();
 };
 // 5、布局切换
+/**
+ * 响应 settings 的 on Set Layout 事件，并协调相关状态和后续操作。
+ * @param layout - layout 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSetLayout = (layout: string) => {
 	Local.set('oldLayout', layout);
 	if (getThemeConfig.value.layout === layout) return false;
@@ -617,6 +716,10 @@ const onSetLayout = (layout: string) => {
 	initLayoutChangeFun();
 };
 // 设置布局切换函数
+/**
+ * 初始化 settings 的 init Layout Change Fun 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initLayoutChangeFun = () => {
 	onBgColorPickerChange('menuBar');
 	onBgColorPickerChange('menuBarColor');
@@ -627,6 +730,10 @@ const initLayoutChangeFun = () => {
 	onBgColorPickerChange('columnsMenuBarColor');
 };
 // 关闭弹窗时，初始化变量。变量用于处理 layoutScrollbarRef.value.update() 更新滚动条高度
+/**
+ * 响应 settings 的 on Drawer Close 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onDrawerClose = () => {
 	getThemeConfig.value.isFixedHeaderChange = false;
 	getThemeConfig.value.isShowLogoChange = false;
@@ -634,24 +741,44 @@ const onDrawerClose = () => {
 	setLocalThemeConfig();
 };
 // 布局配置弹窗打开
+/**
+ * 准备 settings 的 open Drawer 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDrawer = () => {
 	getThemeConfig.value.isDrawer = true;
 };
 // 触发 store 布局配置更新
+/**
+ * 更新 settings 的 set Dispatch Theme Config 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setDispatchThemeConfig = () => {
 	setLocalThemeConfig();
 	setLocalThemeConfigStyle();
 };
 // 存储布局配置
+/**
+ * 更新 settings 的 set Local Theme Config 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setLocalThemeConfig = () => {
 	Local.remove('themeConfig');
 	Local.set('themeConfig', getThemeConfig.value);
 };
 // 存储布局配置全局主题样式（html根标签）
+/**
+ * 更新 settings 的 set Local Theme Config Style 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setLocalThemeConfigStyle = () => {
 	Local.set('themeConfigStyle', document.documentElement.style.cssText);
 };
 // 一键复制配置
+/**
+ * 响应 settings 的 on Copy Config Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCopyConfigClick = () => {
 	let copyThemeConfig = Local.get('themeConfig');
 	copyThemeConfig.isDrawer = false;
@@ -660,6 +787,10 @@ const onCopyConfigClick = () => {
 	});
 };
 // 一键恢复默认
+/**
+ * 响应 settings 的 on Reset Config Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onResetConfigClick = () => {
 	Local.clear();
 	Session.clear();
@@ -668,6 +799,10 @@ const onResetConfigClick = () => {
 	Local.set('version', __NEXT_VERSION__);
 };
 // 初始化菜单样式等
+/**
+ * 初始化 settings 的 init Set Style 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initSetStyle = () => {
 	// 2、菜单 / 顶栏 --> 顶栏背景渐变
 	onTopBarGradualChange();

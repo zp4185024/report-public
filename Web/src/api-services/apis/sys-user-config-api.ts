@@ -530,6 +530,7 @@ export const SysUserConfigApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserConfigAddPost(body?: AddConfigInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysUserConfigApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserConfigApiAxiosParamCreator(configuration).apiSysUserConfigAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -561,6 +562,7 @@ export const SysUserConfigApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysUserConfigApiAxiosParamCreator(configuration).apiSysUserConfigBatchUpdatePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysUserConfigApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -600,6 +602,7 @@ export const SysUserConfigApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserConfigDetailGet(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysConfig>>> {
+            // 第3阶段：调用 SysUserConfigApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserConfigApiAxiosParamCreator(configuration).apiSysUserConfigDetailGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -630,6 +633,7 @@ export const SysUserConfigApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysUserConfigApiAxiosParamCreator(configuration).apiSysUserConfigListPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysUserConfigApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -678,6 +682,7 @@ export const SysUserConfigApiFactory = function (configuration?: Configuration, 
          * @throws {RequiredError}
          */
         async apiSysUserConfigAddPost(body?: AddConfigInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysUserConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserConfigApiFp(configuration).apiSysUserConfigAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -708,6 +713,7 @@ export const SysUserConfigApiFactory = function (configuration?: Configuration, 
          * @throws {RequiredError}
          */
         async apiSysUserConfigConfigValueByCodeCodeGet(code: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultString>> {
+            // 第2阶段：整理 SysUserConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserConfigApiFp(configuration).apiSysUserConfigConfigValueByCodeCodeGet(code, options).then((request) => request(axios, basePath));
         },
         /**
@@ -747,6 +753,7 @@ export const SysUserConfigApiFactory = function (configuration?: Configuration, 
          * @throws {RequiredError}
          */
         async apiSysUserConfigListPost(body?: PageConfigInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListSysConfig>> {
+            // 第3阶段：整理 SysUserConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserConfigApiFp(configuration).apiSysUserConfigListPost(body, options).then((request) => request(axios, basePath));
         },
         /**

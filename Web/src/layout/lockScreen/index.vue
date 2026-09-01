@@ -97,26 +97,50 @@ const state = reactive({
 });
 
 // 鼠标按下 pc
+/**
+ * 响应 index 的 on Down Pc 事件，并协调相关状态和后续操作。
+ * @param down - down 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onDownPc = (down: MouseEvent) => {
 	state.isFlags = true;
 	state.downClientY = down.clientY;
 };
 // 鼠标按下 app
+/**
+ * 响应 index 的 on Down App 事件，并协调相关状态和后续操作。
+ * @param down - down 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onDownApp = (down: TouchEvent) => {
 	state.isFlags = true;
 	state.downClientY = down.touches[0].clientY;
 };
 // 鼠标移动 pc
+/**
+ * 响应 index 的 on Move Pc 事件，并协调相关状态和后续操作。
+ * @param move - move 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onMovePc = (move: MouseEvent) => {
 	state.moveDifference = move.clientY - state.downClientY;
 	onMove();
 };
 // 鼠标移动 app
+/**
+ * 响应 index 的 on Move App 事件，并协调相关状态和后续操作。
+ * @param move - move 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onMoveApp = (move: TouchEvent) => {
 	state.moveDifference = move.touches[0].clientY - state.downClientY;
 	onMove();
 };
 // 鼠标移动事件
+/**
+ * 响应 index 的 on Move 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onMove = () => {
 	if (state.isFlags) {
 		const el = <HTMLElement>state.querySelectorEl;
@@ -137,6 +161,10 @@ const onMove = () => {
 	}
 };
 // 鼠标松开
+/**
+ * 响应 index 的 on End 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onEnd = () => {
 	state.isFlags = false;
 	state.transparency = 1;
@@ -145,18 +173,30 @@ const onEnd = () => {
 	}
 };
 // 获取要拖拽的初始元素
+/**
+ * 初始化 index 的 init Get Element 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initGetElement = () => {
 	nextTick(() => {
 		state.querySelectorEl = layoutLockScreenDateRef.value;
 	});
 };
 // 时间初始化
+/**
+ * 初始化 index 的 init Time 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initTime = () => {
 	state.time.hm = formatDate(new Date(), 'HH:MM');
 	state.time.s = formatDate(new Date(), 'SS');
 	state.time.mdq = formatDate(new Date(), 'mm月dd日，WWW');
 };
 // 时间初始化定时器
+/**
+ * 初始化 index 的 init Set Time 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initSetTime = () => {
 	initTime();
 	state.setIntervalTime = window.setInterval(() => {
@@ -164,6 +204,10 @@ const initSetTime = () => {
 	}, 1000);
 };
 // 锁屏时间定时器
+/**
+ * 初始化 index 的 init Lock Screen 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initLockScreen = () => {
 	if (themeConfig.value.isLockScreen) {
 		state.isShowLockScreenIntervalTime = window.setInterval(() => {
@@ -185,11 +229,19 @@ const initLockScreen = () => {
 	}
 };
 // 存储布局配置
+/**
+ * 更新 index 的 set Local Theme Config 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setLocalThemeConfig = () => {
 	themeConfig.value.isDrawer = false;
 	Local.set('themeConfig', themeConfig.value);
 };
 // 密码输入点击事件
+/**
+ * 响应 index 的 on Lock Screen Submit 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onLockScreenSubmit = async () => {
 	if (state.lockScreenPassword) {
 		try {
@@ -222,6 +274,10 @@ const onLockScreenSubmit = async () => {
 	}
 };
 // 隐藏消息
+/**
+ * 结束 index 的 hide Message 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const hideMessage = () => {
 	state.showMessage = false;
 	nextTick(() => {
@@ -235,6 +291,7 @@ onMounted(() => {
 	initLockScreen();
 
 	// 侦听ENTER按钮事件
+	/** 按下回车时展开锁屏密码输入区，或关闭当前错误提示。 */
 	document.onkeydown = (e) => {
 		if (e.key === 'Enter') {
 			// 当显示锁屏页时，按ENTER切到密码输入

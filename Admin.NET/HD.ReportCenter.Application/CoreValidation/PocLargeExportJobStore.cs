@@ -43,16 +43,24 @@ public sealed class PocLargeExportJobStore
     private readonly int? _validationRowCount;
     private readonly PocStreamingTemplateDataExporter _exporter = new();
 
+    /// <summary>初始化 PocLargeExportJobStore 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocLargeExportJobStore()
         : this(Path.Combine(Path.GetTempPath(), "hd-report-center-poc"), null, true)
     {
     }
 
+    /// <summary>初始化 PocLargeExportJobStore 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="outputDirectory">outputDirectory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="rowCount">控制数据范围或位置的数值。</param>
     public PocLargeExportJobStore(string outputDirectory, int rowCount)
         : this(outputDirectory, rowCount, true)
     {
     }
 
+    /// <summary>初始化 PocLargeExportJobStore 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="outputDirectory">outputDirectory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="validationRowCount">控制数据范围或位置的数值。</param>
+    /// <param name="_">_ 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private PocLargeExportJobStore(string outputDirectory, int? validationRowCount, bool _)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
@@ -74,6 +82,10 @@ public sealed class PocLargeExportJobStore
         return Start(plan, null);
     }
 
+    /// <summary>启动 PocLargeExportJobStore 的 Start 流程，并建立运行期间所需状态。</summary>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="pagesFactory">pagesFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public PocExportJobSnapshot Start(
         PocTemplateDataExportPlan plan,
         Func<CancellationToken, IAsyncEnumerable<IReadOnlyList<PocDataRow>>>? pagesFactory)
@@ -122,6 +134,11 @@ public sealed class PocLargeExportJobStore
     /// <summary>读取已登记任务对应的导出计划，供下载响应使用报表模板名称。</summary>
     public PocTemplateDataExportPlan GetPlan(string jobNo) => Find(jobNo).Plan;
 
+    /// <summary>执行 PocLargeExportJobStore 的 Run Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="state">state 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="pagesFactory">pagesFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task RunAsync(
         JobState state,
         PocTemplateDataExportPlan plan,
@@ -171,6 +188,11 @@ public sealed class PocLargeExportJobStore
         }
     }
 
+    /// <summary>查询或读取 PocLargeExportJobStore 所需的 Read Validation Pages 数据，并按调用约定返回结果。</summary>
+    /// <param name="rowCount">控制数据范围或位置的数值。</param>
+    /// <param name="deptId">需要定位的业务记录标识。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async IAsyncEnumerable<IReadOnlyList<PocDataRow>> ReadValidationPages(
         int rowCount,
         string? deptId,
@@ -195,6 +217,9 @@ public sealed class PocLargeExportJobStore
         }
     }
 
+    /// <summary>查询或读取 PocLargeExportJobStore 所需的 Find 数据，并按调用约定返回结果。</summary>
+    /// <param name="jobNo">jobNo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private JobState Find(string jobNo)
     {
         if (string.IsNullOrWhiteSpace(jobNo) || !_jobs.TryGetValue(jobNo, out var state))
@@ -205,6 +230,8 @@ public sealed class PocLargeExportJobStore
         return state;
     }
 
+    /// <summary>尝试或判断 PocLargeExportJobStore 的 Try Delete 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="path">path 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void TryDelete(string path)
     {
         try
@@ -239,10 +266,14 @@ public sealed class PocLargeExportJobStore
         public PocTemplateDataExportPlan Plan { get; } = plan;
         public CancellationToken CancellationToken => _cancellation.Token;
 
+        /// <summary>负责 JobState 的 Mark Running 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
         public void MarkRunning() => Update(() => _status = PocExportJobStatus.Running);
 
+        /// <summary>负责 JobState 的 Report Progress 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="writtenRows">需要遍历、筛选或写入的业务数据集合。</param>
         public void ReportProgress(long writtenRows) => Update(() => _writtenRows = writtenRows);
 
+        /// <summary>负责 JobState 的 Mark Completed 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
         public void MarkCompleted() => Update(() =>
         {
             if (_totalRows == 0)
@@ -253,12 +284,15 @@ public sealed class PocLargeExportJobStore
             _completedAt = DateTimeOffset.Now;
         });
 
+        /// <summary>负责 JobState 的 Mark Cancelled 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
         public void MarkCancelled() => Update(() =>
         {
             _status = PocExportJobStatus.Cancelled;
             _completedAt = DateTimeOffset.Now;
         });
 
+        /// <summary>负责 JobState 的 Mark Failed 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="error">error 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
         public void MarkFailed(string error) => Update(() =>
         {
             _error = error;
@@ -266,6 +300,7 @@ public sealed class PocLargeExportJobStore
             _completedAt = DateTimeOffset.Now;
         });
 
+        /// <summary>校验 PocLargeExportJobStore 的 Cancel 条件，并返回可供后续流程判断的结果。</summary>
         public void Cancel()
         {
             lock (_sync)
@@ -278,6 +313,8 @@ public sealed class PocLargeExportJobStore
             }
         }
 
+        /// <summary>根据 JobState 当前输入计算 Snapshot 结果，并按方法声明的类型返回。</summary>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public PocExportJobSnapshot Snapshot()
         {
             lock (_sync)
@@ -295,6 +332,8 @@ public sealed class PocLargeExportJobStore
 
         private DateTimeOffset CreatedAt { get; } = DateTimeOffset.Now;
 
+        /// <summary>更新 PocLargeExportJobStore 的 Update 状态，并同步相关业务数据。</summary>
+        /// <param name="update">update 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
         private void Update(Action update)
         {
             lock (_sync)

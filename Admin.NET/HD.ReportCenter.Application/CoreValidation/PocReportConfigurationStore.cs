@@ -19,6 +19,9 @@ public sealed record PocReportConfigurationMutation(
 
 public sealed class PocReportConfigurationRevisionConflictException : Exception
 {
+    /// <summary>初始化 PocReportConfigurationRevisionConflictException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="expectedRevision">expectedRevision 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocReportConfigurationRevisionConflictException(string reportCode, int expectedRevision)
         : base($"Report configuration '{reportCode}' is no longer at revision {expectedRevision}.")
     {
@@ -30,22 +33,32 @@ public sealed class PocReportConfigurationStore : ITransient
 {
     private readonly ISqlSugarClient _database;
 
+    /// <summary>初始化 PocReportConfigurationStore 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="database">database 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocReportConfigurationStore(ISqlSugarClient database)
     {
         _database = database;
     }
 
+    /// <summary>从 PocReportConfigurationStore 查询 List Reports Async 所需数据，处理空结果并按调用约定返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocReport>> ListReportsAsync() =>
         await _database.Queryable<PocReport>()
             .OrderBy(item => item.Name)
             .OrderBy(item => item.Code)
             .ToListAsync();
 
+    /// <summary>负责 PocReportConfigurationStore 的 Report Exists Async 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> ReportExistsAsync(string reportCode) =>
         await _database.Queryable<PocReport>()
             .Where(item => item.Code == reportCode)
             .AnyAsync();
 
+    /// <summary>查询或读取 PocReportConfigurationStore 所需的 Get Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocStoredReportConfiguration?> GetAsync(string reportCode)
     {
         var report = await _database.Queryable<PocReport>()
@@ -75,6 +88,9 @@ public sealed class PocReportConfigurationStore : ITransient
         return new PocStoredReportConfiguration(report, dataSource, dataset, parameters);
     }
 
+    /// <summary>更新 PocReportConfigurationStore 的 Save Async 状态，并同步相关业务数据。</summary>
+    /// <param name="mutation">mutation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<int> SaveAsync(PocReportConfigurationMutation mutation)
     {
         ArgumentNullException.ThrowIfNull(mutation);
@@ -83,6 +99,7 @@ public sealed class PocReportConfigurationStore : ITransient
         try
         {
             var now = DateTime.Now;
+            // 第一阶段：遍历 SaveAsync 当前数据集合，逐项转换并维护处理结果。
             var existingReport = await _database.Queryable<PocReport>()
                 .Where(item => item.Code == mutation.ReportCode)
                 .FirstAsync();
@@ -112,6 +129,7 @@ public sealed class PocReportConfigurationStore : ITransient
                 }).ExecuteCommandAsync();
             }
             else
+            // 第2阶段：遍历 SaveAsync 当前数据集合，逐项转换并维护处理结果。
             {
                 var affected = await _database.Updateable<PocReport>()
                     .SetColumns(item => new PocReport
@@ -141,6 +159,7 @@ public sealed class PocReportConfigurationStore : ITransient
             await _database.Deleteable<PocReportParameter>()
                 .Where(item => item.ReportCode == mutation.ReportCode)
                 .ExecuteCommandAsync();
+            // 第3阶段：检查 SaveAsync 当前条件，并按匹配分支执行对应处理。
             if (mutation.Parameters.Count > 0)
             {
                 foreach (var parameter in mutation.Parameters)

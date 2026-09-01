@@ -37,9 +37,7 @@ public sealed class RedisEventSourceStorer : IEventSourceStorer, IDisposable
 
     private ILogger<RedisEventSourceStorer> _logger;
 
-    /// <summary>
-    /// 构造函数
-    /// </summary>
+    /// <summary>初始化 RedisEventSourceStorer 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     /// <param name="cacheProvider">Redis 连接对象</param>
     /// <param name="routeKey">路由键</param>
     /// <param name="capacity">存储器最多能够处理多少消息，超过该容量进入等待写入</param>
@@ -86,12 +84,21 @@ public sealed class RedisEventSourceStorer : IEventSourceStorer, IDisposable
         _eventConsumer.Start();
     }
 
+    /// <summary>响应 RedisEventSourceStorer 的 On Consume Broadcast 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="message">需要记录、展示或继续传递的错误上下文。</param>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task OnConsumeBroadcast(string source, Message message, CancellationToken token)
     {
         ChannelEventSource ces = JsonConvert.DeserializeObject<ChannelEventSource>(source);
         await ConsumeChannelEventSourceAsync(ces, token);
     }
 
+    /// <summary>调用 RedisEventSourceStorer 的异步依赖完成 Consume Channel Event Source Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="ces">当前方法执行时使用的 ces 输入值。</param>
+    /// <param name="cancel">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task ConsumeChannelEventSourceAsync(ChannelEventSource ces, CancellationToken cancel = default)
     {
         // 打印测试事件
@@ -153,9 +160,7 @@ public sealed class RedisEventSourceStorer : IEventSourceStorer, IDisposable
         return eventSource;
     }
 
-    /// <summary>
-    /// 释放非托管资源
-    /// </summary>
+    /// <summary>释放 RedisEventSourceStorer 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public async void Dispose()
     {
         await _eventConsumer.Stop();

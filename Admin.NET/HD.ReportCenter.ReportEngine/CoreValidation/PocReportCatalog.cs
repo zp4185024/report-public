@@ -22,8 +22,10 @@ public static class PocReportCatalog
     public static PocReportDefinition GetDefinition(DateTimeOffset? now = null)
     {
         var current = now ?? DateTimeOffset.Now;
+        // 第2阶段：构造 GetDefinition 当前步骤需要的中间数据和执行参数。
         var startDate = new DateTimeOffset(current.Year, current.Month, 1, 0, 0, 0, current.Offset);
 
+        // 第一阶段：整理 GetDefinition 已计算的数据，并按方法契约返回最终结果。
         return new PocReportDefinition(
             ReportCode,
             "科室工作量统计",
@@ -88,6 +90,11 @@ public static class PocReportCatalog
         return Execute(request, preview, GetDefinition(now));
     }
 
+    /// <summary>执行 PocReportCatalog 的 Execute 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="request">本次操作使用的输入数据。</param>
+    /// <param name="preview">preview 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="definition">描述字段、参数或业务约束的定义对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExecuteResult Execute(
         PocExecuteRequest request,
         PocPreviewSettings preview,
@@ -176,6 +183,10 @@ public static class PocReportCatalog
         }
     }
 
+    /// <summary>构建 PocReportCatalog 所需的 Create Row 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="sequence">sequence 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="deptId">需要定位的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocWorkloadRow CreateRow(int sequence, string? deptId)
     {
         // 使用确定性算式生成数据，使分页、导出首尾行和公式结果都可在自动化测试中稳定断言。
@@ -187,9 +198,16 @@ public static class PocReportCatalog
             20 + sequence * 11 % 61);
     }
 
+    /// <summary>读取 PocReportCatalog 的目标值；值为空时返回调用方提供的默认内容。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="fallback">fallback 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ValueOrDefault(string? value, string fallback) =>
         string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 
+    /// <summary>将 PocReportCatalog 中的 Format Date 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string FormatDate(DateTimeOffset value) =>
         value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

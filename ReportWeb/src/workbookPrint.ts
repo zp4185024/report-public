@@ -98,9 +98,11 @@ export function buildPrintableSheetDocument(sheet: PrintableSheet): PrintableShe
     ...sheet.values.map((row) => row.length),
     0,
   );
+  // 第一阶段：检查 buildPrintableSheetDocument 当前条件，并按匹配分支执行对应处理。
   if (rowCount < 1 || columnCount < 1) {
     throw new Error('当前工作表没有可打印内容。');
   }
+  // 第一阶段：检查 buildPrintableSheetDocument 当前条件，并按匹配分支执行对应处理。
   if (!sheet.values.some((row) => row.some((value) => value.length > 0))) {
     throw new Error('当前工作表没有可打印内容。');
   }
@@ -124,6 +126,7 @@ export function buildPrintableSheetDocument(sheet: PrintableSheet): PrintableShe
       if (mergeIndex.covered.has(coordinate)) continue;
 
       const merge = mergeIndex.starts.get(coordinate);
+      // 第2阶段：构造 buildPrintableSheetDocument 当前阶段需要的中间数据和执行参数。
       const rowspan = merge === undefined ? 1 : merge.endRow - merge.startRow + 1;
       const colspan = merge === undefined ? 1 : merge.endColumn - merge.startColumn + 1;
       const value = sheet.values[rowIndex]?.[columnIndex] ?? '';
@@ -140,6 +143,7 @@ export function buildPrintableSheetDocument(sheet: PrintableSheet): PrintableShe
     rows.push(`<tr${hidden} style="height:${height}px">${cells.join('')}</tr>`);
   }
 
+  // 第2阶段：遍历 buildPrintableSheetDocument 当前数据集合，逐项转换并维护处理结果。
   const columns = columnWidths
     .map((width) => `<col style="width:${width}px">`)
     .join('');
@@ -150,6 +154,7 @@ export function buildPrintableSheetDocument(sheet: PrintableSheet): PrintableShe
     scale,
     sheet.showGridlines !== false,
   );
+  // 第3阶段：构造 buildPrintableSheetDocument 当前阶段需要的中间数据和执行参数。
   const html = [
     '<!doctype html>',
     '<html lang="zh-CN">',
@@ -172,11 +177,17 @@ export function buildPrintableSheetDocument(sheet: PrintableSheet): PrintableShe
   return { html, orientation, scale };
 }
 
+/**
+ * 初始化 workbookPrint 的 print Printable Sheet 监听流程，并在状态变化时同步执行相关操作。
+ * @param sheet - 当前读取或修改的工作表对象。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export async function printPrintableSheet(sheet: PrintableSheet): Promise<PrintOrientation> {
   const printable = buildPrintableSheetDocument(sheet);
   const iframe = document.createElement('iframe');
   iframe.title = '报表打印';
   iframe.setAttribute('aria-hidden', 'true');
+  // 第一阶段：根据 printPrintableSheet 当前分支转换输入数据，并保存该阶段产生的中间结果。
   Object.assign(iframe.style, {
     border: '0',
     height: '1px',
@@ -195,11 +206,16 @@ export async function printPrintableSheet(sheet: PrintableSheet): Promise<PrintO
   }
 
   let cleanupTimer = 0;
+  /**
+   * 移除 workbookPrint 中与 cleanup 对应的数据，并清理关联状态。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const cleanup = () => {
     window.clearTimeout(cleanupTimer);
     iframe.remove();
   };
 
+  // 第2阶段：执行 printPrintableSheet 可能失败的核心操作，并由异常分支统一收尾。
   try {
     frameDocument.open();
     frameDocument.write(printable.html);
@@ -217,6 +233,14 @@ export async function printPrintableSheet(sheet: PrintableSheet): Promise<PrintO
   }
 }
 
+/**
+ * 构建 workbookPrint 所需的 build Print Css 内容，并保证生成结果符合调用约定。
+ * @param orientation - orientation 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param sourceWidth - sourceWidth 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param scale - scale 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param showGridlines - showGridlines 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function buildPrintCss(
   orientation: PrintOrientation,
   sourceWidth: number,
@@ -255,6 +279,11 @@ function buildPrintCss(
   `;
 }
 
+/**
+ * 按 printable Cell Css 规则筛选 workbookPrint 数据，并返回满足条件的结果。
+ * @param style - style 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function printableCellCss(style?: PrintableCellStyle): string {
   if (style === undefined) return '';
   const declarations: string[] = [];
@@ -290,6 +319,13 @@ function printableCellCss(style?: PrintableCellStyle): string {
   return declarations.join(';');
 }
 
+/**
+ * 创建并返回 workbookPrint 的 index Merges 配置对象，集中提供相关状态和操作入口。
+ * @param sheet - 当前读取或修改的工作表对象。
+ * @param rowCount - 控制数据范围或位置的数值。
+ * @param columnCount - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function indexMerges(
   sheet: PrintableSheet,
   rowCount: number,
@@ -334,6 +370,11 @@ function indexMerges(
   return { covered, starts };
 }
 
+/**
+ * 初始化 workbookPrint 的 wait For Print Resources 监听流程，并在状态变化时同步执行相关操作。
+ * @param frameDocument - frameDocument 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 async function waitForPrintResources(frameDocument: Document): Promise<void> {
   const images = Array.from(frameDocument.images);
   await Promise.all(images.map((image) => {
@@ -346,6 +387,11 @@ async function waitForPrintResources(frameDocument: Document): Promise<void> {
   await frameDocument.fonts?.ready;
 }
 
+/**
+ * 校验并规范化 workbookPrint 的 safe Horizontal Alignment 输入，无效时返回安全默认值或明确错误。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function safeHorizontalAlignment(value?: string): string {
   const normalized = value?.toLowerCase();
   if (normalized === 'center' || normalized === '2') return 'center';
@@ -354,6 +400,11 @@ function safeHorizontalAlignment(value?: string): string {
   return 'left';
 }
 
+/**
+ * 校验并规范化 workbookPrint 的 safe Vertical Alignment 输入，无效时返回安全默认值或明确错误。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function safeVerticalAlignment(value?: string): string {
   const normalized = value?.toLowerCase();
   if (normalized === 'top' || normalized === '1') return 'top';
@@ -361,6 +412,11 @@ function safeVerticalAlignment(value?: string): string {
   return 'middle';
 }
 
+/**
+ * 校验并规范化 workbookPrint 的 safe Color 输入，无效时返回安全默认值或明确错误。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function safeColor(value?: string): string | undefined {
   const normalized = value?.trim();
   return normalized !== undefined
@@ -369,11 +425,24 @@ function safeColor(value?: string): string | undefined {
     : undefined;
 }
 
+/**
+ * 校验并规范化 workbookPrint 的 safe Font Family 输入，无效时返回安全默认值或明确错误。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function safeFontFamily(value?: string): string | undefined {
   const normalized = value?.trim().replace(/["'`;<>\\]/g, '').slice(0, 80);
   return normalized === undefined || normalized.length === 0 ? undefined : normalized;
 }
 
+/**
+ * 校验并规范化 workbookPrint 的 finite Dimension 输入，无效时返回安全默认值或明确错误。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param fallback - fallback 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param minimum - minimum 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param maximum - maximum 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function finiteDimension(
   value: number | undefined,
   fallback: number,
@@ -385,6 +454,11 @@ function finiteDimension(
     : fallback;
 }
 
+/**
+ * 查询或读取 workbookPrint 所需的 read Finite Number 数据，并按调用约定返回结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function readFiniteNumber(value: unknown): number | undefined {
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
   if (typeof value !== 'string' || value.trim().length === 0) return undefined;
@@ -392,6 +466,11 @@ function readFiniteNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/**
+ * 查询或读取 workbookPrint 所需的 read Boolean Flag 数据，并按调用约定返回结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function readBooleanFlag(value: unknown): boolean | undefined {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return Number.isFinite(value) ? value !== 0 : undefined;
@@ -402,18 +481,39 @@ function readBooleanFlag(value: unknown): boolean | undefined {
   return undefined;
 }
 
+/**
+ * 查询或读取 workbookPrint 所需的 read Non Empty String 数据，并按调用约定返回结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function readNonEmptyString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
+/**
+ * 校验并规范化 workbookPrint 的 valid Coordinate 输入，无效时返回安全默认值或明确错误。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function validCoordinate(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }
 
+/**
+ * 将 workbookPrint 的 coordinate Key 输入转换为稳定格式，保留后续计算或展示需要的信息。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function coordinateKey(row: number, column: number): string {
   return `${row}:${column}`;
 }
 
+/**
+ * 将 workbookPrint 的 escape Html 输入转换为稳定格式，保留后续计算或展示需要的信息。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')

@@ -110,6 +110,10 @@ onMounted(async () => {
 });
 
 // 获取租户信息
+/**
+ * 查询或读取 index 所需的 get Tenant Info 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getTenantInfo = async () => {
 	if (themeConfig.value.hideTenantForLogin) {
 		return tenantInfo.value;

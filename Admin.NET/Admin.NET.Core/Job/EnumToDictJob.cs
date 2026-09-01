@@ -17,11 +17,17 @@ public class EnumToDictJob : IJob
     private const string DefaultTagType = null;
     private const int OrderOffset = 10;
 
+    /// <summary>初始化 EnumToDictJob 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="scopeFactory">当前方法执行时使用的 scopeFactory 输入值。</param>
     public EnumToDictJob(IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
     }
 
+    /// <summary>执行 EnumToDictJob 的 Execute Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
         var originColor = Console.ForegroundColor;
@@ -29,6 +35,7 @@ public class EnumToDictJob : IJob
         Console.WriteLine($"【{DateTime.Now}】系统枚举转换字典");
 
         using var serviceScope = _scopeFactory.CreateScope();
+        // 第一阶段：构造 ExecuteAsync 当前步骤需要的中间数据和执行参数。
         var db = serviceScope.ServiceProvider.GetRequiredService<ISqlSugarClient>().CopyNew();
 
         var sysEnumService = serviceScope.ServiceProvider.GetRequiredService<SysEnumService>();
@@ -60,6 +67,7 @@ public class EnumToDictJob : IJob
                 .SplitUpdate(it => it.Any())
                 .SplitInsert(_ => true)
                 .ToStorageAsync();
+            // 第2阶段：调用 ExecuteAsync 依赖的异步能力，等待并校验返回数据。
             await storageable2.AsInsertable.ExecuteCommandAsync(stoppingToken);
             await storageable2.AsUpdateable.UpdateColumns(u => new
             {
@@ -87,8 +95,8 @@ public class EnumToDictJob : IJob
     /// <summary>
     /// 用于同步枚举转字典数据
     /// </summary>
-    /// <param name="db"></param>
-    /// <param name="list"></param>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="list">需要遍历、筛选或写入的业务数据集合。</param>
     private async Task SyncEnumToDictInfoAsync(SqlSugarClient db, List<SysDictType> list)
     {
         var codeList = list.Select(x => x.Code).ToList();
@@ -110,11 +118,9 @@ public class EnumToDictJob : IJob
         }
     }
 
-    /// <summary>
-    /// 枚举信息转字典
-    /// </summary>
-    /// <param name="enumTypeList"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 EnumToDictJob 所需的 Get Dict By Enum Type 数据，并按调用约定返回结果。</summary>
+    /// <param name="enumTypeList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private List<SysDictType> GetDictByEnumType(List<EnumTypeOutput> enumTypeList)
     {
         var orderNo = 1;

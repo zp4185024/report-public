@@ -21,6 +21,9 @@ namespace Admin.NET.Plugin.ReZero.Service;
 /// </summary>
 public class SuperApiAop : DefaultSuperApiAop
 {
+    /// <summary>响应 SuperApiAop 的 On Executing Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="aopContext">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task OnExecutingAsync(InterfaceContext aopContext)
     {
         //if (aopContext.InterfaceType == InterfaceType.DynamicApi)
@@ -38,6 +41,9 @@ public class SuperApiAop : DefaultSuperApiAop
         await base.OnExecutingAsync(aopContext);
     }
 
+    /// <summary>响应 SuperApiAop 的 On Executed Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="aopContext">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task OnExecutedAsync(InterfaceContext aopContext)
     {
         InitLogContext(aopContext, LogLevel.Information);
@@ -45,6 +51,9 @@ public class SuperApiAop : DefaultSuperApiAop
         await base.OnExecutedAsync(aopContext);
     }
 
+    /// <summary>响应 SuperApiAop 的 On Error Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="aopContext">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task OnErrorAsync(InterfaceContext aopContext)
     {
         InitLogContext(aopContext, LogLevel.Error);
@@ -55,8 +64,8 @@ public class SuperApiAop : DefaultSuperApiAop
     /// <summary>
     /// 保存超级API接口日志
     /// </summary>
-    /// <param name="aopContext"></param>
-    /// <param name="logLevel"></param>
+    /// <param name="aopContext">本次操作共享的运行上下文。</param>
+    /// <param name="logLevel">logLevel 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private void InitLogContext(InterfaceContext aopContext, LogLevel logLevel)
     {
         var api = aopContext.InterfaceInfo;
@@ -64,6 +73,7 @@ public class SuperApiAop : DefaultSuperApiAop
 
         var accessToken = context.Request.Headers["Authorization"].ToString();
         if (!string.IsNullOrWhiteSpace(accessToken) && accessToken.StartsWith("Bearer "))
+            // 第一阶段：更新 InitLogContext 当前分支对应的业务状态，并保持关联数据一致。
             accessToken = accessToken.Replace("Bearer ", "");
         var claims = JWTEncryption.ReadJwtToken(accessToken)?.Claims;
         var userName = claims?.FirstOrDefault(u => u.Type == ClaimConst.Account)?.Value;
@@ -101,6 +111,7 @@ public class SuperApiAop : DefaultSuperApiAop
             exception = aopContext.Exception == null ? null : JSON.Serialize(aopContext.Exception)
         };
 
+        // 第2阶段：构造 InitLogContext 当前步骤需要的中间数据和执行参数。
         var logger = App.GetRequiredService<ILoggerFactory>().CreateLogger(CommonConst.SysLogCategoryName);
         using var scope = logger.ScopeContext(new Dictionary<object, object> {
             { "loggingMonitor", apiInfo.ToJson() }

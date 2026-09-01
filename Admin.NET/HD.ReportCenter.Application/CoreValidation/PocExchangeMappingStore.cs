@@ -7,11 +7,16 @@ public sealed class PocExchangeMappingStore : ITransient
 {
     private readonly ISqlSugarClient _database;
 
+    /// <summary>初始化 PocExchangeMappingStore 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="database">database 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocExchangeMappingStore(ISqlSugarClient database)
     {
         _database = database;
     }
 
+    /// <summary>查询或读取 PocExchangeMappingStore 所需的 Get Current Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="univerVersion">univerVersion 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocExchangeRuleSet> GetCurrentAsync(string univerVersion)
     {
         if (string.IsNullOrWhiteSpace(univerVersion))
@@ -48,6 +53,9 @@ public sealed class PocExchangeMappingStore : ITransient
             entities.Select(ToRule).ToArray());
     }
 
+    /// <summary>查询或读取 PocExchangeMappingStore 所需的 Find Latest Version Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="univerVersion">univerVersion 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<int> FindLatestVersionAsync(string univerVersion)
     {
         var entity = await _database.Queryable<PocExchangeMapping>()
@@ -57,6 +65,8 @@ public sealed class PocExchangeMappingStore : ITransient
         return entity?.MappingVersion ?? 0;
     }
 
+    /// <summary>调用 PocExchangeMappingStore 的异步依赖完成 Seed Defaults Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task SeedDefaultsAsync()
     {
         // 先检查再插入可避免正常重复读取产生写操作；唯一索引仍负责阻止并发重复种子。
@@ -68,6 +78,10 @@ public sealed class PocExchangeMappingStore : ITransient
         }
     }
 
+    /// <summary>校验 PocExchangeMappingStore 的 Validate 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="rules">rules 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="univerVersion">univerVersion 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="mappingVersion">mappingVersion 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void Validate(
         IReadOnlyCollection<PocExchangeMapping> rules,
         string univerVersion,
@@ -99,6 +113,9 @@ public sealed class PocExchangeMappingStore : ITransient
         }
     }
 
+    /// <summary>将 PocExchangeMappingStore 的 To Rule 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="rule">rule 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExchangeRule ToRule(PocExchangeMapping rule) => new(
         rule.RuleCode,
         rule.Direction,

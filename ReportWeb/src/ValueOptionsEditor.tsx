@@ -8,19 +8,31 @@ interface ValueOptionsEditorProps {
   onClose: () => void;
 }
 
+/**
+ * 按 Value Options Editor 规则筛选 ValueOptionsEditor 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function ValueOptionsEditor({
   title,
   options,
   onChange,
   onClose,
 }: ValueOptionsEditorProps) {
+  /**
+   * 更新 ValueOptionsEditor 的 update 状态，并同步相关业务数据。
+   * @param index - 控制数据范围或位置的数值。
+   * @param patch - patch 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const update = (index: number, patch: Partial<ValueOption>) => {
+    // 第一阶段：遍历 ValueOptionsEditor 当前数据集合，逐项转换并维护处理结果。
     const next = options.map((option, optionIndex) => (
       optionIndex === index ? { ...option, ...patch } : { ...option }
     ));
     onChange(next);
   };
 
+  // 第2阶段：遍历 ValueOptionsEditor 当前数据集合，逐项转换并维护处理结果。
   return (
     <div className="value-options-backdrop" role="presentation">
       <section className="value-options-dialog" role="dialog" aria-modal="true" aria-label={title}>

@@ -15,17 +15,18 @@ public class SysUserMenuService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysUserMenu> _sysUserMenuRep;
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 SysUserMenuService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysUserMenuRep">sysUserMenuRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysUserMenuService(SqlSugarRepository<SysUserMenu> sysUserMenuRep, UserManager userManager)
     {
         _sysUserMenuRep = sysUserMenuRep;
         _userManager = userManager;
     }
 
-    /// <summary>
-    /// 收藏菜单 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysUserMenuService 所需的 Add User Menu 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("收藏菜单")]
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
@@ -42,11 +43,9 @@ public class SysUserMenuService : IDynamicApiController, ITransient
         await _sysUserMenuRep.InsertRangeAsync(menus);
     }
 
-    /// <summary>
-    /// 取消收藏菜单 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysUserMenuService 中与 Delete User Menu 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "DeleteUserMenu"), HttpPost]
     [DisplayName("取消收藏菜单")]
     public async Task DeleteUserMenu(UserMenuInput input)
@@ -57,7 +56,7 @@ public class SysUserMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取当前用户收藏的菜单集合 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取当前用户收藏的菜单集合")]
     public async Task<List<MenuOutput>> GetUserMenuList()
     {
@@ -70,7 +69,7 @@ public class SysUserMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取当前用户收藏的菜单Id集合 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取当前用户收藏的菜单Id集合")]
     public async Task<List<long>> GetUserMenuIdList()
     {
@@ -81,7 +80,7 @@ public class SysUserMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除指定用户的收藏菜单
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task DeleteUserMenuList(long userId)
     {
@@ -91,7 +90,7 @@ public class SysUserMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 批量删除收藏菜单
     /// </summary>
-    /// <param name="ids"></param>
+    /// <param name="ids">ids 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [NonAction]
     public async Task DeleteMenuList(List<long> ids)
     {

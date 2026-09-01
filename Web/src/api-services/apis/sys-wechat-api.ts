@@ -382,6 +382,7 @@ export const SysWechatApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWechatDeleteMessageTemplatePost(body?: DeleteMessageTemplateInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第一阶段：调用 SysWechatApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWechatApiAxiosParamCreator(configuration).apiSysWechatDeleteMessageTemplatePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -413,6 +414,7 @@ export const SysWechatApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysWechatApiAxiosParamCreator(configuration).apiSysWechatGenConfigParaPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysWechatApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -451,6 +453,7 @@ export const SysWechatApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWechatSendTemplateMessagePost(body?: MessageTemplateSendInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第3阶段：调用 SysWechatApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWechatApiAxiosParamCreator(configuration).apiSysWechatSendTemplateMessagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -488,6 +491,7 @@ export const SysWechatApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysWechatDeleteMessageTemplatePost(body?: DeleteMessageTemplateInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultObject>> {
+            // 第一阶段：整理 SysWechatApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWechatApiFp(configuration).apiSysWechatDeleteMessageTemplatePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -527,6 +531,7 @@ export const SysWechatApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysWechatOpenIdLoginPost(body?: WechatUserLogin, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultObject>> {
+            // 第2阶段：整理 SysWechatApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWechatApiFp(configuration).apiSysWechatOpenIdLoginPost(body, options).then((request) => request(axios, basePath));
         },
         /**

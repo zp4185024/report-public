@@ -17,6 +17,9 @@ public class SysMessageService : IDynamicApiController, ITransient
     private readonly SysCacheService _sysCacheService;
     private readonly IHubContext<OnlineUserHub, IOnlineUserHub> _chatHubContext;
 
+    /// <summary>初始化 SysMessageService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="chatHubContext">本次操作共享的运行上下文。</param>
     public SysMessageService(SysCacheService sysCacheService,
         IHubContext<OnlineUserHub, IOnlineUserHub> chatHubContext)
     {
@@ -27,8 +30,8 @@ public class SysMessageService : IDynamicApiController, ITransient
     /// <summary>
     /// 发送消息给所有人 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("发送消息给所有人")]
     public async Task SendAllUser(MessageInput input)
     {
@@ -38,8 +41,8 @@ public class SysMessageService : IDynamicApiController, ITransient
     /// <summary>
     /// 发送消息给除了发送人的其他人 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("发送消息给除了发送人的其他人")]
     public async Task SendOtherUser(MessageInput input)
     {
@@ -51,8 +54,8 @@ public class SysMessageService : IDynamicApiController, ITransient
     /// <summary>
     /// 发送消息给某个人 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("发送消息给某个人")]
     public async Task SendUser(MessageInput input)
     {
@@ -64,8 +67,8 @@ public class SysMessageService : IDynamicApiController, ITransient
     /// <summary>
     /// 发送消息给某些人 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("发送消息给某些人")]
     public async Task SendUsers(MessageInput input)
     {

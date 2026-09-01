@@ -611,6 +611,7 @@ export const SysWxOpenApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWxOpenAddSubscribeMessageTemplatePost(body?: AddSubscribeMessageTemplateInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第一阶段：调用 SysWxOpenApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWxOpenApiAxiosParamCreator(configuration).apiSysWxOpenAddSubscribeMessageTemplatePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -641,6 +642,7 @@ export const SysWxOpenApiFp = function(configuration?: Configuration) {
         async apiSysWxOpenGenerateQRImageUnlimitPost(body?: GenerateQRImageUnLimitInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultGenerateQRImageOutput>>> {
             const localVarAxiosArgs = await SysWxOpenApiAxiosParamCreator(configuration).apiSysWxOpenGenerateQRImageUnlimitPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                // 第2阶段：构造 SysWxOpenApiFp 当前阶段需要的中间数据和执行参数。
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -669,6 +671,7 @@ export const SysWxOpenApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysWxOpenApiAxiosParamCreator(configuration).apiSysWxOpenSendSubscribeMessagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysWxOpenApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -700,6 +703,7 @@ export const SysWxOpenApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysWxOpenApiAxiosParamCreator(configuration).apiSysWxOpenUploadAvatarPostForm(openId, file, fileType, path, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysWxOpenApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -739,6 +743,7 @@ export const SysWxOpenApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWxOpenWxOpenIdLoginPost(body?: WxOpenIdLoginInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第5阶段：调用 SysWxOpenApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWxOpenApiAxiosParamCreator(configuration).apiSysWxOpenWxOpenIdLoginPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -777,6 +782,7 @@ export const SysWxOpenApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysWxOpenAddSubscribeMessageTemplatePost(body?: AddSubscribeMessageTemplateInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultObject>> {
+            // 第一阶段：整理 SysWxOpenApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWxOpenApiFp(configuration).apiSysWxOpenAddSubscribeMessageTemplatePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -816,6 +822,7 @@ export const SysWxOpenApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysWxOpenSendSubscribeMessagePost(body?: SendSubscribeMessageInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultObject>> {
+            // 第2阶段：整理 SysWxOpenApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWxOpenApiFp(configuration).apiSysWxOpenSendSubscribeMessagePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -849,6 +856,7 @@ export const SysWxOpenApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysWxOpenUserInfoOpenidGet(openid: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultObject>> {
+            // 第3阶段：整理 SysWxOpenApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWxOpenApiFp(configuration).apiSysWxOpenUserInfoOpenidGet(openid, options).then((request) => request(axios, basePath));
         },
         /**

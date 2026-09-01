@@ -17,6 +17,10 @@ public partial class WechatApiClientFactory : ISingleton
     public readonly WechatOptions _wechatOptions;
     private readonly SysCacheService _sysCacheService;
 
+    /// <summary>初始化 WechatApiClientFactory 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="httpClientFactory">httpClientFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="wechatOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public WechatApiClientFactory(IHttpClientFactory httpClientFactory, IOptions<WechatOptions> wechatOptions, SysCacheService sysCacheService)
     {
         _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
@@ -24,10 +28,8 @@ public partial class WechatApiClientFactory : ISingleton
         _sysCacheService = sysCacheService;
     }
 
-    /// <summary>
-    /// 微信公众号
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>构建 WechatApiHttpClient 所需的 Create Wechat Client 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public WechatApiClient CreateWechatClient()
     {
         if (string.IsNullOrEmpty(_wechatOptions.WechatAppId) || string.IsNullOrEmpty(_wechatOptions.WechatAppSecret))
@@ -54,10 +56,8 @@ public partial class WechatApiClientFactory : ISingleton
         return client;
     }
 
-    /// <summary>
-    /// 微信小程序
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>构建 WechatApiHttpClient 所需的 Create Wx Open Client 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public WechatApiClient CreateWxOpenClient()
     {
         if (string.IsNullOrEmpty(_wechatOptions.WxOpenAppId) || string.IsNullOrEmpty(_wechatOptions.WxOpenAppSecret))
@@ -87,7 +87,7 @@ public partial class WechatApiClientFactory : ISingleton
     /// <summary>
     /// 获取微信公众号AccessToken
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<string> TryGetWechatAccessTokenAsync()
     {
         if (!_sysCacheService.ExistKey($"WxAccessToken_{_wechatOptions.WechatAppId}") || string.IsNullOrEmpty(_sysCacheService.Get<string>($"WxAccessToken_{_wechatOptions.WechatAppId}")))
@@ -106,7 +106,7 @@ public partial class WechatApiClientFactory : ISingleton
     /// <summary>
     /// 获取微信小程序AccessToken
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<string> TryGetWxOpenAccessTokenAsync()
     {
         if (!_sysCacheService.ExistKey($"WxAccessToken_{_wechatOptions.WxOpenAppId}") || string.IsNullOrEmpty(_sysCacheService.Get<string>($"WxAccessToken_{_wechatOptions.WxOpenAppId}")))
@@ -125,7 +125,7 @@ public partial class WechatApiClientFactory : ISingleton
     /// <summary>
     /// 检查微信公众号AccessToken
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task CheckWechatAccessTokenAsync()
     {
         if (string.IsNullOrEmpty(_wechatOptions.WechatAppId) || string.IsNullOrEmpty(_wechatOptions.WechatAppSecret)) return;
@@ -156,7 +156,7 @@ public partial class WechatApiClientFactory : ISingleton
     /// <summary>
     /// 检查微信小程序AccessToken
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task CheckWxOpenAccessTokenAsync()
     {
         if (string.IsNullOrEmpty(_wechatOptions.WxOpenAppId) || string.IsNullOrEmpty(_wechatOptions.WxOpenAppSecret)) return;
@@ -187,7 +187,7 @@ public partial class WechatApiClientFactory : ISingleton
     /// <summary>
     /// 获取微信JS接口临时票据jsapi_ticket
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<string> TryGetWechatJsApiTicketAsync()
     {
         if (!_sysCacheService.ExistKey($"WxJsApiTicket_{_wechatOptions.WechatAppId}") || string.IsNullOrEmpty(_sysCacheService.Get<string>($"WxJsApiTicket_{_wechatOptions.WechatAppId}")))

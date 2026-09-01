@@ -23,6 +23,11 @@ public class SysWechatPayService : IDynamicApiController, ITransient
 
     private readonly WechatTenpayClient _wechatTenpayClient;
 
+    /// <summary>初始化 SysWechatPayService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysWechatPayUserRep">sysWechatPayUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysWechatRefundRep">sysWechatRefundRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="wechatPayOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="payCallBackOptions">控制本次处理行为的配置选项。</param>
     public SysWechatPayService(SqlSugarRepository<SysWechatPay> sysWechatPayUserRep,
         SqlSugarRepository<SysWechatRefund> sysWechatRefundRep,
         IOptions<WechatPayOptions> wechatPayOptions,
@@ -39,7 +44,7 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 初始化微信支付客户端
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private WechatTenpayClient CreateTenpayClient()
     {
         var cerFilePath = Path.Combine(App.WebHostEnvironment.ContentRootPath, _wechatPayOptions.MerchantCertificatePrivateKey.Replace("/", Path.DirectorySeparatorChar.ToString()));
@@ -58,8 +63,8 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 分页查询支付列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost]
     [ApiDescriptionSettings(Name = "Page")]
     public async Task<SqlSugarPagedList<SysWechatPay>> Page(WechatPayPageInput input)
@@ -74,8 +79,8 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 查询退款信息列表
     /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <param name="id">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost]
     [DisplayName("根据支付id获取退款信息列表")]
     public async Task<List<SysWechatRefund>> ListRefund([FromBody] string id)
@@ -88,8 +93,8 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 生成JSAPI调起支付所需参数 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("生成JSAPI调起支付所需参数")]
     public WechatPayParaOutput GenerateParametersForJsapiPay(WechatPayParaInput input)
     {
@@ -111,6 +116,7 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     [DisplayName("微信支付下单(商户直连)")]
     public async Task<WechatPayTransactionOutput> CreatePayTransaction([FromBody] WechatPayTransactionInput input)
     {
+        // 第一阶段：构造 CreatePayTransaction 当前步骤需要的中间数据和执行参数。
         var request = new CreatePayTransactionJsapiRequest()
         {
             OutTradeNumber = DateTimeOffset.Now.ToString("yyyyMMddHHmmssfff") + (new Random()).Next(100, 1000), // 订单号
@@ -129,6 +135,7 @@ public class SysWechatPayService : IDynamicApiController, ITransient
 
         var singInfo = this.GenerateParametersForJsapiPay(new WechatPayParaInput() { PrepayId = response.PrepayId });
         // 保存订单信息
+        // 第2阶段：构造 CreatePayTransaction 当前步骤需要的中间数据和执行参数。
         var wechatPay = new SysWechatPay()
         {
             AppId = _wechatPayOptions.AppId,
@@ -208,6 +215,7 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     [DisplayName("微信支付下单(服务商模式)")]
     public async Task<dynamic> CreatePayPartnerTransaction([FromBody] WechatPayTransactionInput input)
     {
+        // 第一阶段：构造 CreatePayPartnerTransaction 当前步骤需要的中间数据和执行参数。
         var request = new CreatePayPartnerTransactionJsapiRequest()
         {
             OutTradeNumber = DateTimeOffset.Now.ToString("yyyyMMddHHmmssfff") + (new Random()).Next(100, 1000), // 订单号
@@ -228,6 +236,7 @@ public class SysWechatPayService : IDynamicApiController, ITransient
             throw Oops.Oh(response.ErrorMessage);
         var singInfo = this.GenerateParametersForJsapiPay(new WechatPayParaInput() { PrepayId = response.PrepayId });
         // 保存订单信息
+        // 第2阶段：构造 CreatePayPartnerTransaction 当前步骤需要的中间数据和执行参数。
         var wechatPay = new SysWechatPay()
         {
             AppId = _wechatPayOptions.AppId,
@@ -255,8 +264,8 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取支付订单详情(本地库) 🔖
     /// </summary>
-    /// <param name="tradeId"></param>
-    /// <returns></returns>
+    /// <param name="tradeId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取支付订单详情(本地库)")]
     public async Task<SysWechatPay> GetPayInfo(string tradeId)
     {
@@ -266,8 +275,8 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取支付订单详情(微信接口) 🔖
     /// </summary>
-    /// <param name="tradeId"></param>
-    /// <returns></returns>
+    /// <param name="tradeId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取支付订单详情(微信接口)")]
     public async Task<SysWechatPay> GetPayInfoFromWechat(string tradeId)
     {
@@ -311,11 +320,9 @@ public class SysWechatPayService : IDynamicApiController, ITransient
         return wechatPay;
     }
 
-    /// <summary>
-    /// 退款申请
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysWechatPayService 所需的 Create Refund Domestic 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("退款申请")]
     [HttpPost]
     public async Task<dynamic> CreateRefundDomestic([FromBody] WechatPayRefundDomesticInput input)
@@ -366,8 +373,8 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取退款订单详情(微信接口)
     /// </summary>
-    /// <param name="refundId"></param>
-    /// <returns></returns>
+    /// <param name="refundId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取退款订单详情(微信接口)")]
     public async Task<SysWechatRefund> GetRefundInfoFromWechat(string refundId)
     {
@@ -404,7 +411,7 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 微信支付成功回调(商户直连)
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("微信支付成功回调(商户直连)")]
     public async Task<WechatPayOutput> PayCallBack()
@@ -483,7 +490,7 @@ public class SysWechatPayService : IDynamicApiController, ITransient
     /// <summary>
     /// 微信支付成功回调(服务商模式) 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("微信支付成功回调(服务商模式)")]
     public async Task PayPartnerCallBack()

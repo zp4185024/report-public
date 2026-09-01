@@ -21,7 +21,7 @@ public static class EnumerableExtension
     /// <param name="parentIdExpression">父级字段</param>
     /// <param name="topParentIdValue">顶级节点父级字段值</param>
     /// <param name="isContainOneself">是否包含顶级节点本身</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IEnumerable<T> ToChildList<T, P>(this IEnumerable<T> list,
         Expression<Func<T, P>> idExpression,
         Expression<Func<T, P>> parentIdExpression,
@@ -47,7 +47,7 @@ public static class EnumerableExtension
     /// <param name="parentIdExpression">父级字段</param>
     /// <param name="topLevelPredicate">顶级节点的选择条件</param>
     /// <param name="isContainOneself">是否包含顶级节点本身</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IEnumerable<T> ToChildList<T, P>(this IEnumerable<T> list,
         Expression<Func<T, P>> idExpression,
         Expression<Func<T, P>> parentIdExpression,

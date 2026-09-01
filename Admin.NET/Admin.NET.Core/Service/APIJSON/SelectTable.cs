@@ -18,6 +18,10 @@ public class SelectTable : ISingleton
     private readonly TableMapper _tableMapper;
     private readonly ISqlSugarClient _db;
 
+    /// <summary>初始化 SelectTable 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="identityService">当前方法执行时使用的 identityService 输入值。</param>
+    /// <param name="tableMapper">当前方法执行时使用的 tableMapper 输入值。</param>
+    /// <param name="dbClient">当前方法执行时使用的 dbClient 输入值。</param>
     public SelectTable(IdentityService identityService, TableMapper tableMapper, ISqlSugarClient dbClient)
     {
         _identitySvc = identityService;
@@ -28,8 +32,8 @@ public class SelectTable : ISingleton
     /// <summary>
     /// 判断表名是否正确，若不正确则抛异常
     /// </summary>
-    /// <param name="table"></param>
-    /// <returns></returns>
+    /// <param name="table">当前方法执行时使用的 table 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual bool IsTable(string table)
     {
         return _db.DbMaintenance.GetTableInfoList().Any(it => it.Name.Equals(table, StringComparison.CurrentCultureIgnoreCase))
@@ -40,9 +44,9 @@ public class SelectTable : ISingleton
     /// <summary>
     /// 判断表的列名是否正确,如果不正确则抛异常，更早地暴露给调用方
     /// </summary>
-    /// <param name="table"></param>
-    /// <param name="col"></param>
-    /// <returns></returns>
+    /// <param name="table">当前方法执行时使用的 table 输入值。</param>
+    /// <param name="col">当前方法执行时使用的 col 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual bool IsCol(string table, string col)
     {
         return _db.DbMaintenance.GetColumnInfosByTableName(table).Any(it => it.DbColumnName.Equals(col, StringComparison.CurrentCultureIgnoreCase))
@@ -50,16 +54,14 @@ public class SelectTable : ISingleton
             : throw new Exception($"表【{table}】不存在列【{col}】！请检查输入参数");
     }
 
-    /// <summary>
-    /// 查询列表数据
-    /// </summary>
-    /// <param name="subtable"></param>
-    /// <param name="page"></param>
-    /// <param name="count"></param>
-    /// <param name="query"></param>
-    /// <param name="json"></param>
-    /// <param name="dd"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SelectTable 所需的 Get Table Data 数据，并按调用约定返回结果。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="page">控制数据范围、数量或工作簿坐标的数值。</param>
+    /// <param name="count">控制数据范围、数量或工作簿坐标的数值。</param>
+    /// <param name="query">当前方法执行时使用的 query 输入值。</param>
+    /// <param name="json">当前方法执行时使用的 json 输入值。</param>
+    /// <param name="dd">当前方法执行时使用的 dd 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual Tuple<dynamic, int> GetTableData(string subtable, int page, int count, int query, string json, JObject dd)
     {
         var role = _identitySvc.GetSelectRole(subtable);
@@ -101,23 +103,19 @@ public class SelectTable : ISingleton
         }
     }
 
-    /// <summary>
-    /// 解析并查询
-    /// </summary>
-    /// <param name="queryJson"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SelectTable 所需的 Query 数据，并按调用约定返回结果。</summary>
+    /// <param name="queryJson">当前方法执行时使用的 queryJson 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual JObject Query(string queryJson)
     {
         var queryJobj = JObject.Parse(queryJson);
         return Query(queryJobj);
     }
 
-    /// <summary>
-    /// 单表查询
-    /// </summary>
-    /// <param name="queryObj"></param>
+    /// <summary>查询或读取 SelectTable 所需的 Query Single 数据，并按调用约定返回结果。</summary>
+    /// <param name="queryObj">当前方法执行时使用的 queryObj 输入值。</param>
     /// <param name="nodeName">返回数据的节点名称  默认为 infos</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual JObject QuerySingle(JObject queryObj, string nodeName = "infos")
     {
         var resultObj = new JObject();
@@ -142,11 +140,9 @@ public class SelectTable : ISingleton
         return resultObj;
     }
 
-    /// <summary>
-    /// 获取查询语句
-    /// </summary>
-    /// <param name="queryObj"></param>
-    /// <returns></returns>
+    /// <summary>遍历 SelectTable 当前数据并执行 To Sql 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="queryObj">当前方法执行时使用的 queryObj 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual string ToSql(JObject queryObj)
     {
         foreach (var item in queryObj)
@@ -157,11 +153,9 @@ public class SelectTable : ISingleton
         return string.Empty;
     }
 
-    /// <summary>
-    /// 解析并查询
-    /// </summary>
-    /// <param name="queryObj"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SelectTable 所需的 Query 数据，并按调用约定返回结果。</summary>
+    /// <param name="queryObj">当前方法执行时使用的 queryObj 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public virtual JObject Query(JObject queryObj)
     {
         var resultObj = new JObject();
@@ -199,6 +193,11 @@ public class SelectTable : ISingleton
     }
 
     // 动态调用方法
+    /// <summary>根据 SelectTable 当前输入计算 Exec Func 结果，并按方法声明的类型返回。</summary>
+    /// <param name="funcname">需要读取、校验或转换的业务值。</param>
+    /// <param name="param">本次操作使用的输入数据。</param>
+    /// <param name="types">当前方法执行时使用的 types 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static object ExecFunc(string funcname, object[] param, Type[] types)
     {
         var method = typeof(FuncList).GetMethod(funcname);
@@ -208,6 +207,13 @@ public class SelectTable : ISingleton
     }
 
     // 生成sql
+    /// <summary>根据 SelectTable 当前输入计算 To Sql 结果，并按方法声明的类型返回。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="page">控制数据范围或位置的数值。</param>
+    /// <param name="count">控制数据范围或位置的数值。</param>
+    /// <param name="query">当前方法执行时使用的 query 输入值。</param>
+    /// <param name="json">当前方法执行时使用的 json 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private string ToSql(string subtable, int page, int count, int query, string json)
     {
         var values = JObject.Parse(json);
@@ -222,13 +228,11 @@ public class SelectTable : ISingleton
         return sqlObj.Key;
     }
 
-    /// <summary>
-    /// 查询第一条数据
-    /// </summary>
-    /// <param name="subtable"></param>
-    /// <param name="json"></param>
-    /// <param name="job"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SelectTable 所需的 Get First Data 数据，并按调用约定返回结果。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="json">当前方法执行时使用的 json 输入值。</param>
+    /// <param name="job">当前方法执行时使用的 job 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <exception cref="Exception"></exception>
     private dynamic GetFirstData(string subtable, string json, JObject job)
     {
@@ -264,6 +268,11 @@ public class SelectTable : ISingleton
     }
 
     // 单表查询,返回的数据在指定的NodeName节点
+    /// <summary>查询或读取 SelectTable 所需的 Query Single List 数据，并按调用约定返回结果。</summary>
+    /// <param name="resultObj">当前方法执行时使用的 resultObj 输入值。</param>
+    /// <param name="item">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="nodeName">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private int QuerySingleList(JObject resultObj, KeyValuePair<string, JToken> item, string nodeName)
     {
         var key = item.Key.Trim();
@@ -297,6 +306,9 @@ public class SelectTable : ISingleton
     }
 
     // 生成sql
+    /// <summary>遍历 SelectTable 当前数据并执行 To Sql 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="item">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private string ToSql(KeyValuePair<string, JToken> item)
     {
         var jb = JObject.Parse(item.Value.ToString());
@@ -313,18 +325,20 @@ public class SelectTable : ISingleton
     }
 
     // 单表查询
+    /// <summary>查询或读取 SelectTable 所需的 Query Single List 数据，并按调用约定返回结果。</summary>
+    /// <param name="resultObj">当前方法执行时使用的 resultObj 输入值。</param>
+    /// <param name="item">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private int QuerySingleList(JObject resultObj, KeyValuePair<string, JToken> item)
     {
         var key = item.Key.TrimEnd("[]");
         return QuerySingleList(resultObj, item, key);
     }
 
-    /// <summary>
-    /// 多列表查询
-    /// </summary>
-    /// <param name="resultObj"></param>
-    /// <param name="item"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SelectTable 所需的 Query More List 数据，并按调用约定返回结果。</summary>
+    /// <param name="resultObj">当前方法执行时使用的 resultObj 输入值。</param>
+    /// <param name="item">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private int QueryMoreList(JObject resultObj, KeyValuePair<string, JToken> item)
     {
         int total = 0;
@@ -396,6 +410,9 @@ public class SelectTable : ISingleton
     }
 
     // 执行方法
+    /// <summary>遍历 SelectTable 当前数据并执行 Exec Func 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="resultObj">当前方法执行时使用的 resultObj 输入值。</param>
+    /// <param name="item">需要遍历、筛选或写入的业务数据集合。</param>
     private void ExecFunc(JObject resultObj, KeyValuePair<string, JToken> item)
     {
         var jb = JObject.Parse(item.Value.ToString());
@@ -415,14 +432,12 @@ public class SelectTable : ISingleton
         resultObj.Add("func", dataJObj);
     }
 
-    /// <summary>
-    /// 构造查询过程
-    /// </summary>
-    /// <param name="subtable"></param>
-    /// <param name="selectrole"></param>
-    /// <param name="values"></param>
-    /// <param name="dd"></param>
-    /// <returns></returns>
+    /// <summary>遍历 SelectTable 当前数据并执行 Sugar Queryable 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="selectrole">当前方法执行时使用的 selectrole 输入值。</param>
+    /// <param name="values">当前方法执行时使用的 values 输入值。</param>
+    /// <param name="dd">当前方法执行时使用的 dd 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private ISugarQueryable<ExpandoObject> SugarQueryable(string subtable, string selectrole, JObject values, JObject dd)
     {
         IsTable(subtable);
@@ -458,6 +473,11 @@ public class SelectTable : ISingleton
     }
 
     // 处理字段重命名 "@column":"toId:parentId"，对应SQL是toId AS parentId，将查询的字段toId变为parentId返回
+    /// <summary>执行 SelectTable 的 Process Column 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="selectrole">当前方法执行时使用的 selectrole 输入值。</param>
+    /// <param name="values">当前方法执行时使用的 values 输入值。</param>
+    /// <param name="tb">当前方法执行时使用的 tb 输入值。</param>
     private void ProcessColumn(string subtable, string selectrole, JObject values, ISugarQueryable<ExpandoObject> tb)
     {
         var str = new System.Text.StringBuilder(100);
@@ -503,10 +523,10 @@ public class SelectTable : ISingleton
     /// <summary>
     /// 构造查询条件 where
     /// </summary>
-    /// <param name="subtable"></param>
-    /// <param name="values"></param>
-    /// <param name="tb"></param>
-    /// <param name="dd"></param>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="values">当前方法执行时使用的 values 输入值。</param>
+    /// <param name="tb">当前方法执行时使用的 tb 输入值。</param>
+    /// <param name="dd">当前方法执行时使用的 dd 输入值。</param>
     private void ProcessWhere(string subtable, JObject values, ISugarQueryable<ExpandoObject> tb, JObject dd)
     {
         var conModels = new List<IConditionalModel>();
@@ -514,6 +534,7 @@ public class SelectTable : ISingleton
             conModels.Add(new ConditionalModel() { FieldName = values["identity"].ToString(), ConditionalType = ConditionalType.Equal, FieldValue = _identitySvc.GetUserIdentity() });
 
         foreach (var va in values)
+        // 第一阶段：执行 ProcessWhere 当前分支的数据转换，并保存该步骤产生的中间结果。
         {
             string key = va.Key.Trim();
             string fieldValue = va.Value.ToString();
@@ -539,6 +560,7 @@ public class SelectTable : ISingleton
                     continue;
 
                 var str = fieldValue.Split('/');
+                // 第2阶段：构造 ProcessWhere 当前步骤需要的中间数据和执行参数。
                 var lastTableRecord = ((JObject)dd[str[^2]]);
                 if (!lastTableRecord.ContainsKey(str[^1]))
                     throw new Exception($"找不到关联列:{str}，请在{str[^2]}@column中设置");
@@ -561,6 +583,9 @@ public class SelectTable : ISingleton
 
     // "@having":"function0(...)?value0;function1(...)?value1;function2(...)?value2..."，
     // SQL函数条件，一般和 @group一起用，函数一般在 @column里声明
+    /// <summary>执行 SelectTable 的 Process Having 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="values">当前方法执行时使用的 values 输入值。</param>
+    /// <param name="tb">当前方法执行时使用的 tb 输入值。</param>
     private static void ProcessHaving(JObject values, ISugarQueryable<ExpandoObject> tb)
     {
         if (!values["@having"].IsNullOrEmpty())
@@ -626,6 +651,10 @@ public class SelectTable : ISingleton
     // "@group":"column0,column1..."，分组方式。如果 @column里声明了Table的id，则id也必须在 @group中声明；其它情况下必须满足至少一个条件:
     // 1.分组的key在 @column里声明
     // 2.Table主键在 @group中声明
+    /// <summary>遍历 SelectTable 当前数据并执行 Prccess Group 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="values">当前方法执行时使用的 values 输入值。</param>
+    /// <param name="tb">当前方法执行时使用的 tb 输入值。</param>
     private void PrccessGroup(string subtable, JObject values, ISugarQueryable<ExpandoObject> tb)
     {
         if (!values["@group"].IsNullOrEmpty())
@@ -645,6 +674,10 @@ public class SelectTable : ISingleton
     }
 
     // 处理排序 "@order":"name-,id"查询按 name降序、id默认顺序 排序的User数组
+    /// <summary>执行 SelectTable 的 Process Order 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="values">当前方法执行时使用的 values 输入值。</param>
+    /// <param name="tb">当前方法执行时使用的 tb 输入值。</param>
     private void ProcessOrder(string subtable, JObject values, ISugarQueryable<ExpandoObject> tb)
     {
         if (!values["@order"].IsNullOrEmpty())
@@ -671,8 +704,8 @@ public class SelectTable : ISingleton
     /// <summary>
     /// 表内参数"@count"(int)：查询前几行，不能同时使用count和@count函数
     /// </summary>
-    /// <param name="values"></param>
-    /// <param name="tb"></param>
+    /// <param name="values">当前方法执行时使用的 values 输入值。</param>
+    /// <param name="tb">当前方法执行时使用的 tb 输入值。</param>
     private static void ProcessLimit(JObject values, ISugarQueryable<ExpandoObject> tb)
     {
         if (!values["@count"].IsNullOrEmpty())
@@ -688,6 +721,10 @@ public class SelectTable : ISingleton
     // ① & 可用于"key&{}":"条件"等
     // ② | 可用于"key|{}":"条件", "key|{}":[] 等，一般可省略
     // ③ ! 可单独使用，如"key!":Object，也可像&,|一样配合其他功能符使用
+    /// <summary>遍历 SelectTable 当前数据并执行 Condition Query 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="conModels">当前方法执行时使用的 conModels 输入值。</param>
+    /// <param name="va">当前方法执行时使用的 va 输入值。</param>
     private void ConditionQuery(string subtable, List<IConditionalModel> conModels, KeyValuePair<string, JToken> va)
     {
         var vakey = va.Key.Trim();
@@ -732,10 +769,10 @@ public class SelectTable : ISingleton
     /// "key%":"start,end" => "key%":["start,end"]，其中 start 和 end 都只能为 Boolean, Number, String 中的一种，如 "2017-01-01,2019-01-01" ，["1,90000", "82001,100000"] ，可用于连续范围内的筛选
     /// 目前不支持数组形式
     /// </summary>
-    /// <param name="subtable"></param>
-    /// <param name="conModels"></param>
-    /// <param name="va"></param>
-    /// <param name="tb"></param>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="conModels">当前方法执行时使用的 conModels 输入值。</param>
+    /// <param name="va">当前方法执行时使用的 va 输入值。</param>
+    /// <param name="tb">当前方法执行时使用的 tb 输入值。</param>
     private static void ConditionBetween(string subtable, List<IConditionalModel> conModels, KeyValuePair<string, JToken> va, ISugarQueryable<ExpandoObject> tb)
     {
         var vakey = va.Key.Trim();
@@ -768,9 +805,9 @@ public class SelectTable : ISingleton
     /// <summary>
     /// 等于、不等于、in 、not in
     /// </summary>
-    /// <param name="subtable"></param>
-    /// <param name="conModels"></param>
-    /// <param name="va"></param>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="conModels">当前方法执行时使用的 conModels 输入值。</param>
+    /// <param name="va">当前方法执行时使用的 va 输入值。</param>
     private void ConditionEqual(string subtable, List<IConditionalModel> conModels, KeyValuePair<string, JToken> va)
     {
         var key = va.Key;
@@ -815,6 +852,10 @@ public class SelectTable : ISingleton
     }
 
     // 模糊搜索  "key$":"SQL搜索表达式" => "key$":["SQL搜索表达式"]，任意SQL搜索表达式字符串，如 %key%(包含key), key%(以key开始), %k%e%y%(包含字母k,e,y) 等，%表示任意字符
+    /// <summary>根据 SelectTable 当前输入执行 Fuzzy Query 规则，更新关联状态并返回该操作产生的结果。</summary>
+    /// <param name="subtable">当前方法执行时使用的 subtable 输入值。</param>
+    /// <param name="conModels">当前方法执行时使用的 conModels 输入值。</param>
+    /// <param name="va">当前方法执行时使用的 va 输入值。</param>
     private void FuzzyQuery(string subtable, List<IConditionalModel> conModels, KeyValuePair<string, JToken> va)
     {
         var vakey = va.Key.Trim();
@@ -840,6 +881,9 @@ public class SelectTable : ISingleton
     }
 
     // 处理sql注入
+    /// <summary>根据 SelectTable 当前输入计算 Replace SQLChar 结果，并按方法声明的类型返回。</summary>
+    /// <param name="str">当前方法执行时使用的 str 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private string ReplaceSQLChar(string str)
     {
         if (string.IsNullOrWhiteSpace(str))
@@ -876,12 +920,10 @@ public class SelectTable : ISingleton
         return str;
     }
 
-    /// <summary>
-    /// 单条插入
-    /// </summary>
-    /// <param name="tableName"></param>
-    /// <param name="cols"></param>
-    /// <param name="role"></param>
+    /// <summary>遍历 SelectTable 当前数据并执行 Insert Single 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="tableName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="cols">当前方法执行时使用的 cols 输入值。</param>
+    /// <param name="role">当前方法执行时使用的 role 输入值。</param>
     /// <returns>（各种类型的）id</returns>
     public object InsertSingle(string tableName, JObject cols, APIJSON_Role role = null)
     {
@@ -914,10 +956,10 @@ public class SelectTable : ISingleton
     /// <summary>
     /// 为每天记录创建udpate sql
     /// </summary>
-    /// <param name="tableName"></param>
-    /// <param name="record"></param>
-    /// <param name="role"></param>
-    /// <returns></returns>
+    /// <param name="tableName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="record">当前方法执行时使用的 record 输入值。</param>
+    /// <param name="role">当前方法执行时使用的 role 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public int UpdateSingleRecord(string tableName, JObject record, APIJSON_Role role = null)
     {
         role ??= _identitySvc.GetRole();
@@ -955,10 +997,10 @@ public class SelectTable : ISingleton
     /// <summary>
     /// 更新单表，支持同表多条记录
     /// </summary>
-    /// <param name="tableName"></param>
-    /// <param name="records"></param>
-    /// <param name="role"></param>
-    /// <returns></returns>
+    /// <param name="tableName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="records">当前方法执行时使用的 records 输入值。</param>
+    /// <param name="role">当前方法执行时使用的 role 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public int UpdateSingleTable(string tableName, JToken records, APIJSON_Role role = null)
     {
         role ??= _identitySvc.GetRole();

@@ -14,6 +14,8 @@ public class SysCodeGenConfigService : IDynamicApiController, ITransient
 {
     private readonly ISqlSugarClient _db;
 
+    /// <summary>初始化 SysCodeGenConfigService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
     public SysCodeGenConfigService(ISqlSugarClient db)
     {
         _db = db;
@@ -22,8 +24,8 @@ public class SysCodeGenConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取代码生成配置列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取代码生成配置列表")]
     public async Task<List<CodeGenConfig>> GetList([FromQuery] CodeGenConfig input)
     {
@@ -42,8 +44,8 @@ public class SysCodeGenConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新代码生成配置 🔖
     /// </summary>
-    /// <param name="inputList"></param>
-    /// <returns></returns>
+    /// <param name="inputList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新代码生成配置")]
     public async Task UpdateCodeGenConfig(List<CodeGenConfig> inputList)
@@ -61,8 +63,8 @@ public class SysCodeGenConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除代码生成配置
     /// </summary>
-    /// <param name="codeGenId"></param>
-    /// <returns></returns>
+    /// <param name="codeGenId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task DeleteCodeGenConfig(long codeGenId)
     {
@@ -72,8 +74,8 @@ public class SysCodeGenConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取代码生成配置详情 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取代码生成配置详情")]
     public async Task<SysCodeGenConfig> GetDetail([FromQuery] CodeGenConfig input)
     {
@@ -83,8 +85,8 @@ public class SysCodeGenConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 批量增加代码生成配置
     /// </summary>
-    /// <param name="tableColumnOutputList"></param>
-    /// <param name="codeGenerate"></param>
+    /// <param name="tableColumnOutputList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="codeGenerate">当前方法执行时使用的 codeGenerate 输入值。</param>
     [NonAction]
     public void AddList(List<ColumnOuput> tableColumnOutputList, SysCodeGen codeGenerate)
     {
@@ -150,8 +152,8 @@ public class SysCodeGenConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 批量更新代码字段:先删除再新增，会保留历史字段操作类型
     /// </summary>
-    /// <param name="tableColumnOutputList"></param>
-    /// <param name="codeGenId"></param>
+    /// <param name="tableColumnOutputList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="codeGenId">需要查询、更新或删除的业务记录标识。</param>
     [NonAction]
     public async Task UpdateList(List<ColumnOuput> tableColumnOutputList, long codeGenId)
     {
@@ -239,11 +241,9 @@ public class SysCodeGenConfigService : IDynamicApiController, ITransient
         provider.Insertable(codeGenConfigs).ExecuteCommand();
     }
 
-    /// <summary>
-    /// 默认查询类型
-    /// </summary>
-    /// <param name="codeGenConfig"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysCodeGenConfigService 所需的 Get Default Query Type 数据，并按调用约定返回结果。</summary>
+    /// <param name="codeGenConfig">控制本次调用行为、超时或展示方式的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetDefaultQueryType(SysCodeGenConfig codeGenConfig)
     {
         return (codeGenConfig.NetType?.TrimEnd('?')) switch

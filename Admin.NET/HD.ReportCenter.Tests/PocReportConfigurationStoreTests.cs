@@ -15,6 +15,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
     private readonly PocDataAssetService _dataAssetService;
     private readonly PocReportConfigurationService _configurationService;
 
+    /// <summary>初始化 PocReportConfigurationStoreTests 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocReportConfigurationStoreTests()
     {
         _database = new SqlSugarClient(new ConnectionConfig
@@ -26,6 +27,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             ConfigureExternalServices = new ConfigureExternalServices
             {
                 EntityService = (property, column) =>
+                // 第一阶段：根据 PocReportConfigurationStoreTests 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 {
                     if (new NullabilityInfoContext().Create(property).WriteState is NullabilityState.Nullable)
                     {
@@ -59,6 +61,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         _store = new PocReportConfigurationStore(_database);
         _dataAssetStore = new PocDataAssetStore(_database);
         _dataAssetService = new PocDataAssetService(_dataAssetStore);
+        // 第2阶段：更新 PocReportConfigurationStoreTests 当前分支对应的业务状态，并保持关联数据一致。
         _configurationService = new PocReportConfigurationService(
             _store,
             _dataAssetStore,
@@ -89,6 +92,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         }).ExecuteCommand();
     }
 
+    /// <summary>验证 Configuration entities use production table names 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Configuration_entities_use_production_table_names()
     {
@@ -98,6 +102,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.True(_database.DbMaintenance.IsAnyTable("RcReportParameter", false));
     }
 
+    /// <summary>验证 Save Async Inserts And Reads Whole Configuration Graph 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task SaveAsync_InsertsAndReadsWholeConfigurationGraph()
     {
@@ -116,6 +122,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal(new[] { "hospitalId", "startDate" }, stored.Parameters.Select(item => item.Code));
     }
 
+    /// <summary>验证 Save Async Updates By Revision And Replaces Parameters 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task SaveAsync_UpdatesByRevisionAndReplacesParameters()
     {
@@ -137,6 +145,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("deptId", Assert.Single(stored.Parameters).Code);
     }
 
+    /// <summary>验证 Save Async Rejects Stale Revision Without Partial Writes 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task SaveAsync_RejectsStaleRevisionWithoutPartialWrites()
     {
@@ -151,6 +161,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal(2, stored.Parameters.Count);
     }
 
+    /// <summary>验证 Data assets are saved independently and dataset is reusable 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Data_assets_are_saved_independently_and_dataset_is_reusable()
     {
@@ -180,6 +192,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("共享工作量明细", (await _dataAssetStore.GetDatasetAsync("detail"))!.Name);
     }
 
+    /// <summary>验证 Dataset references return every report using the shared dataset 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Dataset_references_return_every_report_using_the_shared_dataset()
     {
@@ -198,6 +212,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.All(references, item => Assert.True(item.Enabled));
     }
 
+    /// <summary>验证 Report list combines report and template revisions 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Report_list_combines_report_and_template_revisions()
     {
@@ -229,6 +245,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.NotNull(outpatient.UpdatedAt);
     }
 
+    /// <summary>验证 Configuration service reads the report selected from the list 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Configuration_service_reads_the_report_selected_from_the_list()
     {
@@ -246,6 +264,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("detail", document.DatasetCode);
     }
 
+    /// <summary>验证 Create Async creates report and parameters from the selected dataset 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task CreateAsync_creates_report_and_parameters_from_the_selected_dataset()
     {
@@ -269,6 +289,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             item => item.ReportCode == "outpatient-log");
     }
 
+    /// <summary>验证 Create Async rejects an existing report code 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task CreateAsync_rejects_an_existing_report_code()
     {
@@ -288,6 +310,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             item => item.ReportCode == "outpatient-log");
     }
 
+    /// <summary>验证 Configuration service persists parameter options and field presentations separately 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Configuration_service_persists_parameter_options_and_field_presentations_separately()
     {
@@ -299,6 +323,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             })
             .Where(dataset => dataset.Code == "detail")
             .ExecuteCommand();
+        // 第一阶段：构造 Configuration_service_persists_parameter_options_and_field_presentations_separately 当前步骤需要的中间数据和执行参数。
         var parameterOptions = new[]
         {
             new PocValueOption("M", "男性条件"),
@@ -336,6 +361,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
                 0,
                 [new PocFieldPresentationDefinition("GENDER_CODE", fieldMappings)]));
 
+        // 第2阶段：构造 Configuration_service_persists_parameter_options_and_field_presentations_separately 当前步骤需要的中间数据和执行参数。
         var parameter = Assert.Single(document.Parameters);
         Assert.Equal("男性条件", parameter.Options![0].Label);
         var presentation = Assert.Single(document.FieldPresentations!);
@@ -346,6 +372,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Contains("男", stored.Report.FieldPresentationsJson);
     }
 
+    /// <summary>验证 Share protection password is hashed and preserved when configuration changes 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Share_protection_password_is_hashed_and_preserved_when_configuration_changes()
     {
@@ -381,6 +409,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             password));
     }
 
+    /// <summary>验证 Date control with string dataset type supports dynamic default 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Date_control_with_string_dataset_type_supports_dynamic_default()
     {
@@ -418,6 +448,10 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("2026-08-17", dateParameter.DefaultValue);
     }
 
+    /// <summary>验证 Calendar period control formats dynamic default 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="controlType">controlType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="expected">expected 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Theory]
     [InlineData("month", "2026-08")]
     [InlineData("year", "2026")]
@@ -457,6 +491,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal(expected, parameter.DefaultValue);
     }
 
+    /// <summary>验证 Share protection cannot be enabled without an unlock password 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Share_protection_cannot_be_enabled_without_an_unlock_password()
     {
@@ -470,6 +506,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("SHARE_PROTECTION_PASSWORD_REQUIRED", exception.Code);
     }
 
+    /// <summary>验证 Newly created report gets its own editable initial template 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Newly_created_report_gets_its_own_editable_initial_template()
     {
@@ -491,6 +529,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("hospitalId", binding.Code);
     }
 
+    /// <summary>验证 Report create options only include enabled datasets 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Report_create_options_only_include_enabled_datasets()
     {
@@ -504,6 +544,11 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Empty(options.Datasets);
     }
 
+    /// <summary>验证 Data source round trips supported database types 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="port">port 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Theory]
     [InlineData("SqlServer", "source_sqlserver", 1433)]
     [InlineData("Oracle", "source_oracle", 1521)]
@@ -539,6 +584,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal(dbType, (await _dataAssetStore.GetDataSourceAsync(code))!.DbType);
     }
 
+    /// <summary>验证 Data source rejects an unsupported database type 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Data_source_rejects_an_unsupported_database_type()
     {
@@ -562,6 +609,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("DATA_SOURCE_TYPE_UNSUPPORTED", exception.Code);
     }
 
+    /// <summary>验证 Data source preserves password whitespace 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Data_source_preserves_password_whitespace()
     {
@@ -588,6 +637,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal(password, endpoint.Password);
     }
 
+    /// <summary>验证 Database provider returns oracle error without wrapper details 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Database_provider_returns_oracle_error_without_wrapper_details()
     {
@@ -602,6 +652,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.DoesNotContain("ConnectionString", message);
     }
 
+    /// <summary>验证 Database provider recognizes database errors nested in wrappers 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Database_provider_recognizes_database_errors_nested_in_wrappers()
     {
@@ -613,6 +664,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Contains("MySQL 1045", PocDatabaseProvider.GetSafeConnectionError(exception));
     }
 
+    /// <summary>验证 Database provider extracts mysql access denied from sqlsugar message 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Database_provider_extracts_mysql_access_denied_from_sqlsugar_message()
     {
@@ -630,9 +682,15 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
 
     private sealed class TestDatabaseException : System.Data.Common.DbException
     {
+        /// <summary>初始化 TestDatabaseException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+        /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
         public TestDatabaseException(string message) : base(message) { }
     }
 
+    /// <summary>验证 Database provider uses the expected default port and paging dialect 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="defaultPort">defaultPort 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="pagingClause">pagingClause 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("SqlServer", 1433, "OFFSET @rcPageOffset ROWS FETCH NEXT @rcPageTake ROWS ONLY")]
     [InlineData("Oracle", 1521, "OFFSET @rcPageOffset ROWS FETCH NEXT @rcPageTake ROWS ONLY")]
@@ -649,6 +707,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             PocDatabaseProvider.BuildPagedQuery(dbType, "SELECT 1 ORDER BY 1"));
     }
 
+    /// <summary>验证 Data asset save rejects stale revision 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Data_asset_save_rejects_stale_revision()
     {
@@ -667,6 +727,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("明细", (await _dataAssetStore.GetDatasetAsync("detail"))!.Name);
     }
 
+    /// <summary>验证 Dataset parameter extraction ignores string literals 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Dataset_parameter_extraction_ignores_string_literals()
     {
@@ -676,6 +737,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal(["deptId"], parameters);
     }
 
+    /// <summary>验证 Dataset parameter extraction also enforces read only sql 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Dataset_parameter_extraction_also_enforces_read_only_sql()
     {
@@ -685,6 +747,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
     }
 
+    /// <summary>验证 Dataset preview requires every referenced parameter 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Dataset_preview_requires_every_referenced_parameter()
     {
@@ -696,6 +760,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("DATASET_PREVIEW_PARAMETER_REQUIRED", exception.Code);
     }
 
+    /// <summary>验证 Dataset preview rejects mutating sql before connecting 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Dataset_preview_rejects_mutating_sql_before_connecting()
     {
@@ -712,6 +778,7 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("DATASET_QUERY_NOT_READ_ONLY", exception.Code);
     }
 
+    /// <summary>验证 Legacy dataset schema infers variables and drops excel formula fields 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Legacy_dataset_schema_infers_variables_and_drops_excel_formula_fields()
     {
@@ -734,6 +801,8 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("医院", field.DisplayName);
     }
 
+    /// <summary>验证 Report configuration requires a value binding for each dataset variable 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Report_configuration_requires_a_value_binding_for_each_dataset_variable()
     {
@@ -759,12 +828,16 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.Equal("DATASET_PARAMETER_UNMAPPED", exception.Code);
     }
 
+    /// <summary>释放 PocReportConfigurationStoreTests 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _database.Dispose();
         SqliteConnection.ClearAllPools();
     }
 
+    /// <summary>构建 PocReportConfigurationStoreTests 所需的 Create Mutation 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="revision">revision 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocReportConfigurationMutation CreateMutation(int revision) =>
         new(
             "dept-workload",
@@ -776,6 +849,10 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             [Parameter("hospitalId", 0), Parameter("startDate", 1)],
             revision);
 
+    /// <summary>构建 PocReportConfigurationStoreTests 所需的 Create Save Request 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="revision">revision 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="protection">protection 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocSaveReportConfigurationRequest CreateSaveRequest(
         int revision,
         PocSaveShareProtectionRequest protection) =>
@@ -803,6 +880,10 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
             [],
             protection);
 
+    /// <summary>负责 PocReportConfigurationStoreTests 的 Parameter 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="order">order 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocReportParameter Parameter(string code, int order) => new()
     {
         Code = code,

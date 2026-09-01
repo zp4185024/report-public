@@ -51,7 +51,7 @@ public sealed class AlipayOptions : IConfigurableOptions
     /// <summary>
     /// 获取支付宝客户端
     /// </summary>
-    /// <param name="account"></param>
+    /// <param name="account">控制数据范围、数量或工作簿坐标的数值。</param>
     public DefaultAopClient GetClient(AlipayMerchantAccount account)
     {
         account = account ?? throw new Exception("未找到支付宝商户账号");

@@ -14,26 +14,24 @@ public class BaseService<TEntity> : IDynamicApiController where TEntity : class,
 {
     private readonly SqlSugarRepository<TEntity> _rep;
 
+    /// <summary>初始化 BaseService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="rep">当前方法执行时使用的 rep 输入值。</param>
     public BaseService(SqlSugarRepository<TEntity> rep)
     {
         _rep = rep;
     }
 
-    /// <summary>
-    /// 获取详情 🔖
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 BaseService 所需的 Get Detail 数据，并按调用约定返回结果。</summary>
+    /// <param name="id">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取详情")]
     public virtual async Task<TEntity> GetDetail(long id)
     {
         return await _rep.GetByIdAsync(id);
     }
 
-    /// <summary>
-    /// 获取集合 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 BaseService 所需的 Get List 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取集合")]
     public virtual async Task<List<TEntity>> GetList()
     {
@@ -52,11 +50,9 @@ public class BaseService<TEntity> : IDynamicApiController where TEntity : class,
     //    return await _rep.AsQueryable().ToPagedListAsync(input.Page, input.PageSize);
     //}
 
-    /// <summary>
-    /// 增加 🔖
-    /// </summary>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <summary>构建 BaseService 所需的 Add 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加")]
     public virtual async Task<bool> Add(TEntity entity)
@@ -64,11 +60,9 @@ public class BaseService<TEntity> : IDynamicApiController where TEntity : class,
         return await _rep.InsertAsync(entity);
     }
 
-    /// <summary>
-    /// 更新 🔖
-    /// </summary>
-    /// <param name="entity"></param>
-    /// <returns></returns>
+    /// <summary>更新 BaseService 的 Update 状态，并同步相关业务数据。</summary>
+    /// <param name="entity">当前方法执行时使用的 entity 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新")]
     public virtual async Task<int> Update(TEntity entity)
@@ -76,11 +70,9 @@ public class BaseService<TEntity> : IDynamicApiController where TEntity : class,
         return await _rep.AsUpdateable(entity).IgnoreColumns(true).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除 🔖
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <summary>移除 BaseService 中与 Delete 对应的数据，并清理关联状态。</summary>
+    /// <param name="id">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除")]
     public virtual async Task<bool> Delete(long id)

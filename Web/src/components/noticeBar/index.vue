@@ -47,6 +47,10 @@ onMounted(() => {
 });
 
 // 初始化动画
+/**
+ * 初始化 index 的 init Animation 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initAnimation = () => {
 	nextTick(() => {
 		if (noticeBarWarpRef.value && noticeBarTextRef.value) {
@@ -75,6 +79,10 @@ const initAnimation = () => {
 };
 
 // 右侧 icon 图标点击
+/**
+ * 响应 index 的 on Right Icon Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onRightIconClick = () => {
 	if (!props.mode) return false;
 	if (props.mode === 'closeable') {

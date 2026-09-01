@@ -26,6 +26,9 @@ public sealed class CacheOptions : IConfigurableOptions<CacheOptions>
     /// </summary>
     public RedisOption Redis { get; set; }
 
+    /// <summary>根据 CacheOptions 当前输入执行 Post Configure 规则，更新关联状态并返回该操作产生的结果。</summary>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <param name="configuration">控制本次调用行为、超时或展示方式的配置选项。</param>
     public void PostConfigure(CacheOptions options, IConfiguration configuration)
     {
         options.Prefix = string.IsNullOrWhiteSpace(options.Prefix) ? "" : options.Prefix.Trim();

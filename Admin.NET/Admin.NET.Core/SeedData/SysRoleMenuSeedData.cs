@@ -11,10 +11,8 @@ namespace Admin.NET.Core;
 /// </summary>
 public class SysRoleMenuSeedData : ISqlSugarEntitySeedData<SysRoleMenu>
 {
-    /// <summary>
-    /// 种子数据
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>校验 SysRoleMenuSeedData 的 Has Data 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IEnumerable<SysRoleMenu> HasData()
     {
         var roleMenuList = new List<SysRoleMenu>();

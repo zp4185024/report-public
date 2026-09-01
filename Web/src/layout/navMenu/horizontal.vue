@@ -45,6 +45,10 @@ const props = defineProps({
 	// 菜单列表
 	menuList: {
 		type: Array<RouteRecordRaw>,
+		/**
+		 * 为 menuList 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
 	},
 });
@@ -64,6 +68,11 @@ const menuLists = computed(() => {
 	return <RouteItems>props.menuList;
 });
 // 路由过滤递归函数
+/**
+ * 按 filter Routes Fun 规则筛选 horizontal 数据，并返回满足条件的结果。
+ * @param arr - arr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const filterRoutesFun = <T extends RouteItem>(arr: T[]): T[] => {
 	return arr
 		.filter((item: T) => !item.meta?.isHide)
@@ -74,6 +83,11 @@ const filterRoutesFun = <T extends RouteItem>(arr: T[]): T[] => {
 		});
 };
 // 传送当前子级数据到菜单中
+/**
+ * 更新 horizontal 的 set Send Classic Children 状态，并同步相关业务数据。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setSendClassicChildren = (path: string) => {
 	const currentPathSplit = path.split('/');
 	let currentData: MittMenu = { children: [] };
@@ -88,6 +102,11 @@ const setSendClassicChildren = (path: string) => {
 	return currentData;
 };
 // 设置页面当前路由高亮
+/**
+ * 更新 horizontal 的 set Current Router Highlight 状态，并同步相关业务数据。
+ * @param currentRoute - currentRoute 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setCurrentRouterHighlight = (currentRoute: RouteToFrom) => {
 	const { path, meta } = currentRoute;
 	if (themeConfig.value.layout === 'classic') {
@@ -99,6 +118,11 @@ const setCurrentRouterHighlight = (currentRoute: RouteToFrom) => {
 	}
 };
 // 打开外部链接
+/**
+ * 响应 horizontal 的 on ALink Click 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onALinkClick = (val: RouteItem) => {
 	other.handleOpenLink(val);
 };

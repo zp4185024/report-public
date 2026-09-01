@@ -17,6 +17,10 @@ public class APIJSONService : IDynamicApiController, ITransient
     private readonly TableMapper _tableMapper;
     private readonly SelectTable _selectTable;
 
+    /// <summary>初始化 APIJSONService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="identityService">当前方法执行时使用的 identityService 输入值。</param>
+    /// <param name="tableMapper">当前方法执行时使用的 tableMapper 输入值。</param>
     public APIJSONService(ISqlSugarClient db,
         IdentityService identityService,
         TableMapper tableMapper)
@@ -27,12 +31,10 @@ public class APIJSONService : IDynamicApiController, ITransient
         _selectTable = new SelectTable(_identityService, _tableMapper, _db);
     }
 
-    /// <summary>
-    /// 统一查询入口 🔖
-    /// </summary>
-    /// <param name="jobject"></param>
+    /// <summary>查询或读取 APIJSONService 所需的 Query 数据，并按调用约定返回结果。</summary>
+    /// <param name="jobject">当前方法执行时使用的 jobject 输入值。</param>
     /// <remarks>参数：{"[]":{"SYSLOGOP":{}}}</remarks>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost("get")]
     [DisplayName("APIJSON统一查询")]
     public JObject Query([FromBody] JObject jobject)
@@ -48,12 +50,10 @@ public class APIJSONService : IDynamicApiController, ITransient
         return _selectTable.Query(jobject);
     }
 
-    /// <summary>
-    /// 查询 🔖
-    /// </summary>
-    /// <param name="table"></param>
-    /// <param name="jobject"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 APIJSONService 所需的 Query By Table 数据，并按调用约定返回结果。</summary>
+    /// <param name="table">当前方法执行时使用的 table 输入值。</param>
+    /// <param name="jobject">当前方法执行时使用的 jobject 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost("get/{table}")]
     [DisplayName("APIJSON查询")]
     public JObject QueryByTable([FromRoute] string table, [FromBody] JObject jobject)
@@ -98,11 +98,9 @@ public class APIJSONService : IDynamicApiController, ITransient
         return Query(ht);
     }
 
-    /// <summary>
-    /// 新增 🔖
-    /// </summary>
+    /// <summary>构建 APIJSONService 所需的 Add 内容，并保证生成结果符合调用约定。</summary>
     /// <param name="tables">表对象或数组，若没有传Id则后端生成Id</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost("add")]
     [DisplayName("APIJSON新增")]
     [UnitOfWork]
@@ -145,7 +143,7 @@ public class APIJSONService : IDynamicApiController, ITransient
     /// 更新（只支持Id作为条件） 🔖
     /// </summary>
     /// <param name="tables">支持多表、多Id批量更新</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost("update")]
     [DisplayName("APIJSON更新")]
     [UnitOfWork]
@@ -165,8 +163,8 @@ public class APIJSONService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除（支持非Id条件、支持批量） 🔖
     /// </summary>
-    /// <param name="tables"></param>
-    /// <returns></returns>
+    /// <param name="tables">当前方法执行时使用的 tables 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost("delete")]
     [DisplayName("APIJSON删除")]
     [UnitOfWork]

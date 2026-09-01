@@ -14,10 +14,13 @@ public class UserTest : BaseTest
     // 用户登录 token
     private static readonly string Token = "xxxxxxxxx";
 
+    /// <summary>初始化 UserTest 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public UserTest() : base(Token)
     {
     }
 
+    /// <summary>调用 UserTest 的异步依赖完成 Login 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Login()
     {
@@ -25,6 +28,8 @@ public class UserTest : BaseTest
         WaitEnter();
     }
 
+    /// <summary>构建 UserTest 所需的 Add User 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task AddUser()
     {

@@ -46,6 +46,11 @@ watch(
 	(newValue) => setDictValue(newValue)
 );
 
+/**
+ * 更新 dictLabel 的 set Dict Value 状态，并同步相关业务数据。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setDictValue = (value: any) => {
   state.dict = useUserInfo().dictList[props.code]?.find((x: any) => x[props.propValue] == value);
   if (state.dict != null && !tagTypeMap[state.dict.tagType]) state.dict.tagType = "primary";

@@ -13,6 +13,10 @@ namespace Admin.NET.Core;
 /// </summary>
 public static class SqlSugarExtension
 {
+    /// <summary>查询或读取 SqlSugarExtension 所需的 Search By 数据，并按调用约定返回结果。</summary>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
+    /// <param name="filter">当前方法执行时使用的 filter 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ISugarQueryable<T> SearchBy<T>(this ISugarQueryable<T> queryable, BaseFilter filter)
     {
         return queryable.SearchByKeyword(filter.Keyword)
@@ -20,17 +24,26 @@ public static class SqlSugarExtension
                 .AdvancedFilter(filter.Filter);
     }
 
+    /// <summary>查询或读取 SqlSugarExtension 所需的 Search By Keyword 数据，并按调用约定返回结果。</summary>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
+    /// <param name="keyword">当前方法执行时使用的 keyword 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ISugarQueryable<T> SearchByKeyword<T>(this ISugarQueryable<T> queryable, string keyword)
     {
         return queryable.AdvancedSearch(new Search { Keyword = keyword });
     }
 
+    /// <summary>遍历 SqlSugarExtension 当前数据并执行 Advanced Search 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
+    /// <param name="search">当前方法执行时使用的 search 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ISugarQueryable<T> AdvancedSearch<T>(this ISugarQueryable<T> queryable, Search search)
     {
         if (!string.IsNullOrWhiteSpace(search?.Keyword))
         {
             var paramExpr = Expression.Parameter(typeof(T));
 
+            // 第一阶段：执行 AdvancedSearch 当前分支的数据转换，并保存该步骤产生的中间结果。
             Expression right = Expression.Constant(false);
 
             if (search.Fields?.Any() is true)
@@ -52,6 +65,7 @@ public static class SqlSugarExtension
                              && Type.GetTypeCode(prop.PropertyType) != TypeCode.Object);
 
                 foreach (var property in properties)
+                // 第2阶段：执行 AdvancedSearch 当前分支的数据转换，并保存该步骤产生的中间结果。
                 {
                     var propertyExpr = Expression.Property(paramExpr, property);
 
@@ -69,6 +83,10 @@ public static class SqlSugarExtension
         return queryable;
     }
 
+    /// <summary>遍历 SqlSugarExtension 当前数据并执行 Advanced Filter 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
+    /// <param name="filter">当前方法执行时使用的 filter 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static ISugarQueryable<T> AdvancedFilter<T>(this ISugarQueryable<T> queryable, Filter filter)
     {
         if (filter is not null)
@@ -95,6 +113,11 @@ public static class SqlSugarExtension
         return queryable;
     }
 
+    /// <summary>按照 SqlSugarExtension 的业务约束完成 Combine Filter 数据合并或复制。</summary>
+    /// <param name="filterLogic">当前方法执行时使用的 filterLogic 输入值。</param>
+    /// <param name="bExpresionBase">当前方法执行时使用的 bExpresionBase 输入值。</param>
+    /// <param name="bExpresion">当前方法执行时使用的 bExpresion 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Expression CombineFilter(
            FilterLogicEnum filterLogic,
            Expression bExpresionBase,
@@ -109,6 +132,9 @@ public static class SqlSugarExtension
         };
     }
 
+    /// <summary>查询或读取 SqlSugarExtension 所需的 Get Valid Filter 数据，并按调用约定返回结果。</summary>
+    /// <param name="filter">当前方法执行时使用的 filter 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Filter GetValidFilter(Filter filter)
     {
         if (string.IsNullOrEmpty(filter.Field)) throw new ArgumentException("The field attribute is required when declaring a filter");
@@ -116,6 +142,11 @@ public static class SqlSugarExtension
         return filter;
     }
 
+    /// <summary>构建 SqlSugarExtension 所需的 Create Filter Expression 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="filterLogic">当前方法执行时使用的 filterLogic 输入值。</param>
+    /// <param name="filters">当前方法执行时使用的 filters 输入值。</param>
+    /// <param name="parameter">当前方法执行时使用的 parameter 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Expression CreateFilterExpression(
         FilterLogicEnum filterLogic,
         IEnumerable<Filter> filters,
@@ -144,6 +175,12 @@ public static class SqlSugarExtension
         return filterExpression;
     }
 
+    /// <summary>构建 SqlSugarExtension 所需的 Create Filter Expression 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="field">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="filterOperator">当前方法执行时使用的 filterOperator 输入值。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="parameter">当前方法执行时使用的 parameter 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Expression CreateFilterExpression(
         string field,
         FilterOperatorEnum filterOperator,
@@ -155,6 +192,11 @@ public static class SqlSugarExtension
         return CreateFilterExpression(propertyExpresion, valueExpresion, filterOperator);
     }
 
+    /// <summary>构建 SqlSugarExtension 所需的 Create Filter Expression 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="memberExpression">当前方法执行时使用的 memberExpression 输入值。</param>
+    /// <param name="constantExpression">当前方法执行时使用的 constantExpression 输入值。</param>
+    /// <param name="filterOperator">当前方法执行时使用的 filterOperator 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Expression CreateFilterExpression(
         MemberExpression memberExpression,
         ConstantExpression constantExpression,
@@ -175,6 +217,9 @@ public static class SqlSugarExtension
         };
     }
 
+    /// <summary>查询或读取 SqlSugarExtension 所需的 Get String From Json Element 数据，并按调用约定返回结果。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetStringFromJsonElement(object value)
     {
         if (value is JsonElement) return ((JsonElement)value).GetString()!;
@@ -182,6 +227,11 @@ public static class SqlSugarExtension
         return value?.ToString();
     }
 
+    /// <summary>检查 SqlSugarExtension 的 Ge Valuet Expression 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="field">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="propertyType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static ConstantExpression GeValuetExpression(
           string field,
           object? value,
@@ -191,6 +241,7 @@ public static class SqlSugarExtension
 
         if (propertyType.IsEnum)
         {
+            // 第一阶段：执行 GeValuetExpression 当前分支的数据转换，并保存该步骤产生的中间结果。
             string? stringEnum = GetStringFromJsonElement(value);
 
             if (!Enum.TryParse(propertyType, stringEnum, true, out object? valueparsed)) throw new ArgumentException(string.Format("Value {0} is not valid for {1}", value, field));
@@ -212,6 +263,7 @@ public static class SqlSugarExtension
 
             if (!Guid.TryParse(stringGuid, out Guid valueparsed)) throw new ArgumentException(string.Format("Value {0} is not valid for {1}", value, field));
 
+            // 第2阶段：整理 GeValuetExpression 已计算的数据，并按方法契约返回最终结果。
             return Expression.Constant(valueparsed, propertyType);
         }
 
@@ -231,6 +283,10 @@ public static class SqlSugarExtension
         return Expression.Constant(ChangeType(((JsonElement)value).GetRawText(), propertyType), propertyType);
     }
 
+    /// <summary>更新 SqlSugarExtension 的 Change Type 状态，并同步相关业务数据。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="conversion">当前方法执行时使用的 conversion 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static dynamic? ChangeType(object value, Type conversion)
     {
         var t = conversion;
@@ -248,6 +304,10 @@ public static class SqlSugarExtension
         return Convert.ChangeType(value, t!);
     }
 
+    /// <summary>查询或读取 SqlSugarExtension 所需的 Get Property Expression 数据，并按调用约定返回结果。</summary>
+    /// <param name="propertyName">需要读取、校验或转换的业务值。</param>
+    /// <param name="parameter">当前方法执行时使用的 parameter 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static MemberExpression GetPropertyExpression(
             string propertyName,
             ParameterExpression parameter)
@@ -261,6 +321,11 @@ public static class SqlSugarExtension
         return (MemberExpression)propertyExpression;
     }
 
+    /// <summary>构建 SqlSugarExtension 所需的 Add Search Property By Keyword 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="propertyExpr">当前方法执行时使用的 propertyExpr 输入值。</param>
+    /// <param name="keyword">当前方法执行时使用的 keyword 输入值。</param>
+    /// <param name="operatorSearch">当前方法执行时使用的 operatorSearch 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Expression AddSearchPropertyByKeyword<T>(
           Expression propertyExpr,
             string keyword,
@@ -297,9 +362,9 @@ public static class SqlSugarExtension
     /// <summary>
     /// 获取映射SQL语句, 用于创建视图
     /// </summary>
-    /// <param name="queryable"></param>
+    /// <param name="queryable">当前方法执行时使用的 queryable 输入值。</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ToMappedSqlString<T>(this ISugarQueryable<T> queryable) where T : class
     {
         ArgumentNullException.ThrowIfNull(queryable);
@@ -333,7 +398,7 @@ public static class SqlSugarExtension
     /// <param name="childrenSelector">设置子节点列表。例如：item => item.Children</param>
     /// <param name="parentIdSelector">设置元素的父级 Id。例如：item => item.ParentId</param>
     /// <param name="rootParentId">根节点的父级 Id，默认为 0 </param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <exception cref="Exception"></exception>
     public static IEnumerable<T> ToTree<T>(
        this IEnumerable<T> source,

@@ -1076,6 +1076,7 @@ export const SysJobApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysJobAddJobDetailPost(body?: AddJobDetailInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysJobApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysJobApiAxiosParamCreator(configuration).apiSysJobAddJobDetailPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1117,6 +1118,7 @@ export const SysJobApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysJobCancelSleepPost(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第2阶段：调用 SysJobApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysJobApiAxiosParamCreator(configuration).apiSysJobCancelSleepPost(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1147,6 +1149,7 @@ export const SysJobApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysJobApiAxiosParamCreator(configuration).apiSysJobDeleteJobDetailPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysJobApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -1188,6 +1191,7 @@ export const SysJobApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysJobApiAxiosParamCreator(configuration).apiSysJobJobTriggerListGet(jobId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysJobApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -1228,6 +1232,7 @@ export const SysJobApiFp = function(configuration?: Configuration) {
         async apiSysJobPageJobTriggerRecordPost(body?: PageJobTriggerRecordInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSqlSugarPagedListSysJobTriggerRecord>>> {
             const localVarAxiosArgs = await SysJobApiAxiosParamCreator(configuration).apiSysJobPageJobTriggerRecordPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
+                // 第5阶段：构造 SysJobApiFp 当前阶段需要的中间数据和执行参数。
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
             };
@@ -1267,6 +1272,7 @@ export const SysJobApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysJobPauseTriggerPost(body?: JobTriggerInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第6阶段：调用 SysJobApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysJobApiAxiosParamCreator(configuration).apiSysJobPauseTriggerPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1307,6 +1313,7 @@ export const SysJobApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysJobStartAllJobPost(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第7阶段：调用 SysJobApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysJobApiAxiosParamCreator(configuration).apiSysJobStartAllJobPost(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -1338,6 +1345,7 @@ export const SysJobApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysJobApiAxiosParamCreator(configuration).apiSysJobStartTriggerPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第8阶段：整理 SysJobApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -1386,6 +1394,7 @@ export const SysJobApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysJobAddJobDetailPost(body?: AddJobDetailInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysJobApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysJobApiFp(configuration).apiSysJobAddJobDetailPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1424,6 +1433,7 @@ export const SysJobApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysJobClearJobTriggerRecordPost(options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysJobApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysJobApiFp(configuration).apiSysJobClearJobTriggerRecordPost(options).then((request) => request(axios, basePath));
         },
         /**
@@ -1453,6 +1463,7 @@ export const SysJobApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysJobJobClusterListGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListSysJobCluster>> {
+            // 第3阶段：整理 SysJobApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysJobApiFp(configuration).apiSysJobJobClusterListGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -1492,6 +1503,7 @@ export const SysJobApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysJobPageJobTriggerRecordPost(body?: PageJobTriggerRecordInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysJobTriggerRecord>> {
+            // 第4阶段：整理 SysJobApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysJobApiFp(configuration).apiSysJobPageJobTriggerRecordPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1530,6 +1542,7 @@ export const SysJobApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysJobPersistAllPost(options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第5阶段：整理 SysJobApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysJobApiFp(configuration).apiSysJobPersistAllPost(options).then((request) => request(axios, basePath));
         },
         /**
@@ -1569,6 +1582,7 @@ export const SysJobApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysJobStartTriggerPost(body?: JobTriggerInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第6阶段：整理 SysJobApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysJobApiFp(configuration).apiSysJobStartTriggerPost(body, options).then((request) => request(axios, basePath));
         },
         /**

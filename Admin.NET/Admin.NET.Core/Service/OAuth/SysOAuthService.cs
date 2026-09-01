@@ -19,6 +19,9 @@ public class SysOAuthService : IDynamicApiController, ITransient
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly SqlSugarRepository<SysWechatUser> _sysWechatUserRep;
 
+    /// <summary>初始化 SysOAuthService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="httpContextAccessor">httpContextAccessor 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysWechatUserRep">sysWechatUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysOAuthService(IHttpContextAccessor httpContextAccessor,
         SqlSugarRepository<SysWechatUser> sysWechatUserRep)
     {
@@ -26,12 +29,10 @@ public class SysOAuthService : IDynamicApiController, ITransient
         _sysWechatUserRep = sysWechatUserRep;
     }
 
-    /// <summary>
-    /// 第三方登录 🔖
-    /// </summary>
-    /// <param name="provider"></param>
-    /// <param name="redirectUrl"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysOAuthService 的异步依赖完成 Sign In 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="provider">provider 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="redirectUrl">redirectUrl 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "SignIn"), HttpGet]
     [DisplayName("第三方登录")]
     public virtual async Task<IActionResult> SignIn([FromQuery] string provider, [FromQuery] string redirectUrl)
@@ -49,12 +50,10 @@ public class SysOAuthService : IDynamicApiController, ITransient
         return await Task.FromResult(new ChallengeResult(provider, properties));
     }
 
-    /// <summary>
-    /// 授权回调 🔖
-    /// </summary>
-    /// <param name="provider"></param>
-    /// <param name="redirectUrl"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysOAuthService 的异步依赖完成 Sign In Callback 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="provider">provider 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="redirectUrl">redirectUrl 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "SignInCallback"), HttpGet]
     [DisplayName("授权回调")]
     public virtual async Task<IActionResult> SignInCallback([FromQuery] string provider = null, [FromQuery] string redirectUrl = "")

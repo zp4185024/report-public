@@ -15,8 +15,10 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
     private readonly PocTemplateService _templateService;
     private readonly PocTemplateDataExportService _exportService;
 
+    /// <summary>初始化 PocTemplateDataExportServiceTests 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocTemplateDataExportServiceTests()
     {
+        // 第一阶段：更新 PocTemplateDataExportServiceTests 当前分支对应的业务状态，并保持关联数据一致。
         _database = new SqlSugarClient(new ConnectionConfig
         {
             ConnectionString = "Data Source=:memory:",
@@ -40,6 +42,7 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
                 !entityInfo.EntityColumnInfo.IsPrimarykey ||
                 entityInfo.EntityColumnInfo.PropertyInfo.PropertyType != typeof(long))
             {
+                // 第2阶段：整理 PocTemplateDataExportServiceTests 已计算的数据，并按方法契约返回最终结果。
                 return;
             }
 
@@ -58,6 +61,8 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
             new PocExchangeMappingStore(_database));
     }
 
+    /// <summary>验证 Create Plan Rejects Unsaved Revision Zero 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task CreatePlan_RejectsUnsavedRevisionZero()
     {
@@ -71,6 +76,8 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
         Assert.Contains("保存", exception.Message);
     }
 
+    /// <summary>验证 Create Plan Rejects Stale Revision 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task CreatePlan_RejectsStaleRevision()
     {
@@ -86,6 +93,8 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
         Assert.Contains(saved.Revision.ToString(), exception.Message);
     }
 
+    /// <summary>验证 Create Plan Freezes Saved Snapshot Binding Query And Mappings 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task CreatePlan_FreezesSavedSnapshotBindingQueryAndMappings()
     {
@@ -109,6 +118,8 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
             rule.Direction == PocExchangeDirections.UniverToExcel));
     }
 
+    /// <summary>验证 Create Plan Uses The Report Selected From The Template List 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task CreatePlan_UsesTheReportSelectedFromTheTemplateList()
     {
@@ -127,11 +138,14 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
         Assert.Equal(saved.Revision, plan.TemplateRevision);
     }
 
+    /// <summary>释放 PocTemplateDataExportServiceTests 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _database.Dispose();
     }
 
+    /// <summary>更新 PocTemplateDataExportServiceTests 的 Save Seed Async 状态，并同步相关业务数据。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<PocTemplateDocument> SaveSeedAsync()
     {
         var seed = await _templateService.GetAsync(PocReportCatalog.ReportCode);
@@ -140,6 +154,8 @@ public sealed class PocTemplateDataExportServiceTests : IDisposable
             new PocSaveTemplateRequest(seed.Snapshot, seed.Binding, seed.Revision));
     }
 
+    /// <summary>构建 PocTemplateDataExportServiceTests 所需的 Create Query 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExecuteRequest CreateQuery() =>
         new(3, "H01", "D02", "P03", "2026-07-01", "2026-07-14");
 }

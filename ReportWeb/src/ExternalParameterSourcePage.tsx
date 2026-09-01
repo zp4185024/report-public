@@ -13,12 +13,22 @@ import {
   externalParameterTemplateKeys,
 } from './externalParameterContext';
 
+/**
+ * 按 next Code 规则筛选 ExternalParameterSourcePage 数据，并返回满足条件的结果。
+ * @param sources - sources 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function nextCode(sources: readonly ExternalParameterSourceDocument[]): string {
   let index = sources.length + 1;
   while (sources.some((source) => source.code === `external_${index}`)) index += 1;
   return `external_${index}`;
 }
 
+/**
+ * 构建 ExternalParameterSourcePage 所需的 create Source 内容，并保证生成结果符合调用约定。
+ * @param sources - sources 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function createSource(sources: readonly ExternalParameterSourceDocument[]): ExternalParameterSourceDocument {
   return {
     code: nextCode(sources),
@@ -36,6 +46,11 @@ function createSource(sources: readonly ExternalParameterSourceDocument[]): Exte
   };
 }
 
+/**
+ * 按照 ExternalParameterSourcePage 的业务约束完成 clone Source 数据合并或复制。
+ * @param source - 本次转换或写入使用的数据对象。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function cloneSource(source: ExternalParameterSourceDocument): ExternalParameterSourceDocument {
   return {
     ...source,
@@ -44,10 +59,19 @@ function cloneSource(source: ExternalParameterSourceDocument): ExternalParameter
   };
 }
 
+/**
+ * 负责 ExternalParameterSourcePage 的 context Keys 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param source - 本次转换或写入使用的数据对象。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function contextKeys(source: ExternalParameterSourceDocument | null): string[] {
   return source === null ? [] : externalParameterTemplateKeys(source);
 }
 
+/**
+ * 按 External Parameter Source Page 规则筛选 ExternalParameterSourcePage 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export default function ExternalParameterSourcePage() {
   const [sources, setSources] = useState<ExternalParameterSourceDocument[]>([]);
   const [draft, setDraft] = useState<ExternalParameterSourceDocument | null>(null);
@@ -56,7 +80,9 @@ export default function ExternalParameterSourcePage() {
   const [testResultOpen, setTestResultOpen] = useState(false);
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  // 第一阶段：构造 ExternalParameterSourcePage 当前阶段需要的中间数据和执行参数。
   const [saving, setSaving] = useState(false);
+  // 第一阶段：构造 ExternalParameterSourcePage 当前阶段需要的中间数据和执行参数。
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -89,11 +115,19 @@ export default function ExternalParameterSourcePage() {
       .filter((parameter) => parameter.required)
       .map((parameter) => parameter.urlKey),
   ]), [draft, templateContextKeys]);
+  // 第2阶段：构造 ExternalParameterSourcePage 当前阶段需要的中间数据和执行参数。
+  // 第2阶段：构造 ExternalParameterSourcePage 当前阶段需要的中间数据和执行参数。
   const urlContext = useMemo(
     () => currentUrlParameterValues(requiredContextKeys),
     [requiredContextKeys],
   );
 
+  /**
+   * 更新 ExternalParameterSourcePage 的 update Field 状态，并同步相关业务数据。
+   * @param index - 控制数据范围或位置的数值。
+   * @param patch - patch 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const updateField = (index: number, patch: Partial<ExternalParameterFieldDefinition>) => {
     setDraft((current) => current === null ? current : {
       ...current,
@@ -104,10 +138,17 @@ export default function ExternalParameterSourcePage() {
     setTestValues(null);
   };
 
+  /**
+   * 更新 ExternalParameterSourcePage 的 update Request Parameter 状态，并同步相关业务数据。
+   * @param index - 控制数据范围或位置的数值。
+   * @param patch - patch 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const updateRequestParameter = (
     index: number,
     patch: Partial<ExternalRequestParameterDefinition>,
   ) => {
+    // 第3阶段：遍历 ExternalParameterSourcePage 当前数据集合，逐项转换并维护处理结果。
     setDraft((current) => current === null ? current : {
       ...current,
       requestParameters: current.requestParameters.map((parameter, parameterIndex) => (
@@ -117,6 +158,10 @@ export default function ExternalParameterSourcePage() {
     setTestValues(null);
   };
 
+  /**
+   * 更新 ExternalParameterSourcePage 的 save 状态，并同步相关业务数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const save = async () => {
     if (draft === null) return;
     setSaving(true);
@@ -124,6 +169,7 @@ export default function ExternalParameterSourcePage() {
     setStatus(null);
     try {
       const saved = await dataAssetApi.saveExternalParameterSource(draft);
+      // 第3阶段：构造 ExternalParameterSourcePage 当前阶段需要的中间数据和执行参数。
       const next = [...sources.filter((source) => source.code !== saved.code), saved]
         .sort((left, right) => left.name.localeCompare(right.name, 'zh-CN'));
       setSources(next);
@@ -136,7 +182,12 @@ export default function ExternalParameterSourcePage() {
     }
   };
 
+  /**
+   * 遍历 ExternalParameterSourcePage 数据并执行 test 转换，生成后续流程需要的结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const test = async () => {
+    // 第4阶段：检查 ExternalParameterSourcePage 当前条件，并按匹配分支执行对应处理。
     if (draft === null) return;
     if (draft.revision === 0) {
       setError('请先保存接口参数源，再进行接口测试。');
@@ -159,18 +210,28 @@ export default function ExternalParameterSourcePage() {
       setTestResultOpen(true);
       setTestContext({});
     } catch (exception) {
+      // 第4阶段：根据 ExternalParameterSourcePage 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setError(exception instanceof Error ? exception.message : '接口测试失败。');
     } finally {
       setTesting(false);
     }
   };
 
+  /**
+   * 结束 ExternalParameterSourcePage 的 close Test Dialog 交互并清理临时状态。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const closeTestDialog = () => {
+    // 第5阶段：检查 ExternalParameterSourcePage 当前条件，并按匹配分支执行对应处理。
     if (testing) return;
     setTestDialogOpen(false);
     setTestContext({});
   };
 
+  /**
+   * 启动 ExternalParameterSourcePage 的 start Test 流程，并建立运行期间所需状态。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const startTest = () => {
     if (requiredContextKeys.length === 0) {
       void test();
@@ -181,6 +242,8 @@ export default function ExternalParameterSourcePage() {
     setTestDialogOpen(true);
   };
 
+  // 第5阶段：遍历 ExternalParameterSourcePage 当前数据集合，逐项转换并维护处理结果。
+  // 第6阶段：遍历 ExternalParameterSourcePage 当前数据集合，逐项转换并维护处理结果。
   return (
     <main className="asset-page external-source-page">
       <header className="asset-header">

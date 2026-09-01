@@ -18,7 +18,7 @@ public static class CodeGenUtil
     /// </summary>
     /// <param name="columnName">字段名</param>
     /// <param name="dbColumnNames">EntityBase 实体属性名称</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string CamelColumnName(string columnName, string[] dbColumnNames)
     {
         if (columnName.Contains('_'))
@@ -48,6 +48,10 @@ public static class CodeGenUtil
     }
 
     // 根据数据库类型来处理对应的数据字段类型
+    /// <summary>将 CodeGenUtil 中的 Convert Data Type 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dbColumnInfo">dbColumnInfo 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataType(DbColumnInfo dbColumnInfo, DbType dbType = DbType.Custom)
     {
         if (dbType == DbType.Custom)
@@ -62,8 +66,14 @@ public static class CodeGenUtil
         return dataType + (dbColumnInfo.IsNullable ? "?" : "");
     }
 
+    /// <summary>将 CodeGenUtil 中的 Convert Data Type Oracle Sql 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="length">length 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="scale">scale 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataTypeOracleSql(string dataType, int? length, int? scale)
     {
+        // 第一阶段：检查 ConvertDataTypeOracleSql 当前条件，并按匹配分支执行对应处理。
         switch (dataType.ToLower())
         {
             case "interval year to month": return "int";
@@ -100,6 +110,7 @@ public static class CodeGenUtil
             case "nvarchar2":
             case "varchar2":
             case "rowid":
+                // 第2阶段：整理 ConvertDataTypeOracleSql 已计算的数据，并按方法契约返回最终结果。
                 return "string";
 
             case "timestamp":
@@ -124,12 +135,16 @@ public static class CodeGenUtil
     }
 
     //PostgresSQL数据类型对应的字段类型
+    /// <summary>将 CodeGenUtil 中的 Convert Data Type Postgres Sql 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataTypePostgresSql(string dataType)
     {
         switch (dataType)
         {
             case "int2":
             case "smallint":
+                // 第一阶段：整理 ConvertDataTypePostgresSql 已计算的数据，并按方法契约返回最终结果。
                 return "Int16";
 
             case "int4":
@@ -157,6 +172,7 @@ public static class CodeGenUtil
             case "lseg":
             case "macaddr":
             case "money":
+                // 第2阶段：整理 ConvertDataTypePostgresSql 已计算的数据，并按方法契约返回最终结果。
                 return "decimal";
 
             case "boolean":
@@ -182,6 +198,7 @@ public static class CodeGenUtil
                 return "string";
 
             case "uuid":
+                // 第3阶段：整理 ConvertDataTypePostgresSql 已计算的数据，并按方法契约返回最终结果。
                 return "Guid";
 
             case "timestamp":
@@ -207,6 +224,9 @@ public static class CodeGenUtil
         }
     }
 
+    /// <summary>将 CodeGenUtil 中的 Convert Data Type Default 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ConvertDataTypeDefault(string dataType)
     {
         return dataType.ToLower() switch
@@ -233,8 +253,8 @@ public static class CodeGenUtil
     /// <summary>
     /// 数据类型转显示类型
     /// </summary>
-    /// <param name="dataType"></param>
-    /// <returns></returns>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string DataTypeToEff(string dataType)
     {
         if (string.IsNullOrEmpty(dataType)) return "";
@@ -254,6 +274,9 @@ public static class CodeGenUtil
     }
 
     // 是否通用字段
+    /// <summary>校验 CodeGenUtil 的 Is Common Column 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="columnName">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool IsCommonColumn(string columnName)
     {
         var columnList = new List<string>()
@@ -274,8 +297,8 @@ public static class CodeGenUtil
     /// <summary>
     /// 获取类型的PropertyInfo列表
     /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">type 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static PropertyInfo[] GetPropertyInfoArray(Type type)
     {
         PropertyInfo[] props = null;

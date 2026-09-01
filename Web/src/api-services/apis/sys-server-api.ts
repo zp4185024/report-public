@@ -212,6 +212,7 @@ export const SysServerApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysServerAssemblyListGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第一阶段：调用 SysServerApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysServerApiAxiosParamCreator(configuration).apiSysServerAssemblyListGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -238,6 +239,7 @@ export const SysServerApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysServerServerDiskGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第2阶段：调用 SysServerApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysServerApiAxiosParamCreator(configuration).apiSysServerServerDiskGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};

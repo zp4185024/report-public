@@ -57,11 +57,25 @@ const props = defineProps({
     },
 });
 const tgswModelValue = computed({
+    /**
+     * 查询或读取 index 所需的 get 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     get: () => props.modelValue,
+    /**
+     * 更新 index 的 set 状态，并同步相关业务数据。
+     * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     set: (val) => emit('update:modelValue', val),
 });
 
 
+/**
+ * 响应 index 的 handle Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleChange = (val: any) => {
     emit('change', val);
 };

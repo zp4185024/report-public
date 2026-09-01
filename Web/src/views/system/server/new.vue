@@ -507,6 +507,11 @@ const deviceInfo = reactive<any>({
 const activeNetworkNames = ref('');
 
 // 格式化字节数为可读格式
+/**
+ * 将 new 中的 format Bytes 输入转换为调用方需要的稳定格式。
+ * @param bytes - bytes 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const formatBytes = (bytes: number) => {
 	if (bytes === 0) return '0 B';
 	const k = 1024;
@@ -516,6 +521,10 @@ const formatBytes = (bytes: number) => {
 };
 
 // 获取硬件信息
+/**
+ * 查询或读取 new 所需的 get Hardware Info Data 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getHardwareInfoData = async () => {
 	try {
 		// 并行获取硬件信息、运行时信息和 NuGet 包信息
@@ -607,6 +616,10 @@ const getHardwareInfoData = async () => {
 };
 
 // 获取活跃网络
+/**
+ * 查询或读取 new 所需的 get Active Networks 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getActiveNetworks = () => {
 	return deviceInfo.networkInfos.filter(
 		(network: NetworkInfo) =>
@@ -615,6 +628,11 @@ const getActiveNetworks = () => {
 };
 
 // 获取网络状态图标
+/**
+ * 查询或读取 new 所需的 get Network Status Icon 数据，并按调用约定返回结果。
+ * @param status - status 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getNetworkStatusIcon = (status: string) => {
 	switch (status) {
 		case 'Up':
@@ -627,6 +645,11 @@ const getNetworkStatusIcon = (status: string) => {
 };
 
 // 获取网络类型颜色
+/**
+ * 查询或读取 new 所需的 get Network Type Color 数据，并按调用约定返回结果。
+ * @param type - type 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getNetworkTypeColor = (type: string) => {
 	switch (type) {
 		case 'Ethernet':
@@ -641,6 +664,11 @@ const getNetworkTypeColor = (type: string) => {
 };
 
 // 获取CPU使用率颜色
+/**
+ * 查询或读取 new 所需的 get Cpu Color 数据，并按调用约定返回结果。
+ * @param percentage - percentage 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getCpuColor = (percentage: number) => {
 	if (percentage < 50) return '#67c23a';
 	if (percentage < 80) return '#e6a23c';
@@ -648,6 +676,11 @@ const getCpuColor = (percentage: number) => {
 };
 
 // 获取内存使用率颜色
+/**
+ * 查询或读取 new 所需的 get Ram Color 数据，并按调用约定返回结果。
+ * @param percentage - percentage 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getRamColor = (percentage: number) => {
 	if (percentage < 60) return '#409eff';
 	if (percentage < 80) return '#e6a23c';
@@ -655,6 +688,11 @@ const getRamColor = (percentage: number) => {
 };
 
 // 获取磁盘使用率颜色
+/**
+ * 查询或读取 new 所需的 get Disk Color 数据，并按调用约定返回结果。
+ * @param availablePercentage - availablePercentage 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getDiskColor = (availablePercentage: number) => {
 	const usedPercentage = 100 - availablePercentage;
 	if (usedPercentage < 70) return '#67c23a';

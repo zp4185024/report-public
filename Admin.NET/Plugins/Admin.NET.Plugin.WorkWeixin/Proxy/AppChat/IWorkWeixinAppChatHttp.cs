@@ -11,42 +11,34 @@ namespace Admin.NET.Plugin.WorkWeixin.Proxy.AppChat;
 /// </summary>
 public interface IWorkWeixinAppChatHttp : IHttpDeclarative
 {
-    /// <summary>
-    /// 创建群聊会话
-    /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="body"></param>
-    /// <returns></returns>
+    /// <summary>构建 IWorkWeixinAppChatHttp 所需的 Create 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="body">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <see href="https://developer.work.weixin.qq.com/document/path/90245"/>
     [Post("https://qyapi.weixin.qq.com/cgi-bin/appchat/create")]
     Task<CreatAppChatOutput> Create([QueryParam("access_token")] string accessToken, [Body] CreatAppChatInput body);
 
-    /// <summary>
-    /// 修改群聊会话
-    /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="body"></param>
-    /// <returns></returns>
+    /// <summary>更新 IWorkWeixinAppChatHttp 的 Update 状态，并同步相关业务数据。</summary>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="body">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <see href="https://developer.work.weixin.qq.com/document/path/98913"/>
     [Post("https://qyapi.weixin.qq.com/cgi-bin/appchat/update")]
     Task<CreatAppChatOutput> Update([QueryParam("access_token")] string accessToken, [Body] UpdateAppChatInput body);
 
-    /// <summary>
-    /// 获取群聊会话
-    /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="chatId"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 IWorkWeixinAppChatHttp 所需的 Get 数据，并按调用约定返回结果。</summary>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <see href="https://developer.work.weixin.qq.com/document/path/98914"/>
     [Get("https://qyapi.weixin.qq.com/cgi-bin/appchat/get")]
     Task<CreatAppChatOutput> Get([QueryParam("access_token")] string accessToken, [QueryParam("chatid")] string chatId);
 
-    /// <summary>
-    /// 应用推送消息
-    /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="body"></param>
-    /// <returns></returns>
+    /// <summary>执行 IWorkWeixinAppChatHttp 的 Send 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="body">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <see href="https://developer.work.weixin.qq.com/document/path/90248"/>
     [Post("https://qyapi.weixin.qq.com/cgi-bin/appchat/send")]
     Task<BaseWorkOutput> Send([QueryParam("access_token")] string accessToken, [Body] SendBaseAppChatInput body);

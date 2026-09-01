@@ -15,8 +15,7 @@ public class CommonValidationAttribute : ValidationAttribute
     private readonly Dictionary<string, string> _conditions;
     private static readonly Dictionary<string, Delegate> CompiledConditions = new();
 
-    /// <summary>
-    /// </summary>
+    /// <summary>初始化 CommonValidationAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     /// <param name="conditionPairs">条件对参数，长度必须为偶数<br/>
     /// 奇数字符串参数：动态条件<br/>
     /// 偶数字符串参数：提示消息
@@ -48,6 +47,10 @@ public class CommonValidationAttribute : ValidationAttribute
         _conditions = conditions;
     }
 
+    /// <summary>校验 CommonValidationAttribute 的 Is Valid 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="validationContext">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     protected override ValidationResult IsValid(object value, ValidationContext validationContext)
     {
         foreach (var (expr, errorMessage) in _conditions)
@@ -68,6 +71,10 @@ public class CommonValidationAttribute : ValidationAttribute
         return ValidationResult.Success;
     }
 
+    /// <summary>构建 CommonValidationAttribute 所需的 Create Condition 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="modelType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <param name="expression">当前方法执行时使用的 expression 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private Delegate CreateCondition(Type modelType, string expression)
     {
         try

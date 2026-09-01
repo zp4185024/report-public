@@ -105,6 +105,11 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @param updateTree - updateTree 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async (updateTree: boolean = false) => {
     state.loading = true;
     let res = await getAPI(SysOrgApi).apiSysOrgListGet(state.queryParams.id, state.queryParams.name, state.queryParams.code, state.queryParams.type);
@@ -124,6 +129,10 @@ const handleQuery = async (updateTree: boolean = false) => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
     state.queryParams.id = 0;
     state.queryParams.name = undefined;
@@ -133,18 +142,32 @@ const resetQuery = () => {
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Org 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddOrg = () => {
     state.editOrgTitle = '添加机构';
     editOrgRef.value?.openDialog({ status: 1, orderNo: 100, tenantId: state.tenantId });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Org 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditOrg = (row: any) => {
     state.editOrgTitle = '编辑机构';
     editOrgRef.value?.openDialog(row);
 };
 
 // 打开复制页面
+/**
+ * 准备 index 的 open Copy Org 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openCopyOrg = (row: any) => {
     state.editOrgTitle = '复制机构';
     var copyRow = JSON.parse(JSON.stringify(row)) as UpdateOrgInput;
@@ -154,6 +177,11 @@ const openCopyOrg = (row: any) => {
 };
 
 // 删除
+/**
+ * 从 index 移除 del Org 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delOrg = (row: any) => {
     ElMessageBox.confirm(`确定删除机构：【${row.name}】?`, '提示', {
         confirmButtonText: '确定',
@@ -169,6 +197,11 @@ const delOrg = (row: any) => {
 };
 
 // 树组件点击
+/**
+ * 负责 index 的 node Click 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const nodeClick = async (node: any) => {
     state.queryParams.id = node.id;
     state.queryParams.name = undefined;

@@ -75,6 +75,11 @@ const state = reactive({
 	graphData: {},
 });
 
+/**
+ * 准备 editFlowDialog 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: ApprovalFlowOutput) => {
 	state.ruleSource = row as UpdateApprovalFlowInput;
 	// 初始化数据
@@ -94,18 +99,30 @@ const openDialog = (row: ApprovalFlowOutput) => {
 	console.log('open');
 };
 
+/**
+ * 结束 editFlowDialog 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emit('reloadTable');
 	state.isShowDialog = false;
 	console.log('close');
 };
 
+/**
+ * 校验 editFlowDialog 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 	console.log('cancel');
 };
 
 // 保存流程设计
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editFlowDialog 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = async () => {
 	flowData.value = lf.value?.getGraphData();
 	state.ruleSource.flowJson = JSON.stringify(flowData.value);
@@ -114,6 +131,10 @@ const submit = async () => {
 	closeDialog();
 };
 
+/**
+ * 初始化 editFlowDialog 的 init Graph 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initGraph = () => {
 	// 初始化画布
 	const container: HTMLElement = document.querySelector('#container')!;
@@ -181,6 +202,11 @@ const initGraph = () => {
 };
 
 // 框选
+/**
+ * 更新 editFlowDialog 的 change 状态，并同步相关业务数据。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const change = (val: boolean) => {
 	if (val) {
 		lf.value?.extension.selectionSelect.openSelectionSelect();
@@ -190,6 +216,10 @@ const change = (val: boolean) => {
 };
 
 // 获取数据
+/**
+ * 查询或读取 editFlowDialog 所需的 get Data 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getData = () => {
 	var data = lf.value?.getGraphData();
 	state.graphData = data;
@@ -197,6 +227,11 @@ const getData = () => {
 };
 
 // 关闭属性界面提醒
+/**
+ * 响应 editFlowDialog 的 handle Close 事件，并协调相关状态和后续操作。
+ * @param done - done 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleClose = (done: () => void) => {
 	ElMessageBox.confirm('确认要关闭当前属性编辑?')
 		.then(() => {

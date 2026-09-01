@@ -573,6 +573,7 @@ export const SysConfigApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysConfigAddPost(body?: AddConfigInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysConfigApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysConfigApiAxiosParamCreator(configuration).apiSysConfigAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -615,6 +616,7 @@ export const SysConfigApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysConfigDeletePost(body?: DeleteConfigInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第2阶段：调用 SysConfigApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysConfigApiAxiosParamCreator(configuration).apiSysConfigDeletePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -645,6 +647,7 @@ export const SysConfigApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysConfigApiAxiosParamCreator(configuration).apiSysConfigGroupListGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysConfigApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -687,6 +690,7 @@ export const SysConfigApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysConfigApiAxiosParamCreator(configuration).apiSysConfigSaveSysInfoPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysConfigApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -734,6 +738,7 @@ export const SysConfigApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysConfigAddPost(body?: AddConfigInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysConfigApiFp(configuration).apiSysConfigAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -774,6 +779,7 @@ export const SysConfigApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysConfigDetailGet(id: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSysConfig>> {
+            // 第2阶段：整理 SysConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysConfigApiFp(configuration).apiSysConfigDetailGet(id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -803,6 +809,7 @@ export const SysConfigApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysConfigPagePost(body?: PageConfigInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysConfig>> {
+            // 第3阶段：整理 SysConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysConfigApiFp(configuration).apiSysConfigPagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

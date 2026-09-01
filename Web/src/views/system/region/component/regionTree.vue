@@ -69,6 +69,10 @@ watch(filterText, (val) => {
 	treeRef.value!.filter(val);
 });
 
+/**
+ * 初始化 regionTree 的 init Tree Data 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initTreeData = async () => {
 	state.loading = true;
 	var res = await getAPI(SysRegionApi).apiSysRegionListGet(0);
@@ -76,6 +80,12 @@ const initTreeData = async () => {
 	state.loading = false;
 };
 
+/**
+ * 查询或读取 regionTree 所需的 load Node 数据，并按调用约定返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param resolve - resolve 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadNode = async (node: any, resolve: any) => {
 	if (node.data == undefined || Array.isArray(node.data)) return;
 
@@ -122,6 +132,11 @@ const getCurrentPath = () => {
 };
 
 // 递归获取当前选中级联数据
+/**
+ * 查询或读取 regionTree 所需的 get Cascader Data 数据，并按调用约定返回结果。
+ * @param child - child 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getCascaderData = (child: any) => {
     const parent = treeRef.value!.getNode(child.pid)?.data as SysRegion & { child?: SysRegion };
     if(!parent) return child;
@@ -134,11 +149,22 @@ const getCascaderData = (child: any) => {
     return parent;
 };
 
+/**
+ * 按 filter Node 条件比较、筛选或整理 regionTree 数据，并返回顺序稳定的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const filterNode = (value: string, data: any) => {
 	if (!value) return true;
 	return data.name.includes(value);
 };
 
+/**
+ * 响应 regionTree 的 handle Command 事件，并协调相关状态和后续操作。
+ * @param command - command 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCommand = async (command: string | number | object) => {
 	if ('expandAll' == command) {
 		for (let i = 0; i < treeRef.value!.store._getAllNodes().length; i++) {
@@ -157,6 +183,11 @@ const handleCommand = async (command: string | number | object) => {
 
 // 与父组件的交互逻辑
 const emits = defineEmits(['node-click']);
+/**
+ * 负责 regionTree 的 node Click 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const nodeClick = (node: any) => {
 	emits('node-click', { id: node.id, name: node.name });
 };

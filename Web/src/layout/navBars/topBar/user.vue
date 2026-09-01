@@ -148,6 +148,10 @@ const hasUnreadNotice = computed(() => {
 	return state.noticeList.some((r: any) => r.readStatus == undefined || r.readStatus == 0);
 });
 // 全屏点击时
+/**
+ * 响应 user 的 on Screenfull Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onScreenfullClick = () => {
 	if (!screenfull.isEnabled) {
 		ElMessage.warning('暂不不支持全屏');
@@ -160,16 +164,26 @@ const onScreenfullClick = () => {
 	});
 };
 // 布局配置 icon 点击时
+/**
+ * 响应 user 的 on Layout Seting Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onLayoutSetingClick = () => {
 	mittBus.emit('openSettingsDrawer');
 };
 // 下拉菜单点击时
+/**
+ * 响应 user 的 on Handle Command Click 事件，并协调相关状态和后续操作。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onHandleCommandClick = (path: string) => {
 	if (path === 'clearCache') {
 		Local.clear();
 		Session.clear();
 		window.location.reload();
 	} else if (path === 'lockScreen') {
+		// 第一阶段：根据 onHandleCommandClick 当前分支转换输入数据，并保存该阶段产生的中间结果。
 		Local.remove('themeConfig');
 		themeConfig.value.isLockScreen = true;
 		themeConfig.value.lockScreenTime = 1;
@@ -185,6 +199,13 @@ const onHandleCommandClick = (path: string) => {
 			confirmButtonText: '确定',
 			cancelButtonText: '取消',
 			buttonSize: 'default',
+			/**
+			 * 响应 user 的 before Close 事件，并协调相关状态和后续操作。
+			 * @param action - action 对应的业务输入；具体类型和空值范围以方法签名为准。
+			 * @param instance - instance 对应的业务输入；具体类型和空值范围以方法签名为准。
+			 * @param done - done 对应的业务输入；具体类型和空值范围以方法签名为准。
+			 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+			 */
 			beforeClose: async (action, instance, done) => {
 				if (action === 'confirm') {
 					instance.confirmButtonLoading = true;
@@ -192,6 +213,7 @@ const onHandleCommandClick = (path: string) => {
 					try {
 						await getAPI(SysAuthApi).apiSysAuthLogoutPost();
 					} catch (error) {
+						// 第2阶段：根据 onHandleCommandClick 当前分支转换输入数据，并保存该阶段产生的中间结果。
 						console.error(error);
 					}
 					instance.confirmButtonLoading = false;
@@ -212,14 +234,27 @@ const onHandleCommandClick = (path: string) => {
 	}
 };
 // 菜单搜索点击
+/**
+ * 响应 user 的 on Search Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSearchClick = () => {
 	searchRef.value.openSearch();
 };
 // 在线用户列表
+/**
+ * 响应 user 的 on Online User Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onOnlineUserClick = () => {
 	onlineUserRef.value.openDrawer();
 };
 // 组件大小改变
+/**
+ * 响应 user 的 on Component Size Change 事件，并协调相关状态和后续操作。
+ * @param size - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onComponentSizeChange = (size: string) => {
 	Local.remove('themeConfig');
 	themeConfig.value.globalComponentSize = size;
@@ -228,6 +263,11 @@ const onComponentSizeChange = (size: string) => {
 	//window.location.reload();
 };
 // 语言切换
+/**
+ * 响应 user 的 on Language Change 事件，并协调相关状态和后续操作。
+ * @param lang - lang 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onLanguageChange = async (lang: string) => {
 	const langItem = state.languages.find((item: { value: string }) => item.value === lang);
 	if (langItem) {
@@ -244,6 +284,12 @@ const onLanguageChange = async (lang: string) => {
 	initI18nOrSize('globalI18n', 'disabledI18n');
 };
 // 初始化组件大小/i18n
+/**
+ * 初始化 user 的 init I18n Or Size 状态，创建依赖并注册运行期间需要的资源。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param attr - attr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initI18nOrSize = (value: string, attr: string) => {
 	(<any>state)[attr] = Local.get('themeConfig')[value];
 
@@ -303,6 +349,11 @@ onMounted(async () => {
 // 	mittBus.off('noticeRead', () => {});
 // });
 
+/**
+ * 负责 user 的 receive Notice 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param msg - msg 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const receiveNotice = (msg: any) => {
 	state.noticeList.unshift(msg);
 

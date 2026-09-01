@@ -37,6 +37,10 @@ const state = reactive({
 const qrcodeRef = ref<HTMLElement | null>(null);
 
 // 初始化生成二维码
+/**
+ * 初始化 scan 的 init Qrcode 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initQrcode = () => {
 	nextTick(() => {
 		(<HTMLElement>qrcodeRef.value).innerHTML = '';

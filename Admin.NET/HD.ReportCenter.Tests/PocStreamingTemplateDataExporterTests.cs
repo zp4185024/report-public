@@ -15,6 +15,8 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocStreamingTemplateDataExporterTests
 {
+    /// <summary>验证 Write Large Async Streams Paged Rows Through The Saved Template 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task WriteLargeAsync_StreamsPagedRowsThroughTheSavedTemplate()
     {
@@ -26,6 +28,7 @@ public sealed class PocStreamingTemplateDataExporterTests
             "P03",
             "2026-07-01",
             "2026-07-14");
+        // 第一阶段：构造 WriteLargeAsync_StreamsPagedRowsThroughTheSavedTemplate 当前步骤需要的中间数据和执行参数。
         var plan = new PocTemplateDataExportPlan(
             PocReportCatalog.ReportCode,
             3,
@@ -48,6 +51,7 @@ public sealed class PocStreamingTemplateDataExporterTests
         output.Position = 0;
         using (var document = SpreadsheetDocument.Open(output, false))
         {
+            // 第2阶段：根据 WriteLargeAsync_StreamsPagedRowsThroughTheSavedTemplate 当前分支转换输入数据，并保存该阶段产生的中间结果。
             Assert.Empty(new OpenXmlValidator().Validate(document));
         }
 
@@ -68,6 +72,8 @@ public sealed class PocStreamingTemplateDataExporterTests
         Assert.Equal([500L, 1_000L, 1_500L, 2_000L, 2_001L], progress);
     }
 
+    /// <summary>验证 Write Large Async Writes One Hundred Thousand Rows Without Materializing All Data 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task WriteLargeAsync_WritesOneHundredThousandRowsWithoutMaterializingAllData()
     {
@@ -79,6 +85,7 @@ public sealed class PocStreamingTemplateDataExporterTests
             "P03",
             "2026-07-01",
             "2026-07-14");
+        // 第一阶段：构造 WriteLargeAsync_WritesOneHundredThousandRowsWithoutMaterializingAllData 当前步骤需要的中间数据和执行参数。
         var plan = new PocTemplateDataExportPlan(
             PocReportCatalog.ReportCode,
             3,
@@ -105,6 +112,7 @@ public sealed class PocStreamingTemplateDataExporterTests
                              1024 * 1024,
                              FileOptions.SequentialScan))
             {
+                // 第2阶段：调用 WriteLargeAsync_WritesOneHundredThousandRowsWithoutMaterializingAllData 依赖的异步能力，等待并校验返回数据。
                 await exporter.WriteLargeAsync(
                     output,
                     plan,
@@ -129,6 +137,12 @@ public sealed class PocStreamingTemplateDataExporterTests
         }
     }
 
+    /// <summary>查询或读取 PocStreamingTemplateDataExporterTests 所需的 Read Pages 数据，并按调用约定返回结果。</summary>
+    /// <param name="rowCount">控制数据范围或位置的数值。</param>
+    /// <param name="pageSize">控制数据范围或位置的数值。</param>
+    /// <param name="deptId">需要定位的业务记录标识。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async IAsyncEnumerable<IReadOnlyList<PocDataRow>> ReadPages(
         int rowCount,
         int pageSize,
@@ -153,6 +167,8 @@ public sealed class PocStreamingTemplateDataExporterTests
         }
     }
 
+    /// <summary>查询或读取 PocStreamingTemplateDataExporterTests 所需的 Load Seed Snapshot With Summary Row 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject LoadSeedSnapshotWithSummaryRow()
     {
         const string resourceName =
@@ -171,6 +187,8 @@ public sealed class PocStreamingTemplateDataExporterTests
         return snapshot;
     }
 
+    /// <summary>根据 PocStreamingTemplateDataExporterTests 当前输入计算 Current Rules 结果，并按方法声明的类型返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExchangeRuleSet CurrentRules()
     {
         var rules = PocExchangeMappingDefaults.Create()
@@ -193,6 +211,11 @@ public sealed class PocStreamingTemplateDataExporterTests
             rules);
     }
 
+    /// <summary>检查 PocStreamingTemplateDataExporterTests 的 Inspect Worksheet 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="path">path 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="detailRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="summaryRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static (string DetailFormula, string SummaryFormula) InspectWorksheet(
         string path,
         int detailRow,

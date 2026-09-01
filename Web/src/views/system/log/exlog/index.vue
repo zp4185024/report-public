@@ -161,6 +161,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	if (state.queryParams.startTime == null) state.queryParams.startTime = undefined;
 	if (state.queryParams.endTime == null) state.queryParams.endTime = undefined;
@@ -180,6 +184,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.startTime = undefined;
 	state.queryParams.endTime = undefined;
@@ -193,6 +201,10 @@ const resetQuery = () => {
 };
 
 // 清空日志
+/**
+ * 移除 index 中与 clear Log 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clearLog = async () => {
 	state.loading = true;
 	await getAPI(SysLogExApi).apiSysLogExClearPost();
@@ -203,6 +215,10 @@ const clearLog = async () => {
 };
 
 // 导出日志
+/**
+ * 整理 index 的 export Log 数据，并生成可供调用方使用的输出。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const exportLog = async () => {
 	state.loading = true;
 	var res = await getAPI(SysLogExApi).apiSysLogExExportPost(state.queryParams, { responseType: 'blob' });
@@ -213,18 +229,33 @@ const exportLog = async () => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();
 };
 
 // 查看详情
+/**
+ * 负责 index 的 view Detail 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const viewDetail = async (row: any) => {
 	state.content = '';
 	state.dialogVisible = true;
@@ -236,6 +267,11 @@ const viewDetail = async (row: any) => {
 };
 
 // 设置行颜色
+/**
+ * 负责 index 的 table Row Class Name 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const tableRowClassName = (row: any) => {
 	return row.row.exception != null ? 'warning-row' : '';
 };
@@ -247,6 +283,10 @@ const shortcuts = [
 	},
 	{
 		text: '昨天',
+		/**
+		 * 计算并返回 index 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const date = new Date();
 			date.setTime(date.getTime() - 3600 * 1000 * 24);
@@ -255,6 +295,10 @@ const shortcuts = [
 	},
 	{
 		text: '上周',
+		/**
+		 * 计算并返回 index 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const date = new Date();
 			date.setTime(date.getTime() - 3600 * 1000 * 24 * 7);
@@ -264,6 +308,11 @@ const shortcuts = [
 ];
 
 // 列排序
+/**
+ * 按 sort Change 条件比较、筛选或整理 index 数据，并返回顺序稳定的结果。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const sortChange = (column: any) => {
 	state.tableParams.field = column.prop;
 	state.tableParams.order = column.order;

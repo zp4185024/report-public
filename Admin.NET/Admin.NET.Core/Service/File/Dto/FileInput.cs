@@ -125,10 +125,8 @@ public class RelationQueryInput
     /// </summary>
     public long? BelongId { get; set; }
 
-    /// <summary>
-    /// 文件类型分割
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 FileInput 所需的 Get File Type BS 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string[] GetFileTypeBS()
     {
         return FileTypes.Split(',');

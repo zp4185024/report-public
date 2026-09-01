@@ -88,6 +88,11 @@ watch([() => state.ruleForm.method, () => state.ruleForm.url, () => state.ruleFo
 });
 
 // 打开弹窗
+/**
+ * 准备 generateSign 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	state.ruleForm = {
 		accessKey: row?.accessKey,
@@ -99,7 +104,7 @@ const openDialog = (row: any) => {
 	ruleFormRef.value?.resetFields();
 };
 
-/** 生成密钥 */
+/** 生成密钥  构建 generateSign 所需的 create Secret 内容，并保证生成结果符合调用约定。 */
 const createSecret = async () => {
 	var res = await getAPI(SysOpenAccessApi).apiSysOpenAccessSecretPost();
 	state.ruleForm.accessSecret = res.data.result!;

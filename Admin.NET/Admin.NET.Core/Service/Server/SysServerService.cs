@@ -20,6 +20,7 @@ namespace Admin.NET.Core.Service;
 [ApiDescriptionSettings(Order = 290, Description = "服务器监控")]
 public class SysServerService : IDynamicApiController, ITransient
 {
+    /// <summary>初始化 SysServerService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public SysServerService()
     {
     }
@@ -29,7 +30,7 @@ public class SysServerService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取服务器硬件信息
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取服务器硬件信息")]
     public SystemInfo HardwareInfo()
     {
@@ -40,7 +41,7 @@ public class SysServerService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取服务器运行时信息
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取服务器运行时信息")]
     public XiHan.Framework.Utils.Runtime.RuntimeInfo RuntimeInfo()
     {
@@ -51,7 +52,7 @@ public class SysServerService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取框架主要程序集
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取框架主要程序集")]
     public List<NuGetPackage> NuGetPackagesInfo()
     {
@@ -64,7 +65,7 @@ public class SysServerService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取服务器配置信息 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取服务器配置信息")]
     public dynamic GetServerBase()
     {
@@ -87,7 +88,7 @@ public class SysServerService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取服务器使用信息 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取服务器使用信息")]
     public dynamic GetServerUsed()
     {
@@ -113,7 +114,7 @@ public class SysServerService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取服务器磁盘信息 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取服务器磁盘信息")]
     public dynamic GetServerDisk()
     {
@@ -123,7 +124,7 @@ public class SysServerService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取框架主要程序集 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取框架主要程序集")]
     public dynamic GetAssemblyList()
     {
@@ -134,6 +135,7 @@ public class SysServerService : IDynamicApiController, ITransient
         var jsonAssembly = typeof(NewtonsoftJsonMvcCoreBuilderExtensions).Assembly.GetName();
         var excelAssembly = typeof(IExcelImporter).Assembly.GetName();
         var pdfAssembly = typeof(Magicodes.ExporterAndImporter.Pdf.IPdfExporter).Assembly.GetName();
+        // 第一阶段：构造 GetAssemblyList 当前步骤需要的中间数据和执行参数。
         var wordAssembly = typeof(Magicodes.ExporterAndImporter.Word.IWordExporter).Assembly.GetName();
         var captchaAssembly = typeof(Lazy.Captcha.Core.ICaptcha).Assembly.GetName();
         var wechatApiAssembly = typeof(WechatApiClient).Assembly.GetName();
@@ -156,6 +158,7 @@ public class SysServerService : IDynamicApiController, ITransient
         var sftpClientAssembly = typeof(Renci.SshNet.SftpClient).Assembly.GetName();
         var hardwareInfoAssembly = typeof(Hardware.Info.HardwareInfo).Assembly.GetName();
 
+        // 第2阶段：整理 GetAssemblyList 已计算的数据，并按方法契约返回最终结果。
         return new[]
         {
             new { furionAssembly.Name, furionAssembly.Version },

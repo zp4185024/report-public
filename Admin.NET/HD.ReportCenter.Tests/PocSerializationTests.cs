@@ -6,6 +6,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocSerializationTests
 {
+    /// <summary>验证 Enums Are Serialized As Stable Strings By Host Serializer 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Enums_AreSerializedAsStableStringsByHostSerializer()
     {

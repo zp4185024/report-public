@@ -1,6 +1,7 @@
 /**
  * @description: base64 to blob
- */
+   * 创建并返回 base64Conver 的 data URLto Blob 初始数据，避免不同调用方共享可变对象。
+  */
 export function dataURLtoBlob(base64Buf: string): Blob {
 	const arr = base64Buf.split(',');
 	const typeItem = arr[0];
@@ -25,6 +26,7 @@ export function urlToBase64(url: string, mineType?: string): Promise<string> {
 
 		const img = new Image();
 		img.crossOrigin = '';
+		/** 图片加载完成后绘制到 Canvas，并把像素内容编码为 Data URL。 */
 		img.onload = function () {
 			if (!canvas || !ctx) {
 				return reject();
@@ -48,7 +50,9 @@ export function fileToBase64(file: Blob) {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
 		reader.readAsDataURL(file);
+		/** 文件读取成功后向调用方返回生成的 Data URL。 */
 		reader.onload = () => resolve(reader.result);
+		/** 文件读取失败时把原始 FileReader 错误交给调用方处理。 */
 		reader.onerror = (error) => reject(error);
 	});
 }

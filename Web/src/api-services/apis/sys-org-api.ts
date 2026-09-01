@@ -334,6 +334,7 @@ export const SysOrgApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysOrgAddPost(body?: AddOrgInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 SysOrgApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysOrgApiAxiosParamCreator(configuration).apiSysOrgAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -351,6 +352,7 @@ export const SysOrgApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysOrgApiAxiosParamCreator(configuration).apiSysOrgDeletePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysOrgApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -385,6 +387,7 @@ export const SysOrgApiFp = function(configuration?: Configuration) {
          */
         async apiSysOrgTreeGet(id: number, name?: string, code?: string, type?: string, tenantId?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListOrgTreeOutput>>> {
             const localVarAxiosArgs = await SysOrgApiAxiosParamCreator(configuration).apiSysOrgTreeGet(id, name, code, type, tenantId, options);
+            // 第3阶段：整理 SysOrgApiFp 已计算的数据，并按方法契约返回最终结果。
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
@@ -421,6 +424,7 @@ export const SysOrgApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysOrgAddPost(body?: AddOrgInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt64>> {
+            // 第一阶段：整理 SysOrgApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysOrgApiFp(configuration).apiSysOrgAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -445,6 +449,7 @@ export const SysOrgApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysOrgListGet(id: number, name?: string, code?: string, type?: string, tenantId?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListSysOrg>> {
+            // 第2阶段：整理 SysOrgApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysOrgApiFp(configuration).apiSysOrgListGet(id, name, code, type, tenantId, options).then((request) => request(axios, basePath));
         },
         /**

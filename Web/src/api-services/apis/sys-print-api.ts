@@ -287,6 +287,7 @@ export const SysPrintApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysPrintAddPost(body?: AddPrintInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysPrintApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysPrintApiAxiosParamCreator(configuration).apiSysPrintAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -318,6 +319,7 @@ export const SysPrintApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysPrintApiAxiosParamCreator(configuration).apiSysPrintPagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysPrintApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -366,6 +368,7 @@ export const SysPrintApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiSysPrintAddPost(body?: AddPrintInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysPrintApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysPrintApiFp(configuration).apiSysPrintAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -386,6 +389,7 @@ export const SysPrintApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiSysPrintPagePost(body?: PagePrintInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysPrint>> {
+            // 第2阶段：整理 SysPrintApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysPrintApiFp(configuration).apiSysPrintPagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

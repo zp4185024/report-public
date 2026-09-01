@@ -204,6 +204,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
     state.loading = true;
     let params = Object.assign(state.queryParams, state.tableParams);
@@ -214,6 +218,11 @@ const handleQuery = async () => {
 };
 
 // 进入租管端
+/**
+ * 负责 index 的 go Tenant 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const goTenant = (row: any) => {
     ElMessageBox.confirm(`确定要进入【${row.name}】租管端?`, '提示', {
         confirmButtonText: '确定',
@@ -227,6 +236,11 @@ const goTenant = (row: any) => {
 }
 
 // 切换租户
+/**
+ * 更新 index 的 change Tenant 状态，并同步相关业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeTenant = (row: any) => {
     ElMessageBox.confirm(`确定要将当前用户切换到【${row.name}】?`, '提示', {
         confirmButtonText: '确定',
@@ -239,6 +253,11 @@ const changeTenant = (row: any) => {
     );
 }
 
+/**
+ * 更新 index 的 sync Grant Menu 状态，并把变化同步到关联组件或业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const syncGrantMenu = (row: any) => {
     ElMessageBox.confirm(`确定要将同步【${row.name}】的授权数据?`, '提示', {
         confirmButtonText: '确定',
@@ -251,6 +270,10 @@ const syncGrantMenu = (row: any) => {
 }
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
     state.queryParams.name = undefined;
     state.queryParams.phone = undefined;
@@ -258,23 +281,42 @@ const resetQuery = () => {
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Tenant 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddTenant = () => {
     state.editTenantTitle = '添加租户';
     editTenantRef.value?.openDialog({ tenantType: 0, orderNo: 100, host: '' });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Tenant 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditTenant = (row: any) => {
     state.editTenantTitle = '编辑租户';
     editTenantRef.value?.openDialog(row);
 };
 
 // 打开授权菜单页面
+/**
+ * 准备 index 的 open Grant Menu 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openGrantMenu = async (row: any) => {
     grantMenuRef.value?.openDialog(row);
 };
 
 // 重置密码
+/**
+ * 重置或刷新 index 的 reset Tenant Pwd 状态，并重新加载所需数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetTenantPwd = async (row: any) => {
     ElMessageBox.confirm(`确定重置密码：【${row.name}】?`, '提示', {
         confirmButtonText: '确定',
@@ -292,6 +334,11 @@ const resetTenantPwd = async (row: any) => {
 };
 
 // 删除
+/**
+ * 从 index 移除 del Tenant 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delTenant = (row: any) => {
     ElMessageBox.confirm(`确定删除租户：【${row.name}】?`, '提示', {
         confirmButtonText: '确定',
@@ -307,18 +354,33 @@ const delTenant = (row: any) => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
     state.tableParams.pageSize = val;
     handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
     state.tableParams.page = val;
     handleQuery();
 };
 
 // 创建租户库
+/**
+ * 构建 index 所需的 create Tenant 内容，并保证生成结果符合调用约定。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const createTenant = (row: any) => {
     ElMessageBox.confirm(`确定创建/更新租户数据库：【${row.name}】?`, '提示', {
         confirmButtonText: '确定',
@@ -333,6 +395,11 @@ const createTenant = (row: any) => {
 };
 
 // 修改状态
+/**
+ * 更新 index 的 change Status 状态，并同步相关业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeStatus = (row: any) => {
     getAPI(SysTenantApi)
         .apiSysTenantSetStatusPost({ id: row.id, status: row.status })

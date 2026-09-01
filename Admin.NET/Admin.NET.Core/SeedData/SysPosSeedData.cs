@@ -11,10 +11,8 @@ namespace Admin.NET.Core;
 /// </summary>
 public class SysPosSeedData : ISqlSugarEntitySeedData<SysPos>
 {
-    /// <summary>
-    /// 种子数据
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>校验 SysPosSeedData 的 Has Data 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IEnumerable<SysPos> HasData()
     {
         return new[]

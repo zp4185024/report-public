@@ -32,6 +32,10 @@ const state = reactive({
 	list: [] as any,
 });
 
+/**
+ * 查询或读取 commit 所需的 get List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getList = () => {
 	axios({
 		method: 'get',
@@ -46,6 +50,10 @@ const getList = () => {
 	});
 };
 
+/**
+ * 重置或刷新 commit 的 refresh 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const refresh = () => {
 	state.loading = true;
 	getList();

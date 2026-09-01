@@ -16,6 +16,10 @@ public class SysPosService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysPos> _sysPosRep;
     private readonly SysUserExtOrgService _sysUserExtOrgService;
 
+    /// <summary>初始化 SysPosService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysPosRep">sysPosRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserExtOrgService">sysUserExtOrgService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysPosService(UserManager userManager,
         SqlSugarRepository<SysPos> sysPosRep,
         SysUserExtOrgService sysUserExtOrgService)
@@ -25,11 +29,9 @@ public class SysPosService : IDynamicApiController, ITransient
         _sysUserExtOrgService = sysUserExtOrgService;
     }
 
-    /// <summary>
-    /// 获取职位列表 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysPosService 所需的 Get List 数据，并按调用约定返回结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取职位列表")]
     public async Task<List<SysPos>> GetList([FromQuery] PosInput input)
     {
@@ -48,11 +50,9 @@ public class SysPosService : IDynamicApiController, ITransient
             .ToListAsync();
     }
 
-    /// <summary>
-    /// 增加职位 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysPosService 所需的 Add Pos 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加职位")]
     public async Task AddPos(AddPosInput input)
@@ -62,11 +62,9 @@ public class SysPosService : IDynamicApiController, ITransient
         await _sysPosRep.InsertAsync(input.Adapt<SysPos>());
     }
 
-    /// <summary>
-    /// 更新职位 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysPosService 的 Update Pos 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新职位")]
     public async Task UpdatePos(UpdatePosInput input)
@@ -80,11 +78,9 @@ public class SysPosService : IDynamicApiController, ITransient
         await _sysPosRep.AsUpdateable(input.Adapt<SysPos>()).IgnoreColumns(true).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除职位 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysPosService 中与 Delete Pos 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除职位")]
     public async Task DeletePos(DeletePosInput input)

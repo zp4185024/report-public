@@ -73,6 +73,10 @@ const hovered = ref<number | null>(null);
 let refreshInterval: number;
 
 // 获取初始数据
+/**
+ * 查询或读取 index 所需的 fetch Data 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const fetchData = async () => {
     try {
         state.backups = (await getAPI(SysUpdateApi).apiSysUpdateListPost()).data.result ?? [];
@@ -83,6 +87,10 @@ const fetchData = async () => {
 };
 
 // 刷新日志
+/**
+ * 重置或刷新 index 的 refresh Log 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const refreshLog = async () => {
     try {
         const response = await getAPI(SysUpdateApi).apiSysUpdateLogsGet();
@@ -94,6 +102,10 @@ const refreshLog = async () => {
 };
 
 // 滚动到底部
+/**
+ * 负责 index 的 scroll To Bottom 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const scrollToBottom = () => {
     nextTick(() => {
         if (terminalOutput.value) {
@@ -103,6 +115,11 @@ const scrollToBottom = () => {
 };
 
 // 启动/停止日志刷新定时器
+/**
+ * 更新 index 的 toggle Refresh Timer 状态，并把变化同步到关联组件或业务数据。
+ * @param start - start 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const toggleRefreshTimer = (start: boolean) => {
     if (start && !refreshInterval) {
         refreshInterval = window.setInterval(refreshLog, 300);
@@ -113,6 +130,11 @@ const toggleRefreshTimer = (start: boolean) => {
 };
 
 // 处理动作
+/**
+ * 响应 index 的 handle Action 事件，并协调相关状态和后续操作。
+ * @param action - action 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleAction = async (action: 'update' | 'restore') => {
     if (state.isUpdating) return;
 
@@ -146,6 +168,10 @@ const handleAction = async (action: 'update' | 'restore') => {
 };
 
 // 清空日志
+/**
+ * 移除 index 中与 clear Logs 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clearLogs = async () => {
     try {
         state.logOutput = '';
@@ -157,6 +183,10 @@ const clearLogs = async () => {
 };
 
 // 获取密钥
+/**
+ * 查询或读取 index 所需的 get Web Hook Key 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getWebHookKey = async () => {
     try {
         const res = await getAPI(SysUpdateApi).apiSysUpdateWebHookKeyGet();
@@ -167,6 +197,12 @@ const getWebHookKey = async () => {
 }
 
 // 错误处理
+/**
+ * 响应 index 的 handle Error 事件，并协调相关状态和后续操作。
+ * @param message - message 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param error - error 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleError = (message: string, error: any) => {
     ElMessage.error(`${message}，请稍后再试。`);
 };

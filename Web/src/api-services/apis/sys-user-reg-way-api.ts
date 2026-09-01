@@ -238,6 +238,7 @@ export const SysUserRegWayApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserRegWayAddPost(body?: AddUserRegWayInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 SysUserRegWayApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserRegWayApiAxiosParamCreator(configuration).apiSysUserRegWayAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -266,6 +267,7 @@ export const SysUserRegWayApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserRegWayListPost(body?: PageUserRegWayInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListUserRegWayOutput>>> {
+            // 第2阶段：调用 SysUserRegWayApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserRegWayApiAxiosParamCreator(configuration).apiSysUserRegWayListPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -294,6 +296,7 @@ export const SysUserRegWayApiFp = function(configuration?: Configuration) {
  * @export
  */
 export const SysUserRegWayApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    // 第一阶段：整理 SysUserRegWayApiFactory 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -323,6 +326,7 @@ export const SysUserRegWayApiFactory = function (configuration?: Configuration, 
          * @throws {RequiredError}
          */
         async apiSysUserRegWayListPost(body?: PageUserRegWayInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListUserRegWayOutput>> {
+            // 第2阶段：整理 SysUserRegWayApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserRegWayApiFp(configuration).apiSysUserRegWayListPost(body, options).then((request) => request(axios, basePath));
         },
         /**

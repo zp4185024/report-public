@@ -23,6 +23,11 @@ public class SyncDingTalkDeptJob : IJob
     private readonly ILogger _logger;
     private readonly SqlSugarRepository<DingTalkDept> _dingTalkDeptRep;
 
+    /// <summary>初始化 SyncDingTalkDeptJob 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="scopeFactory">scopeFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dingTalkApi">dingTalkApi 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dingTalkDeptRep">dingTalkDeptRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="loggerFactory">loggerFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SyncDingTalkDeptJob(
         IServiceScopeFactory scopeFactory,
         IDingTalkApi dingTalkApi,
@@ -35,6 +40,10 @@ public class SyncDingTalkDeptJob : IJob
         _logger = loggerFactory.CreateLogger(CommonConst.SysLogCategoryName);
     }
 
+    /// <summary>执行 SyncDingTalkDeptJob 的 Execute Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
         using var serviceScope = _scopeFactory.CreateScope();
@@ -71,6 +80,10 @@ public class SyncDingTalkDeptJob : IJob
         Console.ForegroundColor = originColor;
     }
 
+    /// <summary>查询或读取 SyncDingTalkDeptJob 所需的 Get Ding Talk Dept List 数据，并按调用约定返回结果。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="dept_id">需要定位的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<List<DingTalkDept>> GetDingTalkDeptList(string token, long dept_id)
     {
         List<DingTalkDept> listTemp = new List<DingTalkDept>();

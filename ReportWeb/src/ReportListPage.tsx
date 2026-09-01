@@ -11,6 +11,11 @@ const emptyCreateRequest: CreateReportRequest = {
   datasetCode: '',
 };
 
+/**
+ * 将 ReportListPage 中的 format Updated At 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function formatUpdatedAt(value: string | null): string {
   if (!value) return '暂无记录';
   const date = new Date(value);
@@ -25,6 +30,10 @@ function formatUpdatedAt(value: string | null): string {
   }).format(date);
 }
 
+/**
+ * 按 Report List Page 规则筛选 ReportListPage 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export default function ReportListPage() {
   const [reports, setReports] = useState<ReportSummaryDocument[]>([]);
   const [query, setQuery] = useState('');
@@ -34,9 +43,14 @@ export default function ReportListPage() {
   const [createOptionsLoading, setCreateOptionsLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  // 第一阶段：构造 ReportListPage 当前阶段需要的中间数据和执行参数。
   const [datasets, setDatasets] = useState<DatasetOption[]>([]);
   const [createRequest, setCreateRequest] = useState<CreateReportRequest>(emptyCreateRequest);
 
+  /**
+   * 查询或读取 ReportListPage 所需的 load 数据，并按调用约定返回结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const load = async () => {
     setLoading(true);
     setError(null);
@@ -64,11 +78,16 @@ export default function ReportListPage() {
     ].some((value) => value.toLocaleLowerCase('zh-CN').includes(keyword)));
   }, [query, reports]);
 
+  /**
+   * 准备 ReportListPage 的 open Create 交互状态并打开对应界面。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const openCreate = async () => {
     setCreateOpen(true);
     setCreateError(null);
     setCreateOptionsLoading(true);
     try {
+      // 第2阶段：调用 ReportListPage 依赖的异步能力，等待并校验返回数据。
       const options = await reportCatalogApi.createOptions();
       setDatasets(options.datasets);
       setCreateRequest({
@@ -82,12 +101,21 @@ export default function ReportListPage() {
     }
   };
 
+  /**
+   * 结束 ReportListPage 的 close Create 交互并清理临时状态。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const closeCreate = () => {
     if (creating) return;
     setCreateOpen(false);
     setCreateError(null);
   };
 
+  /**
+   * 构建 ReportListPage 所需的 create Report 内容，并保证生成结果符合调用约定。
+   * @param event - 触发当前处理流程的界面或业务事件。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const createReport = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedCode = createRequest.reportCode.trim().toLowerCase();
@@ -104,6 +132,7 @@ export default function ReportListPage() {
       return;
     }
 
+    // 第3阶段：根据 ReportListPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
     setCreating(true);
     setCreateError(null);
     try {
@@ -115,11 +144,14 @@ export default function ReportListPage() {
       });
       window.location.assign(`/reports/${encodeURIComponent(created.reportCode)}`);
     } catch (exception) {
+      // 第7阶段：根据 ReportListPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setCreateError(exception instanceof Error ? exception.message : '模板创建失败。');
+      // 第6阶段：根据 ReportListPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setCreating(false);
     }
   };
 
+  // 第4阶段：遍历 ReportListPage 当前数据集合，逐项转换并维护处理结果。
   return (
     <main className="report-list-page">
       <header className="report-list-header">
@@ -162,6 +194,7 @@ export default function ReportListPage() {
       <StatusToasts
         error={createError ?? error}
         onErrorClose={() => {
+          // 第5阶段：检查 ReportListPage 当前条件，并按匹配分支执行对应处理。
           if (createError !== null) setCreateError(null);
           else setError(null);
         }}

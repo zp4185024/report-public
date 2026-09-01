@@ -18,6 +18,10 @@ interface ShareReportDialogProps {
   onClose: () => void;
 }
 
+/**
+ * 初始化 ShareReportDialog 的 Share Report Dialog 监听流程，并在状态变化时同步执行相关操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function ShareReportDialog({
   open,
   reportName,
@@ -30,15 +34,23 @@ export function ShareReportDialog({
 }: ShareReportDialogProps) {
   useEffect(() => {
     if (!open) return undefined;
+    /**
+     * 结束 ShareReportDialog 的 close On Escape 交互并清理临时状态。
+     * @param event - 触发当前处理流程的界面或业务事件。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', closeOnEscape);
+    // 第一阶段：整理 ShareReportDialog 已计算的数据，并按方法契约返回最终结果。
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [onClose, open]);
 
+  // 第3阶段：检查 ShareReportDialog 当前条件，并按匹配分支执行对应处理。
   if (!open) return null;
 
+  // 第2阶段：遍历 ShareReportDialog 当前数据集合，逐项转换并维护处理结果。
   return (
     <div className="share-dialog-backdrop" role="presentation">
       <section

@@ -11,6 +11,7 @@ namespace Admin.NET.Test.Utils;
 
 public class DateTimeUtilTests
 {
+    /// <summary>验证 Init With Time Span Returns Correct Date Time 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Init_WithTimeSpan_ReturnsCorrectDateTime()
     {
@@ -24,6 +25,7 @@ public class DateTimeUtilTests
         Assert.Equal(DateTime.Now.AddDays(1).Date, dateTimeUtil.Date.Date);
     }
 
+    /// <summary>验证 Init With Date Time Returns Correct Date Time 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Init_WithDateTime_ReturnsCorrectDateTime()
     {
@@ -37,6 +39,7 @@ public class DateTimeUtilTests
         Assert.Equal(dateTime, dateTimeUtil.Date);
     }
 
+    /// <summary>验证 Get Today Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetTodayRange_ReturnsCorrectRange()
     {
@@ -51,6 +54,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 15, 23, 59, 59), end); // 当天结束时间
     }
 
+    /// <summary>验证 Get Month Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetMonthRange_ReturnsCorrectRange()
     {
@@ -65,6 +69,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 31, 23, 59, 59), end); // 本月最后一天
     }
 
+    /// <summary>验证 Get First Day Of Month Returns Correct Date 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetFirstDayOfMonth_ReturnsCorrectDate()
     {
@@ -78,6 +83,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 1), firstDay); // 本月第一天
     }
 
+    /// <summary>验证 Get Last Day Of Month Returns Correct Date 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetLastDayOfMonth_ReturnsCorrectDate()
     {
@@ -91,6 +97,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 31, 23, 59, 59), lastDay); // 本月最后一天
     }
 
+    /// <summary>验证 Get Year Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetYearRange_ReturnsCorrectRange()
     {
@@ -105,6 +112,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 12, 31, 23, 59, 59), end); // 今年最后一天
     }
 
+    /// <summary>验证 Get First Day Of Year Returns Correct Date 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetFirstDayOfYear_ReturnsCorrectDate()
     {
@@ -118,6 +126,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 1, 1), firstDay); // 今年第一天
     }
 
+    /// <summary>验证 Get Last Day Of Year Returns Correct Date 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetLastDayOfYear_ReturnsCorrectDate()
     {
@@ -131,6 +140,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 12, 31, 23, 59, 59), lastDay); // 今年最后一天
     }
 
+    /// <summary>验证 Get Day Before Yesterday Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetDayBeforeYesterdayRange_ReturnsCorrectRange()
     {
@@ -145,6 +155,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 13, 23, 59, 59), end); // 前天结束时间
     }
 
+    /// <summary>验证 Get Yesterday Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetYesterdayRange_ReturnsCorrectRange()
     {
@@ -159,6 +170,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 14, 23, 59, 59), end); // 昨天结束时间
     }
 
+    /// <summary>验证 Get Last Week Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetLastWeekRange_ReturnsCorrectRange()
     {
@@ -173,6 +185,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 14, 23, 59, 59), end); // 上周最后一天（周日）
     }
 
+    /// <summary>验证 Get This Week Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetThisWeekRange_ReturnsCorrectRange()
     {
@@ -187,6 +200,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 21, 23, 59, 59), end); // 本周最后一天（周日）
     }
 
+    /// <summary>验证 Get Last Month Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetLastMonthRange_ReturnsCorrectRange()
     {
@@ -201,6 +215,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 9, 30, 23, 59, 59), end); // 上月最后一天
     }
 
+    /// <summary>验证 Get Last3 Days Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetLast3DaysRange_ReturnsCorrectRange()
     {
@@ -215,6 +230,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 15, 23, 59, 59), end); // 当前日期的结束时间
     }
 
+    /// <summary>验证 Get Last7 Days Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetLast7DaysRange_ReturnsCorrectRange()
     {
@@ -229,6 +245,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 15, 23, 59, 59), end); // 当前日期的结束时间
     }
 
+    /// <summary>验证 Get Last15 Days Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetLast15DaysRange_ReturnsCorrectRange()
     {
@@ -243,6 +260,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 15, 23, 59, 59), end); // 当前日期的结束时间
     }
 
+    /// <summary>验证 Get Last3 Months Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetLast3MonthsRange_ReturnsCorrectRange()
     {
@@ -257,6 +275,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 10, 15, 23, 59, 59), end); // 当前日期的结束时间
     }
 
+    /// <summary>验证 Get First Half Year Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetFirstHalfYearRange_ReturnsCorrectRange()
     {
@@ -271,6 +290,7 @@ public class DateTimeUtilTests
         Assert.Equal(new DateTime(2023, 6, 30, 23, 59, 59), end); // 上半年结束时间
     }
 
+    /// <summary>验证 Get Second Half Year Range Returns Correct Range 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetSecondHalfYearRange_ReturnsCorrectRange()
     {

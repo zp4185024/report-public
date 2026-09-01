@@ -72,6 +72,10 @@ const setShowLogo = computed(() => {
 	return (isShowLogo && layout === 'defaults') || (isShowLogo && layout === 'columns');
 });
 // 关闭移动端蒙版
+/**
+ * 结束 aside 的 close Layout Aside Mobile Mode 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeLayoutAsideMobileMode = () => {
 	const el = document.querySelector('.layout-aside-mobile-mode');
 	el?.setAttribute('style', 'animation: error-img-two 0.3s');
@@ -83,11 +87,20 @@ const closeLayoutAsideMobileMode = () => {
 	document.body.setAttribute('class', '');
 };
 // 设置/过滤路由（非静态路由/是否显示在菜单中）
+/**
+ * 更新 aside 的 set Filter Routes 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setFilterRoutes = () => {
 	if (themeConfig.value.layout === 'columns') return false;
 	state.menuList = filterRoutesFun(routesList.value);
 };
 // 路由过滤递归函数
+/**
+ * 按 filter Routes Fun 规则筛选 aside 数据，并返回满足条件的结果。
+ * @param arr - arr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const filterRoutesFun = <T extends RouteItem>(arr: T[]): T[] => {
 	return arr
 		.filter((item: T) => !item.meta?.isHide)
@@ -98,10 +111,20 @@ const filterRoutesFun = <T extends RouteItem>(arr: T[]): T[] => {
 		});
 };
 // 设置菜单导航是否固定（移动端）
+/**
+ * 初始化 aside 的 init Menu Fixed 状态，创建依赖并注册运行期间需要的资源。
+ * @param clientWidth - clientWidth 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initMenuFixed = (clientWidth: number) => {
 	state.clientWidth = clientWidth;
 };
 // 鼠标移入、移出
+/**
+ * 响应 aside 的 on Aside Enter Leave 事件，并协调相关状态和后续操作。
+ * @param bool - bool 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onAsideEnterLeave = (bool: Boolean) => {
 	let { layout } = themeConfig.value;
 	if (layout !== 'columns') return false;

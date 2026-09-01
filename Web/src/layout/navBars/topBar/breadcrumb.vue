@@ -56,6 +56,11 @@ const isShowBreadcrumb = computed(() => {
 	else return isBreadcrumb ? true : false;
 });
 // 面包屑点击时
+/**
+ * 响应 breadcrumb 的 on Breadcrumb Click 事件，并协调相关状态和后续操作。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onBreadcrumbClick = (v: RouteItem) => {
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
 	const { redirect, path } = v;
@@ -64,16 +69,29 @@ const onBreadcrumbClick = (v: RouteItem) => {
 	// else if (path) router.push(path);
 };
 // 展开/收起左侧菜单点击
+/**
+ * 响应 breadcrumb 的 on Theme Config Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onThemeConfigChange = () => {
 	themeConfig.value.isCollapse = !themeConfig.value.isCollapse;
 	setLocalThemeConfig();
 };
 // 存储布局配置
+/**
+ * 更新 breadcrumb 的 set Local Theme Config 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setLocalThemeConfig = () => {
 	Local.remove('themeConfig');
 	Local.set('themeConfig', themeConfig.value);
 };
 // 处理面包屑数据
+/**
+ * 查询或读取 breadcrumb 所需的 get Breadcrumb List 数据，并按调用约定返回结果。
+ * @param arr - arr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getBreadcrumbList = (arr: RouteItems) => {
 	arr.forEach((item: RouteItem) => {
 		state.routeSplit.forEach((v: string, k: number, arrs: string[]) => {
@@ -87,6 +105,11 @@ const getBreadcrumbList = (arr: RouteItems) => {
 	});
 };
 // 当前路由字符串切割成数组，并删除第一项空内容
+/**
+ * 初始化 breadcrumb 的 init Route Split 状态，创建依赖并注册运行期间需要的资源。
+ * @param toRoute - toRoute 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initRouteSplit = (toRoute: RouteLocationNormalized) => {
 	if (!themeConfig.value.isBreadcrumb) return false;
 	state.breadcrumbList = [];

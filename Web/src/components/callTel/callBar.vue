@@ -15,6 +15,10 @@ const props = defineProps({
 const qrcodeRef = ref<HTMLElement | null>(null);
 
 // 初始化生成二维码
+/**
+ * 初始化 callBar 的 init Qrcode 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initQrcode = () => {
 	nextTick(() => {
 		const token = props.needToken ? Local.get(accessTokenKey) : '';
@@ -37,6 +41,10 @@ const initQrcode = () => {
 };
 
 // 拨打电话
+/**
+ * 校验 callBar 的 call Tel 输入后执行核心操作，并把成功或失败结果交给调用方。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const callTel = () => {
 	location.href = 'tel:' + props.number;
 }

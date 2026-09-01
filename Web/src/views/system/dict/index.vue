@@ -208,6 +208,10 @@ onMounted(async () => {
 });
 
 // 查询字典操作
+/**
+ * 响应 index 的 handle Dict Type Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleDictTypeQuery = async () => {
 	state.typeLoading = true;
 	let params = Object.assign(state.queryDictTypeParams, state.tableDictTypeParams);
@@ -218,6 +222,10 @@ const handleDictTypeQuery = async () => {
 };
 
 // 查询字典值操作
+/**
+ * 响应 index 的 handle Dict Data Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleDictDataQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryDictDataParams, state.tableDictDataParams);
@@ -228,6 +236,11 @@ const handleDictDataQuery = async () => {
 };
 
 // 列排序
+/**
+ * 按 sort Change Dity Type 条件比较、筛选或整理 index 数据，并返回顺序稳定的结果。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const sortChangeDityType = async (column: any) => {
   state.tableDictTypeParams.field = column.prop;
   state.tableDictTypeParams.order = column.order;
@@ -235,17 +248,33 @@ const sortChangeDityType = async (column: any) => {
 };
 
 // 点击表格
+/**
+ * 响应 index 的 handle Dict Type 事件，并协调相关状态和后续操作。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param event - 触发当前处理流程的界面或业务事件。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleDictType = (row: any, event: any, column: any) => {
 	openDictDataDialog(row);
 };
 
 // 判断是否有权限操作
+/**
+ * 校验 index 的 has Permission 条件，并返回可供后续流程判断的结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const hasPermission = (row: any) => {
 	//if (row.code?.toLowerCase().endsWith('enum')) return false;
 	return row?.sysFlag === 2 || userInfo.accountType === AccountTypeEnum.NUMBER_999;
 };
 
 // 重置字典操作
+/**
+ * 重置或刷新 index 的 reset Dict Type Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetDictTypeQuery = () => {
 	state.queryDictTypeParams.name = undefined;
 	state.queryDictTypeParams.code = undefined;
@@ -253,18 +282,30 @@ const resetDictTypeQuery = () => {
 };
 
 // 重置字典值操作
+/**
+ * 重置或刷新 index 的 reset Dict Data Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetDictDataQuery = () => {
 	state.queryDictDataParams.label = undefined;
 	handleDictDataQuery();
 };
 
 // 打开新增字典页面
+/**
+ * 准备 index 的 open Add Dict Type 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddDictType = () => {
 	state.editDictTypeTitle = '添加字典';
 	editDictTypeRef.value?.openDialog({ sysFlag: 2, status: 1, orderNo: 100 });
 };
 
 // 打开新增字典值页面
+/**
+ * 准备 index 的 open Add Dict Data 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddDictData = () => {
 	if (!state.queryDictDataParams.dictTypeId) {
 		ElMessage.warning('请选择字典');
@@ -275,12 +316,22 @@ const openAddDictData = () => {
 };
 
 // 打开编辑字典页面
+/**
+ * 准备 index 的 open Edit Dict Type 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditDictType = (row: any) => {
 	state.editDictTypeTitle = '编辑字典';
 	editDictTypeRef.value?.openDialog(row);
 };
 
 // 打开复制字典值页面
+/**
+ * 准备 index 的 open Copy Dict Data 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openCopyDictData = (row: any) => {
 	state.editDictDataTitle = '复制字典值';
 	const copyRow = JSON.parse(JSON.stringify(row));
@@ -290,6 +341,11 @@ const openCopyDictData = (row: any) => {
 };
 
 // 打开编辑字典值页面
+/**
+ * 准备 index 的 open Edit Dict Data 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditDictData = (row: any) => {
 	row.dictType = state.selectDict;
 	state.editDictDataTitle = '编辑字典值';
@@ -297,6 +353,11 @@ const openEditDictData = (row: any) => {
 };
 
 // 打开字典值页面
+/**
+ * 准备 index 的 open Dict Data Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDictDataDialog = (row: any) => {
 	state.selectDict = row;
 	state.editDictTypeName = row.name;
@@ -305,6 +366,11 @@ const openDictDataDialog = (row: any) => {
 };
 
 // 删除字典
+/**
+ * 从 index 移除 del Dict Type 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delDictType = (row: any) => {
 	ElMessageBox.confirm(`确定删除字典：【${row.name}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -319,6 +385,11 @@ const delDictType = (row: any) => {
 };
 
 // 删除字典值
+/**
+ * 从 index 移除 del Dict Data 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delDictData = (row: any) => {
 	ElMessageBox.confirm(`确定删除字典值：【${row.value}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -333,30 +404,54 @@ const delDictData = (row: any) => {
 };
 
 // 改变字典页面容量
+/**
+ * 响应 index 的 handle Dict Type Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleDictTypeSizeChange = (val: number) => {
 	state.tableDictTypeParams.pageSize = val;
 	handleDictTypeQuery();
 };
 
 // 改变字典页码序号
+/**
+ * 响应 index 的 handle Dict Type Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleDictTypeCurrentChange = (val: number) => {
 	state.tableDictTypeParams.page = val;
 	handleDictTypeQuery();
 };
 
 // 改变字典值页面容量
+/**
+ * 响应 index 的 handle Dict Data Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleDictDataSizeChange = (val: number) => {
 	state.tableDictDataParams.pageSize = val;
 	handleDictDataQuery();
 };
 
 // 改变字典值页码序号
+/**
+ * 响应 index 的 handle Dict Data Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleDictDataCurrentChange = (val: number) => {
 	state.tableDictDataParams.page = val;
 	handleDictDataQuery();
 };
 
 // 更新前端字典缓存
+/**
+ * 更新 index 的 update Dict Session 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateDictSession = async () => {
 	await useUserInfo().setDictList();
 };

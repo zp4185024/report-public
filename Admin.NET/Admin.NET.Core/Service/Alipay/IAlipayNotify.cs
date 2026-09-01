@@ -13,19 +13,15 @@ namespace Admin.NET.Core.Service;
 /// </summary>
 public abstract class IAlipayNotify
 {
-    /// <summary>
-    /// 充值回调方法
-    /// </summary>
+    /// <summary>根据 IAlipayNotify 当前输入执行 Top Up Callback 规则，更新关联状态并返回该操作产生的结果。</summary>
     /// <param name="type">交易类型</param>
     /// <param name="tradeNo">交易id</param>
     public abstract bool TopUpCallback(long type, long tradeNo);
 
-    /// <summary>
-    /// 扫码回调
-    /// </summary>
-    /// <param name="type"></param>
-    /// <param name="userId"></param>
-    /// <param name="response"></param>
-    /// <returns></returns>
+    /// <summary>根据 IAlipayNotify 当前输入执行 Scan Callback 规则，更新关联状态并返回该操作产生的结果。</summary>
+    /// <param name="type">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="response">上一步或远程调用返回的处理结果。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public abstract bool ScanCallback(long type, long userId, AlipayUserInfoShareResponse response);
 }

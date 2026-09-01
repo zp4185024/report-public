@@ -15,6 +15,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# 校验 Initialize-ReportCenterSqlServer 的 Assert Safe Sql Identifier 条件，并返回可供后续流程判断的结果。
 function Assert-SafeSqlIdentifier {
     param(
         [Parameter(Mandatory)]
@@ -29,6 +30,7 @@ function Assert-SafeSqlIdentifier {
     }
 }
 
+# 构建 Initialize-ReportCenterSqlServer 所需的 New Report Center Connection String 内容，并保证生成结果符合调用约定。
 function New-ReportCenterConnectionString {
     param(
         [Parameter(Mandatory)]
@@ -50,6 +52,7 @@ function New-ReportCenterConnectionString {
     return $builder.ConnectionString
 }
 
+# 执行 Initialize-ReportCenterSqlServer 的 Invoke Sql Scalar 核心流程，并保持错误和结果语义稳定。
 function Invoke-SqlScalar {
     param(
         [Parameter(Mandatory)]
@@ -83,6 +86,7 @@ function Invoke-SqlScalar {
     }
 }
 
+# 执行 Initialize-ReportCenterSqlServer 的 Invoke Sql Non Query 核心流程，并保持错误和结果语义稳定。
 function Invoke-SqlNonQuery {
     param(
         [Parameter(Mandatory)]
@@ -104,6 +108,7 @@ function Invoke-SqlNonQuery {
     }
 }
 
+# 查询或读取 Initialize-ReportCenterSqlServer 所需的 Get Sanitized Log Tail 数据，并按调用约定返回结果。
 function Get-SanitizedLogTail {
     param(
         [Parameter(Mandatory)]

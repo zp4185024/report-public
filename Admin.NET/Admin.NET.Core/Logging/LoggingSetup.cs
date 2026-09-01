@@ -8,10 +8,8 @@ namespace Admin.NET.Core;
 
 public static class LoggingSetup
 {
-    /// <summary>
-    /// 日志注册
-    /// </summary>
-    /// <param name="services"></param>
+    /// <summary>构建 LoggingSetup 所需的 Add Logging Setup 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="services">当前方法执行时使用的 services 输入值。</param>
     public static void AddLoggingSetup(this IServiceCollection services)
     {
         // 日志监听

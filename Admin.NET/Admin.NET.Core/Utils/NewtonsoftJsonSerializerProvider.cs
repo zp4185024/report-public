@@ -13,36 +13,30 @@ namespace Admin.NET.Core;
 /// </summary>
 public class NewtonsoftJsonSerializerProvider : IJsonSerializerProvider, ISingleton
 {
-    /// <summary>
-    /// 序列化对象
-    /// </summary>
-    /// <param name="value"></param>
-    /// <param name="jsonSerializerOptions"></param>
-    /// <returns></returns>
+    /// <summary>将 NewtonsoftJsonSerializerProvider 中的 Serialize 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="jsonSerializerOptions">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string Serialize(object value, object jsonSerializerOptions = null)
     {
         return JsonConvert.SerializeObject(value, (jsonSerializerOptions ?? GetSerializerOptions()) as JsonSerializerSettings);
     }
 
-    /// <summary>
-    /// 反序列化字符串
-    /// </summary>
+    /// <summary>将 NewtonsoftJsonSerializerProvider 中的 Deserialize 输入转换为调用方需要的稳定格式。</summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="json"></param>
-    /// <param name="jsonSerializerOptions"></param>
-    /// <returns></returns>
+    /// <param name="json">json 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="jsonSerializerOptions">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public T Deserialize<T>(string json, object jsonSerializerOptions = null)
     {
         return JsonConvert.DeserializeObject<T>(json, (jsonSerializerOptions ?? GetSerializerOptions()) as JsonSerializerSettings);
     }
 
-    /// <summary>
-    /// 反序列化字符串
-    /// </summary>
-    /// <param name="json"></param>
-    /// <param name="returnType"></param>
-    /// <param name="jsonSerializerOptions"></param>
-    /// <returns></returns>
+    /// <summary>将 NewtonsoftJsonSerializerProvider 中的 Deserialize 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="json">json 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="returnType">returnType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="jsonSerializerOptions">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public object Deserialize(string json, Type returnType, object jsonSerializerOptions = null)
     {
         return JsonConvert.DeserializeObject(json, returnType, (jsonSerializerOptions ?? GetSerializerOptions()) as JsonSerializerSettings);
@@ -51,7 +45,7 @@ public class NewtonsoftJsonSerializerProvider : IJsonSerializerProvider, ISingle
     /// <summary>
     /// 返回读取全局配置的 JSON 选项
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public object GetSerializerOptions()
     {
         return App.GetOptions<MvcNewtonsoftJsonOptions>()?.SerializerSettings;

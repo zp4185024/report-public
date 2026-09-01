@@ -18,6 +18,8 @@ public class BaseTest : IDisposable
     private readonly string _baseUrl = "http://localhost:8888";
     protected readonly EdgeDriver Driver = new();
 
+    /// <summary>初始化 BaseTest 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
     protected BaseTest(string token = null)
     {
         var url = _baseUrl;
@@ -39,11 +41,9 @@ public class BaseTest : IDisposable
         await Task.Delay(1000);
     }
 
-    /// <summary>
-    /// 用户登录
-    /// </summary>
-    /// <param name="account"></param>
-    /// <param name="password"></param>
+    /// <summary>调用 BaseTest 的异步依赖完成 Login 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="account">控制数据范围或位置的数值。</param>
+    /// <param name="password">password 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     protected async Task Login(string account = "superAdmin.NET", string password = "Admin.NET++010101")
     {
         await GoToUrlAsync("/#/login");
@@ -69,10 +69,8 @@ public class BaseTest : IDisposable
         button.Click();
     }
 
-    /// <summary>
-    /// 打开指定页面
-    /// </summary>
-    /// <param name="url"></param>
+    /// <summary>调用 BaseTest 的异步依赖完成 Go To Url Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="url">url 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     protected async Task GoToUrlAsync(string url)
     {
         if (url.StartsWith("http")) await Driver.Navigate().GoToUrlAsync(url);
@@ -90,6 +88,7 @@ public class BaseTest : IDisposable
         Console.ReadLine();
     }
 
+    /// <summary>释放 BaseTest 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         Driver.Quit();

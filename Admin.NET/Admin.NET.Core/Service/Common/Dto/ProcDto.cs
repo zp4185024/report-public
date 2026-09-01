@@ -65,11 +65,16 @@ public class ProcExporterHeaderFilter : IExporterHeaderFilter
 {
     private Dictionary<string, Tuple<string, int>> _includeHeader;
 
+    /// <summary>初始化 ProcExporterHeaderFilter 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="includeHeader">当前方法执行时使用的 includeHeader 输入值。</param>
     public ProcExporterHeaderFilter(Dictionary<string, Tuple<string, int>> includeHeader)
     {
         _includeHeader = includeHeader;
     }
 
+    /// <summary>根据 ProcExporterHeaderFilter 当前输入计算 Filter 结果，并按方法声明的类型返回。</summary>
+    /// <param name="exporterHeaderInfo">当前方法执行时使用的 exporterHeaderInfo 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public ExporterHeaderInfo Filter(ExporterHeaderInfo exporterHeaderInfo)
     {
         if (_includeHeader != null && _includeHeader.Count > 0)

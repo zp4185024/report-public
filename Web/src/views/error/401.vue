@@ -24,6 +24,10 @@
 import { Session } from '/@/utils/storage';
 import unauthorizedImage from '/@/assets/401.png';
 
+/**
+ * 响应 401 的 on Set Auth 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSetAuth = () => {
 	// https://gitee.com/lyt-top/vue-next-admin/issues/I5C3JS
 	// 清除缓存/token等

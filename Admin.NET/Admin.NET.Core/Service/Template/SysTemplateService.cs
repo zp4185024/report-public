@@ -16,6 +16,10 @@ public class SysTemplateService : IDynamicApiController, ITransient
     private readonly UserManager _userManager;
     private readonly IViewEngine _viewEngine;
 
+    /// <summary>初始化 SysTemplateService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysTemplateRep">sysTemplateRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="viewEngine">viewEngine 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysTemplateService(
         SqlSugarRepository<SysTemplate> sysTemplateRep,
         IViewEngine viewEngine,
@@ -26,11 +30,9 @@ public class SysTemplateService : IDynamicApiController, ITransient
         _viewEngine = viewEngine;
     }
 
-    /// <summary>
-    /// 获取模板列表 📑
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysTemplateService 的异步依赖完成 Page 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings]
     [DisplayName("获取模板列表")]
     public async Task<SqlSugarPagedList<SysTemplate>> Page(PageTemplateInput input)
@@ -45,11 +47,9 @@ public class SysTemplateService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 获取模板 📑
-    /// </summary>
-    /// <param name="code"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysTemplateService 所需的 Get Template 数据，并按调用约定返回结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取模板")]
     [ApiDescriptionSettings]
     public async Task<SysTemplate> GetTemplate(string code)
@@ -57,11 +57,9 @@ public class SysTemplateService : IDynamicApiController, ITransient
         return await _sysTemplateRep.GetFirstAsync(u => u.Name == code);
     }
 
-    /// <summary>
-    /// 预览模板内容 📑
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysTemplateService 的异步依赖完成 Pro View 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("预览模板内容")]
     [ApiDescriptionSettings]
     public async Task<string> ProView(ProViewTemplateInput input)
@@ -70,11 +68,9 @@ public class SysTemplateService : IDynamicApiController, ITransient
         return await RenderAsync(template.Content, input.Data);
     }
 
-    /// <summary>
-    /// 增加模板 📑
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysTemplateService 所需的 Add Template 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("增加模板")]
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     public async Task AddTemplate(AddTemplateInput input)
@@ -88,11 +84,9 @@ public class SysTemplateService : IDynamicApiController, ITransient
         await _sysTemplateRep.InsertAsync(input.Adapt<SysTemplate>());
     }
 
-    /// <summary>
-    /// 更新模板 📑
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysTemplateService 的 Update Template 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("更新模板")]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     public async Task UpdateTemplate(UpdateTemplateInput input)
@@ -106,11 +100,9 @@ public class SysTemplateService : IDynamicApiController, ITransient
         await _sysTemplateRep.AsUpdateable(input.Adapt<SysTemplate>()).IgnoreColumns(true).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除模板 📑
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysTemplateService 中与 Delete Template 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("删除模板")]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     public async Task DeleteTemplate(BaseIdInput input)
@@ -118,10 +110,8 @@ public class SysTemplateService : IDynamicApiController, ITransient
         await _sysTemplateRep.DeleteAsync(u => u.Id == input.Id);
     }
 
-    /// <summary>
-    /// 获取分组列表 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysTemplateService 所需的 Get Group List 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings]
     [DisplayName("获取分组列表")]
     public async Task<List<string>> GetGroupList()
@@ -131,11 +121,9 @@ public class SysTemplateService : IDynamicApiController, ITransient
             .Select(u => u.GroupName).ToListAsync();
     }
 
-    /// <summary>
-    /// 渲染模板内容 📑
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysTemplateService 的异步依赖完成 Render 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("渲染模板内容")]
     [ApiDescriptionSettings, HttpPost]
     public async Task<string> Render(RenderTemplateInput input)
@@ -143,12 +131,10 @@ public class SysTemplateService : IDynamicApiController, ITransient
         return await RenderAsync(input.Content, input.Data);
     }
 
-    /// <summary>
-    /// 渲染模板内容 📑
-    /// </summary>
-    /// <param name="content"></param>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysTemplateService 的异步依赖完成 Render Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="content">content 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<string> RenderAsync(string content, object data)
     {
@@ -167,9 +153,9 @@ public class SysTemplateService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据编码渲染模板内容
     /// </summary>
-    /// <param name="code"></param>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<string> RenderByCode(string code, Dictionary<string, object> data)
     {

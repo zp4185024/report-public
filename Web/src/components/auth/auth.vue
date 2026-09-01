@@ -11,6 +11,10 @@ import { useUserInfo } from '/@/stores/userInfo';
 const props = defineProps({
 	value: {
 		type: String,
+		/**
+		 * 为 value 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '',
 	},
 });

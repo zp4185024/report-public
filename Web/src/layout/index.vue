@@ -25,6 +25,10 @@ const { themeConfig } = storeToRefs(storesThemeConfig);
 let maxClientWidth = document.body.clientWidth;
 
 // 窗口大小改变时(适配移动端)
+/**
+ * 响应 index 的 on Layout Resize 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onLayoutResize = () => {
 	if (!Local.get('oldLayout')) Local.set('oldLayout', themeConfig.value.layout);
 	const clientWidth = document.body.clientWidth;

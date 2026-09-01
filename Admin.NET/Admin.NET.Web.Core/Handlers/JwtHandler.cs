@@ -25,9 +25,9 @@ public class JwtHandler : AppAuthorizeHandler
     /// <summary>
     /// 自动刷新Token
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="httpContext"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="httpContext">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task HandleAsync(AuthorizationHandlerContext context, DefaultHttpContext httpContext)
     {
         var userId = context.User.FindFirst(ClaimConst.UserId)?.Value;
@@ -60,6 +60,10 @@ public class JwtHandler : AppAuthorizeHandler
         }
     }
 
+    /// <summary>调用 JwtHandler 的异步依赖完成 Pipeline Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="httpContext">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task<bool> PipelineAsync(AuthorizationHandlerContext context, DefaultHttpContext httpContext)
     {
         // 已自动验证 Jwt Token 有效性
@@ -69,8 +73,8 @@ public class JwtHandler : AppAuthorizeHandler
     /// <summary>
     /// 权限校验核心逻辑
     /// </summary>
-    /// <param name="httpContext"></param>
-    /// <returns></returns>
+    /// <param name="httpContext">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<bool> CheckAuthorizeAsync(DefaultHttpContext httpContext)
     {
         // 登录模式判断PC、APP

@@ -109,6 +109,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -119,6 +123,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = async () => {
 	state.queryParams.name = undefined;
 	state.queryParams.code = undefined;
@@ -126,23 +134,42 @@ const resetQuery = async () => {
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Role 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddRole = () => {
 	state.editRoleTitle = '添加角色';
 	editRoleRef.value?.openDialog({ id: undefined, status: 1, tenantId: state.queryParams.tenantId, orderNo: 100 });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Role 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditRole = async (row: any) => {
 	state.editRoleTitle = '编辑角色';
 	editRoleRef.value?.openDialog(row);
 };
 
 // 打开授权数据范围页面
+/**
+ * 准备 index 的 open Grant Data 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openGrantData = (row: any) => {
 	grantDataRef.value?.openDialog(row);
 };
 
 // 删除
+/**
+ * 从 index 移除 del Role 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delRole = (row: any) => {
 	ElMessageBox.confirm(`确定删角色：【${row.name}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -158,18 +185,33 @@ const delRole = (row: any) => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = async (val: number) => {
 	state.tableParams.pageSize = val;
 	await handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = async (val: number) => {
 	state.tableParams.page = val;
 	await handleQuery();
 };
 
 // 修改状态
+/**
+ * 更新 index 的 change Status 状态，并同步相关业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeStatus = async (row: any) => {
 	await getAPI(SysRoleApi)
 		.apiSysRoleSetStatusPost({ id: row.id, status: row.status })

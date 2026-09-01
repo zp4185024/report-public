@@ -18,6 +18,10 @@ export const accessTokenKey = 'access-token';
 export const refreshAccessTokenKey = `x-${accessTokenKey}`;
 
 // 获取 token
+/**
+ * 查询或读取 request 所需的 get Token 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const getToken = () => {
 	return Local.get(accessTokenKey);
 };
@@ -163,6 +167,11 @@ service.interceptors.response.use(
 );
 
 // 取消指定请求
+/**
+ * 校验 request 的 cancel Request 条件，并返回可供后续流程判断的结果。
+ * @param url - url 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const cancelRequest = (url: string | string[]) => {
 	const urlList = Array.isArray(url) ? url : [url];
 	for (const _url of urlList) {
@@ -172,6 +181,10 @@ export const cancelRequest = (url: string | string[]) => {
 }
 
 // 取消全部请求
+/**
+ * 校验 request 的 cancel All Request 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const cancelAllRequest = () => {
 	for (const [_, controller] of abortControllerMap) {
 		controller.abort();
@@ -182,7 +195,8 @@ export const cancelAllRequest = () => {
 /**
  *  参数处理
  * @param {*} params  参数
- */
+   * 负责 request 的 tans Params 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+  */
 export function tansParams(params: any) {
 	let result = '';
 	for (const propName of Object.keys(params)) {

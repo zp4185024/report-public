@@ -46,6 +46,10 @@ const state = reactive({
 });
 
 // 打开弹窗
+/**
+ * 准备 changeTenant 的 open Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = async () => {
 	state.tenantList = await getAPI(SysTenantApi).apiSysTenantListGet().then(res => res.data.result ?? []);
 	state.ruleForm.id = userStore.userInfos.currentTenantId as any;
@@ -55,6 +59,10 @@ const openDialog = async () => {
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 changeTenant 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;

@@ -15,6 +15,9 @@ public class SysScheduleService : IDynamicApiController, ITransient
     private readonly UserManager _userManager;
     private readonly SqlSugarRepository<SysSchedule> _sysSchedule;
 
+    /// <summary>初始化 SysScheduleService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysSchedule">sysSchedule 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysScheduleService(UserManager userManager,
         SqlSugarRepository<SysSchedule> sysSchedule)
     {
@@ -22,10 +25,8 @@ public class SysScheduleService : IDynamicApiController, ITransient
         _sysSchedule = sysSchedule;
     }
 
-    /// <summary>
-    /// 获取日程列表
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>调用 SysScheduleService 的异步依赖完成 Page 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取日程列表")]
     public async Task<List<SysSchedule>> Page(ListScheduleInput input)
     {
@@ -38,22 +39,18 @@ public class SysScheduleService : IDynamicApiController, ITransient
             .ToListAsync();
     }
 
-    /// <summary>
-    /// 获取日程详情
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysScheduleService 所需的 Get Detail 数据，并按调用约定返回结果。</summary>
+    /// <param name="id">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取日程详情")]
     public async Task<SysSchedule> GetDetail(long id)
     {
         return await _sysSchedule.GetFirstAsync(u => u.Id == id);
     }
 
-    /// <summary>
-    /// 增加日程
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysScheduleService 所需的 Add User Schedule 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加日程")]
     public async Task AddUserSchedule(AddScheduleInput input)
@@ -62,11 +59,9 @@ public class SysScheduleService : IDynamicApiController, ITransient
         await _sysSchedule.InsertAsync(input.Adapt<SysSchedule>());
     }
 
-    /// <summary>
-    /// 更新日程
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysScheduleService 的 Update User Schedule 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新日程")]
     public async Task UpdateUserSchedule(UpdateScheduleInput input)
@@ -74,11 +69,9 @@ public class SysScheduleService : IDynamicApiController, ITransient
         await _sysSchedule.AsUpdateable(input.Adapt<SysSchedule>()).IgnoreColumns(true).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除日程
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysScheduleService 中与 Delete User Schedule 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除日程")]
     public async Task DeleteUserSchedule(DeleteScheduleInput input)
@@ -86,11 +79,9 @@ public class SysScheduleService : IDynamicApiController, ITransient
         await _sysSchedule.DeleteAsync(u => u.Id == input.Id);
     }
 
-    /// <summary>
-    /// 设置日程状态
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysScheduleService 的 Set Status 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("设置日程状态")]
     public async Task<int> SetStatus(ScheduleInput input)
     {

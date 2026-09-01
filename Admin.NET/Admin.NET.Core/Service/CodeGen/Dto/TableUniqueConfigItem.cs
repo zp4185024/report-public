@@ -21,11 +21,9 @@ public class TableUniqueConfigItem
     /// </summary>
     public string Message { get; set; }
 
-    /// <summary>
-    /// 格式化查询条件
-    /// </summary>
+    /// <summary>将 TableUniqueConfigItem 中的 Format 输入转换为调用方需要的稳定格式。</summary>
     /// <param name="separator">分隔符</param>
     /// <param name="format">模板字符串</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string Format(string separator, string format) => string.Join(separator, Columns.Select(name => string.Format(format, name)));
 }

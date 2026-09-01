@@ -18,6 +18,12 @@ public class SysNoticeService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysNoticeUser> _sysNoticeUserRep;
     private readonly SysOnlineUserService _sysOnlineUserService;
 
+    /// <summary>初始化 SysNoticeService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRep">sysUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysNoticeRep">sysNoticeRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysNoticeUserRep">sysNoticeUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysOnlineUserService">sysOnlineUserService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysNoticeService(
         UserManager userManager,
         SqlSugarRepository<SysUser> sysUserRep,
@@ -35,8 +41,8 @@ public class SysNoticeService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取通知公告分页列表 📢
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取通知公告分页列表")]
     public async Task<SqlSugarPagedList<SysNotice>> Page(PageNoticeInput input)
     {
@@ -48,11 +54,9 @@ public class SysNoticeService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 增加通知公告 📢
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysNoticeService 所需的 Add Notice 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加通知公告")]
     public async Task AddNotice(AddNoticeInput input)
@@ -62,11 +66,9 @@ public class SysNoticeService : IDynamicApiController, ITransient
         await _sysNoticeRep.InsertAsync(notice);
     }
 
-    /// <summary>
-    /// 更新通知公告 📢
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysNoticeService 的 Update Notice 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新通知公告")]
@@ -80,11 +82,9 @@ public class SysNoticeService : IDynamicApiController, ITransient
         await _sysNoticeRep.UpdateAsync(notice);
     }
 
-    /// <summary>
-    /// 删除通知公告 📢
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysNoticeService 中与 Delete Notice 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除通知公告")]
@@ -101,11 +101,9 @@ public class SysNoticeService : IDynamicApiController, ITransient
         await _sysNoticeUserRep.DeleteAsync(u => u.NoticeId == input.Id);
     }
 
-    /// <summary>
-    /// 发布通知公告 📢
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysNoticeService 的异步依赖完成 Public 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("发布通知公告")]
     public async Task Public(NoticeInput input)
     {
@@ -135,8 +133,8 @@ public class SysNoticeService : IDynamicApiController, ITransient
     /// <summary>
     /// 设置通知公告已读状态 📢
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("设置通知公告已读状态")]
     public async Task SetRead(NoticeInput input)
     {
@@ -150,8 +148,8 @@ public class SysNoticeService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取接收的通知公告
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取接收的通知公告")]
     public async Task<SqlSugarPagedList<SysNoticeUser>> PageReceived(PageNoticeInput input)
     {
@@ -166,7 +164,7 @@ public class SysNoticeService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取未读的通知公告 📢
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取未读的通知公告")]
     public async Task<List<SysNotice>> GetUnReadList()
     {
@@ -179,7 +177,7 @@ public class SysNoticeService : IDynamicApiController, ITransient
     /// <summary>
     /// 初始化通知公告信息
     /// </summary>
-    /// <param name="notice"></param>
+    /// <param name="notice">notice 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [NonAction]
     private void InitNoticeInfo(SysNotice notice)
     {

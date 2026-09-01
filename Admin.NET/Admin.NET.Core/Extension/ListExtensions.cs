@@ -8,6 +8,10 @@ namespace Admin.NET.Core;
 
 public static class ListExtensions
 {
+    /// <summary>调用 ListExtensions 的异步依赖完成 For Each Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="list">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="func">当前方法执行时使用的 func 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task ForEachAsync<T>(this List<T> list, Func<T, Task> func)
     {
         foreach (var value in list)
@@ -16,6 +20,10 @@ public static class ListExtensions
         }
     }
 
+    /// <summary>调用 ListExtensions 的异步依赖完成 For Each Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="action">当前方法执行时使用的 action 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task ForEachAsync<T>(this IEnumerable<T> source, Func<T, Task> action)
     {
         foreach (var value in source)
@@ -24,6 +32,9 @@ public static class ListExtensions
         }
     }
 
+    /// <summary>遍历 ListExtensions 当前数据并执行 For Each 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="enumerable">当前方法执行时使用的 enumerable 输入值。</param>
+    /// <param name="consumer">当前方法执行时使用的 consumer 输入值。</param>
     public static void ForEach<T>(this IEnumerable<T> enumerable, Action<T> consumer)
     {
         foreach (T item in enumerable)
@@ -32,6 +43,9 @@ public static class ListExtensions
         }
     }
 
+    /// <summary>构建 ListExtensions 所需的 Add Range 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="list">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="items">需要遍历、筛选或写入的业务数据集合。</param>
     public static void AddRange<T>(this IList<T> list, IEnumerable<T> items)
     {
         if (list is List<T> list2)

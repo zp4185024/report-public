@@ -45,6 +45,15 @@ const state = reactive({
 
 const previewContentRef = ref();
 
+/**
+ * 准备 preview 的 show Dialog 交互状态并打开对应界面。
+ * @param hiprintTemplate - hiprintTemplate 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param printData - 本次操作使用的输入数据。
+ * @param width - width 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param printType - printType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param printParam - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const showDialog = (hiprintTemplate: any, printData: {}, width = 210, printType = 1, printParam: { printer: ''; title: ''; color: false; copies: 1 }) => {
 	state.dialogVisible = true;
 	state.width = width;
@@ -61,6 +70,10 @@ const showDialog = (hiprintTemplate: any, printData: {}, width = 210, printType 
 	});
 };
 
+/**
+ * 按 print 规则筛选 preview 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const print = () => {
 	state.waitShowPrinter = true;
 	// debugger;
@@ -95,6 +108,10 @@ const print = () => {
 			state.printData,
 			{},
 			{
+				/**
+				 * 接收 preview 的异步处理结果并同步调用方关心的状态。
+				 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+				 */
 				callback: () => {
 					state.waitShowPrinter = false;
 				},
@@ -103,10 +120,18 @@ const print = () => {
 	}
 };
 
+/**
+ * 将 preview 的 to Pdf 输入转换为稳定格式，保留后续计算或展示需要的信息。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const toPdf = () => {
 	state.hiprintTemplate.toPdf(state.printData, 'PDF文件');
 };
 
+/**
+ * 结束 preview 的 hide Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const hideDialog = () => {
 	state.dialogVisible = false;
 };

@@ -181,6 +181,10 @@ const macroData: MacroData[] = reactive([
 
 // 间隔周期值
 const periodValue: WritableComputedRef<number | undefined> = computed({
+	/**
+	 * 查询或读取 editJobTrigger 所需的 get 数据，并按调用约定返回结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	get() {
 		const defaultValue: number | undefined = undefined;
 		// 触发器周期不是周期，返回默认值
@@ -192,6 +196,11 @@ const periodValue: WritableComputedRef<number | undefined> = computed({
 
 		return value;
 	},
+	/**
+	 * 更新 editJobTrigger 的 set 状态，并同步相关业务数据。
+	 * @param value - 需要读取、校验或转换的业务值。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	set(value: number | undefined) {
 		state.ruleForm.args = String(value);
 	},
@@ -199,6 +208,10 @@ const periodValue: WritableComputedRef<number | undefined> = computed({
 
 // cron 表达式值
 const cronValue: WritableComputedRef<string> = computed({
+	/**
+	 * 查询或读取 editJobTrigger 所需的 get 数据，并按调用约定返回结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	get() {
 		const defaultValue = '';
 		// 触发器周期不是周期，返回默认值
@@ -217,6 +230,11 @@ const cronValue: WritableComputedRef<string> = computed({
 			return cron;
 		}
 	},
+	/**
+	 * 更新 editJobTrigger 的 set 状态，并同步相关业务数据。
+	 * @param value - 需要读取、校验或转换的业务值。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	set(value: string) {
 		if (state.ruleForm.args == value) return;
 		const newValue = value.trim();
@@ -235,6 +253,11 @@ const cronValue: WritableComputedRef<string> = computed({
 });
 
 // 打开弹窗
+/**
+ * 准备 editJobTrigger 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	state.ruleForm = JSON.parse(JSON.stringify(row));
 	state.isShowDialog = true;
@@ -242,17 +265,29 @@ const openDialog = (row: any) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 editJobTrigger 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('handleQuery');
 	state.isShowDialog = false;
 };
 
 // 取消
+/**
+ * 校验 editJobTrigger 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editJobTrigger 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;
@@ -274,11 +309,21 @@ const submit = () => {
 };
 
 // cron窗体确定后值
+/**
+ * 负责 editJobTrigger 的 crontab Fill 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const crontabFill = (value: string | null | undefined) => {
 	cronValue.value = value == null || value == undefined ? '' : value;
 };
 
 // macro 下拉选中回调
+/**
+ * 负责 editJobTrigger 的 macro Drop Down Command 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const macroDropDownCommand = (item: MacroData) => {
 	cronValue.value = item.key;
 };

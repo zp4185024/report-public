@@ -768,6 +768,7 @@ export const SysDatabaseApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysDatabaseAddColumnPost(body?: DbColumnInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysDatabaseApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysDatabaseApiAxiosParamCreator(configuration).apiSysDatabaseAddColumnPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -798,6 +799,7 @@ export const SysDatabaseApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysDatabaseApiAxiosParamCreator(configuration).apiSysDatabaseBackupDatabasePost(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysDatabaseApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -838,6 +840,7 @@ export const SysDatabaseApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysDatabaseCreateSeedDataPost(body?: CreateSeedDataInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第3阶段：调用 SysDatabaseApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysDatabaseApiAxiosParamCreator(configuration).apiSysDatabaseCreateSeedDataPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -869,6 +872,7 @@ export const SysDatabaseApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysDatabaseApiAxiosParamCreator(configuration).apiSysDatabaseDeleteColumnPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysDatabaseApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -907,6 +911,7 @@ export const SysDatabaseApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysDatabaseMoveColumnPost(body?: MoveDbColumnInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第5阶段：调用 SysDatabaseApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysDatabaseApiAxiosParamCreator(configuration).apiSysDatabaseMoveColumnPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -938,6 +943,7 @@ export const SysDatabaseApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysDatabaseApiAxiosParamCreator(configuration).apiSysDatabaseUpdateColumnPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第6阶段：整理 SysDatabaseApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -985,6 +991,7 @@ export const SysDatabaseApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysDatabaseAddColumnPost(body?: DbColumnInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysDatabaseApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysDatabaseApiFp(configuration).apiSysDatabaseAddColumnPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1025,6 +1032,7 @@ export const SysDatabaseApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysDatabaseCreateEntityPost(body?: CreateEntityInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysDatabaseApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysDatabaseApiFp(configuration).apiSysDatabaseCreateEntityPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1055,6 +1063,7 @@ export const SysDatabaseApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysDatabaseDeleteColumnPost(body?: DeleteDbColumnInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第3阶段：整理 SysDatabaseApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysDatabaseApiFp(configuration).apiSysDatabaseDeleteColumnPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1094,6 +1103,7 @@ export const SysDatabaseApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysDatabaseTableListConfigIdGet(configId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListDbTableInfo>> {
+            // 第4阶段：整理 SysDatabaseApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysDatabaseApiFp(configuration).apiSysDatabaseTableListConfigIdGet(configId, options).then((request) => request(axios, basePath));
         },
         /**

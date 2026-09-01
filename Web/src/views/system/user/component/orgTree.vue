@@ -66,6 +66,12 @@ onMounted(async () => {
 });
 
 // 递归遍历
+/**
+ * 遍历 orgTree 数据并执行 Init Org 转换，生成后续流程需要的结果。
+ * @param orgData - 本次操作使用的输入数据。
+ * @param id - 需要定位的业务记录标识。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const InitOrg = (orgData: any, id: any) => {
 	if (orgData && orgData.length > 0) {
 		orgData.forEach(function (u: any) {

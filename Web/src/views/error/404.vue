@@ -28,6 +28,10 @@ import notFoundImage from '/@/assets/404.png';
 const router = useRouter();
 
 // 返回首页
+/**
+ * 响应 404 的 on Go Home 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onGoHome = () => {
 	router.push('/');
 };

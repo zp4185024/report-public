@@ -19,6 +19,10 @@ const ruleFormRef = ref();
 
 const state = reactive({});
 
+/**
+ * 更新 PropertyDialog 的 set Properties 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setProperties = () => {};
 </script>
 

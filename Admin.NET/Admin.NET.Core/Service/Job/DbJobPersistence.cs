@@ -13,6 +13,8 @@ public class DbJobPersistence : IJobPersistence
 {
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
+    /// <summary>初始化 DbJobPersistence 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="serviceScopeFactory">serviceScopeFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public DbJobPersistence(IServiceScopeFactory serviceScopeFactory)
     {
         _serviceScopeFactory = serviceScopeFactory;
@@ -21,8 +23,8 @@ public class DbJobPersistence : IJobPersistence
     /// <summary>
     /// 作业调度服务启动时
     /// </summary>
-    /// <param name="stoppingToken"></param>
-    /// <returns></returns>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <exception cref="NotSupportedException"></exception>
     public async Task<IEnumerable<SchedulerBuilder>> PreloadAsync(CancellationToken stoppingToken)
     {
@@ -205,9 +207,9 @@ public class DbJobPersistence : IJobPersistence
     /// <summary>
     /// 作业计划初始化通知
     /// </summary>
-    /// <param name="builder"></param>
-    /// <param name="stoppingToken"></param>
-    /// <returns></returns>
+    /// <param name="builder">builder 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task<SchedulerBuilder> OnLoadingAsync(SchedulerBuilder builder, CancellationToken stoppingToken)
     {
         return Task.FromResult(builder);
@@ -216,8 +218,8 @@ public class DbJobPersistence : IJobPersistence
     /// <summary>
     /// 作业计划Scheduler的JobDetail变化时
     /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task OnChangedAsync(PersistenceContext context)
     {
         using var scope = _serviceScopeFactory.CreateScope();
@@ -243,8 +245,8 @@ public class DbJobPersistence : IJobPersistence
     /// <summary>
     /// 作业计划Scheduler的触发器Trigger变化时
     /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task OnTriggerChangedAsync(PersistenceTriggerContext context)
     {
         using var scope = _serviceScopeFactory.CreateScope();
@@ -270,8 +272,8 @@ public class DbJobPersistence : IJobPersistence
     /// <summary>
     /// 作业触发器运行记录
     /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task OnExecutionRecordAsync(PersistenceExecutionRecordContext context)
     {
         using var scope = _serviceScopeFactory.CreateScope();

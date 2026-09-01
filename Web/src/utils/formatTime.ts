@@ -8,7 +8,8 @@
  * @description format 几周："YYYY-mm-dd HH:MM:SS ZZZ"
  * @description format 季度 + 星期 + 几周："YYYY-mm-dd HH:MM:SS WWW QQQQ ZZZ"
  * @returns 返回拼接后的时间字符串
- */
+   * 将 formatTime 中的 format Date 输入转换为调用方需要的稳定格式。
+  */
 export function formatDate(date: Date, format: string): string {
 	let we = date.getDay(); // 星期
 	let z = getWeek(date); // 周
@@ -209,6 +210,11 @@ export function formatDateString(timeStr: string | null | undefined, length: num
 	const targetLength = length > 0 ? length : len + (len - 4) / 2 + (len == 10 ? 3 : 0);
 
 	// 处理0/00的修正函数
+	/**
+	 * 负责 formatTime 的 fix Zero 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @param value - 需要读取、校验或转换的业务值。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	const fixZero = (value: string) => ['0', '00'].includes(value) ? '01' : value;
 
 	// 生成完整格式字符串

@@ -12,10 +12,15 @@ namespace Admin.NET.Application;
 [AppStartup(100)]
 public class Startup : AppStartup
 {
+    /// <summary>向依赖注入容器注册 Startup 启动所需的服务和运行配置。</summary>
+    /// <param name="services">当前方法执行时使用的 services 输入值。</param>
     public void ConfigureServices(IServiceCollection services)
     {
     }
 
+    /// <summary>配置 Startup 的运行管道与启动行为，使后续请求按既定顺序执行。</summary>
+    /// <param name="app">当前方法执行时使用的 app 输入值。</param>
+    /// <param name="env">当前方法执行时使用的 env 输入值。</param>
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
     }

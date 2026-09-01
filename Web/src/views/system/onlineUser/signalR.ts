@@ -7,6 +7,10 @@ const connection = new SignalR.HubConnectionBuilder()
 	.configureLogging(SignalR.LogLevel.Information)
 	.withUrl(`${window.__env__.VITE_API_URL}/hubs/onlineUser?token=${getToken()}`, { transport: SignalR.HttpTransportType.WebSockets, skipNegotiation: true })
 	.withAutomaticReconnect({
+		/**
+		 * 负责 signalR 的 next Retry Delay In Milliseconds 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		nextRetryDelayInMilliseconds: () => {
 			return 5000; // 每5秒重连一次
 		},

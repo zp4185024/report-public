@@ -126,6 +126,10 @@ public class SendBaseAppChatInput
     [Required(ErrorMessage = "消息类型不能为空")]
     public int Safe { get; set; }
 
+    /// <summary>初始化 SendBaseAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要定位的业务记录标识。</param>
+    /// <param name="msgType">msgType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendBaseAppChatInput(string chatId, string msgType, bool safe = false)
     {
         ChatId = chatId;
@@ -146,12 +150,10 @@ public class SendTextAppChatInput : SendBaseAppChatInput
     [JsonPropertyName("text")]
     public object Text { get; set; }
 
-    /// <summary>
-    /// 文本消息
-    /// </summary>
-    /// <param name="chatId"></param>
-    /// <param name="content"></param>
-    /// <param name="safe"></param>
+    /// <summary>初始化 SendTextAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="content">content 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendTextAppChatInput(string chatId, string content, bool safe = false) : base(chatId, "text", safe)
     {
         Text = new { content };
@@ -170,12 +172,10 @@ public class SendImageAppChatInput : SendBaseAppChatInput
     [JsonPropertyName("image")]
     public object Image { get; set; }
 
-    /// <summary>
-    /// 图片消息
-    /// </summary>
-    /// <param name="chatId"></param>
-    /// <param name="mediaId"></param>
-    /// <param name="safe"></param>
+    /// <summary>初始化 SendImageAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="mediaId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendImageAppChatInput(string chatId, string mediaId, bool safe = false) : base(chatId, "image", safe)
     {
         Image = new { media_id = mediaId };
@@ -194,12 +194,10 @@ public class SendVoiceAppChatInput : SendBaseAppChatInput
     [JsonPropertyName("voice")]
     public object Voice { get; set; }
 
-    /// <summary>
-    /// 语音消息
-    /// </summary>
-    /// <param name="chatId"></param>
-    /// <param name="mediaId"></param>
-    /// <param name="safe"></param>
+    /// <summary>初始化 SendVoiceAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="mediaId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendVoiceAppChatInput(string chatId, string mediaId, bool safe = false) : base(chatId, "voice", safe)
     {
         Voice = new { media_id = mediaId };
@@ -218,14 +216,12 @@ public class SendVideoAppChatInput : SendBaseAppChatInput
     [JsonPropertyName("video")]
     public object Video { get; set; }
 
-    /// <summary>
-    /// 视频消息
-    /// </summary>
-    /// <param name="chatId"></param>
-    /// <param name="title"></param>
-    /// <param name="description"></param>
-    /// <param name="mediaId"></param>
-    /// <param name="safe"></param>
+    /// <summary>初始化 SendVideoAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="title">title 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="description">description 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="mediaId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendVideoAppChatInput(string chatId, string title, string description, string mediaId, bool safe = false) : base(chatId, "video", safe)
     {
         Video = new
@@ -249,12 +245,10 @@ public class SendFileAppChatInput : SendBaseAppChatInput
     [JsonPropertyName("file")]
     public object File { get; set; }
 
-    /// <summary>
-    /// 文件消息
-    /// </summary>
-    /// <param name="chatId"></param>
-    /// <param name="mediaId"></param>
-    /// <param name="safe"></param>
+    /// <summary>初始化 SendFileAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="mediaId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendFileAppChatInput(string chatId, string mediaId, bool safe = false) : base(chatId, "video", safe)
     {
         File = new { media_id = mediaId };
@@ -273,15 +267,13 @@ public class SendTextCardAppChatInput : SendBaseAppChatInput
     [JsonPropertyName("textcard")]
     public object TextCard { get; set; }
 
-    /// <summary>
-    /// 文本卡片消息
-    /// </summary>
-    /// <param name="chatId"></param>
+    /// <summary>初始化 SendTextCardAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
     /// <param name="title">标题</param>
     /// <param name="description">描述</param>
     /// <param name="url">点击后跳转的链接</param>
     /// <param name="btnTxt">按钮文字</param>
-    /// <param name="safe"></param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendTextCardAppChatInput(string chatId, string title, string description, string url, string btnTxt, bool safe = false) : base(chatId, "textcard", safe)
     {
         TextCard = new
@@ -340,12 +332,10 @@ public class SendNewsAppChatInput : SendBaseAppChatInput
     [JsonPropertyName("news")]
     public object News { get; set; }
 
-    /// <summary>
-    /// 图文消息
-    /// </summary>
-    /// <param name="chatId"></param>
+    /// <summary>初始化 SendNewsAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
     /// <param name="newsList">图文消息列表</param>
-    /// <param name="safe"></param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendNewsAppChatInput(string chatId, List<SendNewsItem> newsList, bool safe = false) : base(chatId, "news", safe)
     {
         News = new { articles = newsList };
@@ -412,12 +402,10 @@ public class SendMpNewsAppChatInput : SendBaseAppChatInput
     [JsonPropertyName("mpnews")]
     public object MpNews { get; set; }
 
-    /// <summary>
-    /// 图文消息
-    /// </summary>
-    /// <param name="chatId"></param>
+    /// <summary>初始化 SendMpNewsAppChatInput 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="chatId">需要查询、更新或删除的业务记录标识。</param>
     /// <param name="mpNewsList">图文消息列表</param>
-    /// <param name="safe"></param>
+    /// <param name="safe">safe 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SendMpNewsAppChatInput(string chatId, List<SendMpNewsItem> mpNewsList, bool safe = false) : base(chatId, "mpnews", safe)
     {
         MpNews = new { articles = mpNewsList };

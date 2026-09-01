@@ -427,6 +427,7 @@ export const SysNoticeApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysNoticeAddPost(body?: AddNoticeInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysNoticeApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysNoticeApiAxiosParamCreator(configuration).apiSysNoticeAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -469,6 +470,7 @@ export const SysNoticeApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysNoticePageReceivedPost(body?: PageNoticeInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSqlSugarPagedListSysNoticeUser>>> {
+            // 第2阶段：调用 SysNoticeApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysNoticeApiAxiosParamCreator(configuration).apiSysNoticePageReceivedPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -500,6 +502,7 @@ export const SysNoticeApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysNoticeApiAxiosParamCreator(configuration).apiSysNoticeSetReadPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysNoticeApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -547,6 +550,7 @@ export const SysNoticeApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysNoticeAddPost(body?: AddNoticeInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysNoticeApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysNoticeApiFp(configuration).apiSysNoticeAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -567,6 +571,7 @@ export const SysNoticeApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysNoticePagePost(body?: PageNoticeInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysNotice>> {
+            // 第2阶段：整理 SysNoticeApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysNoticeApiFp(configuration).apiSysNoticePagePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -597,6 +602,7 @@ export const SysNoticeApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysNoticeSetReadPost(body?: NoticeInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第3阶段：整理 SysNoticeApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysNoticeApiFp(configuration).apiSysNoticeSetReadPost(body, options).then((request) => request(axios, basePath));
         },
         /**

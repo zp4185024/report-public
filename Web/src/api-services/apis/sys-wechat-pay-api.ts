@@ -621,6 +621,7 @@ export const SysWechatPayApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWechatPayGenerateParametersForJsapiPayPost(body?: WechatPayParaInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultWechatPayParaOutput>>> {
+            // 第一阶段：调用 SysWechatPayApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWechatPayApiAxiosParamCreator(configuration).apiSysWechatPayGenerateParametersForJsapiPayPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -652,6 +653,7 @@ export const SysWechatPayApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysWechatPayApiAxiosParamCreator(configuration).apiSysWechatPayPagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysWechatPayApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -690,6 +692,7 @@ export const SysWechatPayApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWechatPayPayInfoTradeIdGet(tradeId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysWechatPay>>> {
+            // 第3阶段：调用 SysWechatPayApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWechatPayApiAxiosParamCreator(configuration).apiSysWechatPayPayInfoTradeIdGet(tradeId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -720,6 +723,7 @@ export const SysWechatPayApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysWechatPayApiAxiosParamCreator(configuration).apiSysWechatPayPayPartnerTransactionPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysWechatPayApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -759,6 +763,7 @@ export const SysWechatPayApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWechatPayRefundDomesticPost(body?: WechatPayRefundDomesticInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第5阶段：调用 SysWechatPayApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWechatPayApiAxiosParamCreator(configuration).apiSysWechatPayRefundDomesticPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -796,6 +801,7 @@ export const SysWechatPayApiFactory = function (configuration?: Configuration, b
          * @throws {RequiredError}
          */
         async apiSysWechatPayGenerateParametersForJsapiPayPost(body?: WechatPayParaInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultWechatPayParaOutput>> {
+            // 第一阶段：整理 SysWechatPayApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWechatPayApiFp(configuration).apiSysWechatPayGenerateParametersForJsapiPayPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -825,6 +831,7 @@ export const SysWechatPayApiFactory = function (configuration?: Configuration, b
          * @throws {RequiredError}
          */
         async apiSysWechatPayPayCallBackPost(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultWechatPayOutput>> {
+            // 第2阶段：整理 SysWechatPayApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWechatPayApiFp(configuration).apiSysWechatPayPayCallBackPost(options).then((request) => request(axios, basePath));
         },
         /**
@@ -854,6 +861,7 @@ export const SysWechatPayApiFactory = function (configuration?: Configuration, b
          * @throws {RequiredError}
          */
         async apiSysWechatPayPayPartnerCallBackPost(options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第3阶段：整理 SysWechatPayApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWechatPayApiFp(configuration).apiSysWechatPayPayPartnerCallBackPost(options).then((request) => request(axios, basePath));
         },
         /**
@@ -884,6 +892,7 @@ export const SysWechatPayApiFactory = function (configuration?: Configuration, b
          * @throws {RequiredError}
          */
         async apiSysWechatPayPayTransactionPost(body?: WechatPayTransactionInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultWechatPayTransactionOutput>> {
+            // 第4阶段：整理 SysWechatPayApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWechatPayApiFp(configuration).apiSysWechatPayPayTransactionPost(body, options).then((request) => request(axios, basePath));
         },
         /**

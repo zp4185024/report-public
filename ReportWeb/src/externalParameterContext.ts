@@ -10,6 +10,11 @@ const requestLocationLabels: Record<ExternalRequestParameterDefinition['location
   Header: '请求头',
 };
 
+/**
+ * 遍历 externalParameterContext 数据并执行 external Parameter Template Keys 转换，生成后续流程需要的结果。
+ * @param source - 本次转换或写入使用的数据对象。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function externalParameterTemplateKeys(
   source: Pick<ExternalParameterSourceDocument, 'endpoint' | 'requestBodyTemplate' | 'headersTemplate'> &
     Partial<Pick<ExternalParameterSourceDocument, 'requestParameters'>>,
@@ -23,6 +28,12 @@ export function externalParameterTemplateKeys(
   return [...keys].sort();
 }
 
+/**
+ * 负责 externalParameterContext 的 current Url Parameter Values 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param keys - keys 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param search - search 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function currentUrlParameterValues(
   keys: readonly string[],
   search = window.location.search,
@@ -34,6 +45,12 @@ export function currentUrlParameterValues(
   }));
 }
 
+/**
+ * 按 external Parameter Destinations 规则筛选 externalParameterContext 数据，并返回满足条件的结果。
+ * @param source - 本次转换或写入使用的数据对象。
+ * @param key - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function externalParameterDestinations(
   source: Pick<ExternalParameterSourceDocument, 'endpoint' | 'requestBodyTemplate' | 'headersTemplate'> &
     Partial<Pick<ExternalParameterSourceDocument, 'requestParameters'>>,
@@ -63,6 +80,12 @@ export function externalParameterContext(
   return Object.fromEntries([...keys].map((key) => [key, query.get(key)]));
 }
 
+/**
+ * 遍历 externalParameterContext 数据并执行 external Parameter Document Context 转换，生成后续流程需要的结果。
+ * @param sources - sources 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param search - search 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function externalParameterDocumentContext(
   sources: readonly ExternalParameterSourceDocument[],
   search = window.location.search,
@@ -78,6 +101,11 @@ export function externalParameterDocumentContext(
 
 export type ParameterSourceCategory = 'form' | 'url' | 'system' | 'external';
 
+/**
+ * 负责 externalParameterContext 的 parameter Source Category 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param sourceType - sourceType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function parameterSourceCategory(sourceType: string): ParameterSourceCategory {
   const normalized = sourceType.toLowerCase();
   if (normalized === 'external') return 'external';

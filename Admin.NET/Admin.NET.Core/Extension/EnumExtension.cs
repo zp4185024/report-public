@@ -23,8 +23,8 @@ public static class EnumExtension
     /// <summary>
     /// 获取枚举对象Key与名称的字典（缓存）
     /// </summary>
-    /// <param name="enumType"></param>
-    /// <returns></returns>
+    /// <param name="enumType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Dictionary<int, string> GetEnumDictionary(this Type enumType)
     {
         if (!enumType.IsEnum)
@@ -46,8 +46,8 @@ public static class EnumExtension
     /// <summary>
     /// 获取枚举对象Key与名称的字典
     /// </summary>
-    /// <param name="enumType"></param>
-    /// <returns></returns>
+    /// <param name="enumType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Dictionary<int, string> GetEnumDictionaryItems(this Type enumType)
     {
         // 获取类型的字段，初始化一个有限长度的字典
@@ -67,8 +67,8 @@ public static class EnumExtension
     /// <summary>
     /// 获取枚举类型key与描述的字典（缓存）
     /// </summary>
-    /// <param name="enumType"></param>
-    /// <returns></returns>
+    /// <param name="enumType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <exception cref="Exception"></exception>
     public static Dictionary<int, string> GetEnumDescDictionary(this Type enumType)
     {
@@ -93,8 +93,8 @@ public static class EnumExtension
     /// <summary>
     /// 获取枚举类型key与描述的字典（没有描述则获取name）
     /// </summary>
-    /// <param name="enumType"></param>
-    /// <returns></returns>
+    /// <param name="enumType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <exception cref="Exception"></exception>
     private static Dictionary<int, string> GetEnumDescDictionaryItems(this Type enumType)
     {
@@ -116,9 +116,9 @@ public static class EnumExtension
     /// <summary>
     /// 从程序集中查找指定枚举类型
     /// </summary>
-    /// <param name="assembly"></param>
-    /// <param name="typeName"></param>
-    /// <returns></returns>
+    /// <param name="assembly">当前方法执行时使用的 assembly 输入值。</param>
+    /// <param name="typeName">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static Type TryToGetEnumType(Assembly assembly, string typeName)
     {
         // 枚举缓存为空则重新加载枚举类型字典
@@ -131,8 +131,8 @@ public static class EnumExtension
     /// <summary>
     /// 从程序集中加载所有枚举类型
     /// </summary>
-    /// <param name="assembly"></param>
-    /// <returns></returns>
+    /// <param name="assembly">当前方法执行时使用的 assembly 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static ConcurrentDictionary<string, Type> LoadEnumTypeDict(Assembly assembly)
     {
         // 取程序集中所有类型
@@ -147,8 +147,8 @@ public static class EnumExtension
     /// <summary>
     /// 获取枚举的Description
     /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetEnumDescription(this Enum value)
     {
         return value.GetType().GetField(value.ToString())?.GetCustomAttribute<DescriptionAttribute>()?.Description;
@@ -157,8 +157,8 @@ public static class EnumExtension
     /// <summary>
     /// 获取枚举的Description
     /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetEnumDescription(this object value)
     {
         return value.GetType().GetField(value.ToString()!)?.GetCustomAttribute<DescriptionAttribute>()?.Description;
@@ -201,8 +201,8 @@ public static class EnumExtension
     /// <summary>
     /// 获取枚举的Theme
     /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetTheme(this object value)
     {
         return value.GetType().GetField(value.ToString()!)?.GetCustomAttribute<ThemeAttribute>()?.Theme;
@@ -211,8 +211,8 @@ public static class EnumExtension
     /// <summary>
     /// 将枚举转成枚举信息集合
     /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static List<EnumEntity> EnumToList(this Type type)
     {
         if (!type.IsEnum)
@@ -235,8 +235,8 @@ public static class EnumExtension
     /// 枚举ToList
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static List<T> EnumToList<T>(this Type type)
     {
         if (!type.IsEnum)

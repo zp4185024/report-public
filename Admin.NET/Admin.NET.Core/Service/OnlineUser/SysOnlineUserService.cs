@@ -19,6 +19,11 @@ public class SysOnlineUserService : IDynamicApiController, ITransient
     private readonly IHubContext<OnlineUserHub, IOnlineUserHub> _onlineUserHubContext;
     private readonly SqlSugarRepository<SysOnlineUser> _sysOnlineUerRep;
 
+    /// <summary>初始化 SysOnlineUserService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysConfigService">sysConfigService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="onlineUserHubContext">本次操作共享的运行上下文。</param>
+    /// <param name="sysOnlineUerRep">sysOnlineUerRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysOnlineUserService(SysConfigService sysConfigService,
         IHubContext<OnlineUserHub, IOnlineUserHub> onlineUserHubContext,
         SqlSugarRepository<SysOnlineUser> sysOnlineUerRep,
@@ -33,7 +38,7 @@ public class SysOnlineUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取在线用户分页列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取在线用户分页列表")]
     public async Task<SqlSugarPagedList<SysOnlineUser>> Page(PageOnlineUserInput input)
     {
@@ -44,11 +49,9 @@ public class SysOnlineUserService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 强制下线 🔖
-    /// </summary>
-    /// <param name="user"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysOnlineUserService 的异步依赖完成 Force Offline 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="user">user 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonValidation]
     [DisplayName("强制下线")]
     public async Task ForceOffline(SysOnlineUser user)
@@ -57,12 +60,10 @@ public class SysOnlineUserService : IDynamicApiController, ITransient
         await _sysOnlineUerRep.DeleteAsync(user);
     }
 
-    /// <summary>
-    /// 发布站内消息
-    /// </summary>
-    /// <param name="notice"></param>
-    /// <param name="userIds"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysOnlineUserService 的异步依赖完成 Public Notice 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="notice">notice 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userIds">userIds 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task PublicNotice(SysNotice notice, List<long> userIds)
     {
@@ -75,10 +76,8 @@ public class SysOnlineUserService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 单用户登录
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>调用 SysOnlineUserService 的异步依赖完成 Single Login 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task SingleLogin(long userId)
     {
@@ -95,8 +94,8 @@ public class SysOnlineUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 通过用户ID踢掉在线用户
     /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task ForceOffline(long userId)
     {

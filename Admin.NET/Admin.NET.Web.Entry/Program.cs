@@ -8,6 +8,9 @@ Serve.Run(RunOptions.Default.AddWebComponent<WebComponent>());
 
 public class WebComponent : IWebComponent
 {
+    /// <summary>查询或读取 Program 所需的 Load 数据，并按调用约定返回结果。</summary>
+    /// <param name="builder">builder 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="componentContext">本次操作共享的运行上下文。</param>
     public void Load(WebApplicationBuilder builder, ComponentContext componentContext)
     {
         // 设置日志过滤

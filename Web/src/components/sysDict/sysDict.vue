@@ -63,6 +63,11 @@ const props = defineProps({
    */
   onItemFilter: {
     type: Function as PropType<(dict: DictItem) => boolean>,
+    /**
+     * 为 onItemFilter 属性创建独立默认值，避免组件实例之间共享可变数据。
+     * @param dict - dict 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     default: (dict: DictItem) => true,
   },
   /**
@@ -73,6 +78,10 @@ const props = defineProps({
    */
   onItemFormatter: {
     type: Function as PropType<(dict: DictItem) => string | undefined | null>,
+    /**
+     * 为 onItemFormatter 属性创建独立默认值，避免组件实例之间共享可变数据。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     default: () => undefined,
   },
   /**
@@ -83,6 +92,11 @@ const props = defineProps({
   renderAs: {
     type: String as PropType<'tag' | 'select' | 'radio' | 'checkbox'>,
     default: 'tag',
+    /**
+     * 校验 sysDict 的表单输入，发现不符合约束的值时向调用方返回明确错误。
+     * @param value - 需要读取、校验或转换的业务值。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     validator(value: string) {
       return ['tag', 'select', 'radio', 'checkbox'].includes(value);
     },
@@ -104,6 +118,10 @@ const state = reactive({
 });
 
 // 获取数据集
+/**
+ * 查询或读取 sysDict 所需的 get Data List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getDataList = () => {
   if (props.isConst) {
     const data = userStore.constList?.find((x: any) => x.code === props.code)?.data?.result ?? [];
@@ -120,12 +138,21 @@ const getDataList = () => {
 }
 
 // 设置字典数据
+/**
+ * 更新 sysDict 的 set Dict Data 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setDictData = () => {
   state.dictData = getDataList()?.filter(props.onItemFilter) ?? [];
   processNumericValues(props.modelValue);
 };
 
 // 处理数字类型的值
+/**
+ * 执行 sysDict 的 process Numeric Values 核心流程，并保持错误和结果语义稳定。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const processNumericValues = (value: any) => {
   if (typeof value === 'number' || (Array.isArray(value) && typeof value[0] === 'number')) {
     state.dictData.forEach((item) => {
@@ -135,6 +162,11 @@ const processNumericValues = (value: any) => {
 };
 
 // 设置多选值
+/**
+ * 尝试或判断 sysDict 的 try Set Multiple Value 条件，并以明确结果表示是否匹配。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const trySetMultipleValue = (value: any) => {
   let newValue = value;
   if (typeof value === 'string') {
@@ -156,6 +188,11 @@ const trySetMultipleValue = (value: any) => {
 }
 
 // 设置字典值
+/**
+ * 更新 sysDict 的 set Dict Value 状态，并同步相关业务数据。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setDictValue = (value: any) => {
   value = trySetMultipleValue(value);
   if (Array.isArray(value)) {
@@ -169,6 +206,11 @@ const setDictValue = (value: any) => {
 };
 
 // 确保标签类型存在
+/**
+ * 校验 sysDict 的 ensure Tag Type 条件，并返回可供后续流程判断的结果。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const ensureTagType = (item: DictItem) => {
   if (!['success', 'warning', 'info', 'primary', 'danger'].includes(item.tagType ?? '')) {
     item.tagType = 'primary';
@@ -176,11 +218,21 @@ const ensureTagType = (item: DictItem) => {
 };
 
 // 更新绑定值
+/**
+ * 更新 sysDict 的 update Value 状态，并同步相关业务数据。
+ * @param newValue - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateValue = (newValue: any) => {
   emit('update:modelValue', newValue);
 };
 
 // 计算显示的文本
+/**
+ * 查询或读取 sysDict 所需的 get Display Text 数据，并按调用约定返回结果。
+ * @param dict - dict 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getDisplayText = (dict: DictItem | undefined = undefined) => {
   if (dict) return props.onItemFormatter?.(dict) ?? dict[props.propLabel];
   return state.value;

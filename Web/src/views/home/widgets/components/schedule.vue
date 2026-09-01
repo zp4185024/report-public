@@ -90,6 +90,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 schedule 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.queryParams.startTime = dayjs(GetMonthFirstDay(state.calendarValue)).add(-1, 'month').toDate();
 	state.queryParams.endTime = dayjs(GetMonthLastDay(state.calendarValue)).add(1, 'month').toDate();
@@ -104,12 +108,22 @@ const handleQuery = async () => {
 	state.currentMonth = dayjs(state.calendarValue).format('YYYYMM');
 };
 
+/**
+ * 负责 schedule 的 select Date 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const selectDate = async (val: CalendarDateType) => {
 	if (!calendar.value) return;
 	calendar.value.selectDate(val);
 	await handleQuery();
 };
 // 删除
+/**
+ * 从 schedule 移除 del Item 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delItem = (row: any) => {
 	ElMessageBox.confirm(`确定删日程：${row.startTime}-${row.endTime}【${row.content}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -125,6 +139,11 @@ const delItem = (row: any) => {
 };
 
 // 修改状态
+/**
+ * 更新 schedule 的 change Status 状态，并同步相关业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeStatus = async (row: any) => {
 	await getAPI(SysScheduleApi)
 		.apiSysScheduleSetStatusPost({ id: row.id, status: row.status == 1 ? 0 : 1 })
@@ -138,6 +157,11 @@ const changeStatus = async (row: any) => {
 };
 
 // 农历转换
+/**
+ * 负责 schedule 的 solar Date2lunar 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param solarDate - solarDate 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const solarDate2lunar = (solarDate: any) => {
 	var solar = solarDate.split('-');
 	var lunar = calendarCom.solar2lunar(solar[0], solar[1], solar[2]);
@@ -146,6 +170,11 @@ const solarDate2lunar = (solarDate: any) => {
 };
 
 // 按天查询
+/**
+ * 响应 schedule 的 handle Query By Date 事件，并协调相关状态和后续操作。
+ * @param date - date 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQueryByDate = async (date: any) => {
 	state.queryParams.startTime = FormatDateDelHMS(date);
 	state.queryParams.endTime = FormatDateEndHMS(date);
@@ -155,6 +184,10 @@ const handleQueryByDate = async (date: any) => {
 };
 
 // 打开新增页面
+/**
+ * 准备 schedule 的 open Add Schedule 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddSchedule = () => {
 	var timerange = GetRecentTime();
 
@@ -163,6 +196,11 @@ const openAddSchedule = () => {
 };
 
 // 打开编辑页面
+/**
+ * 准备 schedule 的 open Edit Schedule 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditSchedule = async (row: any) => {
 	if (row.status == 1) return;
 	state.editTitle = '编辑日程';
@@ -170,6 +208,11 @@ const openEditSchedule = async (row: any) => {
 };
 
 // 点击日历中的日期
+/**
+ * 响应 schedule 的 handle Click Date 事件，并协调相关状态和后续操作。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleClickDate = async (data: any) => {
 	if (state.currentMonth != dayjs(data.day).format('YYYYMM')) {
 		await handleQuery();
@@ -179,6 +222,11 @@ const handleClickDate = async (data: any) => {
 };
 
 // 获取当月第一天
+/**
+ * 查询或读取 schedule 所需的 Get Month First Day 数据，并按调用约定返回结果。
+ * @param date - date 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const GetMonthFirstDay = (date: any) => {
 	var newDate = new Date(date);
 	newDate.setDate(1);
@@ -189,6 +237,11 @@ const GetMonthFirstDay = (date: any) => {
 };
 
 // 获取当月最后一天
+/**
+ * 查询或读取 schedule 所需的 Get Month Last Day 数据，并按调用约定返回结果。
+ * @param date - date 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const GetMonthLastDay = (date: any) => {
 	var newDate = new Date(date);
 	newDate.setMonth(newDate.getMonth() + 1);
@@ -200,6 +253,11 @@ const GetMonthLastDay = (date: any) => {
 };
 
 // 去掉时分秒的日期
+/**
+ * 将 schedule 中的 Format Date Del HMS 输入转换为调用方需要的稳定格式。
+ * @param date - date 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const FormatDateDelHMS = (date: any) => {
 	var newDate = new Date(date);
 	newDate.setHours(0);
@@ -208,6 +266,11 @@ const FormatDateDelHMS = (date: any) => {
 	return newDate;
 };
 
+/**
+ * 将 schedule 中的 Format Date End HMS 输入转换为调用方需要的稳定格式。
+ * @param date - date 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const FormatDateEndHMS = (date: any) => {
 	var newDate = new Date(date);
 	newDate.setHours(23);
@@ -217,11 +280,20 @@ const FormatDateEndHMS = (date: any) => {
 };
 
 // 格式化日期
+/**
+ * 将 schedule 中的 Format Date 输入转换为调用方需要的稳定格式。
+ * @param date - date 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const FormatDate = (date: any) => {
 	return dayjs(date).format('YYYY-MM-DD');
 };
 
 // 获取最近的初始时间  EndTime默认为StartTime + 1(hour)
+/**
+ * 查询或读取 schedule 所需的 Get Recent Time 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const GetRecentTime = () => {
 	var date = new Date();
 	// 计算最近的开始时间

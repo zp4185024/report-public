@@ -19,16 +19,17 @@ public class SysUpdateService : IDynamicApiController, ITransient
     private readonly SysCacheService _sysCacheService;
     private readonly CDConfigOptions _cdConfigOptions;
 
+    /// <summary>初始化 SysUpdateService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="giteeOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysUpdateService(IOptions<CDConfigOptions> giteeOptions, SysCacheService sysCacheService)
     {
         _cdConfigOptions = giteeOptions.Value;
         _sysCacheService = sysCacheService;
     }
 
-    /// <summary>
-    /// 备份列表
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>根据 SysUpdateService 当前输入计算 List 结果，并按方法声明的类型返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("备份列表")]
     [ApiDescriptionSettings(Name = "List"), HttpPost]
     public Task<List<BackupOutput>> List()
@@ -50,10 +51,8 @@ public class SysUpdateService : IDynamicApiController, ITransient
             .ToList());
     }
 
-    /// <summary>
-    /// 还原
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>调用 SysUpdateService 的异步依赖完成 Restore 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("还原")]
     [ApiDescriptionSettings(Name = "Restore"), HttpPost]
     public async Task Restore(RestoreInput input)
@@ -81,10 +80,8 @@ public class SysUpdateService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 从远端更新系统
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>更新 SysUpdateService 的 Update 状态，并同步相关业务数据。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("系统更新")]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     public async Task Update()
@@ -193,7 +190,7 @@ public class SysUpdateService : IDynamicApiController, ITransient
     /// <summary>
     /// 仓库WebHook接口
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("仓库WebHook接口")]
     [ApiDescriptionSettings(Name = "WebHook"), HttpPost]
@@ -306,7 +303,7 @@ public class SysUpdateService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取WebHook接口密钥
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取WebHook接口密钥")]
     [ApiDescriptionSettings(Name = "WebHookKey"), HttpGet]
     public string GetWebHookKey()
@@ -314,10 +311,8 @@ public class SysUpdateService : IDynamicApiController, ITransient
         return CryptogramUtil.Encrypt(_cdConfigOptions.AccessToken);
     }
 
-    /// <summary>
-    /// 获取日志列表
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>根据 SysUpdateService 当前输入计算 Log List 结果，并按方法声明的类型返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取日志列表")]
     [ApiDescriptionSettings(Name = "Logs"), HttpGet]
     public List<string> LogList()
@@ -325,10 +320,8 @@ public class SysUpdateService : IDynamicApiController, ITransient
         return _sysCacheService.Get<List<string>>(CacheConst.KeySysUpdateLog) ?? new();
     }
 
-    /// <summary>
-    /// 清空日志
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>移除 SysUpdateService 中与 Clear Log 对应的数据，并清理关联状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("清空日志")]
     [ApiDescriptionSettings(Name = "Clear"), HttpGet]
     public void ClearLog()
@@ -336,10 +329,8 @@ public class SysUpdateService : IDynamicApiController, ITransient
         _sysCacheService.Remove(CacheConst.KeySysUpdateLog);
     }
 
-    /// <summary>
-    /// 检查参数
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>校验 SysUpdateService 的 Check Config 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private void CheckConfig()
     {
         PrintfLog("检查CD配置参数...");
@@ -365,10 +356,8 @@ public class SysUpdateService : IDynamicApiController, ITransient
         if (string.IsNullOrWhiteSpace(_cdConfigOptions.Publish.RuntimeIdentifier)) throw Oops.Oh("运行平台配置不能为空");
     }
 
-    /// <summary>
-    /// 打印日志
-    /// </summary>
-    /// <param name="message"></param>
+    /// <summary>整理 SysUpdateService 的 Printf Log 数据，生成可下载、导出或打印的最终内容。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private void PrintfLog(string message)
     {
         var logList = _sysCacheService.Get<List<string>>(CacheConst.KeySysUpdateLog) ?? new();
@@ -382,9 +371,7 @@ public class SysUpdateService : IDynamicApiController, ITransient
         _sysCacheService.Set(CacheConst.KeySysUpdateLog, logList);
     }
 
-    /// <summary>
-    /// 执行命令
-    /// </summary>
+    /// <summary>执行 SysUpdateService 的 Run Command Async 核心流程，并保持错误和结果语义稳定。</summary>
     /// <param name="command">命令</param>
     /// <param name="arguments">参数</param>
     /// <param name="workingDirectory">工作目录</param>

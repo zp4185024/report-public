@@ -433,6 +433,7 @@ export const SysLdapApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLdapAddPost(body?: AddSysLdapInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 SysLdapApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLdapApiAxiosParamCreator(configuration).apiSysLdapAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -474,6 +475,7 @@ export const SysLdapApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLdapListGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListSysLdap>>> {
+            // 第2阶段：调用 SysLdapApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLdapApiAxiosParamCreator(configuration).apiSysLdapListGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -505,6 +507,7 @@ export const SysLdapApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysLdapApiAxiosParamCreator(configuration).apiSysLdapSyncDeptPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysLdapApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -553,6 +556,7 @@ export const SysLdapApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysLdapAddPost(body?: AddSysLdapInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt64>> {
+            // 第一阶段：整理 SysLdapApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLdapApiFp(configuration).apiSysLdapAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -573,6 +577,7 @@ export const SysLdapApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysLdapDetailGet(id: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSysLdap>> {
+            // 第2阶段：整理 SysLdapApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLdapApiFp(configuration).apiSysLdapDetailGet(id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -602,6 +607,7 @@ export const SysLdapApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysLdapSyncDeptPost(body?: SyncSysLdapInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第3阶段：整理 SysLdapApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLdapApiFp(configuration).apiSysLdapSyncDeptPost(body, options).then((request) => request(axios, basePath));
         },
         /**

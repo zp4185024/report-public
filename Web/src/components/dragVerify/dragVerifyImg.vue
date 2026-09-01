@@ -130,6 +130,10 @@ export default {
 			default: 20
 		}
 	},
+	/**
+	 * 在元素挂载后初始化 dragVerifyImg 指令行为，并注册所需事件或界面状态。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	mounted: function () {
 		const dragEl = this.$refs.dragVerify;
 		dragEl.style.setProperty("--textColor", this.textColor);
@@ -137,6 +141,10 @@ export default {
 		dragEl.style.setProperty("--pwidth", -Math.floor(this.width / 2) + "px");
 	},
 	computed: {
+		/**
+		 * 响应 dragVerifyImg 的 handler Style 事件，并协调相关状态和后续操作。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		handlerStyle: function () {
 			return {
 				width: this.height + "px",
@@ -144,12 +152,24 @@ export default {
 				background: this.handlerBg
 			};
 		},
+		/**
+		 * 响应 dragVerifyImg 的 message 事件，更新界面状态并触发必要的后续操作。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		message: function () {
 			return this.isPassing ? "" : this.text;
 		},
+		/**
+		 * 响应 dragVerifyImg 的 success Message 事件，更新界面状态并触发必要的后续操作。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		successMessage: function () {
 			return this.isPassing ? this.successText : "";
 		},
+		/**
+		 * 创建并返回 dragVerifyImg 的 drag Verify Style 配置对象，集中提供相关状态和操作入口。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		dragVerifyStyle: function () {
 			console.log(this.width, "width");
 			return {
@@ -160,6 +180,10 @@ export default {
 				borderRadius: this.circle ? this.height / 2 + "px" : this.radius
 			};
 		},
+		/**
+		 * 创建并返回 dragVerifyImg 的 drag Verify Img Style 配置对象，集中提供相关状态和操作入口。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		dragVerifyImgStyle: function () {
 			return {
 				width: this.width + "px",
@@ -167,6 +191,10 @@ export default {
 				overflow: "hidden"
 			};
 		},
+		/**
+		 * 创建并返回 dragVerifyImg 的 progress Bar Style 配置对象，集中提供相关状态和操作入口。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		progressBarStyle: function () {
 			return {
 				background: this.progressBarBg,
@@ -176,6 +204,10 @@ export default {
 					: this.radius
 			};
 		},
+		/**
+		 * 创建并返回 dragVerifyImg 的 text Style 配置对象，集中提供相关状态和操作入口。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		textStyle: function () {
 			return {
 				height: this.height + "px",
@@ -184,6 +216,10 @@ export default {
 			};
 		}
 	},
+	/**
+	 * 创建并返回 dragVerifyImg 的 data 配置对象，集中提供相关状态和操作入口。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	data() {
 		return {
 			isMoving: false,
@@ -198,6 +234,10 @@ export default {
 		};
 	},
 	methods: {
+		/**
+		 * 校验 dragVerifyImg 的 checkimg Loaded 条件，并返回可供后续流程判断的结果。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		checkimgLoaded: function () {
 			//生成图片缺失位置
 			var barWidth = this.barWidth;
@@ -232,6 +272,11 @@ export default {
 				"border-radius": this.barRadius + "px"
 			};
 		},
+		/**
+		 * 根据指针位置更新 dragVerifyImg 的 drag Start 坐标，并限制目标元素不超出可视区域。
+		 * @param e - 触发当前处理流程的界面或业务事件。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		dragStart: function (e) {
 			if (!this.isPassing) {
 				this.isMoving = true;
@@ -242,6 +287,11 @@ export default {
 			this.showErrorTip = false;
 			this.$emit("handlerMove");
 		},
+		/**
+		 * 根据指针位置更新 dragVerifyImg 的 drag Moving 坐标，并限制目标元素不超出可视区域。
+		 * @param e - 触发当前处理流程的界面或业务事件。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		dragMoving: function (e) {
 			if (this.isMoving && !this.isPassing) {
 				var _x = (e.pageX || e.touches[0].pageX) - this.x;
@@ -251,6 +301,11 @@ export default {
 				this.$refs.moveBar.style.left = _x + "px";
 			}
 		},
+		/**
+		 * 根据指针位置更新 dragVerifyImg 的 drag Finish 坐标，并限制目标元素不超出可视区域。
+		 * @param e - 触发当前处理流程的界面或业务事件。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		dragFinish: function (e) {
 			if (this.isMoving && !this.isPassing) {
 				var _x = (e.pageX || e.changedTouches[0].pageX) - this.x;
@@ -271,6 +326,10 @@ export default {
 				this.isMoving = false;
 			}
 		},
+		/**
+		 * 校验并规范化 dragVerifyImg 的 pass Verify 输入，无效时返回安全默认值或明确错误。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		passVerify: function () {
 			this.$emit("update:isPassing", true);
 			this.isMoving = false;
@@ -290,10 +349,18 @@ export default {
 			}, 100);
 			this.$emit("passcallback");
 		},
+		/**
+		 * 重置或刷新 dragVerifyImg 的 reset 状态，并重新加载所需数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		reset: function () {
 			this.reImg();
 			this.checkimgLoaded();
 		},
+		/**
+		 * 重置 dragVerifyImg 的 re Img 状态，并重新加载当前流程依赖的数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		reImg: function () {
 			this.$emit("update:isPassing", false);
 			const oriData = this.$options.data();
@@ -311,6 +378,10 @@ export default {
 			message.style.animation = "slidetounlock 3s infinite";
 			message.style.color = this.background;
 		},
+		/**
+		 * 重置或刷新 dragVerifyImg 的 refreshimg 状态，并重新加载所需数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		refreshimg: function () {
 			this.$emit("refresh");
 		}
@@ -318,6 +389,10 @@ export default {
 	watch: {
 		imgsrc: {
 			immediate: false,
+			/**
+			 * 响应 dragVerifyImg 的 handler 事件，并协调相关状态和后续操作。
+			 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+			 */
 			handler: function () {
 				this.reImg();
 			}

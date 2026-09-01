@@ -8,12 +8,15 @@ public static class PocExchangeMappingDefaults
     public const string CurrentUniverVersion = "0.25.1";
     public const int CurrentMappingVersion = 1;
 
+    /// <summary>构建 PocExchangeMappingDefaults 所需的 Create 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IReadOnlyList<PocExchangeMapping> Create()
     {
         var now = DateTime.Now;
         var rules = new List<PocExchangeMapping>();
         var sort = 0;
 
+        // 第一阶段：根据 Create 当前分支转换输入数据，并保存该阶段产生的中间结果。
         void Add(
             string code,
             string direction,
@@ -49,6 +52,7 @@ public static class PocExchangeMappingDefaults
             });
         }
 
+        // 第2阶段：构造 Create 当前步骤需要的中间数据和执行参数。
         const string import = PocExchangeDirections.ExcelToUniver;
         Add("xlsx-to-univer-cell-value", import, "Cell", "Excel.Cell.Value", "v", PocExchangeTransformTypes.Direct, true);
         Add("xlsx-to-univer-cell-type", import, "Cell", "Excel.Cell.Type", "t", PocExchangeTransformTypes.CellType, true);
@@ -80,6 +84,7 @@ public static class PocExchangeMappingDefaults
         Add("univer-to-xlsx-cell-value", export, "Cell", "v", "Excel.Cell.Value", PocExchangeTransformTypes.Direct, true);
         Add("univer-to-xlsx-cell-type", export, "Cell", "t", "Excel.Cell.Type", PocExchangeTransformTypes.CellType, true);
         Add("univer-to-xlsx-cell-formula", export, "Formula", "f", "Excel.Cell.FormulaA1", PocExchangeTransformTypes.RemovePrefix, true);
+        // 第3阶段：根据 Create 当前分支转换输入数据，并保存该阶段产生的中间结果。
         Add("univer-to-xlsx-cell-style", export, "Style", "s", "Excel.Cell.Style", PocExchangeTransformTypes.StyleReference, true);
         Add("univer-to-xlsx-style-font-name", export, "Style", "ff", "Excel.Style.Font.Name", PocExchangeTransformTypes.Direct);
         Add("univer-to-xlsx-style-font-size", export, "Style", "fs", "Excel.Style.Font.Size", PocExchangeTransformTypes.Direct);

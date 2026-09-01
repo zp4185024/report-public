@@ -4,6 +4,13 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocFormulaTranslatorTests
 {
+    /// <summary>验证 Move Formula Preserves Excel Reference Semantics 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="formula">formula 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sourceRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="sourceColumn">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="targetRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="targetColumn">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="expected">expected 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("=C6+D6", 6, 5, 7, 5, "=C7+D7")]
     [InlineData("=$C6+D$6", 6, 5, 8, 5, "=$C8+D$6")]
@@ -27,6 +34,15 @@ public sealed class PocFormulaTranslatorTests
         Assert.Equal(expected, moved);
     }
 
+    /// <summary>验证 Insert Rows Adjusts Only References To The Inserted Sheet 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="formula">formula 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="formulaSheet">当前读取或修改的工作表对象。</param>
+    /// <param name="formulaRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="formulaColumn">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="insertedSheet">当前读取或修改的工作表对象。</param>
+    /// <param name="insertAfterRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="insertedRowCount">控制数据范围或位置的数值。</param>
+    /// <param name="expected">expected 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("=SUM(E6:E6)", "科室工作量", 7, 5, "科室工作量", 6, 136, "=SUM(E6:E142)")]
     [InlineData("=E6", "科室工作量", 7, 5, "科室工作量", 6, 136, "=E6")]

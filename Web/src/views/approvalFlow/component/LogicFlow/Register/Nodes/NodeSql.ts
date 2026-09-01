@@ -16,6 +16,11 @@ class SqlNode extends HtmlNode {
                 }`,
         });
     }
+    /**
+     * 更新 NodeSql 的 set Html 状态，并同步相关业务数据。
+     * @param rootEl - rootEl 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     setHtml(rootEl) {
         rootEl.innerHTML = '';
         const {
@@ -68,6 +73,10 @@ class SqlNodeModel extends HtmlNodeModel {
             edge.updatePathByAnchor();
         });
     }
+    /**
+     * 查询或读取 NodeSql 所需的 get Outline Style 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     getOutlineStyle() {
         const style = super.getOutlineStyle();
         style.stroke = 'none';
@@ -75,6 +84,11 @@ class SqlNodeModel extends HtmlNodeModel {
         return style;
     }
     // 如果不用修改锚地形状，可以重写颜色相关样式
+    /**
+     * 查询或读取 NodeSql 所需的 get Anchor Style 数据，并按调用约定返回结果。
+     * @param anchorInfo - anchorInfo 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     getAnchorStyle(anchorInfo) {
         const style = super.getAnchorStyle();
         if (anchorInfo.type === 'left') {
@@ -87,6 +101,10 @@ class SqlNodeModel extends HtmlNodeModel {
         }
         return style;
     }
+    /**
+     * 更新 NodeSql 的 set Attributes 状态，并同步相关业务数据。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     setAttributes() {
         this.width = 200;
         const {
@@ -95,6 +113,13 @@ class SqlNodeModel extends HtmlNodeModel {
         this.height = 60 + fields.length * 24;
         const circleOnlyAsTarget = {
             message: '只允许从右边的锚点连出',
+            /**
+             * 校验 NodeSql 的 validate 条件，并返回可供后续流程判断的结果。
+             * @param sourceNode - sourceNode 对应的业务输入；具体类型和空值范围以方法签名为准。
+             * @param targetNode - targetNode 对应的业务输入；具体类型和空值范围以方法签名为准。
+             * @param sourceAnchor - sourceAnchor 对应的业务输入；具体类型和空值范围以方法签名为准。
+             * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+             */
             validate: (sourceNode, targetNode, sourceAnchor) => {
                 return sourceAnchor.type === 'right';
             },
@@ -102,11 +127,23 @@ class SqlNodeModel extends HtmlNodeModel {
         this.sourceRules.push(circleOnlyAsTarget);
         this.targetRules.push({
             message: '只允许连接左边的锚点',
+            /**
+             * 校验 NodeSql 的 validate 条件，并返回可供后续流程判断的结果。
+             * @param sourceNode - sourceNode 对应的业务输入；具体类型和空值范围以方法签名为准。
+             * @param targetNode - targetNode 对应的业务输入；具体类型和空值范围以方法签名为准。
+             * @param sourceAnchor - sourceAnchor 对应的业务输入；具体类型和空值范围以方法签名为准。
+             * @param targetAnchor - targetAnchor 对应的业务输入；具体类型和空值范围以方法签名为准。
+             * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+             */
             validate: (sourceNode, targetNode, sourceAnchor, targetAnchor) => {
                 return targetAnchor.type === 'left';
             },
         });
     }
+    /**
+     * 查询或读取 NodeSql 所需的 get Default Anchor 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     getDefaultAnchor() {
         const {
             id,

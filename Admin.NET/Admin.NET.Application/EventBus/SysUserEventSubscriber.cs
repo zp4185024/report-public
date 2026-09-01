@@ -13,48 +13,41 @@ namespace Admin.NET.Application;
 /// </summary>
 public class SysUserEventSubscriber : IEventSubscriber, ISingleton, IDisposable
 {
+    /// <summary>初始化 SysUserEventSubscriber 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public SysUserEventSubscriber()
     {
     }
 
-    /// <summary>
-    /// 增加系统用户
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysUserEventSubscriber 所需的 Add User 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(SysUserEventTypeEnum.Add)]
     public Task AddUser(EventHandlerExecutingContext context)
     {
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 注册用户
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>根据 SysUserEventSubscriber 当前输入计算 Register User 结果，并按方法声明的类型返回。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(SysUserEventTypeEnum.Register)]
     public Task RegisterUser(EventHandlerExecutingContext context)
     {
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 更新系统用户
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysUserEventSubscriber 的 Update User 状态，并同步相关业务数据。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(SysUserEventTypeEnum.Update)]
     public Task UpdateUser(EventHandlerExecutingContext context)
     {
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 删除系统用户
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysUserEventSubscriber 中与 Delete User 对应的数据，并清理关联状态。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(SysUserEventTypeEnum.Delete)]
     public Task DeleteUser(EventHandlerExecutingContext context)
     {
@@ -64,39 +57,33 @@ public class SysUserEventSubscriber : IEventSubscriber, ISingleton, IDisposable
     /// <summary>
     /// 设置系统用户状态
     /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(SysUserEventTypeEnum.SetStatus)]
     public Task SetUserStatus(EventHandlerExecutingContext context)
     {
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 授权用户角色
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysUserEventSubscriber 的 Update User Role 状态，并同步相关业务数据。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(SysUserEventTypeEnum.UpdateRole)]
     public Task UpdateUserRole(EventHandlerExecutingContext context)
     {
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 解除登录锁定
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>根据 SysUserEventSubscriber 当前输入计算 Unlock User Login 结果，并按方法声明的类型返回。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(SysUserEventTypeEnum.UnlockLogin)]
     public Task UnlockUserLogin(EventHandlerExecutingContext context)
     {
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 释放服务作用域
-    /// </summary>
+    /// <summary>释放 SysUserEventSubscriber 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
     }

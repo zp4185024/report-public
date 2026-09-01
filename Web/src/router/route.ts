@@ -42,6 +42,10 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 	{
 		path: '/',
 		name: '/',
+		/**
+		 * 按路由配置异步加载 route 对应的页面组件，减少初始化阶段的资源开销。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		component: () => import('/@/layout/index.vue'),
 		redirect: '/dashboard/home',
 		meta: {
@@ -52,6 +56,10 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 	{
 		path: '/platform/job/dashboard',
 		name: 'jobDashboard',
+		/**
+		 * 按路由配置异步加载 route 对应的页面组件，减少初始化阶段的资源开销。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		component: () => import('/@/views/system/job/dashboard.vue'),
 		meta: {
 			title: '任务看板',
@@ -66,6 +74,10 @@ export const dynamicRoutes: Array<RouteRecordRaw> = [
 	{
 		path: '/develop/database/visual',
 		name: 'databaseVisual',
+		/**
+		 * 按路由配置异步加载 route 对应的页面组件，减少初始化阶段的资源开销。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		component: () => import('/@/views/system/database/component/visualTable.vue'),
 		meta: {
 			title: '库表可视化',
@@ -86,6 +98,10 @@ export const notFoundAndNoPower = [
 	{
 		path: '/:path(.*)*',
 		name: 'notFound',
+		/**
+		 * 按路由配置异步加载 route 对应的页面组件，减少初始化阶段的资源开销。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		component: () => import('/@/views/error/404.vue'),
 		meta: {
 			title: '找不到此页面',
@@ -95,6 +111,10 @@ export const notFoundAndNoPower = [
 	{
 		path: '/401',
 		name: 'noPower',
+		/**
+		 * 按路由配置异步加载 route 对应的页面组件，减少初始化阶段的资源开销。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		component: () => import('/@/views/error/401.vue'),
 		meta: {
 			title: '没有权限',
@@ -113,6 +133,10 @@ export const staticRoutes: Array<RouteRecordRaw> = [
 	{
 		path: '/login',
 		name: 'login',
+		/**
+		 * 按路由配置异步加载 route 对应的页面组件，减少初始化阶段的资源开销。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		component: () => import('/@/views/login/index.vue'),
 		meta: {
 			title: '登录',
@@ -121,6 +145,10 @@ export const staticRoutes: Array<RouteRecordRaw> = [
 	},{
 		path: '/$callTel',
 		name: '$callTel',
+		/**
+		 * 按路由配置异步加载 route 对应的页面组件，减少初始化阶段的资源开销。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		component: () => import('/@/components/callTel/index.vue'),
 		meta: {
 			title: '拨号',

@@ -13,10 +13,14 @@ namespace Admin.NET.Core;
 /// </summary>
 public class SqlSugarTypeProvider : DefaultDynamicLinqCustomTypeProvider
 {
+    /// <summary>初始化 SqlSugarTypeProvider 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="cacheCustomTypes">cacheCustomTypes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SqlSugarTypeProvider(bool cacheCustomTypes = true) : base(ParsingConfig.Default, cacheCustomTypes)
     {
     }
 
+    /// <summary>查询或读取 SqlSugarTypeProvider 所需的 Get Custom Types 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override HashSet<Type> GetCustomTypes()
     {
         var customTypes = base.GetCustomTypes();

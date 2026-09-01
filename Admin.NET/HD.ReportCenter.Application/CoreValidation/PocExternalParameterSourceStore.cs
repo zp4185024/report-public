@@ -22,11 +22,15 @@ public sealed class PocExternalParameterSourceStore : ITransient
 {
     private readonly ISqlSugarClient _database;
 
+    /// <summary>初始化 PocExternalParameterSourceStore 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="database">database 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocExternalParameterSourceStore(ISqlSugarClient database)
     {
         _database = database;
     }
 
+    /// <summary>调用 PocExternalParameterSourceStore 的异步依赖完成 List Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocExternalParameterSource>> ListAsync()
     {
         await EnsureHisSeedAsync();
@@ -37,6 +41,9 @@ public sealed class PocExternalParameterSourceStore : ITransient
             .ToListAsync();
     }
 
+    /// <summary>查询或读取 PocExternalParameterSourceStore 所需的 Get Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocExternalParameterSource?> GetAsync(string code)
     {
         await EnsureHisSeedAsync();
@@ -45,6 +52,9 @@ public sealed class PocExternalParameterSourceStore : ITransient
             .FirstAsync();
     }
 
+    /// <summary>更新 PocExternalParameterSourceStore 的 Save Async 状态，并同步相关业务数据。</summary>
+    /// <param name="mutation">mutation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<int> SaveAsync(PocExternalParameterSourceMutation mutation)
     {
         ArgumentNullException.ThrowIfNull(mutation);
@@ -54,6 +64,7 @@ public sealed class PocExternalParameterSourceStore : ITransient
             .Where(item => item.Code == mutation.Code)
             .FirstAsync();
         if (existing is null)
+        // 第一阶段：调用 SaveAsync 依赖的异步能力，等待并校验返回数据。
         {
             if (mutation.ExpectedRevision != 0)
             {
@@ -82,6 +93,7 @@ public sealed class PocExternalParameterSourceStore : ITransient
             return revision;
         }
 
+        // 第2阶段：遍历 SaveAsync 当前数据集合，逐项转换并维护处理结果。
         var affected = await _database.Updateable<PocExternalParameterSource>()
             .SetColumns(item => new PocExternalParameterSource
             {
@@ -110,6 +122,8 @@ public sealed class PocExternalParameterSourceStore : ITransient
         return revision;
     }
 
+    /// <summary>校验 PocExternalParameterSourceStore 的 Ensure His Seed Async 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task EnsureHisSeedAsync()
     {
         var existing = await _database.Queryable<PocExternalParameterSource>()
@@ -117,6 +131,7 @@ public sealed class PocExternalParameterSourceStore : ITransient
             .FirstAsync();
         if (existing is not null)
         {
+            // 第一阶段：调用 EnsureHisSeedAsync 依赖的异步能力，等待并校验返回数据。
             await EnsureHisOptionalTokenParameterAsync(existing);
             return;
         }
@@ -134,6 +149,7 @@ public sealed class PocExternalParameterSourceStore : ITransient
         };
         try
         {
+            // 第2阶段：调用 EnsureHisSeedAsync 依赖的异步能力，等待并校验返回数据。
             await _database.Insertable(new PocExternalParameterSource
             {
                 Code = "his",
@@ -162,6 +178,9 @@ public sealed class PocExternalParameterSourceStore : ITransient
         }
     }
 
+    /// <summary>校验 PocExternalParameterSourceStore 的 Ensure His Optional Token Parameter Async 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task EnsureHisOptionalTokenParameterAsync(PocExternalParameterSource source)
     {
         // 新增列在旧数据库记录上为空；保存后的空数组表示用户明确删除，不应再次写回默认项。

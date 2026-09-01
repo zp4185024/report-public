@@ -119,11 +119,22 @@ onMounted(async () => {
 });
 
 // 更新主键
+/**
+ * 执行 genConfigDialog 的 submit Refresh Fk 核心流程，并保持错误和结果语义稳定。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submitRefreshFk = (data: any) => {
 	state.tableData[data.index] = data;
 };
 
 // 控件类型改变
+/**
+ * 按 effect Type Change 规则筛选 genConfigDialog 数据，并返回满足条件的结果。
+ * @param data - 本次操作使用的输入数据。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const effectTypeChange = (data: any, index: number) => {
 	if (['ForeignKey', 'ApiTreeSelector'].some(type => data.effectType == type)) {
     openJoinTableDialog(data, 'ForeignKey' === data.effectType ? '外键配置' : '树选择器配置', index);
@@ -133,6 +144,11 @@ const effectTypeChange = (data: any, index: number) => {
 };
 
 // 查询操作
+/**
+ * 响应 genConfigDialog 的 handle Query 事件，并协调相关状态和后续操作。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async (row: any) => {
 	state.loading = true;
 	state.tableData = await getAPI(SysCodeGenConfigApi).apiSysCodeGenConfigListGet(undefined, row.id).then(res => res.data.result ?? []);
@@ -140,38 +156,72 @@ const handleQuery = async (row: any) => {
 };
 
 // 判断是否（用于是否能选择或输入等）
+/**
+ * 负责 genConfigDialog 的 judge Columns 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function judgeColumns(data: any) {
 	return data.whetherCommon == "Y" || data.columnKey === 'True';
 }
 
+/**
+ * 按 effect Type Enable 规则筛选 genConfigDialog 数据，并返回满足条件的结果。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function effectTypeEnable(data: any) {
   return !['Radio', 'Checkbox', 'DictSelector', 'ConstSelector', 'EnumSelector'].some((e: any) => e === data.effectType)
 }
 
 // 打开弹窗
+/**
+ * 准备 genConfigDialog 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	handleQuery(row);
 	state.isShowDialog = true;
 };
 
 // 打开弹窗
+/**
+ * 准备 genConfigDialog 的 open Join Table Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param title - title 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openJoinTableDialog = (row: any, title: string, index: number) => {
   row.index = index;
   joinTableDialogRef.value.openDialog(row, title);
 };
 
 // 关闭弹窗
+/**
+ * 结束 genConfigDialog 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('handleQuery');
 	state.isShowDialog = false;
 };
 
 // 取消
+/**
+ * 校验 genConfigDialog 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 genConfigDialog 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = async () => {
 	state.loading = true;
 	await getAPI(SysCodeGenConfigApi).apiSysCodeGenConfigUpdatePost(state.tableData);

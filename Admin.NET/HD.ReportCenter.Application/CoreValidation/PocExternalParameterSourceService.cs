@@ -10,6 +10,10 @@ namespace HD.ReportCenter.Application.CoreValidation;
 
 public sealed class PocExternalParameterException : Exception
 {
+    /// <summary>初始化 PocExternalParameterException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="innerException">innerException 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocExternalParameterException(string code, string message, Exception? innerException = null)
         : base(message, innerException)
     {
@@ -51,6 +55,9 @@ public sealed class PocExternalParameterSourceService : ITransient
     private readonly PocExternalParameterSourceStore _store;
     private readonly IHttpClientFactory _httpClientFactory;
 
+    /// <summary>初始化 PocExternalParameterSourceService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="store">store 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="httpClientFactory">httpClientFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocExternalParameterSourceService(
         PocExternalParameterSourceStore store,
         IHttpClientFactory httpClientFactory)
@@ -59,18 +66,26 @@ public sealed class PocExternalParameterSourceService : ITransient
         _httpClientFactory = httpClientFactory;
     }
 
+    /// <summary>调用 PocExternalParameterSourceService 的异步依赖完成 List Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocExternalParameterSourceDocument>> ListAsync()
     {
         var sources = await _store.ListAsync();
         return sources.Select(ToDocument).ToArray();
     }
 
+    /// <summary>调用 PocExternalParameterSourceService 的异步依赖完成 List Definitions Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocExternalParameterSourceDefinition>> ListDefinitionsAsync()
     {
         var documents = await ListAsync();
         return documents.Select(ToDefinition).ToArray();
     }
 
+    /// <summary>更新 PocExternalParameterSourceService 的 Save Async 状态，并同步相关业务数据。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocExternalParameterSourceDocument> SaveAsync(
         string code,
         PocExternalParameterSourceInput input)
@@ -97,6 +112,11 @@ public sealed class PocExternalParameterSourceService : ITransient
         return ToDocument((await _store.GetAsync(input.Code.Trim()))!);
     }
 
+    /// <summary>调用 PocExternalParameterSourceService 的异步依赖完成 Test Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocExternalParameterSourceTestResult> TestAsync(
         string code,
         PocExternalParameterSourceTestRequest input,
@@ -109,6 +129,11 @@ public sealed class PocExternalParameterSourceService : ITransient
         return new PocExternalParameterSourceTestResult(values);
     }
 
+    /// <summary>解析并计算 PocExternalParameterSourceService 的 Resolve Async 结果，处理必要的边界条件。</summary>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyDictionary<string, string?>> ResolveAsync(
         IReadOnlyList<PocParameterDefinition> parameters,
         IReadOnlyDictionary<string, string?>? context,
@@ -118,6 +143,7 @@ public sealed class PocExternalParameterSourceService : ITransient
             .Where(item => item.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase))
             .ToArray();
         if (external.Length == 0)
+        // 第一阶段：根据 ResolveAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             return new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         }
@@ -139,6 +165,7 @@ public sealed class PocExternalParameterSourceService : ITransient
                 if (string.IsNullOrWhiteSpace(parameter.SourceFieldCode) ||
                     !fieldByCode.TryGetValue(parameter.SourceFieldCode, out var field))
                 {
+                    // 第2阶段：根据 ResolveAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
                     throw Invalid($"外部参数 '{parameter.Code}' 的字段映射不存在。");
                 }
                 if (!parameter.DataType.Equals(field.DataType, StringComparison.OrdinalIgnoreCase))
@@ -156,6 +183,9 @@ public sealed class PocExternalParameterSourceService : ITransient
         return result;
     }
 
+    /// <summary>执行 PocExternalParameterSourceService 的 Require Source Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<PocExternalParameterSource> RequireSourceAsync(string code)
     {
         var source = await _store.GetAsync(code.Trim())
@@ -171,6 +201,12 @@ public sealed class PocExternalParameterSourceService : ITransient
         return source;
     }
 
+    /// <summary>调用 PocExternalParameterSourceService 的异步依赖完成 Request Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<Dictionary<string, string>> RequestAsync(
         PocExternalParameterSource source,
         IReadOnlyList<PocExternalParameterFieldDefinition> fields,
@@ -182,6 +218,7 @@ public sealed class PocExternalParameterSourceService : ITransient
         timeout.CancelAfter(TimeSpan.FromSeconds(source.TimeoutSeconds));
         var endpoint = ReplaceEndpointTokens(source.Endpoint, context);
         var requestParameters = ReadRequestParameters(source);
+        // 第一阶段：构造 RequestAsync 当前步骤需要的中间数据和执行参数。
         var requestUri = BuildRequestUri(
             new Uri(new Uri(source.BaseUrl, UriKind.Absolute), endpoint),
             requestParameters,
@@ -211,6 +248,7 @@ public sealed class PocExternalParameterSourceService : ITransient
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
                 timeout.Token);
+            // 第2阶段：检查 RequestAsync 当前条件，并按匹配分支执行对应处理。
             if (!response.IsSuccessStatusCode)
             {
                 throw new PocExternalParameterException(
@@ -238,6 +276,7 @@ public sealed class PocExternalParameterSourceService : ITransient
                         ? $"外部参数源 '{source.Name}' 未返回已映射字段，请检查凭据和响应路径。"
                         : $"外部参数源 '{source.Name}' 返回失败：{externalMessage}");
             }
+            // 第3阶段：整理 RequestAsync 已计算的数据，并按方法契约返回最终结果。
             return result;
         }
         catch (PocExternalParameterException)
@@ -260,6 +299,10 @@ public sealed class PocExternalParameterSourceService : ITransient
         }
     }
 
+    /// <summary>遍历 PocExternalParameterSourceService 当前数据并执行 Replace Json Tokens 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JToken ReplaceJsonTokens(
         JToken token,
         IReadOnlyDictionary<string, string?> context)
@@ -291,6 +334,10 @@ public sealed class PocExternalParameterSourceService : ITransient
         return token.DeepClone();
     }
 
+    /// <summary>负责 PocExternalParameterSourceService 的 Replace Endpoint Tokens 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="endpoint">endpoint 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ReplaceEndpointTokens(
         string endpoint,
         IReadOnlyDictionary<string, string?> context) =>
@@ -300,6 +347,11 @@ public sealed class PocExternalParameterSourceService : ITransient
             match => Uri.EscapeDataString(RequiredContext(context, match.Groups["key"].Value)),
             RegexOptions.CultureInvariant);
 
+    /// <summary>构建 PocExternalParameterSourceService 所需的 Build Request Uri 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="endpoint">endpoint 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static Uri BuildRequestUri(
         Uri endpoint,
         IReadOnlyList<PocExternalRequestParameterDefinition> parameters,
@@ -330,6 +382,10 @@ public sealed class PocExternalParameterSourceService : ITransient
         return builder.Uri;
     }
 
+    /// <summary>执行 PocExternalParameterSourceService 的 Apply Header Parameters 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="headers">headers 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
     private static void ApplyHeaderParameters(
         JObject headers,
         IReadOnlyList<PocExternalRequestParameterDefinition> parameters,
@@ -346,6 +402,10 @@ public sealed class PocExternalParameterSourceService : ITransient
         }
     }
 
+    /// <summary>执行 PocExternalParameterSourceService 的 Apply Body Parameters 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="body">符合当前接口契约的请求输入数据。</param>
+    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
     private static void ApplyBodyParameters(
         JToken body,
         IReadOnlyList<PocExternalRequestParameterDefinition> parameters,
@@ -376,6 +436,10 @@ public sealed class PocExternalParameterSourceService : ITransient
         }
     }
 
+    /// <summary>检查 PocExternalParameterSourceService 的 Optional Context 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="parameter">parameter 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string? OptionalContext(
         PocExternalRequestParameterDefinition parameter,
         IReadOnlyDictionary<string, string?> context)
@@ -392,6 +456,10 @@ public sealed class PocExternalParameterSourceService : ITransient
         return value;
     }
 
+    /// <summary>执行 PocExternalParameterSourceService 的 Required Context 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string RequiredContext(
         IReadOnlyDictionary<string, string?> context,
         string key)
@@ -404,16 +472,26 @@ public sealed class PocExternalParameterSourceService : ITransient
         return value;
     }
 
+    /// <summary>负责 PocExternalParameterSourceService 的 Context Value 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string? ContextValue(
         IReadOnlyDictionary<string, string?> context,
         string key) => context.FirstOrDefault(item =>
             item.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value;
 
+    /// <summary>负责 PocExternalParameterSourceService 的 Missing Context 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="key">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExternalParameterException MissingContext(string key) =>
         new(
             "EXTERNAL_PARAMETER_CONTEXT_REQUIRED",
             $"外部参数接口缺少必填 URL 参数 '{key}'。");
 
+    /// <summary>检查 PocExternalParameterSourceService 的 Scalar Value 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ScalarValue(JToken? token)
     {
         if (token is null || token.Type is JTokenType.Null or JTokenType.Undefined)
@@ -429,6 +507,9 @@ public sealed class PocExternalParameterSourceService : ITransient
             "外部参数字段必须映射到字符串、数字、日期或布尔值。" );
     }
 
+    /// <summary>遍历 PocExternalParameterSourceService 当前数据并执行 External Error Message 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="response">上一步或远程调用返回的处理结果。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string? ExternalErrorMessage(JToken response)
     {
         if (response is not JObject obj)
@@ -454,6 +535,9 @@ public sealed class PocExternalParameterSourceService : ITransient
         return null;
     }
 
+    /// <summary>将 PocExternalParameterSourceService 的 To Document 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExternalParameterSourceDocument ToDocument(PocExternalParameterSource source) =>
         new(
             source.Code,
@@ -469,6 +553,9 @@ public sealed class PocExternalParameterSourceService : ITransient
             source.Revision,
             ReadFields(source));
 
+    /// <summary>将 PocExternalParameterSourceService 的 To Definition 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     internal static PocExternalParameterSourceDefinition ToDefinition(
         PocExternalParameterSourceDocument source) =>
         new(
@@ -482,16 +569,24 @@ public sealed class PocExternalParameterSourceService : ITransient
                 source.RequestBodyTemplate,
                 source.HeadersTemplate));
 
+    /// <summary>查询或读取 PocExternalParameterSourceService 所需的 Read Fields 数据，并按调用约定返回结果。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     internal static IReadOnlyList<PocExternalParameterFieldDefinition> ReadFields(
         PocExternalParameterSource source) =>
         JsonConvert.DeserializeObject<PocExternalParameterFieldDefinition[]>(source.FieldSchemaJson)
         ?? [];
 
+    /// <summary>查询或读取 PocExternalParameterSourceService 所需的 Read Request Parameters 数据，并按调用约定返回结果。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     internal static IReadOnlyList<PocExternalRequestParameterDefinition> ReadRequestParameters(
         PocExternalParameterSource source) =>
         JsonConvert.DeserializeObject<PocExternalRequestParameterDefinition[]>(
             source.RequestParameterSchemaJson ?? "[]") ?? [];
 
+    /// <summary>校验 PocExternalParameterSourceService 的 Validate 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
     private static void Validate(PocExternalParameterSourceInput input)
     {
         if (!CodeRegex.IsMatch(input.Code?.Trim() ?? string.Empty) ||
@@ -503,6 +598,7 @@ public sealed class PocExternalParameterSourceService : ITransient
             input.TimeoutSeconds is < 1 or > 120 ||
             input.Revision < 0 || input.Fields is null || input.Fields.Count is < 1 or > 100 ||
             input.RequestParameters is null || input.RequestParameters.Count > 100)
+        // 第一阶段：根据 Validate 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             throw Invalid("外部参数源配置无效。");
         }
@@ -523,6 +619,7 @@ public sealed class PocExternalParameterSourceService : ITransient
                 !validName ||
                 !CodeRegex.IsMatch(urlKey) ||
                 !requestParameterNames.Add($"{location}:{parameterName}"))
+            // 第2阶段：根据 Validate 当前分支转换输入数据，并保存该阶段产生的中间结果。
             {
                 throw Invalid($"URL 动态请求参数 '{parameter.Name}' 配置无效。");
             }
@@ -542,15 +639,28 @@ public sealed class PocExternalParameterSourceService : ITransient
         }
     }
 
+    /// <summary>将 PocExternalParameterSourceService 中的 Normalize Base Url 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string NormalizeBaseUrl(string value) =>
         value.Trim().TrimEnd('/') + "/";
 
+    /// <summary>将 PocExternalParameterSourceService 中的 Normalize Request Template 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string NormalizeRequestTemplate(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "{}" : JToken.Parse(value).ToString(Formatting.None);
 
+    /// <summary>将 PocExternalParameterSourceService 中的 Normalize Headers Template 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string NormalizeHeadersTemplate(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "{}" : JObject.Parse(value).ToString(Formatting.None);
 
+    /// <summary>查询或读取 PocExternalParameterSourceService 所需的 Read Context Keys 数据，并按调用约定返回结果。</summary>
+    /// <param name="requestParameters">requestParameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="templates">templates 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IReadOnlyList<string> ReadContextKeys(
         IReadOnlyList<PocExternalRequestParameterDefinition> requestParameters,
         params string[] templates) =>
@@ -562,6 +672,9 @@ public sealed class PocExternalParameterSourceService : ITransient
             .OrderBy(key => key, StringComparer.Ordinal)
             .ToArray();
 
+    /// <summary>负责 PocExternalParameterSourceService 的 Invalid 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDatasetConfigurationException Invalid(string message) =>
         new("EXTERNAL_PARAMETER_SOURCE_INVALID", message);
 }

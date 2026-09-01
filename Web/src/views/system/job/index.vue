@@ -320,6 +320,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -330,6 +334,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = async () => {
 	state.queryParams.jobId = undefined;
 	state.queryParams.groupName = undefined;
@@ -338,18 +346,32 @@ const resetQuery = async () => {
 };
 
 // 打开新增作业页面
+/**
+ * 准备 index 的 open Add Job Detail 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddJobDetail = () => {
 	state.editJobDetailTitle = '添加作业';
 	editJobDetailRef.value?.openDialog({ concurrent: true, includeAnnotations: true, groupName: 'default', createType: JobCreateTypeEnum.NUMBER_2 });
 };
 
 // 打开编辑作业页面
+/**
+ * 准备 index 的 open Edit Job Detail 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditJobDetail = (row: JobDetailOutput) => {
 	state.editJobDetailTitle = '编辑作业';
 	editJobDetailRef.value?.openDialog(row.jobDetail);
 };
 
 // 删除作业
+/**
+ * 从 index 移除 del Job Detail 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delJobDetail = (row: JobDetailOutput) => {
 	ElMessageBox.confirm(`确定删除作业：【${row.jobDetail?.jobId}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -365,6 +387,11 @@ const delJobDetail = (row: JobDetailOutput) => {
 };
 
 // 打开新增触发器页面
+/**
+ * 准备 index 的 open Add Job Trigger 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddJobTrigger = (row: JobDetailOutput) => {
 	state.editJobTriggerTitle = '添加触发器';
 	editJobTriggerRef.value?.openDialog({
@@ -378,12 +405,22 @@ const openAddJobTrigger = (row: JobDetailOutput) => {
 };
 
 // 打开编辑触发器页面
+/**
+ * 准备 index 的 open Edit Job Trigger 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditJobTrigger = (row: SysJobTrigger) => {
 	state.editJobTriggerTitle = '编辑触发器';
 	editJobTriggerRef.value?.openDialog(row);
 };
 
 // 删除触发器
+/**
+ * 从 index 移除 del Job Trigger 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delJobTrigger = (row: SysJobTrigger) => {
 	ElMessageBox.confirm(`确定删除触发器：【${row.triggerId}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -399,83 +436,147 @@ const delJobTrigger = (row: SysJobTrigger) => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = async (val: number) => {
 	state.tableParams.pageSize = val;
 	await handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = async (val: number) => {
 	state.tableParams.page = val;
 	await handleQuery();
 };
 
 // 启动所有作业
+/**
+ * 启动 index 的 start All Job 流程，并建立运行期间所需状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const startAllJob = async () => {
 	await getAPI(SysJobApi).apiSysJobStartAllJobPost();
 	ElMessage.success('启动所有作业');
 };
 
 // 暂停所有作业
+/**
+ * 停止 index 的 pause All Job 流程，并完成必要的状态收尾。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const pauseAllJob = async () => {
 	await getAPI(SysJobApi).apiSysJobPauseAllJobPost();
 	ElMessage.success('暂停所有作业');
 };
 
 // 执行某个作业
+/**
+ * 执行 index 的 run Job 核心流程，并保持错误和结果语义稳定。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const runJob = async (row: JobDetailOutput) => {
 	await getAPI(SysJobApi).apiSysJobRunJobPost({ jobId: row.jobDetail?.jobId });
 	ElMessage.success('执行作业');
 };
 
 // 启动某个作业
+/**
+ * 启动 index 的 start Job 流程，并建立运行期间所需状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const startJob = async (row: JobDetailOutput) => {
 	await getAPI(SysJobApi).apiSysJobStartJobPost({ jobId: row.jobDetail?.jobId });
 	ElMessage.success('启动作业');
 };
 
 // 暂停某个作业
+/**
+ * 停止 index 的 pause Job 流程，并完成必要的状态收尾。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const pauseJob = async (row: JobDetailOutput) => {
 	await getAPI(SysJobApi).apiSysJobPauseJobPost({ jobId: row.jobDetail?.jobId });
 	ElMessage.success('暂停作业');
 };
 
 // 取消某个作业
+/**
+ * 校验 index 的 cancel Job 条件，并返回可供后续流程判断的结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancelJob = async (row: JobDetailOutput) => {
 	await getAPI(SysJobApi).apiSysJobCancelJobPost({ jobId: row.jobDetail?.jobId });
 	ElMessage.success('取消作业');
 };
 
 // 启动触发器
+/**
+ * 启动 index 的 start Trigger 流程，并建立运行期间所需状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const startTrigger = async (row: SysJobTrigger) => {
 	await getAPI(SysJobApi).apiSysJobStartTriggerPost({ jobId: row.jobId, triggerId: row.triggerId });
 	ElMessage.success('启动触发器');
 };
 
 // 暂停触发器
+/**
+ * 停止 index 的 pause Trigger 流程，并完成必要的状态收尾。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const pauseTrigger = async (row: SysJobTrigger) => {
 	await getAPI(SysJobApi).apiSysJobPauseTriggerPost({ jobId: row.jobId, triggerId: row.triggerId });
 	ElMessage.success('暂停触发器');
 };
 
 // 强制唤醒作业调度器
+/**
+ * 校验 index 的 cancel Sleep 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancelSleep = async () => {
 	await getAPI(SysJobApi).apiSysJobCancelSleepPost();
 	ElMessage.success('强制唤醒作业调度器');
 };
 
 // 强制触发所有作业持久化
+/**
+ * 负责 index 的 persist All 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const persistAll = async () => {
 	await getAPI(SysJobApi).apiSysJobPersistAllPost();
 	ElMessage.success('强制触发所有作业持久化');
 };
 
 // 打开集群控制页面
+/**
+ * 准备 index 的 open Job Cluster 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openJobCluster = () => {
 	editJobClusterRef.value?.openDrawer();
 };
 
 // 打开任务看板
+/**
+ * 准备 index 的 open Job Dashboard 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openJobDashboard = () => {
 	router.push({
 		path: '/platform/job/dashboard',
@@ -483,6 +584,11 @@ const openJobDashboard = () => {
 };
 
 // 根据任务属性获取 HttpJobMessage
+/**
+ * 查询或读取 index 所需的 get Http Job Message 数据，并按调用约定返回结果。
+ * @param properties - properties 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getHttpJobMessage = (properties: string | undefined | null): HttpJobMessage => {
 	if (properties === undefined || properties === null || properties === '') return {};
 
@@ -497,6 +603,11 @@ const getHttpJobMessage = (properties: string | undefined | null): HttpJobMessag
 };
 
 // 获取请求方法的对应描述
+/**
+ * 查询或读取 index 所需的 get Http Method Desc 数据，并按调用约定返回结果。
+ * @param httpMethodStr - httpMethodStr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getHttpMethodDesc = (httpMethodStr: string | undefined | null): string => {
 	if (httpMethodStr === undefined || httpMethodStr === null || httpMethodStr === '') return '';
 
@@ -507,6 +618,11 @@ const getHttpMethodDesc = (httpMethodStr: string | undefined | null): string => 
 };
 
 // 打开作业触发器运行记录
+/**
+ * 准备 index 的 open Job Trigger Record 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openJobTriggerRecord = async (row: any) => {
 	state.currentJob = row;
 	state.isVisibleDrawer = true;
@@ -514,6 +630,10 @@ const openJobTriggerRecord = async (row: any) => {
 };
 
 // 作业触发器运行记录查询操作
+/**
+ * 响应 index 的 handle Query2 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery2 = async () => {
 	state.loading2 = true;
 	let params = Object.assign({ jobId: state.currentJob.jobDetail.jobId }, state.tableParams2); //state.currentJob.jobTriggers[0].triggerId
@@ -524,12 +644,22 @@ const handleQuery2 = async () => {
 };
 
 // 作业触发器运行记录-改变页面容量
+/**
+ * 响应 index 的 handle Size Change2 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange2 = async (val: number) => {
 	state.tableParams2.pageSize = val;
 	await handleQuery2();
 };
 
 // 作业触发器运行记录-改变页码序号
+/**
+ * 响应 index 的 handle Current Change2 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange2 = async (val: number) => {
 	state.tableParams2.page = val;
 	await handleQuery2();

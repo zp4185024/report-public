@@ -1,6 +1,10 @@
 import { PolygonNode, PolygonNodeModel, h } from "@logicflow/core";
 
 class UserNode extends PolygonNode {
+    /**
+     * 查询或读取 NodeUser 所需的 get Icon Shape 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     getIconShape() {
         const { model } = this.props
         const { stroke } = model.getNodeStyle()
@@ -22,6 +26,10 @@ class UserNode extends PolygonNode {
             )
         )
     }
+    /**
+     * 查询或读取 NodeUser 所需的 get Shape 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     getShape() {
         const { model } = this.props
         const { width, height, x, y, points } = model
@@ -51,6 +59,11 @@ class UserNode extends PolygonNode {
     }
 }
 class UserNodeModel extends PolygonNodeModel {
+    /**
+     * 初始化 NodeUser 实例，保存依赖并建立组件所需的初始状态。
+     * @param data - 本次操作使用的输入数据。
+     * @param graphModel - graphModel 对应的业务输入；具体类型和空值范围以方法签名为准。
+     */
     constructor(data, graphModel) {
         data.text = {
             value: (data.text && data.text.value) || '',
@@ -63,6 +76,11 @@ class UserNodeModel extends PolygonNodeModel {
             {
                 className: 'lf-menu-delete',
                 text: 'delete',
+                /**
+                 * 接收 NodeUser 的异步处理结果并同步调用方关心的状态。
+                 * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+                 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+                 */
                 callback(node) {
                     // const comfirm = window.confirm('你确定要删除吗？')
                     lf.deleteNode(node.id)
@@ -71,6 +89,11 @@ class UserNodeModel extends PolygonNodeModel {
             {
                 text: 'edit',
                 className: 'lf-menu-item',
+                /**
+                 * 接收 NodeUser 的异步处理结果并同步调用方关心的状态。
+                 * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+                 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+                 */
                 callback(node) {
                     lf.editText(node.id)
                 }
@@ -78,12 +101,22 @@ class UserNodeModel extends PolygonNodeModel {
             {
                 text: 'copy',
                 className: 'lf-menu-item',
+                /**
+                 * 接收 NodeUser 的异步处理结果并同步调用方关心的状态。
+                 * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+                 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+                 */
                 callback(node) {
                     lf.cloneNode(node.id)
                 }
             }
         ]
     }
+    /**
+     * 初始化 NodeUser 的 init Node Data 状态，创建依赖并注册运行期间需要的资源。
+     * @param data - 本次操作使用的输入数据。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     initNodeData(data) {
         super.initNodeData(data)
         const lenght = 35
@@ -95,6 +128,10 @@ class UserNodeModel extends PolygonNodeModel {
         ]
     }
     // 自定义锚点样式
+    /**
+     * 查询或读取 NodeUser 所需的 get Anchor Style 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     getAnchorStyle() {
         const style = super.getAnchorStyle();
         style.hover.r = 8;

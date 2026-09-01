@@ -235,6 +235,7 @@ export const SysAlipayApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysAlipayAlipayPreCreatePost(body?: AlipayPreCreateInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultString>>> {
+            // 第一阶段：调用 SysAlipayApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysAlipayApiAxiosParamCreator(configuration).apiSysAlipayAlipayPreCreatePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -264,6 +265,7 @@ export const SysAlipayApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysAlipayAuthInfoGet(userId?: string, authCode?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第2阶段：调用 SysAlipayApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysAlipayApiAxiosParamCreator(configuration).apiSysAlipayAuthInfoGet(userId, authCode, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -291,6 +293,7 @@ export const SysAlipayApiFp = function(configuration?: Configuration) {
  * @export
  */
 export const SysAlipayApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    // 第一阶段：整理 SysAlipayApiFactory 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -321,6 +324,7 @@ export const SysAlipayApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysAlipayAuthInfoGet(userId?: string, authCode?: string, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysAlipayApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysAlipayApiFp(configuration).apiSysAlipayAuthInfoGet(userId, authCode, options).then((request) => request(axios, basePath));
         },
         /**

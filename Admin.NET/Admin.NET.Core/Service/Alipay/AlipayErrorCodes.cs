@@ -134,8 +134,8 @@ public class AlipayErrorCode
     /// <summary>
     /// 根据错误码获取错误信息
     /// </summary>
-    /// <param name="code"></param>
-    /// <returns></returns>
+    /// <param name="code">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static AlipayErrorCode Get(string code)
     {
         return StatusCodes.FirstOrDefault(u => u.Code.EqualIgnoreCase(code));

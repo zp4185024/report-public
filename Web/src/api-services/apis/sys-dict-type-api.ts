@@ -486,6 +486,7 @@ export const SysDictTypeApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysDictTypeAddPost(body?: AddDictTypeInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysDictTypeApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysDictTypeApiAxiosParamCreator(configuration).apiSysDictTypeAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -516,6 +517,7 @@ export const SysDictTypeApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysDictTypeApiAxiosParamCreator(configuration).apiSysDictTypeDataListGet(code, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysDictTypeApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -545,6 +547,7 @@ export const SysDictTypeApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysDictTypeApiAxiosParamCreator(configuration).apiSysDictTypeDetailGet(id, status, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysDictTypeApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -583,6 +586,7 @@ export const SysDictTypeApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysDictTypeSetStatusPost(body?: DictTypeInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第4阶段：调用 SysDictTypeApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysDictTypeApiAxiosParamCreator(configuration).apiSysDictTypeSetStatusPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -620,6 +624,7 @@ export const SysDictTypeApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysDictTypeAddPost(body?: AddDictTypeInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysDictTypeApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysDictTypeApiFp(configuration).apiSysDictTypeAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -649,6 +654,7 @@ export const SysDictTypeApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysDictTypeDeletePost(body?: DeleteDictTypeInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysDictTypeApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysDictTypeApiFp(configuration).apiSysDictTypeDeletePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -679,6 +685,7 @@ export const SysDictTypeApiFactory = function (configuration?: Configuration, ba
          * @throws {RequiredError}
          */
         async apiSysDictTypePagePost(body?: PageDictTypeInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysDictType>> {
+            // 第3阶段：整理 SysDictTypeApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysDictTypeApiFp(configuration).apiSysDictTypePagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

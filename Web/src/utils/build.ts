@@ -9,6 +9,10 @@ import importToCDN from 'vite-plugin-cdn-import';
  * @description external 打包时，过滤包导入。参考：https://rollupjs.org/configuration-options/#external
  */
 export const buildConfig = {
+	/**
+	 * 构造并发送 build 的 cdn 网络请求，随后按接口类型返回响应结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	cdn() {
 		return importToCDN({
 			prodUrl: 'https://unpkg.com/{name}@{version}/{path}',

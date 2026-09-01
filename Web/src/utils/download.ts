@@ -88,6 +88,12 @@ export function downloadByUrl({ url, target = '_blank', fileName }: { url: strin
 	return true;
 }
 
+/**
+ * 准备 download 的 open Window 交互状态并打开对应界面。
+ * @param url - url 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param opt - opt 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function openWindow(url: string, opt?: { target?: string; noopener?: boolean; noreferrer?: boolean }) {
 	const { target = '__blank', noopener = true, noreferrer = true } = opt || {};
 	const feature: string[] = [];
@@ -98,6 +104,11 @@ export function openWindow(url: string, opt?: { target?: string; noopener?: bool
 	window.open(url, target, feature.join(','));
 }
 
+/**
+ * 查询或读取 download 所需的 get File Name 数据，并按调用约定返回结果。
+ * @param headers - headers 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function getFileName(headers: RawAxiosResponseHeaders | AxiosResponseHeaders) {
 	var fileName = headers['content-disposition'].split(';')[1].split('filename=')[1];
 	var fileNameUnicode = headers['content-disposition'].split('filename*=')[1];

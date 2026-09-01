@@ -246,6 +246,7 @@ export const SysPosApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysPosAddPost(body?: AddPosInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysPosApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysPosApiAxiosParamCreator(configuration).apiSysPosAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -276,6 +277,7 @@ export const SysPosApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysPosListGet(name?: string, code?: string, tenantId?: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListSysPos>>> {
+            // 第2阶段：调用 SysPosApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysPosApiAxiosParamCreator(configuration).apiSysPosListGet(name, code, tenantId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -313,6 +315,7 @@ export const SysPosApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysPosAddPost(body?: AddPosInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysPosApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysPosApiFp(configuration).apiSysPosAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -335,6 +338,7 @@ export const SysPosApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysPosListGet(name?: string, code?: string, tenantId?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListSysPos>> {
+            // 第2阶段：整理 SysPosApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysPosApiFp(configuration).apiSysPosListGet(name, code, tenantId, options).then((request) => request(axios, basePath));
         },
         /**

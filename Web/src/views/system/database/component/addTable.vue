@@ -123,6 +123,11 @@ const state = reactive({
 });
 
 // 打开弹窗
+/**
+ * 准备 addTable 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	state.ruleForm = row;
 	state.isShowDialog = true;
@@ -130,6 +135,10 @@ const openDialog = (row: any) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 addTable 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('addTableSubmitted', state.ruleForm.tableName ?? '');
 	state.tableData = [];
@@ -137,11 +146,19 @@ const closeDialog = () => {
 };
 
 // 取消
+/**
+ * 校验 addTable 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 addTable 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;
@@ -162,6 +179,10 @@ const submit = () => {
 };
 
 // 增加主键列
+/**
+ * 构建 addTable 所需的 add Primary Column 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function addPrimaryColumn() {
 	state.tableData.push({
 		columnDescription: '主键Id',
@@ -180,6 +201,10 @@ function addPrimaryColumn() {
 }
 
 // 增加普通列
+/**
+ * 构建 addTable 所需的 add Column 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function addColumn() {
 	state.tableData.push({
 		columnDescription: '',
@@ -198,6 +223,10 @@ function addColumn() {
 }
 
 // 增加租户列
+/**
+ * 构建 addTable 所需的 add Tenant Column 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function addTenantColumn() {
 	state.tableData.push({
 		columnDescription: '租户Id',
@@ -216,6 +245,10 @@ function addTenantColumn() {
 }
 
 // 增加机构列
+/**
+ * 构建 addTable 所需的 add Org Column 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function addOrgColumn() {
 	state.tableData.push({
 		columnDescription: '机构Id',
@@ -234,7 +267,12 @@ function addOrgColumn() {
 }
 
 // 增加通用基础列
+/**
+ * 构建 addTable 所需的 add Base Column 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function addBaseColumn() {
+	// 第一阶段：构造 addBaseColumn 当前阶段需要的中间数据和执行参数。
 	const fileds = [
 		{
 			dataType: 'datetime',
@@ -270,6 +308,7 @@ function addBaseColumn() {
 		},
 	];
 
+	// 第2阶段：遍历 addBaseColumn 当前数据集合，逐项转换并维护处理结果。
 	fileds.forEach((m: any) => {
 		state.tableData.push({
 			columnDescription: m.desc,
@@ -289,6 +328,10 @@ function addBaseColumn() {
 }
 
 // 增加软删除列
+/**
+ * 构建 addTable 所需的 add Delete Column 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function addDeleteColumn() {
 	state.tableData.push({
 		columnDescription: '软删除',
@@ -306,11 +349,21 @@ function addDeleteColumn() {
 	colIndex++;
 }
 
+/**
+ * 响应 addTable 的 handle Col Delete 事件，并协调相关状态和后续操作。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function handleColDelete(index: number) {
 	state.tableData.splice(index, 1);
 }
 
 // 列类型选择变化
+/**
+ * 响应 addTable 的 handle Col Type Change 事件，并协调相关状态和后续操作。
+ * @param record - record 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function handleColTypeChange(record: EditRecordRow) {
     if (['varchar', 'char', 'nvarchar', 'nchar'].includes(record.dataType as string)) {
         if ([0, undefined, null].includes(record.length)) {
@@ -322,6 +375,12 @@ function handleColTypeChange(record: EditRecordRow) {
 }
 
 // 上移
+/**
+ * 响应 addTable 的 handle Col Up 事件，并协调相关状态和后续操作。
+ * @param record - record 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function handleColUp(record: EditRecordRow, index: number) {
 	if (record.isNew) {
 		var data1 = ChangeExForArray(index, index - 1, state.tableData);
@@ -330,12 +389,25 @@ function handleColUp(record: EditRecordRow, index: number) {
 }
 
 // 下移
+/**
+ * 响应 addTable 的 handle Col Down 事件，并协调相关状态和后续操作。
+ * @param record - record 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function handleColDown(record: EditRecordRow, index: number) {
 	if (record.isNew) {
 		return ChangeExForArray(index, index + 1, state.tableData);
 	}
 }
 
+/**
+ * 更新 addTable 的 Change Ex For Array 状态，并同步相关业务数据。
+ * @param index1 - index1 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param index2 - index2 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param array - array 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function ChangeExForArray(index1: number, index2: number, array: Array<EditRecordRow>) {
 	let maxIndex = state.tableData.length - 1; //最大索引
 	if (index2 > maxIndex) {

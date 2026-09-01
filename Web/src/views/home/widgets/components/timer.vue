@@ -37,6 +37,10 @@ onUnmounted(() => {
 	clearInterval(timer.value);
 });
 
+/**
+ * 准备 timer 的 show Time 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const showTime = () => {
 	time.value = formatDate(new Date(), 'HH:MM:SS');
 	day.value = formatDate(new Date(), 'YYYY年mm月dd日');

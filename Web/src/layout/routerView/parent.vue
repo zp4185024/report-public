@@ -52,6 +52,10 @@ const isIframePage = computed(() => {
 	return route.meta.isIframe;
 });
 // 获取 iframe 组件列表(未进行渲染)
+/**
+ * 查询或读取 parent 所需的 get Iframe List Routes 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getIframeListRoutes = async () => {
 	router.getRoutes().forEach((v) => {
 		if (v.meta.isIframe) {

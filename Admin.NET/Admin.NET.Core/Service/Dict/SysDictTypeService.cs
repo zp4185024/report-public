@@ -18,6 +18,12 @@ public class SysDictTypeService : IDynamicApiController, ITransient
     private readonly UserManager _userManager;
     private readonly SysLangTextCacheService _sysLangTextCacheService;
 
+    /// <summary>初始化 SysDictTypeService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysDictTypeRep">当前方法执行时使用的 sysDictTypeRep 输入值。</param>
+    /// <param name="sysDictDataService">当前方法执行时使用的 sysDictDataService 输入值。</param>
+    /// <param name="sysCacheService">当前方法执行时使用的 sysCacheService 输入值。</param>
+    /// <param name="userManager">当前方法执行时使用的 userManager 输入值。</param>
+    /// <param name="sysLangTextCacheService">当前方法执行时使用的 sysLangTextCacheService 输入值。</param>
     public SysDictTypeService(SqlSugarRepository<SysDictType> sysDictTypeRep,
         SysDictDataService sysDictDataService,
         SysCacheService sysCacheService,
@@ -34,7 +40,7 @@ public class SysDictTypeService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取字典类型分页列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取字典类型分页列表")]
     public async Task<SqlSugarPagedList<SysDictType>> Page(PageDictTypeInput input)
     {
@@ -66,7 +72,7 @@ public class SysDictTypeService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取字典类型列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取字典类型列表")]
     public async Task<List<SysDictType>> GetList()
     {
@@ -91,8 +97,8 @@ public class SysDictTypeService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取字典类型-值列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取字典类型-值列表")]
     public async Task<List<SysDictData>> GetDataList([FromQuery] GetDataDictTypeInput input)
     {
@@ -115,11 +121,9 @@ public class SysDictTypeService : IDynamicApiController, ITransient
         return list;
     }
 
-    /// <summary>
-    /// 添加字典类型 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysDictTypeService 所需的 Add Dict Type 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("添加字典类型")]
     public async Task AddDictType(AddDictTypeInput input)
@@ -135,11 +139,9 @@ public class SysDictTypeService : IDynamicApiController, ITransient
         await _sysDictTypeRep.InsertAsync(input.Adapt<SysDictType>());
     }
 
-    /// <summary>
-    /// 更新字典类型 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysDictTypeService 的 Update Dict Type 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新字典类型")]
@@ -159,11 +161,9 @@ public class SysDictTypeService : IDynamicApiController, ITransient
         await _sysDictTypeRep.UpdateAsync(input.Adapt<SysDictType>());
     }
 
-    /// <summary>
-    /// 删除字典类型 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysDictTypeService 中与 Delete Dict Type 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除字典类型")]
@@ -180,8 +180,8 @@ public class SysDictTypeService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取字典类型详情 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取字典类型详情")]
     public async Task<SysDictType> GetDetail([FromQuery] DictTypeInput input)
     {
@@ -191,8 +191,8 @@ public class SysDictTypeService : IDynamicApiController, ITransient
     /// <summary>
     /// 修改字典类型状态 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("修改字典类型状态")]
     public async Task SetStatus(DictTypeInput input)
@@ -209,11 +209,12 @@ public class SysDictTypeService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取所有字典集合 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取所有字典集合")]
     public async Task<dynamic> GetAllDictList()
     {
         var langCode = _userManager.LangCode;
+        // 第一阶段：遍历 GetAllDictList 当前数据集合，逐项转换并维护处理结果。
         var ds = await _sysDictTypeRep.AsQueryable()
             .InnerJoin(_sysDictDataService.VSysDictData, (u, w) => u.Id == w.DictTypeId)
             .Select((u, w) => new DictDataOutput
@@ -244,6 +245,7 @@ public class SysDictTypeService : IDynamicApiController, ITransient
                 langCode
             );
         }
+        // 第2阶段：遍历 GetAllDictList 当前数据集合，逐项转换并维护处理结果。
         foreach (var item in ds)
         {
             if (translations.TryGetValue(item.DictDataId, out var translated) && !string.IsNullOrEmpty(translated))

@@ -6,6 +6,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocParameterResolverTests
 {
+    /// <summary>验证 Resolve Uses Only Definitions And Creates Typed Database Values 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Resolve_UsesOnlyDefinitionsAndCreatesTypedDatabaseValues()
     {
@@ -32,6 +33,7 @@ public sealed class PocParameterResolverTests
         Assert.Equal(false, resolved.DatabaseValues["includeDisabled"]);
     }
 
+    /// <summary>验证 Resolve Ignores Client Value For Fixed And System Parameters 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Resolve_IgnoresClientValueForFixedAndSystemParameters()
     {
@@ -52,6 +54,7 @@ public sealed class PocParameterResolverTests
         Assert.Equal("2026-08-10", resolved.DisplayValues["today"]);
     }
 
+    /// <summary>验证 Resolve Only Accepts External Values From Trusted Input 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Resolve_OnlyAcceptsExternalValuesFromTrustedInput()
     {
@@ -74,6 +77,7 @@ public sealed class PocParameterResolverTests
         Assert.Equal("organ1001", resolved.DatabaseValues["hisOrganizeId"]);
     }
 
+    /// <summary>验证 Resolve Unifies Page Url And External Values For Template And Sql Consumers 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Resolve_UnifiesPageUrlAndExternalValuesForTemplateAndSqlConsumers()
     {
@@ -110,6 +114,7 @@ public sealed class PocParameterResolverTests
         Assert.Equal("super", resolved.DatabaseValues["hisUserName"]);
     }
 
+    /// <summary>验证 Resolve Url Department Id Creates Named Sql Parameter With Url Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Resolve_UrlDepartmentId_CreatesNamedSqlParameterWithUrlValue()
     {
@@ -138,6 +143,7 @@ public sealed class PocParameterResolverTests
         Assert.Equal(DbType.String, sqlParameter.DbType);
     }
 
+    /// <summary>验证 Resolve Rejects Required External Value When Trusted Input Is Missing 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Resolve_RejectsRequiredExternalValueWhenTrustedInputIsMissing()
     {
@@ -149,6 +155,7 @@ public sealed class PocParameterResolverTests
         Assert.Equal("PARAM_REQUIRED", exception.Code);
     }
 
+    /// <summary>验证 Resolve Rejects Missing Required Parameter 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Resolve_RejectsMissingRequiredParameter()
     {
@@ -160,6 +167,7 @@ public sealed class PocParameterResolverTests
         Assert.Equal("PARAM_REQUIRED", exception.Code);
     }
 
+    /// <summary>验证 Resolve Rejects Invalid Typed Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Resolve_RejectsInvalidTypedValue()
     {
@@ -171,6 +179,11 @@ public sealed class PocParameterResolverTests
         Assert.Equal("PARAM_INVALID", exception.Code);
     }
 
+    /// <summary>验证 Resolve Normalizes Calendar Control Formats 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="controlType">controlType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="expected">expected 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     [Theory]
     [InlineData("date", "string", "2026-08-24", "2026-08-24")]
     [InlineData("datetime", "string", "2026-08-24T10:30", "2026-08-24 10:30:00")]
@@ -190,6 +203,9 @@ public sealed class PocParameterResolverTests
         Assert.Equal(expected, resolved.DatabaseValues["period"]);
     }
 
+    /// <summary>验证 Resolve Rejects Values Outside Calendar Control Format 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <param name="controlType">controlType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     [Theory]
     [InlineData("date", "2026-08")]
     [InlineData("datetime", "2026-08-24")]
@@ -205,6 +221,15 @@ public sealed class PocParameterResolverTests
         Assert.Equal("PARAM_INVALID", exception.Code);
     }
 
+    /// <summary>负责 PocParameterResolverTests 的 Parameter 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="required">required 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sourceType">sourceType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="defaultValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="fixedValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="controlType">controlType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocParameterDefinition Parameter(
         string code,
         string dataType,

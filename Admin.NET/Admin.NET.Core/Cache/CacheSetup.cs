@@ -14,7 +14,7 @@ public static class CacheSetup
     /// <summary>
     /// 缓存注册（新生命Redis组件）
     /// </summary>
-    /// <param name="services"></param>
+    /// <param name="services">services 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public static void AddCache(this IServiceCollection services)
     {
         var cacheOptions = App.GetConfig<CacheOptions>("Cache", true);

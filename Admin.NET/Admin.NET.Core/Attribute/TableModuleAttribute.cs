@@ -13,5 +13,7 @@ namespace Admin.NET.Core;
 public class TableModuleAttribute : Attribute
 {
     public string Prefix { get; }
+    /// <summary>初始化 TableModuleAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="prefix">当前方法执行时使用的 prefix 输入值。</param>
     public TableModuleAttribute(string prefix) => Prefix = prefix;
 }

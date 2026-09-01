@@ -26,11 +26,14 @@ public sealed class PocTemplateBindingMismatchException : Exception
 {
     public const string ErrorCode = "TEMPLATE_BINDING_MISMATCH";
 
+    /// <summary>初始化 PocTemplateBindingMismatchException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
     public PocTemplateBindingMismatchException()
         : base(ErrorCode)
     {
     }
 
+    /// <summary>初始化 PocTemplateBindingMismatchException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="innerException">innerException 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocTemplateBindingMismatchException(Exception innerException)
         : base(ErrorCode, innerException)
     {
@@ -47,6 +50,9 @@ public sealed class PocStoredTemplateCorruptedException : Exception
 {
     public const string ErrorCode = "TEMPLATE_STORED_DATA_INVALID";
 
+    /// <summary>初始化 PocStoredTemplateCorruptedException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="innerException">innerException 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocStoredTemplateCorruptedException(string reportCode, Exception innerException)
         : base($"Stored template '{reportCode}' is invalid.", innerException)
     {
@@ -66,6 +72,9 @@ public sealed class PocTemplateService : ITransient
     private readonly PocTemplateStore _store;
     private readonly PocReportConfigurationService? _configurationService;
 
+    /// <summary>初始化 PocTemplateService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="store">store 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="configurationService">configurationService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocTemplateService(
         PocTemplateStore store,
         PocReportConfigurationService? configurationService = null)
@@ -187,6 +196,13 @@ public sealed class PocTemplateService : ITransient
             stored.Revision);
     }
 
+    /// <summary>构建 PocTemplateService 所需的 Create Document 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="snapshotJson">snapshotJson 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="storedBindingJson">storedBindingJson 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="revision">revision 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="definition">描述字段、参数或业务约束的定义对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocTemplateDocument CreateDocument(
         string reportCode,
         string snapshotJson,
@@ -230,19 +246,30 @@ public sealed class PocTemplateService : ITransient
         return new PocTemplateDocument(reportCode, snapshot, canonicalBinding, revision);
     }
 
+    /// <summary>将 PocTemplateService 中的 Serialize Binding 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="binding">模板字段与工作簿坐标之间的绑定定义。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string SerializeBinding(PocTemplateBinding binding) =>
         JsonConvert.SerializeObject(binding, Formatting.None);
 
+    /// <summary>查询或读取 PocTemplateService 所需的 Get Definition Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="reportCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private Task<PocReportDefinition> GetDefinitionAsync(string reportCode) =>
         _configurationService is null
             ? Task.FromResult(PocReportCatalog.GetDefinition())
             : _configurationService.GetDefinitionAsync(reportCode);
 
+    /// <summary>校验 PocTemplateService 的 Is Template Data Exception 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="exception">exception 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool IsTemplateDataException(Exception exception) =>
         exception is JsonException or
             PocTemplateValidationException or
             PocTemplateBindingMismatchException;
 
+    /// <summary>查询或读取 PocTemplateService 所需的 Load Seed Json 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string LoadSeedJson()
     {
         // 作为嵌入资源发布可避免部署时漏拷贝种子文件，也让测试和运行时使用同一份初始模板。
@@ -254,12 +281,16 @@ public sealed class PocTemplateService : ITransient
         return reader.ReadToEnd();
     }
 
+    /// <summary>构建 PocTemplateService 所需的 Create Initial Template Json 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="definition">描述字段、参数或业务约束的定义对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string CreateInitialTemplateJson(PocReportDefinition definition)
     {
         const string sheetId = "report-sheet";
         var fieldCount = definition.Fields.Count;
         var parameterCount = definition.Parameters.Count;
         var usedColumnCount = Math.Max(6, Math.Max(fieldCount, parameterCount));
+        // 第一阶段：构造 CreateInitialTemplateJson 当前步骤需要的中间数据和执行参数。
         var cellData = new JObject
         {
             ["0"] = new JObject
@@ -299,6 +330,7 @@ public sealed class PocTemplateService : ITransient
                     ["v"] = field.DisplayName,
                     ["s"] = "header"
                 };
+                // 第2阶段：根据 CreateInitialTemplateJson 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 detailRow[index.ToString()] = new JObject
                 {
                     ["v"] = $"{{{{detail.{field.Code}}}}}",
@@ -317,6 +349,7 @@ public sealed class PocTemplateService : ITransient
             columnData[index.ToString()] = new JObject { ["w"] = index == 0 ? 150 : 120 };
         }
 
+        // 第3阶段：构造 CreateInitialTemplateJson 当前步骤需要的中间数据和执行参数。
         var snapshot = new JObject
         {
             ["id"] = $"report-{definition.Code}",
@@ -393,6 +426,7 @@ public sealed class PocTemplateService : ITransient
                 }
             }
         };
+        // 第4阶段：整理 CreateInitialTemplateJson 已计算的数据，并按方法契约返回最终结果。
         return snapshot.ToString(Formatting.None);
     }
 }

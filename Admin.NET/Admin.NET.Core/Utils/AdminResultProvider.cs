@@ -15,42 +15,36 @@ public class AdminResultProvider : IUnifyResultProvider
     /// <summary>
     /// JWT 授权异常返回值
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="metadata"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="metadata">metadata 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IActionResult OnAuthorizeException(DefaultHttpContext context, ExceptionMetadata metadata)
     {
         return new JsonResult(RESTfulResult(metadata.StatusCode, data: metadata.Data, msg: metadata.Errors), UnifyContext.GetSerializerSettings(context));
     }
 
-    /// <summary>
-    /// 异常返回值
-    /// </summary>
-    /// <param name="context"></param>
-    /// <param name="metadata"></param>
-    /// <returns></returns>
+    /// <summary>响应 AdminResultProvider 的 On Exception 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="metadata">metadata 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IActionResult OnException(ExceptionContext context, ExceptionMetadata metadata)
     {
         return new JsonResult(RESTfulResult(metadata.StatusCode, data: metadata.Data, msg: metadata.Errors), UnifyContext.GetSerializerSettings(context));
     }
 
-    /// <summary>
-    /// 成功返回值
-    /// </summary>
-    /// <param name="context"></param>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <summary>响应 AdminResultProvider 的 On Succeeded 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IActionResult OnSucceeded(ActionExecutedContext context, object data)
     {
         return new JsonResult(RESTfulResult(StatusCodes.Status200OK, true, data), UnifyContext.GetSerializerSettings(context));
     }
 
-    /// <summary>
-    /// 验证失败返回值
-    /// </summary>
-    /// <param name="context"></param>
-    /// <param name="metadata"></param>
-    /// <returns></returns>
+    /// <summary>响应 AdminResultProvider 的 On Validate Failed 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="metadata">metadata 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IActionResult OnValidateFailed(ActionExecutingContext context, ValidationMetadata metadata)
     {
         return new JsonResult(RESTfulResult(metadata.StatusCode ?? StatusCodes.Status400BadRequest, data: metadata.Data, msg: metadata.ValidationResult), UnifyContext.GetSerializerSettings(context));
@@ -59,10 +53,10 @@ public class AdminResultProvider : IUnifyResultProvider
     /// <summary>
     /// 特定状态码返回值
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="statusCode"></param>
-    /// <param name="unifyResultSettings"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="statusCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="unifyResultSettings">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task OnResponseStatusCodes(HttpContext context, int statusCode, UnifyResultSettingsOptions unifyResultSettings)
     {
         // 设置响应状态码
@@ -100,24 +94,20 @@ public class AdminResultProvider : IUnifyResultProvider
         }
     }
 
-    /// <summary>
-    /// 返回成功结果集
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <summary>根据 AdminResultProvider 当前输入计算 Ok 结果，并按方法声明的类型返回。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static AdminResult<object> Ok(string message, object data = default)
     {
         return RESTfulResult(StatusCodes.Status200OK, true, data, message);
     }
 
-    /// <summary>
-    /// 返回失败结果集
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="code"></param>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <summary>根据 AdminResultProvider 当前输入计算 Error 结果，并按方法声明的类型返回。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static AdminResult<object> Error(string message, int code = StatusCodes.Status400BadRequest, object data = default)
     {
         return RESTfulResult(code, false, data, message);
@@ -126,11 +116,11 @@ public class AdminResultProvider : IUnifyResultProvider
     /// <summary>
     /// 返回 RESTful 风格结果集
     /// </summary>
-    /// <param name="statusCode"></param>
-    /// <param name="succeeded"></param>
-    /// <param name="data"></param>
-    /// <param name="msg"></param>
-    /// <returns></returns>
+    /// <param name="statusCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="succeeded">succeeded 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <param name="msg">msg 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static AdminResult<object> RESTfulResult(int statusCode, bool succeeded = default, object data = default, object msg = default)
     {
         //// 统一返回值脱敏处理

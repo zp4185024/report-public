@@ -15,6 +15,9 @@ public class SysPrintService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysPrint> _sysPrintRep;
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 SysPrintService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysPrintRep">sysPrintRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysPrintService(SqlSugarRepository<SysPrint> sysPrintRep, UserManager userManager)
     {
         _sysPrintRep = sysPrintRep;
@@ -24,8 +27,8 @@ public class SysPrintService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取打印模板列表 🖨️
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取打印模板列表")]
     public async Task<SqlSugarPagedList<SysPrint>> Page(PagePrintInput input)
     {
@@ -36,22 +39,18 @@ public class SysPrintService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 获取打印模板 🖨️
-    /// </summary>
-    /// <param name="name"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysPrintService 所需的 Get Print 数据，并按调用约定返回结果。</summary>
+    /// <param name="name">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取打印模板")]
     public async Task<SysPrint> GetPrint(string name)
     {
         return await _sysPrintRep.GetFirstAsync(u => u.Name == name);
     }
 
-    /// <summary>
-    /// 增加打印模板 🖨️
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysPrintService 所需的 Add Print 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加打印模板")]
     public async Task AddPrint(AddPrintInput input)
@@ -62,11 +61,9 @@ public class SysPrintService : IDynamicApiController, ITransient
         await _sysPrintRep.InsertAsync(input.Adapt<SysPrint>());
     }
 
-    /// <summary>
-    /// 更新打印模板 🖨️
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysPrintService 的 Update Print 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新打印模板")]
     public async Task UpdatePrint(UpdatePrintInput input)
@@ -77,11 +74,9 @@ public class SysPrintService : IDynamicApiController, ITransient
         await _sysPrintRep.AsUpdateable(input.Adapt<SysPrint>()).IgnoreColumns(true).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除打印模板 🖨️
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysPrintService 中与 Delete Print 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除打印模板")]
     public async Task DeletePrint(DeletePrintInput input)

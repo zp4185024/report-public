@@ -108,11 +108,20 @@ onMounted(async () => {
 	state.applicationNamespaces = res.data.result as Array<string>;
 });
 
+/**
+ * 准备 index 的 open Config Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openConfigDialog = (row: any) => {
 	CodeConfigRef.value?.openDialog(row);
 };
 
 // 表查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -123,6 +132,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.busName = undefined;
 	state.queryParams.tableName = undefined;
@@ -130,18 +143,32 @@ const resetQuery = () => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();
 };
 
 // 打开表增加页面
+/**
+ * 准备 index 的 open Add Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddDialog = () => {
 	state.editTitle = '增加';
 	EditCodeGenRef.value?.openDialog({
@@ -156,12 +183,22 @@ const openAddDialog = () => {
 };
 
 // 打开表编辑页面
+/**
+ * 准备 index 的 open Edit Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditDialog = (row: any) => {
 	state.editTitle = '编辑';
 	EditCodeGenRef.value?.openDialog(row);
 };
 
 // 打开复制页面
+/**
+ * 准备 index 的 open Copy Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openCopyDialog = (row: any) => {
 	state.editTitle = '复制';
 	var copyRow = JSON.parse(JSON.stringify(row));
@@ -173,6 +210,11 @@ const openCopyDialog = (row: any) => {
 };
 
 // 删除表
+/**
+ * 从 index 移除 dele Config 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const deleConfig = (row: any) => {
 	ElMessageBox.confirm(`确定删除吗?`, '提示', {
 		confirmButtonText: '确定',
@@ -186,6 +228,11 @@ const deleConfig = (row: any) => {
 };
 
 // 同步生成
+/**
+ * 更新 index 的 sync Code Gen 状态，并把变化同步到关联组件或业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const syncCodeGen = async (row: any) => {
   ElMessageBox.confirm(`确定要同步吗? （保留历史字段作用类型）`, '提示', {
     confirmButtonText: '确定',
@@ -199,6 +246,11 @@ const syncCodeGen = async (row: any) => {
 }
 
 // 开始生成代码
+/**
+ * 响应 index 的 handle Generate 事件，并协调相关状态和后续操作。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleGenerate = (row: any) => {
 	ElMessageBox.confirm(`确定要生成吗?`, '提示', {
 		confirmButtonText: '确定',
@@ -215,6 +267,11 @@ const handleGenerate = (row: any) => {
 };
 
 // 预览代码
+/**
+ * 响应 index 的 handle Preview 事件，并协调相关状态和后续操作。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handlePreview = (row: any) => {
 	state.editTitle = '预览代码';
 	PreviewRef.value?.openDialog(row);

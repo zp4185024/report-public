@@ -11,11 +11,9 @@ namespace Admin.NET.Core;
 /// </summary>
 public static class RegularValidate
 {
-    /// <summary>
-    /// 验证密码规则
-    /// </summary>
-    /// <param name="password"></param>
-    /// <returns></returns>
+    /// <summary>校验 RegularValidate 的 Validate Password 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="password">password 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool ValidatePassword(string password)
     {
         var regex = new Regex(@"

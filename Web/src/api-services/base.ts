@@ -48,6 +48,12 @@ export interface RequestArgs {
 export class BaseAPI {
     protected configuration: Configuration | undefined;
 
+    /**
+     * 初始化 base 实例，保存依赖并建立组件所需的初始状态。
+     * @param configuration - configuration 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @param basePath - basePath 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @param axios - axios 对应的业务输入；具体类型和空值范围以方法签名为准。
+     */
     constructor(configuration?: Configuration, protected basePath: string = BASE_PATH, protected axios: AxiosInstance = globalAxios) {
         if (configuration) {
             this.configuration = configuration;
@@ -64,6 +70,11 @@ export class BaseAPI {
  */
 export class RequiredError extends Error {
     name: "RequiredError" = "RequiredError";
+    /**
+     * 初始化 base 实例，保存依赖并建立组件所需的初始状态。
+     * @param field - 参与映射、显示或数据写入的字段集合。
+     * @param msg - msg 对应的业务输入；具体类型和空值范围以方法签名为准。
+     */
     constructor(public field: string, msg?: string) {
         super(msg);
     }

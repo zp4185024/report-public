@@ -28,43 +28,83 @@ const state = reactive({
 	redoDisable: true,
 });
 
+/**
+ * 验证 $ zoom In 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_zoomIn = () => {
 	props.lf?.zoom(true);
 };
 
+/**
+ * 验证 $ zoom Out 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_zoomOut = () => {
 	props.lf?.zoom(false);
 };
 
+/**
+ * 验证 $ zoom Reset 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_zoomReset = () => {
 	props.lf?.resetZoom();
 };
 
+/**
+ * 验证 $ translate Rest 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_translateRest = () => {
 	props.lf?.resetTranslate();
 };
 
+/**
+ * 验证 $ reset 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_reset = () => {
 	props.lf?.resetZoom();
 	props.lf?.resetTranslate();
 };
 
+/**
+ * 验证 $ undo 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_undo = () => {
 	props.lf?.undo();
 };
 
+/**
+ * 验证 $ redo 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_redo = () => {
 	props.lf?.redo();
 };
 
+/**
+ * 验证 $ download 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_download = () => {
 	props.lf?.getSnapshot();
 };
 
+/**
+ * 验证 $ cat Data 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_catData = () => {
 	emit('catData');
 };
 
+/**
+ * 验证 $ show Mini Map 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const $_showMiniMap = () => {
 	props.lf?.extension.miniMap.show(props.lf.graphModel.width - 210, 70);
 };

@@ -85,6 +85,11 @@ const tb = reactive<TableDemoState>({
 		},
 	},
 });
+/**
+ * 查询或读取 index 所需的 get Data 数据，并按调用约定返回结果。
+ * @param param - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getData = (param: any) => {
 	return getAPI(SysTenantConfigApi)
 		.apiSysTenantConfigPagePost(param)
@@ -92,6 +97,11 @@ const getData = (param: any) => {
 			return res.data;
 		});
 };
+/**
+ * 整理 index 的 export Change Data 数据，并生成可供调用方使用的输出。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const exportChangeData = (data: Array<EmptyObjectType>) => {
 	data.forEach((item) => {
 		item.sysFlag = item.sysFlag == 1 ? '是' : '否';
@@ -99,10 +109,20 @@ const exportChangeData = (data: Array<EmptyObjectType>) => {
 	return data;
 };
 // 拖动显示列排序回调
+/**
+ * 响应 index 的 on Sort Header 事件，并协调相关状态和后续操作。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSortHeader = (data: object[]) => {
 	tb.tableData.columns = data;
 };
 // 搜索点击时表单回调
+/**
+ * 响应 index 的 on Search 事件，并协调相关状态和后续操作。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSearch = (data: EmptyObjectType) => {
 	tb.tableData.param = Object.assign({}, tb.tableData.param, { ...data });
 	nextTick(() => {
@@ -110,6 +130,10 @@ const onSearch = (data: EmptyObjectType) => {
 	});
 };
 
+/**
+ * 查询或读取 index 所需的 get Group List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getGroupList = async () => {
 	const res = await getAPI(SysTenantConfigApi).apiSysTenantConfigGroupListGet();
 	const groupSearch = {
@@ -135,6 +159,11 @@ const getGroupList = async () => {
 };
 
 //表格多选事件
+/**
+ * 负责 index 的 table Selection 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const tableSelection = (data: EmptyObjectType[]) => {
 	state.selectlist = data;
 };
@@ -144,24 +173,42 @@ onMounted(async () => {
 });
 
 // 更新数据
+/**
+ * 更新 index 的 update Data 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateData = () => {
 	tableRef.value.handleList();
 	getGroupList();
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Config 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddConfig = () => {
 	state.editConfigTitle = '添加配置';
 	editConfigRef.value?.openDialog({ sysFlag: 2, orderNo: 100 });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Config 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditConfig = (row: any) => {
 	state.editConfigTitle = '编辑配置';
 	editConfigRef.value?.openDialog(row);
 };
 
 // 删除
+/**
+ * 从 index 移除 del Config 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delConfig = (row: any) => {
 	ElMessageBox.confirm(`确定删除配置：【${row.name}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -177,6 +224,10 @@ const delConfig = (row: any) => {
 };
 
 //批量删除
+/**
+ * 遍历 index 数据并执行 bacth Delete 转换，生成后续流程需要的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const bacthDelete = () => {
 	if (state.selectlist.length == 0) return false;
 	ElMessageBox.confirm(`确定批量删除【${state.selectlist[0].name}】等${state.selectlist.length}个配置?`, '提示', {

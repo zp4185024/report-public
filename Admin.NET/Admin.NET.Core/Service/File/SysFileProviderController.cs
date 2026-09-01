@@ -14,6 +14,8 @@ public class SysFileProviderController : IDynamicApiController, ITransient
 {
     private readonly SysFileProviderService _fileProviderService;
 
+    /// <summary>初始化 SysFileProviderController 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="fileProviderService">当前方法执行时使用的 fileProviderService 输入值。</param>
     public SysFileProviderController(SysFileProviderService fileProviderService)
     {
         _fileProviderService = fileProviderService;
@@ -22,7 +24,7 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// <summary>
     /// 获取存储提供者列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取存储提供者列表")]
     public async Task<List<SysFileProvider>> GetProviderList()
     {
@@ -32,8 +34,8 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// <summary>
     /// 获取存储提供者分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取存储提供者分页列表")]
     public async Task<SqlSugarPagedList<SysFileProvider>> GetProviderPage(PageFileProviderInput input)
     {
@@ -43,19 +45,17 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// <summary>
     /// 获取存储提供者详情 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取存储提供者详情")]
     public async Task<SysFileProvider> GetProvider([FromQuery] QueryFileProviderInput input)
     {
         return await _fileProviderService.GetFileProvider(input);
     }
 
-    /// <summary>
-    /// 添加存储提供者 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysFileProviderController 所需的 Add Provider 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("添加存储提供者")]
     public async Task AddProvider(AddFileProviderInput input)
@@ -63,11 +63,9 @@ public class SysFileProviderController : IDynamicApiController, ITransient
         await _fileProviderService.AddFileProvider(input);
     }
 
-    /// <summary>
-    /// 更新存储提供者 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysFileProviderController 的 Update Provider 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新存储提供者")]
     public async Task UpdateProvider(UpdateFileProviderInput input)
@@ -75,11 +73,9 @@ public class SysFileProviderController : IDynamicApiController, ITransient
         await _fileProviderService.UpdateFileProvider(input);
     }
 
-    /// <summary>
-    /// 删除存储提供者 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysFileProviderController 中与 Delete Provider 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除存储提供者")]
     public async Task DeleteProvider(DeleteFileProviderInput input)
@@ -91,7 +87,7 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// 根据存储桶名称获取存储提供者 🔖
     /// </summary>
     /// <param name="bucketName">存储桶名称</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据存储桶名称获取存储提供者")]
     public async Task<SysFileProvider?> GetProviderByBucketName(string bucketName)
     {
@@ -101,7 +97,7 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// <summary>
     /// 清除存储提供者缓存 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("清除存储提供者缓存")]
     public async Task ClearCache()
     {
@@ -111,8 +107,8 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// <summary>
     /// 批量启用/禁用存储提供者 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "BatchEnable"), HttpPost]
     [DisplayName("批量启用/禁用存储提供者")]
     public async Task BatchEnableProvider(BatchEnableProviderInput input)
@@ -137,7 +133,7 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// <summary>
     /// 获取存储提供者统计信息 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取存储提供者统计信息")]
     public async Task<object> GetProviderStatistics()
     {
@@ -163,7 +159,7 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// <summary>
     /// 获取所有可用的存储桶列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取所有可用的存储桶列表")]
     public async Task<List<string>> GetAvailableBuckets()
     {
@@ -173,7 +169,7 @@ public class SysFileProviderController : IDynamicApiController, ITransient
     /// <summary>
     /// 获取存储桶和提供者的映射关系 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取存储桶和提供者的映射关系")]
     public async Task<Dictionary<string, List<SysFileProvider>>> GetBucketProviderMapping()
     {

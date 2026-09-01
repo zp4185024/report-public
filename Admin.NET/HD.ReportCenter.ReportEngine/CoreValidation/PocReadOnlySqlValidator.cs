@@ -5,6 +5,9 @@ namespace HD.ReportCenter.ReportEngine.CoreValidation;
 
 public sealed class PocDatasetConfigurationException : Exception
 {
+    /// <summary>初始化 PocDatasetConfigurationException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocDatasetConfigurationException(string code, string message)
         : base(message)
     {
@@ -27,6 +30,11 @@ public static partial class PocReadOnlySqlValidator
         "TRUNCATE", "UPDATE", "USE"
     };
 
+    /// <summary>校验 PocReadOnlySqlValidator 的 Validate 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <param name="parameterCodes">parameterCodes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="previewMode">previewMode 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IReadOnlyList<string> Validate(
         string queryText,
         IEnumerable<string> parameterCodes,
@@ -37,6 +45,7 @@ public static partial class PocReadOnlySqlValidator
             throw Unsafe("数据集 SQL 不能为空。");
         }
 
+        // 第一阶段：构造 Validate 当前步骤需要的中间数据和执行参数。
         var sanitized = Sanitize(queryText);
         var tokens = TokenRegex().Matches(sanitized)
             .Select(match => match.Value)
@@ -59,6 +68,7 @@ public static partial class PocReadOnlySqlValidator
         var knownCodes = new HashSet<string>(parameterCodes, StringComparer.OrdinalIgnoreCase);
         var referenced = new List<string>();
         var referencedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // 第2阶段：遍历 Validate 当前数据集合，逐项转换并维护处理结果。
         foreach (Match match in ParameterRegex().Matches(sanitized))
         {
             var code = match.Groups["code"].Value;
@@ -77,6 +87,9 @@ public static partial class PocReadOnlySqlValidator
         return referenced;
     }
 
+    /// <summary>按 PocReadOnlySqlValidator 的安全规则清洗输入文本，同时保留后续解析需要的字符位置。</summary>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string Sanitize(string queryText)
     {
         var output = new StringBuilder(queryText.Length);
@@ -86,6 +99,7 @@ public static partial class PocReadOnlySqlValidator
             var current = queryText[index];
             var next = index + 1 < queryText.Length ? queryText[index + 1] : '\0';
 
+            // 第一阶段：检查 Sanitize 当前条件，并按匹配分支执行对应处理。
             switch (state)
             {
                 case SqlLexState.Normal:
@@ -117,6 +131,7 @@ public static partial class PocReadOnlySqlValidator
                         var closed = false;
                         while (index < queryText.Length)
                         {
+                            // 第2阶段：更新 Sanitize 当前分支对应的业务状态，并保持关联数据一致。
                             current = queryText[index];
                             next = index + 1 < queryText.Length ? queryText[index + 1] : '\0';
                             if (current == '*' && next == '/')
@@ -148,6 +163,7 @@ public static partial class PocReadOnlySqlValidator
                             _ => SqlLexState.BracketIdentifier
                         };
                         output.Append(' ');
+                        // 第3阶段：根据 Sanitize 当前分支转换输入数据，并保存该阶段产生的中间结果。
                         continue;
                     }
                     output.Append(current);
@@ -180,6 +196,7 @@ public static partial class PocReadOnlySqlValidator
                     break;
 
                 case SqlLexState.BracketIdentifier:
+                    // 第4阶段：根据 Sanitize 当前分支转换输入数据，并保存该阶段产生的中间结果。
                     output.Append(' ');
                     if (current == ']' && next == ']')
                     {
@@ -205,9 +222,15 @@ public static partial class PocReadOnlySqlValidator
         return output.ToString();
     }
 
+    /// <summary>负责 PocReadOnlySqlValidator 的 sanitized System Variable 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="output">output 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool sanitizedSystemVariable(StringBuilder output) =>
         output.ToString().Contains("@@", StringComparison.Ordinal);
 
+    /// <summary>尝试或判断 PocReadOnlySqlValidator 的 Contains Order By 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="tokens">tokens 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool ContainsOrderBy(IReadOnlyList<string> tokens)
     {
         for (var index = 0; index + 1 < tokens.Count; index++)
@@ -221,6 +244,9 @@ public static partial class PocReadOnlySqlValidator
         return false;
     }
 
+    /// <summary>构造 PocReadOnlySqlValidator 使用的只读安全异常，并附带稳定错误编码。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDatasetConfigurationException Unsafe(string message) =>
         new("DATASET_QUERY_NOT_READ_ONLY", message);
 
@@ -232,9 +258,13 @@ public static partial class PocReadOnlySqlValidator
         BracketIdentifier
     }
 
+    /// <summary>负责 PocReadOnlySqlValidator 的 Token Regex 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [GeneratedRegex("[A-Za-z_][A-Za-z0-9_]*", RegexOptions.CultureInvariant)]
     private static partial Regex TokenRegex();
 
+    /// <summary>负责 PocReadOnlySqlValidator 的 Parameter Regex 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [GeneratedRegex("(?<!@)@(?<code>[A-Za-z][A-Za-z0-9_]{0,63})", RegexOptions.CultureInvariant)]
     private static partial Regex ParameterRegex();
 }

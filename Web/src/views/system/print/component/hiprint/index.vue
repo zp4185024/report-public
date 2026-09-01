@@ -225,6 +225,10 @@ const curPaperType = computed(() => {
 });
 
 // 选择模板
+/**
+ * 更新 index 的 change Mode 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeMode = () => {
 	let provider = providers[mode.value];
 	hiprint.init({
@@ -267,7 +271,8 @@ const changeMode = () => {
  * 设置纸张大小
  * @param type [A3, A4, A5, B3, B4, B5, other]
  * @param value {width,height} mm
- */
+   * 更新 index 的 set Paper 状态，并同步相关业务数据。
+  */
 const setPaper = (type: string, value?: { width: number; height: number }) => {
 	try {
 		const paperType = state.paperTypes.find((x) => x.type == type);
@@ -284,6 +289,12 @@ const setPaper = (type: string, value?: { width: number; height: number }) => {
 };
 
 // 改变缩放比例
+/**
+ * 更新 index 的 change Scale 状态，并同步相关业务数据。
+ * @param currentValue - 需要读取、校验或转换的业务值。
+ * @param oldValue - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeScale = (currentValue: number, oldValue: number) => {
 	let big = false;
 	currentValue <= oldValue ? (big = false) : (big = true);
@@ -302,6 +313,10 @@ const changeScale = (currentValue: number, oldValue: number) => {
 };
 
 // 旋转模板
+/**
+ * 负责 index 的 rotate Paper 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const rotatePaper = () => {
 	if (hiprintTemplate.value) {
 		hiprintTemplate.value.rotatePaper();
@@ -309,11 +324,20 @@ const rotatePaper = () => {
 };
 
 // 对齐模板
+/**
+ * 更新 index 的 set Els Align 状态，并同步相关业务数据。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setElsAlign = (e: any) => {
 	hiprintTemplate.value.setElsAlign(e);
 };
 
 // 清空模板
+/**
+ * 移除 index 中与 clear Paper 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clearPaper = () => {
 	ElMessageBox.confirm('是否确认清空模板信息?', '警告', {
 		confirmButtonText: '确定',
@@ -333,6 +357,10 @@ const clearPaper = () => {
 };
 
 // 自定义纸张
+/**
+ * 负责 index 的 other Paper 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const otherPaper = () => {
 	let value = {
 		width: 0,
@@ -345,6 +373,10 @@ const otherPaper = () => {
 };
 
 // 预览
+/**
+ * 负责 index 的 pre View 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const preView = () => {
 	let { width } = state.curPaper;
 	let printData = null;
@@ -359,11 +391,19 @@ const preView = () => {
 	preViewRef.value.showDialog(hiprintTemplate.value, printData, width);
 };
 // 直接打印
+/**
+ * 整理 index 的 print 数据，生成可下载、导出或打印的最终内容。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const print = () => {
 	preView();
 };
 
 // 查看模板JSON
+/**
+ * 负责 index 的 view Json 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const viewJson = () => {
 	if (hiprintTemplate.value) {
 		var templateJson = JSON.stringify(hiprintTemplate.value.getJson() || {});
@@ -382,6 +422,10 @@ onMounted(() => {
 });
 
 // 初始化纸张大小
+/**
+ * 按 init Paper 规则筛选 index 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initPaper = () => {
 	var template = hiprintTemplate.value.getJson();
 	var width = template.panels[0].width;
@@ -392,11 +436,20 @@ const initPaper = () => {
 };
 
 // 设置预览测试数据
+/**
+ * 更新 index 的 set Print Data Demo 状态，并同步相关业务数据。
+ * @param strData - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setPrintDataDemo = (strData: string | null | undefined) => {
 	printDataDemo.value = strData as string;
 };
 
 // 格式化打印测试数据
+/**
+ * 将 index 中的 format Print Data Demo 输入转换为调用方需要的稳定格式。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const formatPrintDataDemo = () => {
 	try {
 		const obj = JSON.parse(printDataDemo.value);

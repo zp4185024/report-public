@@ -34,14 +34,26 @@ onMounted(() => {
 	version.value = 'v2.0.0';
 });
 
+/**
+ * 查询或读取 version 所需的 get Ver 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getVer = () => {
 	version.value = 'v2.0.0';
 };
 
+/**
+ * 负责 version 的 golog 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const golog = () => {
 	window.open('https://gitee.com/zuohuaijun/Admin.NET/issues');
 };
 
+/**
+ * 负责 version 的 gogit 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const gogit = () => {
 	window.open('https://gitee.com/zuohuaijun/Admin.NET.git');
 };

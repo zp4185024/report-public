@@ -11,12 +11,10 @@ public interface IOSSServiceManager : IDisposable
     /// 获取OSS服务实例
     /// </summary>
     /// <param name="provider">存储提供者配置</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     Task<IOSSService> GetOSSServiceAsync(SysFileProvider provider);
 
-    /// <summary>
-    /// 清除缓存
-    /// </summary>
+    /// <summary>移除 IOSSServiceManager 中与 Clear Cache 对应的数据，并清理关联状态。</summary>
     void ClearCache();
 }
 
@@ -30,6 +28,8 @@ public class OSSServiceManager : IOSSServiceManager, ITransient
     private readonly object _lockObject = new object();
     private bool _disposed = false;
 
+    /// <summary>初始化 OSSServiceManager 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="serviceProvider">当前方法执行时使用的 serviceProvider 输入值。</param>
     public OSSServiceManager(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
@@ -40,7 +40,7 @@ public class OSSServiceManager : IOSSServiceManager, ITransient
     /// 获取OSS服务实例（带缓存）
     /// </summary>
     /// <param name="provider">存储提供者配置</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IOSSService> GetOSSServiceAsync(SysFileProvider provider)
     {
         if (provider == null)
@@ -84,7 +84,7 @@ public class OSSServiceManager : IOSSServiceManager, ITransient
     /// 创建OSS服务实例
     /// </summary>
     /// <param name="options">OSS配置选项</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private IOSSService CreateOSSService(OSSOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -133,11 +133,9 @@ public class OSSServiceManager : IOSSServiceManager, ITransient
         }
     }
 
-    /// <summary>
-    /// 验证配置
-    /// </summary>
+    /// <summary>校验 IOSSServiceManager 的 Validate Configuration Async 条件，并返回可供后续流程判断的结果。</summary>
     /// <param name="provider">存储提供者配置</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private Task<bool> ValidateConfigurationAsync(SysFileProvider provider)
     {
         if (provider == null) return Task.FromResult(false);
@@ -160,8 +158,8 @@ public class OSSServiceManager : IOSSServiceManager, ITransient
     /// <summary>
     /// 将SysFileProvider转换为OSSOptions
     /// </summary>
-    /// <param name="provider"></param>
-    /// <returns></returns>
+    /// <param name="provider">当前方法执行时使用的 provider 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private OSSOptions ConvertToOSSOptions(SysFileProvider provider)
     {
         if (provider == null)
@@ -183,9 +181,7 @@ public class OSSServiceManager : IOSSServiceManager, ITransient
         return ossOptions;
     }
 
-    /// <summary>
-    /// 清除缓存
-    /// </summary>
+    /// <summary>移除 IOSSServiceManager 中与 Clear Cache 对应的数据，并清理关联状态。</summary>
     public void ClearCache()
     {
         lock (_lockObject)
@@ -194,9 +190,7 @@ public class OSSServiceManager : IOSSServiceManager, ITransient
         }
     }
 
-    /// <summary>
-    /// 释放资源
-    /// </summary>
+    /// <summary>释放 IOSSServiceManager 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         if (!_disposed)

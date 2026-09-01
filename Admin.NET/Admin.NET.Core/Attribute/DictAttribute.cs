@@ -31,8 +31,8 @@ public class DictAttribute : ValidationAttribute, ITransient
     /// <summary>
     /// 字典值合规性校验特性
     /// </summary>
-    /// <param name="dictTypeCode"></param>
-    /// <param name="errorMessage"></param>
+    /// <param name="dictTypeCode">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="errorMessage">需要记录、展示或继续传递的错误上下文。</param>
     public DictAttribute(string dictTypeCode = "", string errorMessage = "字典值不合法！")
     {
         DictTypeCode = dictTypeCode;
@@ -42,9 +42,9 @@ public class DictAttribute : ValidationAttribute, ITransient
     /// <summary>
     /// 字典值合规性校验
     /// </summary>
-    /// <param name="value"></param>
-    /// <param name="validationContext"></param>
-    /// <returns></returns>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="validationContext">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
     {
         // 判断是否允许空值

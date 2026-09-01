@@ -21,6 +21,9 @@ public class SysSmsService : IDynamicApiController, ITransient
     private readonly SMSOptions _smsOptions;
     private readonly SysCacheService _sysCacheService;
 
+    /// <summary>初始化 SysSmsService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="smsOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysSmsService(IOptions<SMSOptions> smsOptions,
         SysCacheService sysCacheService)
     {
@@ -28,12 +31,10 @@ public class SysSmsService : IDynamicApiController, ITransient
         _sysCacheService = sysCacheService;
     }
 
-    /// <summary>
-    /// 发送短信 📨
-    /// </summary>
-    /// <param name="phoneNumber"></param>
+    /// <summary>执行 SysSmsService 的 Send Sms 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="phoneNumber">phoneNumber 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <param name="templateId">短信模板id</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("发送短信")]
     public async Task SendSms([Required] string phoneNumber, string templateId = "0")
@@ -52,11 +53,9 @@ public class SysSmsService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 校验短信验证码
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>校验 SysSmsService 的 Verify Code 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("校验短信验证码")]
     public bool VerifyCode(SmsVerifyCodeInput input)
@@ -70,12 +69,10 @@ public class SysSmsService : IDynamicApiController, ITransient
         return true;
     }
 
-    /// <summary>
-    /// 阿里云发送短信 📨
-    /// </summary>
+    /// <summary>调用 SysSmsService 的异步依赖完成 Aliyun Send Sms 操作，并按当前返回类型传递处理结果。</summary>
     /// <param name="phoneNumber">手机号</param>
     /// <param name="templateId">短信模板id</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("阿里云发送短信")]
     public async Task AliyunSendSms([Required] string phoneNumber, string templateId = "0")
@@ -115,13 +112,11 @@ public class SysSmsService : IDynamicApiController, ITransient
         await Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 发送短信模板
-    /// </summary>
+    /// <summary>调用 SysSmsService 的异步依赖完成 Aliyun Send Sms Template 操作，并按当前返回类型传递处理结果。</summary>
     /// <param name="phoneNumber">手机号</param>
     /// <param name="templateParam">短信内容</param>
     /// <param name="templateId">短信模板id</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("发送短信模板")]
     public async Task AliyunSendSmsTemplate([Required] string phoneNumber, [Required] dynamic templateParam, string templateId)
@@ -152,12 +147,10 @@ public class SysSmsService : IDynamicApiController, ITransient
         await Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 腾讯云发送短信 📨
-    /// </summary>
-    /// <param name="phoneNumber"></param>
+    /// <summary>调用 SysSmsService 的异步依赖完成 Tencent Send Sms 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="phoneNumber">phoneNumber 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <param name="templateId">短信模板id</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("腾讯云发送短信")]
     public async Task TencentSendSms([Required] string phoneNumber, string templateId = "0")
@@ -197,10 +190,8 @@ public class SysSmsService : IDynamicApiController, ITransient
         await Task.CompletedTask;
     }
 
-    /// <summary>
-    /// 阿里云短信配置
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>构建 SysSmsService 所需的 Create Aliyun Client 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private AlibabaCloud.SDK.Dysmsapi20170525.Client CreateAliyunClient()
     {
         var config = new AlibabaCloud.OpenApiClient.Models.Config
@@ -212,10 +203,8 @@ public class SysSmsService : IDynamicApiController, ITransient
         return new AlibabaCloud.SDK.Dysmsapi20170525.Client(config);
     }
 
-    /// <summary>
-    /// 腾讯云短信配置
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>构建 SysSmsService 所需的 Create Tencent Client 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private Credential CreateTencentClient()
     {
         var cred = new Credential
@@ -231,7 +220,7 @@ public class SysSmsService : IDynamicApiController, ITransient
     /// </summary>
     /// <param name="phoneNumber">手机号</param>
     /// <param name="templateId">短信模板id</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("自定义短信接口发送短信")]
     public async Task CustomSendSms([DataValidation(ValidationTypes.PhoneNumber)] string phoneNumber, string templateId = "0")

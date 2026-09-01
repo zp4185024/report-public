@@ -18,7 +18,7 @@ public class SingleFilePublish : ISingleFilePublish
     /// 解决单文件不能扫描的程序集
     /// </summary>
     /// <remarks>和 <see cref="IncludeAssemblyNames"/>可同时配置</remarks>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Assembly[] IncludeAssemblies()
     {
         // 需要 Furion 框架扫描哪些程序集就写上去即可
@@ -29,7 +29,7 @@ public class SingleFilePublish : ISingleFilePublish
     /// 解决单文件不能扫描的程序集名称
     /// </summary>
     /// <remarks>和 <see cref="IncludeAssemblies"/>可同时配置</remarks>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string[] IncludeAssemblyNames()
     {
         // 需要 Furion 框架扫描哪些程序集就写上去即可

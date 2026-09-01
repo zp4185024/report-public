@@ -15,6 +15,9 @@ public class SysUserRegWayService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysUserRegWay> _sysUserRegWayRep;
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 SysUserRegWayService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysUserRegWayRep">sysUserRegWayRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysUserRegWayService(SqlSugarRepository<SysUserRegWay> sysUserRegWayRep, UserManager userManager)
     {
         _sysUserRegWayRep = sysUserRegWayRep;
@@ -24,8 +27,8 @@ public class SysUserRegWayService : IDynamicApiController, ITransient
     /// <summary>
     /// 查询注册方案列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("查询注册方案列表")]
     [ApiDescriptionSettings(Name = "List"), HttpPost]
     public async Task<List<UserRegWayOutput>> List(PageUserRegWayInput input)
@@ -47,11 +50,9 @@ public class SysUserRegWayService : IDynamicApiController, ITransient
         return await query.OrderBuilder(input).ToListAsync();
     }
 
-    /// <summary>
-    /// 增加注册方案 ➕
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysUserRegWayService 所需的 Add 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("增加注册方案")]
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     public async Task<long> Add(AddUserRegWayInput input)
@@ -63,11 +64,9 @@ public class SysUserRegWayService : IDynamicApiController, ITransient
         return await _sysUserRegWayRep.InsertAsync(entity) ? entity.Id : 0;
     }
 
-    /// <summary>
-    /// 更新注册方案 ✏️
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysUserRegWayService 的 Update 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("更新注册方案")]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     public async Task Update(UpdateUserRegWayInput input)
@@ -78,10 +77,8 @@ public class SysUserRegWayService : IDynamicApiController, ITransient
         await _sysUserRegWayRep.AsUpdateable(input).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 检查数据
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>校验 SysUserRegWayService 的 Check Data 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [NonAction]
     public async Task CheckData(AddUserRegWayInput input)
     {
@@ -94,11 +91,9 @@ public class SysUserRegWayService : IDynamicApiController, ITransient
         if (input.AccountType is AccountTypeEnum.SysAdmin or AccountTypeEnum.SuperAdmin) throw Oops.Oh(ErrorCodeEnum.D1037);
     }
 
-    /// <summary>
-    /// 删除注册方案 ❌
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysUserRegWayService 中与 Delete 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("删除注册方案")]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]

@@ -113,6 +113,10 @@ watch(
 );
 
 // 加载系统信息
+/**
+ * 查询或读取 App 所需的 load Sys Info 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadSysInfo = () => {
 	getAPI(SysConfigApi)
 		.apiSysConfigSysInfoGet()
@@ -164,6 +168,10 @@ const loadSysInfo = () => {
 };
 
 // 更新 favicon
+/**
+ * 更新 App 的 update Favicon 状态，并同步相关业务数据。
+ * @param url - url 对应的业务输入；具体类型和空值范围以方法签名为准。
+ */
 const updateFavicon = (url: string): void => {
 	const favicon = document.getElementById('favicon') as HTMLAnchorElement;
 	favicon!.href = url ? url : 'data:;base64,=';
@@ -174,6 +182,7 @@ loadSysInfo();
 const langStore = useLangStore();
 langStore.loadLanguages();
 // 阻止火狐浏览器在拖动时打开新窗口
+/** 拦截页面拖放事件，避免浏览器把拖入文件当作新页面打开。 */
 document.body.ondrop = function (event) {
 	event.preventDefault();
 	event.stopPropagation();

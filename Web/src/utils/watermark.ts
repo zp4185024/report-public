@@ -1,4 +1,9 @@
 // 页面添加水印效果
+/**
+ * 更新 watermark 的 set Watermark 状态，并同步相关业务数据。
+ * @param str - str 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setWatermark = (str: string) => {
 	const id = '1.23452384164.123412416';
 	if (document.getElementById(id) !== null) document.body.removeChild(<HTMLElement>document.getElementById(id));
@@ -32,11 +37,20 @@ const setWatermark = (str: string) => {
  */
 const watermark = {
 	// 设置水印
+	/**
+	 * 更新 watermark 的 set 状态，并同步相关业务数据。
+	 * @param str - str 对应的业务输入；具体类型和空值范围以方法签名为准。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	set: (str: string) => {
 		let id = setWatermark(str);
 		if (document.getElementById(id) === null) id = setWatermark(str);
 	},
 	// 删除水印
+	/**
+	 * 从 watermark 移除 del 对应数据，并清理相关缓存、选中项或临时状态。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	del: () => {
 		let id = '1.23452384164.123412416';
 		if (document.getElementById(id) !== null) document.body.removeChild(<HTMLElement>document.getElementById(id));

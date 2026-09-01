@@ -13,31 +13,31 @@ public class DateTimeUtil
 {
     public readonly DateTime Date;
 
+    /// <summary>初始化 DateTimeUtil 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="timeSpan">timeSpan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private DateTimeUtil(TimeSpan timeSpan = default)
     {
         Date = DateTime.Now.AddTicks(timeSpan.Ticks);
     }
 
+    /// <summary>初始化 DateTimeUtil 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="time">time 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private DateTimeUtil(DateTime time)
     {
         Date = time;
     }
 
-    /// <summary>
-    /// 实例化类
-    /// </summary>
-    /// <param name="timeSpan"></param>
-    /// <returns></returns>
+    /// <summary>根据 DateTimeUtil 当前输入计算 Init 结果，并按方法声明的类型返回。</summary>
+    /// <param name="timeSpan">timeSpan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static DateTimeUtil Init(TimeSpan timeSpan = default)
     {
         return new DateTimeUtil(timeSpan);
     }
 
-    /// <summary>
-    /// 实例化类
-    /// </summary>
-    /// <param name="time"></param>
-    /// <returns></returns>
+    /// <summary>根据 DateTimeUtil 当前输入计算 Init 结果，并按方法声明的类型返回。</summary>
+    /// <param name="time">time 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static DateTimeUtil Init(DateTime time)
     {
         return new DateTimeUtil(time);
@@ -46,8 +46,8 @@ public class DateTimeUtil
     /// <summary>
     /// 根据unix时间戳的长度自动判断是秒还是以毫秒为单位
     /// </summary>
-    /// <param name="unixTime"></param>
-    /// <returns></returns>
+    /// <param name="unixTime">unixTime 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static DateTime ConvertUnixTime(long unixTime)
     {
         // 判断时间戳长度
@@ -63,12 +63,10 @@ public class DateTimeUtil
         }
     }
 
-    /// <summary>
-    /// 获取开始时间
-    /// </summary>
-    /// <param name="dateTime"></param>
-    /// <param name="days"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 DateTimeUtil 所需的 Get Begin Time 数据，并按调用约定返回结果。</summary>
+    /// <param name="dateTime">dateTime 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="days">days 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static DateTime GetBeginTime(DateTime? dateTime, int days = 0)
     {
         return dateTime == DateTime.MinValue || dateTime == null ? DateTime.Now.AddDays(days) : (DateTime)dateTime;
@@ -106,12 +104,10 @@ public class DateTimeUtil
         return new DateTimeOffset(dt).ToUnixTimeMilliseconds();
     }
 
-    /// <summary>
-    /// 毫秒转天时分秒
-    /// </summary>
+    /// <summary>将 DateTimeUtil 中的 Format Time 输入转换为调用方需要的稳定格式。</summary>
     /// <param name="ms">TotalMilliseconds</param>
     /// <param name="isSimplify">是否简化显示</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string FormatTime(long ms, bool isSimplify = false)
     {
         int ss = 1000;
@@ -154,8 +150,8 @@ public class DateTimeUtil
     /// <summary>
     /// 获取unix时间戳
     /// </summary>
-    /// <param name="dt"></param>
-    /// <returns></returns>
+    /// <param name="dt">dt 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static long GetUnixTimeStamp(DateTime dt)
     {
         return ((DateTimeOffset)dt).ToUnixTimeMilliseconds();
@@ -164,8 +160,8 @@ public class DateTimeUtil
     /// <summary>
     /// 获取日期天的最小时间
     /// </summary>
-    /// <param name="dt"></param>
-    /// <returns></returns>
+    /// <param name="dt">dt 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static DateTime GetDayMinDate(DateTime dt)
     {
         return new DateTime(dt.Year, dt.Month, dt.Day, 0, 0, 0);
@@ -174,8 +170,8 @@ public class DateTimeUtil
     /// <summary>
     /// 获取日期天的最大时间
     /// </summary>
-    /// <param name="dt"></param>
-    /// <returns></returns>
+    /// <param name="dt">dt 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
 
     public static DateTime GetDayMaxDate(DateTime dt)
     {
@@ -185,8 +181,8 @@ public class DateTimeUtil
     /// <summary>
     /// 根据日期是否在当前年份来格式化日期
     /// </summary>
-    /// <param name="dt"></param>
-    /// <returns></returns>
+    /// <param name="dt">dt 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string FormatDateTime(DateTime? dt)
     {
         return dt == null ? string.Empty : dt.Value.ToString(dt.Value.Year == DateTime.Now.Year ? "MM-dd HH:mm" : "yyyy-MM-dd HH:mm");
@@ -195,7 +191,7 @@ public class DateTimeUtil
     /// <summary>
     /// 获取日期范围00:00:00 - 23:59:59
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static List<DateTime> GetTodayTimeList(DateTime time)
     {
         return new List<DateTime>
@@ -205,11 +201,9 @@ public class DateTimeUtil
         };
     }
 
-    /// <summary>
-    /// 获取星期几
-    /// </summary>
-    /// <param name="dt"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 DateTimeUtil 所需的 Get Week By Date 数据，并按调用约定返回结果。</summary>
+    /// <param name="dt">dt 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetWeekByDate(DateTime dt)
     {
         var day = new[] { "星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六" };
@@ -219,8 +213,8 @@ public class DateTimeUtil
     /// <summary>
     /// 获取这个月的第几周
     /// </summary>
-    /// <param name="daytime"></param>
-    /// <returns></returns>
+    /// <param name="daytime">daytime 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int GetWeekNumInMonth(DateTime daytime)
     {
         int dayInMonth = daytime.Day;

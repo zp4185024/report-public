@@ -19,16 +19,28 @@ const props = defineProps({
 	// 图标列表数据
 	list: {
 		type: Array,
+		/**
+		 * 为 list 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
 	},
 	// 自定义空状态描述文字
 	empty: {
 		type: String,
+		/**
+		 * 为 empty 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '无相关图标',
 	},
 	// 高亮当前选中图标
 	prefix: {
 		type: String,
+		/**
+		 * 为 prefix 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '',
 	},
 });
@@ -37,6 +49,11 @@ const props = defineProps({
 const emit = defineEmits(['get-icon']);
 
 // 当前 icon 图标点击时
+/**
+ * 响应 list 的 on Col Click 事件，并协调相关状态和后续操作。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColClick = (v: unknown | string) => {
 	emit('get-icon', v);
 };

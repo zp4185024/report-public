@@ -11,6 +11,7 @@ namespace Admin.NET.Test.Utils;
 
 public class SafeMathTests
 {
+    /// <summary>验证 Add Int And Double Returns Correct Result 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Add_IntAndDouble_ReturnsCorrectResult()
     {
@@ -25,6 +26,7 @@ public class SafeMathTests
         Assert.Equal(30, result); // 10 + 20.5 = 30.5，四舍五入后为 30
     }
 
+    /// <summary>验证 Add String And Decimal Returns Correct Result 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Add_StringAndDecimal_ReturnsCorrectResult()
     {
@@ -39,6 +41,7 @@ public class SafeMathTests
         Assert.Equal(20.00m, result); // 15.75 + 4.25 = 20.00
     }
 
+    /// <summary>验证 Sub Double And Int Returns Correct Result 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Sub_DoubleAndInt_ReturnsCorrectResult()
     {
@@ -53,6 +56,7 @@ public class SafeMathTests
         Assert.Equal(25.75, result); // 50.75 - 25 = 25.75
     }
 
+    /// <summary>验证 Mult Decimal And Float Returns Correct Result 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Mult_DecimalAndFloat_ReturnsCorrectResult()
     {
@@ -67,6 +71,7 @@ public class SafeMathTests
         Assert.Equal(21.00m, result); // 10.5 * 2.0 = 21.00
     }
 
+    /// <summary>验证 Div Int And Int Returns Correct Result 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Div_IntAndInt_ReturnsCorrectResult()
     {
@@ -81,6 +86,7 @@ public class SafeMathTests
         Assert.Equal(3.3333, result); // 10 / 3 = 3.3333
     }
 
+    /// <summary>验证 Div By Zero Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Div_ByZero_ReturnsDefaultValue()
     {
@@ -95,6 +101,7 @@ public class SafeMathTests
         Assert.Equal(-1, result); // 除数为 0，返回默认值 -1
     }
 
+    /// <summary>验证 Div By Zero Throws Exception 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Div_ByZero_ThrowsException()
     {
@@ -109,6 +116,7 @@ public class SafeMathTests
         });
     }
 
+    /// <summary>验证 Safe Convert String To Int Returns Correct Result 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void SafeConvert_StringToInt_ReturnsCorrectResult()
     {
@@ -122,6 +130,7 @@ public class SafeMathTests
         Assert.Equal(42, result); // 字符串 "42" 转换为 int 42
     }
 
+    /// <summary>验证 Safe Convert Invalid String Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void SafeConvert_InvalidString_ReturnsDefaultValue()
     {
@@ -135,6 +144,7 @@ public class SafeMathTests
         Assert.Equal(-1, result); // 转换失败，返回默认值 -1
     }
 
+    /// <summary>验证 Convert To Decimal Int Returns Correct Result 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void ConvertToDecimal_Int_ReturnsCorrectResult()
     {
@@ -148,6 +158,7 @@ public class SafeMathTests
         Assert.Equal(42m, result); // int 42 转换为 decimal 42m
     }
 
+    /// <summary>验证 Convert To Decimal String Returns Correct Result 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void ConvertToDecimal_String_ReturnsCorrectResult()
     {
@@ -161,6 +172,7 @@ public class SafeMathTests
         Assert.Equal(42.75m, result); // 字符串 "42.75" 转换为 decimal 42.75m
     }
 
+    /// <summary>验证 Convert To Decimal Invalid String Returns Zero 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void ConvertToDecimal_InvalidString_ReturnsZero()
     {
@@ -171,6 +183,7 @@ public class SafeMathTests
         Assert.Throws<InvalidCastException>(() => SafeMath.ConvertToDecimal(value));
     }
 
+    /// <summary>验证 Add Left Null Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Add_LeftNull_ReturnsDefaultValue()
     {
@@ -185,6 +198,7 @@ public class SafeMathTests
         Assert.Equal(20, result); // 左操作数为 null
     }
 
+    /// <summary>验证 Add Right Null Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Add_RightNull_ReturnsDefaultValue()
     {
@@ -199,6 +213,7 @@ public class SafeMathTests
         Assert.Equal(10, result); // 右操作数为 null
     }
 
+    /// <summary>验证 Sub Left Null Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Sub_LeftNull_ReturnsDefaultValue()
     {
@@ -213,6 +228,7 @@ public class SafeMathTests
         Assert.Equal(-20, result); // 左操作数为 null
     }
 
+    /// <summary>验证 Sub Right Null Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Sub_RightNull_ReturnsDefaultValue()
     {
@@ -227,6 +243,7 @@ public class SafeMathTests
         Assert.Equal(10, result); // 右操作数为 null
     }
 
+    /// <summary>验证 Mult Left Null Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Mult_LeftNull_ReturnsDefaultValue()
     {
@@ -241,6 +258,7 @@ public class SafeMathTests
         Assert.Equal(0, result); // 左操作数为 null
     }
 
+    /// <summary>验证 Mult Right Null Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Mult_RightNull_ReturnsDefaultValue()
     {
@@ -255,6 +273,7 @@ public class SafeMathTests
         Assert.Equal(0, result); // 右操作数为 null
     }
 
+    /// <summary>验证 Div Left Null Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Div_LeftNull_ReturnsDefaultValue()
     {
@@ -269,6 +288,7 @@ public class SafeMathTests
         Assert.Equal(0, result); // 左操作数为 null
     }
 
+    /// <summary>验证 Div Right Null Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Div_RightNull_ReturnsDefaultValue()
     {
@@ -285,6 +305,7 @@ public class SafeMathTests
         });
     }
 
+    /// <summary>验证 Safe Convert Null Input Returns Default Value 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void SafeConvert_NullInput_ReturnsDefaultValue()
     {
@@ -298,6 +319,7 @@ public class SafeMathTests
         Assert.Equal(-1, result); // 输入为 null，返回默认值 -1
     }
 
+    /// <summary>验证 Convert To Decimal Null Input Returns Zero 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void ConvertToDecimal_NullInput_ReturnsZero()
     {

@@ -36,6 +36,11 @@ export class TemplateBindingError extends Error {
   column?: number;
   cellAddress?: string;
 
+  /**
+   * 初始化 templateBinding 实例，保存依赖并建立组件所需的初始状态。
+   * @param message - message 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+   */
   constructor(message: string, location: ErrorLocation = {}) {
     const { sheetId, row, column } = location;
     const cellAddress = isCoordinate(row) && isCoordinate(column)
@@ -199,6 +204,10 @@ export function scanTemplateBindings(
   };
 }
 
+/**
+ * 创建并返回 templateBinding 的 empty Binding 配置对象，集中提供相关状态和操作入口。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function emptyBinding(): TemplateBinding {
   return {
     version: 1,
@@ -207,6 +216,12 @@ function emptyBinding(): TemplateBinding {
   };
 }
 
+/**
+ * 按 compare Ordinal 条件比较、筛选或整理 templateBinding 数据，并返回顺序稳定的结果。
+ * @param left - left 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param right - right 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function compareOrdinal(left: string, right: string): number {
   if (left === right) {
     return 0;
@@ -214,6 +229,11 @@ function compareOrdinal(left: string, right: string): number {
   return left < right ? -1 : 1;
 }
 
+/**
+ * 将 templateBinding 的 trim Ascii Whitespace 输入转换为稳定格式，保留后续计算或展示需要的信息。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function trimAsciiWhitespace(value: string): string {
   return value.replace(/^[ \t\r\n\f\v]+|[ \t\r\n\f\v]+$/g, '');
 }
@@ -225,6 +245,13 @@ function formatSheetLabel(sheetName: string, sheetId: string): string {
     : `'${sheetName}'（ID: ${sheetId}）`;
 }
 
+/**
+ * 校验 templateBinding 的 ensure Known Code 条件，并返回可供后续流程判断的结果。
+ * @param knownCodes - knownCodes 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param scope - scope 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param code - 需要读取、校验或转换的业务值。
+ * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+ */
 function ensureKnownCode(
   knownCodes: Set<string>,
   scope: string,
@@ -236,6 +263,12 @@ function ensureKnownCode(
   }
 }
 
+/**
+ * 校验 templateBinding 的 ensure Detail Row Is Not Merged 条件，并返回可供后续流程判断的结果。
+ * @param sheets - sheets 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param detailLocation - detailLocation 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param detailColumn - 参与映射、显示或数据写入的字段集合。
+ */
 function ensureDetailRowIsNotMerged(
   sheets: JsonObject,
   detailLocation: DetailLocation,
@@ -276,6 +309,12 @@ function ensureDetailRowIsNotMerged(
   }
 }
 
+/**
+ * 将 templateBinding 中的 parse Merge Coordinate 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function parseMergeCoordinate(value: unknown, location: ErrorLocation): number {
   if (!isCoordinate(value)) {
     throw new TemplateBindingError('mergeData 必须包含有效的行坐标。', location);
@@ -283,6 +322,13 @@ function parseMergeCoordinate(value: unknown, location: ErrorLocation): number {
   return value;
 }
 
+/**
+ * 将 templateBinding 中的 parse Coordinate Key 输入转换为调用方需要的稳定格式。
+ * @param key - 需要读取、校验或转换的业务值。
+ * @param coordinateName - 需要读取、校验或转换的业务值。
+ * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function parseCoordinateKey(
   key: string,
   coordinateName: string,
@@ -299,6 +345,11 @@ function parseCoordinateKey(
   return coordinate;
 }
 
+/**
+ * 校验 templateBinding 的 is Coordinate 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isCoordinate(value: unknown): value is number {
   return typeof value === 'number' &&
     Number.isInteger(value) &&
@@ -306,10 +357,21 @@ function isCoordinate(value: unknown): value is number {
     value <= MAX_TEMPLATE_COORDINATE;
 }
 
+/**
+ * 校验 templateBinding 的 is Json Object 条件，并返回可供后续流程判断的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * 将 templateBinding 的 to Cell Address 输入转换为稳定格式，保留后续计算或展示需要的信息。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function toCellAddress(row: number, column: number): string {
   // 内部保持零基坐标，错误消息转成设计人员熟悉的 A1 地址。
   let columnNumber = column + 1;

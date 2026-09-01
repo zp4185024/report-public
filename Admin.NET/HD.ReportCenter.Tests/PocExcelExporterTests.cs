@@ -6,6 +6,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocExcelExporterTests
 {
+    /// <summary>验证 Export Writes Formula And Forces Calculation On Open 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Export_WritesFormulaAndForcesCalculationOnOpen()
     {
@@ -29,6 +30,7 @@ public sealed class PocExcelExporterTests
         Assert.True(workbook.CalculationProperties.ForceFullCalculation!.Value);
     }
 
+    /// <summary>验证 Export Reports Progress Without Materializing Rows 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Export_ReportsProgressWithoutMaterializingRows()
     {

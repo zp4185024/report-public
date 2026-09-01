@@ -178,6 +178,10 @@ onMounted(async () => {
 });
 
 // 查询机构数据
+/**
+ * 查询或读取 index 所需的 load Org Data 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadOrgData = async () => {
 	state.loading = true;
 	let res = await getAPI(SysOrgApi).apiSysOrgTreeGet(0);
@@ -186,6 +190,10 @@ const loadOrgData = async () => {
 };
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -196,6 +204,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = async () => {
 	state.queryParams.orgId = -1;
 	state.queryParams.account = undefined;
@@ -206,18 +218,32 @@ const resetQuery = async () => {
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add User 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddUser = () => {
 	state.editUserTitle = '添加账号';
 	editUserRef.value?.openDialog({ id: undefined, birthday: '2000-01-01', sex: 1, tenantId: state.tenantId, orderNo: 100, cardType: 0, cultureLevel: 5 });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit User 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditUser = (row: any) => {
 	state.editUserTitle = '编辑账号';
 	editUserRef.value?.openDialog(row);
 };
 
 // 打开复制页面
+/**
+ * 准备 index 的 open Copy Menu 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openCopyMenu = (row: any) => {
 	state.editUserTitle = '复制账号';
 	var copyRow = JSON.parse(JSON.stringify(row)) as UpdateUserInput;
@@ -227,6 +253,11 @@ const openCopyMenu = (row: any) => {
 };
 
 // 删除
+/**
+ * 从 index 移除 del User 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delUser = (row: any) => {
 	ElMessageBox.confirm(`确定删除账号：【${row.account}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -242,18 +273,33 @@ const delUser = (row: any) => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = async (val: number) => {
 	state.tableParams.page = val;
 	await handleQuery();
 };
 
 // 修改状态
+/**
+ * 更新 index 的 change Status 状态，并同步相关业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeStatus = async (row: any) => {
 	await getAPI(SysUserApi)
 		.apiSysUserSetStatusPost({ id: row.id, status: row.status })
@@ -266,6 +312,11 @@ const changeStatus = async (row: any) => {
 };
 
 // 重置密码
+/**
+ * 重置或刷新 index 的 reset User Pwd 状态，并重新加载所需数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetUserPwd = async (row: any) => {
 	ElMessageBox.confirm(`确定重置密码：【${row.account}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -283,6 +334,11 @@ const resetUserPwd = async (row: any) => {
 };
 
 // 解除登录锁定
+/**
+ * 负责 index 的 unlock Login 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const unlockLogin = async (row: any) => {
 	ElMessageBox.confirm(`确定解除登录锁定：【${row.account}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -300,6 +356,11 @@ const unlockLogin = async (row: any) => {
 };
 
 // 树组件点击
+/**
+ * 负责 index 的 node Click 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const nodeClick = async (node: any) => {
 	state.queryParams.orgId = node.id;
 	state.queryParams.account = undefined;

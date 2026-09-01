@@ -156,6 +156,11 @@ const state = reactive({
 });
 
 // 格式化参数
+/**
+ * 将 editStressTest 中的 format Parameter 输入转换为调用方需要的稳定格式。
+ * @param params - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const formatParameter = (params: any[] | {}) => {
 	if (Array.isArray(params)) {
 		return Object.fromEntries(params.filter(e => e.length === 2));
@@ -166,6 +171,11 @@ const formatParameter = (params: any[] | {}) => {
 };
 
 // 打开弹窗
+/**
+ * 准备 editStressTest 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	const newRow = { ...state.ruleForm, ...row }; // 合并默认值和新值
 	state.ruleForm = {
@@ -177,6 +187,10 @@ const openDialog = (row: any) => {
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editStressTest 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;
@@ -208,6 +222,10 @@ const submit = () => {
 };
 
 // 添加参数
+/**
+ * 构建 editStressTest 所需的 add Params 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const addParams = () => {
 	const paramType = ['headers', 'requestParameters', 'pathParameters', 'queryParameters'][+state.activeName - 1];
 	if (Array.isArray(state.ruleForm[paramType])) {

@@ -70,15 +70,13 @@ public class BaiDuTranslationService : IDynamicApiController, ITransient
     /// <summary>
     /// 初始化一个<see cref="BaiDuTranslationService"/>类型的新实例.
     /// </summary>
-    /// <param name="httpRemoteService"></param>
+    /// <param name="httpRemoteService">当前方法执行时使用的 httpRemoteService 输入值。</param>
     public BaiDuTranslationService(IHttpRemoteService httpRemoteService)
     {
         _httpRemoteService = httpRemoteService;
     }
 
-    /// <summary>
-    /// 百度在线翻译
-    /// </summary>
+    /// <summary>调用 BaiDuTranslationService 的异步依赖完成 Translation 操作，并按当前返回类型传递处理结果。</summary>
     /// <param name="from">翻译源语种</param>
     /// <param name="to">翻译目标语种</param>
     /// <param name="content">文本内容</param>

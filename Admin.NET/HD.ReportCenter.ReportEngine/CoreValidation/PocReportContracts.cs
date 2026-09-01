@@ -140,6 +140,13 @@ public sealed record PocExecuteRequest(
     IReadOnlyDictionary<string, string?>? Context = null,
     bool SqlDebug = false)
 {
+    /// <summary>初始化 PocExecuteRequest 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="page">控制数据范围或位置的数值。</param>
+    /// <param name="hospitalId">需要定位的业务记录标识。</param>
+    /// <param name="deptId">需要定位的业务记录标识。</param>
+    /// <param name="personId">需要定位的业务记录标识。</param>
+    /// <param name="startDate">startDate 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="endDate">endDate 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocExecuteRequest(
         int page,
         string? hospitalId,
@@ -178,6 +185,9 @@ public sealed record PocExecuteRequest(
     [Newtonsoft.Json.JsonIgnore]
     public string? EndDate => Get("endDate");
 
+    /// <summary>查询或读取 PocReportContracts 所需的 Get 数据，并按调用约定返回结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private string? Get(string code) =>
         Parameters.TryGetValue(code, out var value) ? value : null;
 }
@@ -194,16 +204,25 @@ public sealed record PocDataExportRequest(
 /// </summary>
 public sealed class PocResolvedParameters : Dictionary<string, string>
 {
+    /// <summary>初始化 PocResolvedParameters 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocResolvedParameters()
         : base(StringComparer.OrdinalIgnoreCase)
     {
     }
 
+    /// <summary>初始化 PocResolvedParameters 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="values">values 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocResolvedParameters(IEnumerable<KeyValuePair<string, string>> values)
         : base(values, StringComparer.OrdinalIgnoreCase)
     {
     }
 
+    /// <summary>初始化 PocResolvedParameters 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="hospitalId">需要定位的业务记录标识。</param>
+    /// <param name="deptId">需要定位的业务记录标识。</param>
+    /// <param name="personId">需要定位的业务记录标识。</param>
+    /// <param name="startDate">startDate 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="endDate">endDate 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocResolvedParameters(
         string hospitalId,
         string deptId,
@@ -255,16 +274,22 @@ public sealed record PocWorkloadRow(
 /// </summary>
 public sealed class PocDataRow : Dictionary<string, object?>
 {
+    /// <summary>初始化 PocDataRow 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocDataRow()
         : base(StringComparer.OrdinalIgnoreCase)
     {
     }
 
+    /// <summary>初始化 PocDataRow 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="values">values 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocDataRow(IEnumerable<KeyValuePair<string, object?>> values)
         : base(values, StringComparer.OrdinalIgnoreCase)
     {
     }
 
+    /// <summary>负责 PocDataRow 的 From Workload 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static PocDataRow FromWorkload(PocWorkloadRow row) => new()
     {
         ["sequence"] = row.Sequence,

@@ -14,26 +14,20 @@ public class MaxValueAttribute : ValidationAttribute
 {
     private double MaxValue { get; }
 
-    /// <summary>
-    /// 最大值
-    /// </summary>
-    /// <param name="value"></param>
+    /// <summary>初始化 MaxValueAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
     public MaxValueAttribute(double value) => this.MaxValue = value;
 
-    /// <summary>
-    /// 最大值校验
-    /// </summary>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <summary>校验 MaxValueAttribute 的 Is Valid 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override bool IsValid(object value)
     {
         return value == null || Convert.ToDouble(value) <= this.MaxValue;
     }
 
-    /// <summary>
-    /// 错误信息
-    /// </summary>
-    /// <param name="name"></param>
-    /// <returns></returns>
+    /// <summary>将 MaxValueAttribute 中的 Format Error Message 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="name">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override string FormatErrorMessage(string name) => base.FormatErrorMessage(name);
 }

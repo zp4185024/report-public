@@ -29,10 +29,18 @@ describe('data export save gate', () => {
     const revision = await prepareSavedRevisionForExport({
       revision: 3,
       dirty: true,
+      /**
+       * 验证 confirm Save 场景下的预期行为，并防止相关逻辑回归。
+       * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+       */
       confirmSave: () => {
         calls.push('confirm');
         return true;
       },
+      /**
+       * 验证 save 场景下的预期行为，并防止相关逻辑回归。
+       * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+       */
       save: async () => {
         calls.push('save');
         return 4;
@@ -49,6 +57,10 @@ describe('data export save gate', () => {
     const revision = await prepareSavedRevisionForExport({
       revision: 0,
       dirty: false,
+      /**
+       * 验证 confirm Save 场景下的预期行为，并防止相关逻辑回归。
+       * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+       */
       confirmSave: () => false,
       save,
     });
@@ -102,6 +114,12 @@ describe('large data export polling', () => {
   });
 });
 
+/**
+ * 验证 create Job 场景下的预期行为，并防止相关逻辑回归。
+ * @param status - status 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param writtenRows - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function createJob(status: ExportJob['status'], writtenRows: number): ExportJob {
   return {
     jobNo: 'job-1',

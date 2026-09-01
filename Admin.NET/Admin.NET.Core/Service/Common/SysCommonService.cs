@@ -24,6 +24,12 @@ public class SysCommonService : IDynamicApiController, ITransient
     private readonly UserManager _userManager;
     private readonly HttpClient _httpClient;
 
+    /// <summary>初始化 SysCommonService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="apiProvider">当前方法执行时使用的 apiProvider 输入值。</param>
+    /// <param name="sysUserRep">当前方法执行时使用的 sysUserRep 输入值。</param>
+    /// <param name="giteeOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="httpClientFactory">当前方法执行时使用的 httpClientFactory 输入值。</param>
+    /// <param name="userManager">当前方法执行时使用的 userManager 输入值。</param>
     public SysCommonService(IApiDescriptionGroupCollectionProvider apiProvider,
         SqlSugarRepository<SysUser> sysUserRep,
         IOptions<CDConfigOptions> giteeOptions,
@@ -40,7 +46,7 @@ public class SysCommonService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取国密公钥私钥对 🏆
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取国密公钥私钥对")]
     public SmKeyPairOutput GetSmKeyPair()
     {
@@ -58,7 +64,7 @@ public class SysCommonService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取所有接口/动态API 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取所有接口/动态API")]
     public List<ApiOutput> GetApiList()
     {
@@ -83,7 +89,7 @@ public class SysCommonService : IDynamicApiController, ITransient
     /// <summary>
     /// 下载标记错误的临时Excel（全局）
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("下载标记错误的临时Excel（全局）")]
     public async Task<IActionResult> DownloadErrorExcelTemp([FromQuery] string fileName = null)
     {
@@ -98,10 +104,8 @@ public class SysCommonService : IDynamicApiController, ITransient
         });
     }
 
-    /// <summary>
-    /// 加密字符串 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>根据 SysCommonService 当前输入计算 Encrypt Plain Text 结果，并按方法声明的类型返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [SuppressMonitor]
     [DisplayName("加密字符串")]
     public dynamic EncryptPlainText([Required] string plainText)
@@ -109,10 +113,8 @@ public class SysCommonService : IDynamicApiController, ITransient
         return CryptogramUtil.Encrypt(plainText);
     }
 
-    /// <summary>
-    /// 接口压测 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>调用 SysCommonService 的异步依赖完成 Stress Test 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("接口压测")]
     public async Task<StressTestOutput> StressTest(StressTestInput input)
     {
@@ -220,12 +222,10 @@ public class SysCommonService : IDynamicApiController, ITransient
         };
     }
 
-    /// <summary>
-    /// 创建请求消息
-    /// </summary>
+    /// <summary>构建 SysCommonService 所需的 Create Request Message 内容，并保证生成结果符合调用约定。</summary>
     /// <param name="input">输入参数</param>
     /// <param name="fullUri">url</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private HttpRequestMessage CreateRequestMessage(StressTestInput input, Uri fullUri)
     {
         HttpRequestMessage request = input.RequestMethod switch
@@ -250,7 +250,7 @@ public class SysCommonService : IDynamicApiController, ITransient
     /// </summary>
     /// <param name="times">请求耗时列表</param>
     /// <param name="percentile">百分位</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private double CalculatePercentile(List<double> times, double percentile)
     {
         if (!times.Any()) return 0;

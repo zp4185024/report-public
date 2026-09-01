@@ -14,11 +14,22 @@ namespace Admin.NET.Core;
 [SuppressSniffer]
 public class MaskNewtonsoftJsonConverter : JsonConverter<string>
 {
+    /// <summary>查询或读取 MaskNewtonsoftJsonConverter 所需的 Read Json 数据，并按调用约定返回结果。</summary>
+    /// <param name="reader">当前方法执行时使用的 reader 输入值。</param>
+    /// <param name="objectType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <param name="existingValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="hasExistingValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="serializer">当前方法执行时使用的 serializer 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override string ReadJson(JsonReader reader, Type objectType, string existingValue, bool hasExistingValue, JsonSerializer serializer)
     {
         return reader.Value.ToString();
     }
 
+    /// <summary>更新 MaskNewtonsoftJsonConverter 的 Write Json 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">当前方法执行时使用的 writer 输入值。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="serializer">当前方法执行时使用的 serializer 输入值。</param>
     public override void WriteJson(JsonWriter writer, string value, JsonSerializer serializer)
     {
         writer.WriteValue(value?.ToString().Mask());
@@ -31,11 +42,22 @@ public class MaskNewtonsoftJsonConverter : JsonConverter<string>
 [SuppressSniffer]
 public class MaskIdCardNewtonsoftJsonConverter : JsonConverter<string>
 {
+    /// <summary>查询或读取 MaskNewtonsoftJsonConverter 所需的 Read Json 数据，并按调用约定返回结果。</summary>
+    /// <param name="reader">当前方法执行时使用的 reader 输入值。</param>
+    /// <param name="objectType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <param name="existingValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="hasExistingValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="serializer">当前方法执行时使用的 serializer 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override string ReadJson(JsonReader reader, Type objectType, string existingValue, bool hasExistingValue, JsonSerializer serializer)
     {
         return reader.Value.ToString();
     }
 
+    /// <summary>更新 MaskNewtonsoftJsonConverter 的 Write Json 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">当前方法执行时使用的 writer 输入值。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="serializer">当前方法执行时使用的 serializer 输入值。</param>
     public override void WriteJson(JsonWriter writer, string value, JsonSerializer serializer)
     {
         writer.WriteValue(value?.ToString().MaskIdCard());
@@ -48,11 +70,22 @@ public class MaskIdCardNewtonsoftJsonConverter : JsonConverter<string>
 [SuppressSniffer]
 public class MaskEmailNewtonsoftJsonConverter : JsonConverter<string>
 {
+    /// <summary>查询或读取 MaskNewtonsoftJsonConverter 所需的 Read Json 数据，并按调用约定返回结果。</summary>
+    /// <param name="reader">当前方法执行时使用的 reader 输入值。</param>
+    /// <param name="objectType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <param name="existingValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="hasExistingValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="serializer">当前方法执行时使用的 serializer 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override string ReadJson(JsonReader reader, Type objectType, string existingValue, bool hasExistingValue, JsonSerializer serializer)
     {
         return reader.Value.ToString();
     }
 
+    /// <summary>更新 MaskNewtonsoftJsonConverter 的 Write Json 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">当前方法执行时使用的 writer 输入值。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="serializer">当前方法执行时使用的 serializer 输入值。</param>
     public override void WriteJson(JsonWriter writer, string value, JsonSerializer serializer)
     {
         writer.WriteValue(value?.ToString().MaskEmail());

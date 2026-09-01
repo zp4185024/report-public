@@ -24,16 +24,28 @@ export const accessTokenKey = 'access-token';
 export const refreshAccessTokenKey = `x-${accessTokenKey}`;
 
 // 获取 token
+/**
+ * 查询或读取 axios-utils 所需的 get Token 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const getToken = () => {
 	return Local.get(accessTokenKey);
 };
 
 // 获取请求头 token
+/**
+ * 查询或读取 axios-utils 所需的 get Header 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const getHeader = () => {
 	return { authorization: 'Bearer ' + getToken() };
 };
 
 // 清除 token
+/**
+ * 移除 axios-utils 中与 clear Access After Reload 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const clearAccessAfterReload = () => {
 	clearTokens();
 	// 刷新浏览器
@@ -41,6 +53,10 @@ export const clearAccessAfterReload = () => {
 };
 
 // 清除 token
+/**
+ * 移除 axios-utils 中与 clear Tokens 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const clearTokens = () => {
 	Local.remove(accessTokenKey);
 	Local.remove(refreshAccessTokenKey);

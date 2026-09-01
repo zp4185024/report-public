@@ -16,12 +16,21 @@ const menuItems = [
   { key: 'jnpf-migration', href: '/jnpf-migration', label: 'JNPF迁移', icon: ArrowRightLeft },
 ] as const;
 
+/**
+ * 负责 AppFrame 的 preserve Page Context 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param href - href 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function preservePageContext(href: string): string {
   return window.location.search.length > 0
     ? `${href}${window.location.search}`
     : href;
 }
 
+/**
+ * 遍历 AppFrame 数据并执行 App Frame 转换，生成后续流程需要的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export default function AppFrame({ active, children }: AppFrameProps) {
   return (
     <div className="management-shell">

@@ -58,6 +58,10 @@ import type { UploadInstance, UploadProps, UploadRawFile } from 'element-plus';
 const props = defineProps({
 	title: {
 		type: String,
+		/**
+		 * 为 title 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '',
 	},
 });
@@ -72,6 +76,11 @@ const state = reactive({
 });
 
 // 打开弹窗
+/**
+ * 准备 index 的 open Dialog 交互状态并打开对应界面。
+ * @param imgs - imgs 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (imgs: string) => {
 	state.cropperImg = imgs;
 	state.isShowDialog = true;
@@ -80,21 +89,37 @@ const openDialog = (imgs: string) => {
 	});
 };
 // 关闭弹窗
+/**
+ * 结束 index 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	state.cropper.destroy();
 	state.isShowDialog = false;
 };
 // 取消
+/**
+ * 响应 index 的 on Cancel 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCancel = () => {
 	closeDialog();
 };
 // 更换/上传
+/**
+ * 响应 index 的 on Submit 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSubmit = async () => {
 	const img = await getCroppedCanvas();
 	emits('uploadCropperImg', { img: img });
 	closeDialog();
 };
 // 初始化cropperjs图片裁剪
+/**
+ * 初始化 index 的 init Cropper 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initCropper = () => {
 	const letImg = <HTMLImageElement>document.querySelector('.cropper-warp-left-img');
 	if (letImg) {
@@ -110,6 +135,10 @@ const initCropper = () => {
 		autoCropArea: 1,
 		// zoomOnWheel: false,
 		checkCrossOrigin: false,
+		/**
+		 * 负责 index 的 crop 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		crop: () => {
 			state.cropperImgBase64 = state.cropper.getCroppedCanvas()!.toDataURL('image/jpeg');
 		},
@@ -117,6 +146,10 @@ const initCropper = () => {
 };
 
 // 获取裁切后的图片 (包装为Promise)
+/**
+ * 查询或读取 index 所需的 get Cropped Canvas 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getCroppedCanvas = () => {
 	return new Promise((resolve) => {
 		state.cropper.getCroppedCanvas().toBlob((blob: any) => {
@@ -126,6 +159,11 @@ const getCroppedCanvas = () => {
 };
 
 // 选择图片
+/**
+ * 校验 index 的 select Picture 文件输入，读取内容并更新目标数据或预览状态。
+ * @param file - file 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const selectPicture = async (file: any) => {
 	let URL = window.URL || window.webkitURL;
 	state.cropperImg = URL.createObjectURL(file.raw);
@@ -133,6 +171,11 @@ const selectPicture = async (file: any) => {
 };
 
 // 选择图片超出数量限制时执行
+/**
+ * 校验 index 的 select Picture Exceed 文件输入，读取内容并更新目标数据或预览状态。
+ * @param files - files 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const selectPictureExceed: UploadProps['onExceed'] = (files) => {
 	uploadSignRef.value!.clearFiles();
 	const file = files[0] as UploadRawFile;

@@ -607,6 +607,7 @@ export const SysFileProviderApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysFileProviderAddPost(body?: AddFileProviderInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysFileProviderApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysFileProviderApiAxiosParamCreator(configuration).apiSysFileProviderAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -637,6 +638,7 @@ export const SysFileProviderApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysFileProviderApiAxiosParamCreator(configuration).apiSysFileProviderBatchEnablePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysFileProviderApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -674,6 +676,7 @@ export const SysFileProviderApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysFileProviderDeletePost(body?: DeleteFileProviderInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第3阶段：调用 SysFileProviderApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysFileProviderApiAxiosParamCreator(configuration).apiSysFileProviderDeletePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -705,6 +708,7 @@ export const SysFileProviderApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysFileProviderApiAxiosParamCreator(configuration).apiSysFileProviderProviderGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysFileProviderApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -742,6 +746,7 @@ export const SysFileProviderApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysFileProviderProviderStatisticsGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第5阶段：调用 SysFileProviderApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysFileProviderApiAxiosParamCreator(configuration).apiSysFileProviderProviderStatisticsGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -779,6 +784,8 @@ export const SysFileProviderApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysFileProviderAddPost(body?: AddFileProviderInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysFileProviderApiFactory 已计算的数据，并按方法契约返回最终结果。
+            // 第一阶段：整理 SysFileProviderApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileProviderApiFp(configuration).apiSysFileProviderAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -807,6 +814,7 @@ export const SysFileProviderApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysFileProviderBucketProviderMappingGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultDictionaryStringListSysFileProvider>> {
+            // 第2阶段：整理 SysFileProviderApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileProviderApiFp(configuration).apiSysFileProviderBucketProviderMappingGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -816,6 +824,7 @@ export const SysFileProviderApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysFileProviderCacheDelete(options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysFileProviderApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileProviderApiFp(configuration).apiSysFileProviderCacheDelete(options).then((request) => request(axios, basePath));
         },
         /**
@@ -836,6 +845,7 @@ export const SysFileProviderApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysFileProviderProviderByBucketNameBucketNameGet(bucketName: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSysFileProvider>> {
+            // 第3阶段：整理 SysFileProviderApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileProviderApiFp(configuration).apiSysFileProviderProviderByBucketNameBucketNameGet(bucketName, options).then((request) => request(axios, basePath));
         },
         /**
@@ -855,6 +865,7 @@ export const SysFileProviderApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysFileProviderProviderListGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListSysFileProvider>> {
+            // 第3阶段：整理 SysFileProviderApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileProviderApiFp(configuration).apiSysFileProviderProviderListGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -865,6 +876,7 @@ export const SysFileProviderApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysFileProviderProviderPageGet(body?: PageFileProviderInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysFileProvider>> {
+            // 第4阶段：整理 SysFileProviderApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileProviderApiFp(configuration).apiSysFileProviderProviderPageGet(body, options).then((request) => request(axios, basePath));
         },
         /**

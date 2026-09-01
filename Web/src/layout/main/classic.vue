@@ -34,10 +34,18 @@ const isTagsview = computed(() => {
 	return themeConfig.value.isTagsview;
 });
 // 重置滚动条高度，更新子级 scrollbar
+/**
+ * 更新 classic 的 update Scrollbar 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const updateScrollbar = () => {
 	layoutMainRef.value?.layoutMainScrollbarRef.update();
 };
 // 重置滚动条高度，由于组件是异步引入的
+/**
+ * 初始化 classic 的 init Scroll Bar Height 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initScrollBarHeight = () => {
 	nextTick(() => {
 		setTimeout(() => {

@@ -174,30 +174,50 @@ onMounted(async () => {
 });
 
 // 服务器配置信息
+/**
+ * 查询或读取 index 所需的 load Machine Base Info 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadMachineBaseInfo = async () => {
 	var res = await getAPI(SysServerApi).apiSysServerServerBaseGet();
 	state.machineBaseInfo = res.data.result;
 };
 
 // 服务器内存信息
+/**
+ * 查询或读取 index 所需的 load Machine Use Info 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadMachineUseInfo = async () => {
 	var res = await getAPI(SysServerApi).apiSysServerServerUsedGet();
 	state.machineUseInfo = res.data.result;
 };
 
 // 服务器磁盘信息
+/**
+ * 查询或读取 index 所需的 load Machine Disk Info 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadMachineDiskInfo = async () => {
 	var res = await getAPI(SysServerApi).apiSysServerServerDiskGet();
 	state.machineDiskInfo = res.data.result;
 };
 
 // 框架程序集信息
+/**
+ * 查询或读取 index 所需的 load Assembly Info 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadAssemblyInfo = async () => {
 	var res = await getAPI(SysServerApi).apiSysServerAssemblyListGet();
 	state.assemblyInfo = res.data.result;
 };
 
 // 实时刷新内存
+/**
+ * 重置或刷新 index 的 refresh Data 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const refreshData = () => {
 	loadMachineUseInfo();
 };

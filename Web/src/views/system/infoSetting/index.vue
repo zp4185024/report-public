@@ -88,6 +88,11 @@ const state = reactive({
 });
 
 // 通过onChange方法获得文件列表
+/**
+ * 响应 index 的 handle Upload Change 事件，并协调相关状态和后续操作。
+ * @param file - file 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleUploadChange = (file: any) => {
 	uploadRef.value!.clearFiles();
 	state.file = file;
@@ -95,6 +100,10 @@ const handleUploadChange = (file: any) => {
 };
 
 // 保存
+/**
+ * 响应 index 的 on Save 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSave = async () => {
 	// 如果有选择图标，则转换为 base64
 	if (state.file) {
@@ -124,6 +133,10 @@ const onSave = async () => {
 };
 
 // 加载数据
+/**
+ * 查询或读取 index 所需的 load Data 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadData = async () => {
 	try {
 		state.isLoading = true;

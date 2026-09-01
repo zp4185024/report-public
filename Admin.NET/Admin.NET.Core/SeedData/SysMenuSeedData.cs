@@ -11,20 +11,20 @@ namespace Admin.NET.Core;
 /// </summary>
 public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
 {
-    /// <summary>
-    /// 种子数据
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>校验 SysMenuSeedData 的 Has Data 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IEnumerable<SysMenu> HasData()
     {
         return new[]
         {
+            // 第一阶段：建立工作台和站内信等所有用户进入系统后的基础入口。
             new SysMenu{ Id=1300100000101, Pid=0, Title="工作台", Path="/dashboard", Name="dashboard", Component="Layout", Icon="ele-HomeFilled", Type=MenuTypeEnum.Dir, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=0 },
             new SysMenu{ Id=1300100010101, Pid=1300100000101, Title="工作台", Path="/dashboard/home", Name="home", Component="/home/index", IsAffix=true, Icon="ele-HomeFilled", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
             new SysMenu{ Id=1300100010201, Pid=1300100000101, Title="站内信", Path="/dashboard/notice", Name="notice", Component="/home/notice/index", Icon="ele-Bell", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=101 },
 
             // 建议此处Id范围之间放置具体业务应用菜单
 
+            // 第二阶段：注册账号、角色、机构、职位和多语言等系统管理权限树。
             #region 系统管理
 
             new SysMenu{ Id=1300200000101, Pid=0, Title="系统管理", Path="/system", Name="system", Component="Layout", Icon="ele-Setting", Type=MenuTypeEnum.Dir, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=10000 },
@@ -101,6 +101,7 @@ public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
 
             #endregion 系统管理
 
+            // 第三阶段：注册任务调度、文件、缓存和开放接口等平台运维菜单。
             #region 平台管理
 
             new SysMenu{ Id=1300300000101, Pid=0, Title="平台管理", Path="/platform", Name="platform", Component="Layout", Icon="ele-Operation", Type=MenuTypeEnum.Dir, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=11000 },
@@ -204,6 +205,7 @@ public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
             new SysMenu{ Id=1300300090501, Pid=1300300090101, Title="删除", Permission="sysRegion:delete", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
             new SysMenu{ Id=1300300090601, Pid=1300300090101, Title="同步", Permission="sysRegion:sync", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
 
+            // 第四阶段：补充文件、打印、插件、支付和系统更新等平台扩展入口。
             // 文件管理
             new SysMenu{ Id=1300300100101, Pid=1300300000101, Title="文件管理", Path="/platform/file", Name="sysFile", Component="/system/file/index", Icon="ele-Document", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=180 },
             new SysMenu{ Id=1300300100201, Pid=1300300100101, Title="查询", Permission="sysFile:page", Type=MenuTypeEnum.Btn, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=100 },
@@ -255,6 +257,7 @@ public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
 
 	        #endregion 平台管理
 
+            // 第五阶段：按访问、操作、异常和差异类型建立日志查询与清理权限。
             #region 日志管理
 
             new SysMenu{ Id=1300400000101, Pid=0, Title="日志管理", Path="/log", Name="log", Component="Layout", Icon="ele-DocumentCopy", Type=MenuTypeEnum.Dir, CreateTime=DateTime.Parse("2022-02-10 00:00:00"), OrderNo=12000 },
@@ -283,6 +286,7 @@ public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
 
             #endregion 日志管理
 
+            // 第六阶段：注册库表、代码生成、表单设计和接口调试等开发工具。
             #region 开发工具
 
             // 开发工具
@@ -295,6 +299,7 @@ public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
 
             #endregion 开发工具
 
+            // 第七阶段：提供框架、后端、前端和 SqlSugar 的外部帮助文档入口。
             #region 帮助文档
 
             // 帮助文档
@@ -306,6 +311,7 @@ public class SysMenuSeedData : ISqlSugarEntitySeedData<SysMenu>
 
 	        #endregion 帮助文档
 
+            // 第八阶段：追加项目说明入口并结束完整菜单种子集合。
             // 关于项目
             new SysMenu{ Id=1300700000101, Pid=0, Title="关于项目", Path="/about", Name="about", Component="/about/index", Icon="ele-InfoFilled", Type=MenuTypeEnum.Menu, CreateTime=DateTime.Parse("2023-03-12 00:00:00"), OrderNo=15000 },
         };

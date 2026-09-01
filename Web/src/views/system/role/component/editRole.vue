@@ -86,6 +86,11 @@ const state = reactive({
 });
 
 // 打开弹窗
+/**
+ * 准备 editRole 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = async (row: any) => {
 	state.menuData = await getAPI(SysMenuApi).apiSysMenuListGet(undefined, undefined, row?.tenantId).then((res) => res.data.result ?? []);
 	ruleFormRef.value?.resetFields();
@@ -101,17 +106,29 @@ const openDialog = async (row: any) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 editRole 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('handleQuery');
 	state.isShowDialog = false;
 };
 
 // 取消
+/**
+ * 校验 editRole 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editRole 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;
@@ -126,6 +143,11 @@ const submit = () => {
 };
 
 // 叶子节点同行显示样式
+/**
+ * 负责 editRole 的 tree Node Class 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const treeNodeClass = (node: SysMenu) => {
 	let addClass = true; // 添加叶子节点同行显示样式
 	for (var key in node.children) {

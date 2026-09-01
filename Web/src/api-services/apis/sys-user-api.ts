@@ -771,6 +771,7 @@ export const SysUserApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserAddPost(body?: AddUserInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 SysUserApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserApiAxiosParamCreator(configuration).apiSysUserAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -801,6 +802,7 @@ export const SysUserApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysUserApiAxiosParamCreator(configuration).apiSysUserBaseInfoPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysUserApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -840,6 +842,7 @@ export const SysUserApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserGrantRolePost(body?: UserRoleInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第3阶段：调用 SysUserApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserApiAxiosParamCreator(configuration).apiSysUserGrantRolePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -870,6 +873,7 @@ export const SysUserApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysUserApiAxiosParamCreator(configuration).apiSysUserOwnExtOrgListUserIdGet(userId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysUserApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -910,6 +914,7 @@ export const SysUserApiFp = function(configuration?: Configuration) {
          */
         async apiSysUserResetPwdPost(body?: ResetPwdUserInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultString>>> {
             const localVarAxiosArgs = await SysUserApiAxiosParamCreator(configuration).apiSysUserResetPwdPost(body, options);
+            // 第5阶段：整理 SysUserApiFp 已计算的数据，并按方法契约返回最终结果。
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
@@ -951,6 +956,7 @@ export const SysUserApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysUserUnlockLoginPost(body?: UnlockLoginInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第6阶段：调用 SysUserApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysUserApiAxiosParamCreator(configuration).apiSysUserUnlockLoginPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -988,6 +994,7 @@ export const SysUserApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysUserAddPost(body?: AddUserInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt64>> {
+            // 第一阶段：整理 SysUserApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserApiFp(configuration).apiSysUserAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1027,6 +1034,7 @@ export const SysUserApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysUserDeletePost(body?: DeleteUserInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysUserApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserApiFp(configuration).apiSysUserDeletePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1066,6 +1074,7 @@ export const SysUserApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysUserOwnRoleListUserIdGet(userId: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListInt64>> {
+            // 第3阶段：整理 SysUserApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserApiFp(configuration).apiSysUserOwnRoleListUserIdGet(userId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1096,6 +1105,7 @@ export const SysUserApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysUserSetLangCodeLangCodePost(langCode: string, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第4阶段：整理 SysUserApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysUserApiFp(configuration).apiSysUserSetLangCodeLangCodePost(langCode, options).then((request) => request(axios, basePath));
         },
         /**

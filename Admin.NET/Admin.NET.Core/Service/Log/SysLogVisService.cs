@@ -15,6 +15,9 @@ public class SysLogVisService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysLogVis> _sysLogVisRep;
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 SysLogVisService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysLogVisRep">sysLogVisRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysLogVisService(UserManager userManager, SqlSugarRepository<SysLogVis> sysLogVisRep)
     {
         _sysLogVisRep = sysLogVisRep;
@@ -24,7 +27,7 @@ public class SysLogVisService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取访问日志分页列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [SuppressMonitor]
     [DisplayName("获取访问日志分页列表")]
     public async Task<SqlSugarPagedList<SysLogVis>> Page(PageVisLogInput input)
@@ -43,10 +46,8 @@ public class SysLogVisService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 清空访问日志 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>移除 SysLogVisService 中与 Clear 对应的数据，并清理关联状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Clear"), HttpPost]
     [DisplayName("清空访问日志")]
     public void Clear()
@@ -57,7 +58,7 @@ public class SysLogVisService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取访问日志列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取访问日志列表")]
     public async Task<List<LogVisOutput>> GetList()
     {

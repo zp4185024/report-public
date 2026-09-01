@@ -16,6 +16,9 @@ public class IdentityService : ITransient
     private readonly IHttpContextAccessor _context;
     private readonly List<APIJSON_Role> _roles;
 
+    /// <summary>初始化 IdentityService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="roles">当前方法执行时使用的 roles 输入值。</param>
     public IdentityService(IHttpContextAccessor context, IOptions<APIJSONOptions> roles)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -25,7 +28,7 @@ public class IdentityService : ITransient
     /// <summary>
     /// 获取当前用户Id
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetUserIdentity()
     {
         return _context.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -34,7 +37,7 @@ public class IdentityService : ITransient
     /// <summary>
     /// 获取当前用户权限名称
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetUserRoleName()
     {
         return _context.HttpContext.User.FindFirstValue(ClaimTypes.Role);
@@ -43,7 +46,7 @@ public class IdentityService : ITransient
     /// <summary>
     /// 获取当前用户权限
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public APIJSON_Role GetRole()
     {
         var role = string.IsNullOrEmpty(GetUserRoleName())
@@ -55,8 +58,8 @@ public class IdentityService : ITransient
     /// <summary>
     /// 获取当前表的可查询字段
     /// </summary>
-    /// <param name="table"></param>
-    /// <returns></returns>
+    /// <param name="table">当前方法执行时使用的 table 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public (bool, string) GetSelectRole(string table)
     {
         var role = GetRole();
@@ -75,9 +78,9 @@ public class IdentityService : ITransient
     /// <summary>
     /// 当前列是否在角色里面
     /// </summary>
-    /// <param name="col"></param>
-    /// <param name="selectrole"></param>
-    /// <returns></returns>
+    /// <param name="col">当前方法执行时使用的 col 输入值。</param>
+    /// <param name="selectrole">当前方法执行时使用的 selectrole 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public bool ColIsRole(string col, string[] selectrole)
     {
         if (selectrole.Contains("*")) return true;

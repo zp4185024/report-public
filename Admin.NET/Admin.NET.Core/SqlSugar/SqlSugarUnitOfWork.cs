@@ -16,10 +16,8 @@ public sealed class SqlSugarUnitOfWork : IUnitOfWork
     /// </summary>
     private readonly ISqlSugarClient _sqlSugarClient;
 
-    /// <summary>
-    /// 构造函数
-    /// </summary>
-    /// <param name="sqlSugarClient"></param>
+    /// <summary>初始化 SqlSugarUnitOfWork 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sqlSugarClient">sqlSugarClient 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SqlSugarUnitOfWork(ISqlSugarClient sqlSugarClient)
     {
         _sqlSugarClient = sqlSugarClient;
@@ -28,8 +26,8 @@ public sealed class SqlSugarUnitOfWork : IUnitOfWork
     /// <summary>
     /// 开启工作单元处理
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="unitOfWork"></param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="unitOfWork">unitOfWork 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <exception cref="NotImplementedException"></exception>
     public async Task BeginTransactionAsync(FilterContext context, UnitOfWorkAttribute unitOfWork)
     {
@@ -39,8 +37,8 @@ public sealed class SqlSugarUnitOfWork : IUnitOfWork
     /// <summary>
     /// 提交工作单元处理
     /// </summary>
-    /// <param name="resultContext"></param>
-    /// <param name="unitOfWork"></param>
+    /// <param name="resultContext">本次操作共享的运行上下文。</param>
+    /// <param name="unitOfWork">unitOfWork 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <exception cref="NotImplementedException"></exception>
     public async Task CommitTransactionAsync(FilterContext resultContext, UnitOfWorkAttribute unitOfWork)
     {
@@ -50,8 +48,8 @@ public sealed class SqlSugarUnitOfWork : IUnitOfWork
     /// <summary>
     /// 回滚工作单元处理
     /// </summary>
-    /// <param name="resultContext"></param>
-    /// <param name="unitOfWork"></param>
+    /// <param name="resultContext">本次操作共享的运行上下文。</param>
+    /// <param name="unitOfWork">unitOfWork 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <exception cref="NotImplementedException"></exception>
     public async Task RollbackTransactionAsync(FilterContext resultContext, UnitOfWorkAttribute unitOfWork)
     {
@@ -61,8 +59,8 @@ public sealed class SqlSugarUnitOfWork : IUnitOfWork
     /// <summary>
     /// 执行完毕（无论成功失败）
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="resultContext"></param>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="resultContext">本次操作共享的运行上下文。</param>
     /// <exception cref="NotImplementedException"></exception>
     public Task OnCompletedAsync(FilterContext context, FilterContext resultContext)
     {

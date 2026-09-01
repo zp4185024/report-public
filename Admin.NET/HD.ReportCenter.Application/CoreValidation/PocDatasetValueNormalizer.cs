@@ -8,6 +8,10 @@ namespace HD.ReportCenter.Application.CoreValidation;
 /// </summary>
 internal static class PocDatasetValueNormalizer
 {
+    /// <summary>将 PocDatasetValueNormalizer 中的 Normalize 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="field">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static object? Normalize(object value, PocDatasetFieldDefinition field)
     {
         ArgumentNullException.ThrowIfNull(field);
@@ -28,6 +32,9 @@ internal static class PocDatasetValueNormalizer
         };
     }
 
+    /// <summary>将 PocDatasetValueNormalizer 中的 Normalize Scalar 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static object? NormalizeScalar(object value) => value switch
     {
         DBNull => null,
@@ -39,9 +46,16 @@ internal static class PocDatasetValueNormalizer
         _ => Convert.ToString(value, CultureInfo.InvariantCulture)
     };
 
+    /// <summary>将 PocDatasetValueNormalizer 的 To Invariant Text 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ToInvariantText(object value) =>
         Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
 
+    /// <summary>将 PocDatasetValueNormalizer 中的 Parse Number 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="field">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static decimal ParseNumber(string value, PocDatasetFieldDefinition field)
     {
         if (decimal.TryParse(
@@ -56,6 +70,10 @@ internal static class PocDatasetValueNormalizer
         throw TypeMismatch(field);
     }
 
+    /// <summary>将 PocDatasetValueNormalizer 中的 Parse Boolean 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="field">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool ParseBoolean(string value, PocDatasetFieldDefinition field)
     {
         if (bool.TryParse(value, out var boolean))
@@ -74,6 +92,9 @@ internal static class PocDatasetValueNormalizer
         throw TypeMismatch(field);
     }
 
+    /// <summary>负责 PocDatasetValueNormalizer 的 Type Mismatch 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="field">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDatasetExecutionException TypeMismatch(PocDatasetFieldDefinition field) =>
         new(
             "DATASET_FIELD_TYPE_MISMATCH",

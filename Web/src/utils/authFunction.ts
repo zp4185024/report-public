@@ -6,7 +6,8 @@ import { resolveDirective, withDirectives, VNode } from 'vue';
  * 单个权限验证
  * @param value 权限值
  * @returns 有权限，返回 `true`，反之则反
- */
+   * 按 auth 规则筛选 authFunction 数据，并返回满足条件的结果。
+  */
 export function auth(value: string): boolean {
 	const stores = useUserInfo();
 	return stores.userInfos.authBtnList.some((v: string) => v === value);

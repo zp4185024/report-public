@@ -21,6 +21,7 @@ public sealed record PocTemplateXlsxExportResult(
     string UniverVersion,
     int MappingVersion) : IDisposable
 {
+    /// <summary>释放 PocTemplateExchangeService 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose() => Content.Dispose();
 }
 
@@ -68,6 +69,7 @@ public sealed class PocTemplateExchangeService : ITransient
         ArgumentNullException.ThrowIfNull(input);
         if (!string.Equals(Path.GetExtension(fileName), ".xlsx", StringComparison.OrdinalIgnoreCase))
         {
+            // 第一阶段：根据 ImportAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
             throw new PocExchangeConversionException(
                 "TEMPLATE_XLSX_EXTENSION_REQUIRED",
                 "只支持导入 .xlsx 格式的模板文件。");
@@ -93,6 +95,7 @@ public sealed class PocTemplateExchangeService : ITransient
         }
         catch (Exception exception) when (
             exception is IOException or InvalidDataException or FormatException)
+        // 第2阶段：根据 ImportAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             throw new PocExchangeConversionException(
                 "TEMPLATE_XLSX_INVALID",
@@ -144,6 +147,9 @@ public sealed class PocTemplateExchangeService : ITransient
         }
     }
 
+    /// <summary>将 PocTemplateExchangeService 中的 Normalize Workbook Name 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string NormalizeWorkbookName(string value)
     {
         var name = Path.GetFileNameWithoutExtension(value)?.Trim();

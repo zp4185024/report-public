@@ -4,6 +4,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocReportCatalogTests
 {
+    /// <summary>验证 Get Definition Returns Full Preview And Defaults 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void GetDefinition_ReturnsFullPreviewAndDefaults()
     {
@@ -22,6 +23,7 @@ public sealed class PocReportCatalogTests
         Assert.Equal("2026-07-14", definition.Parameters.Single(x => x.Code == "endDate").DefaultValue);
     }
 
+    /// <summary>验证 Execute Full Preview Returns All Rows And Normalizes Page 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Execute_FullPreviewReturnsAllRowsAndNormalizesPage()
     {
@@ -37,6 +39,7 @@ public sealed class PocReportCatalogTests
         Assert.False(result.HasMore);
     }
 
+    /// <summary>验证 Execute Paged Preview Uses Configured Page Size And Stable Rows 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Execute_PagedPreviewUsesConfiguredPageSizeAndStableRows()
     {
@@ -52,6 +55,8 @@ public sealed class PocReportCatalogTests
         Assert.True(result.HasMore);
     }
 
+    /// <summary>验证 Read Export Pages Full Preview Returns One Complete Batch 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ReadExportPages_FullPreviewReturnsOneCompleteBatch()
     {
@@ -70,6 +75,8 @@ public sealed class PocReportCatalogTests
             pages.SelectMany(page => page).Select(row => row.Sequence));
     }
 
+    /// <summary>验证 Read Export Pages Paged Preview Returns All Batches In Stable Order 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ReadExportPages_PagedPreviewReturnsAllBatchesInStableOrder()
     {

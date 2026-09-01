@@ -66,6 +66,10 @@ const state = reactive({
 });
 
 // 打开弹窗
+/**
+ * 准备 helpView 的 open Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = () => {
 	state.isShowDialog = true;
 };

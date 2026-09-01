@@ -1,6 +1,13 @@
 /** Univer 公式 facade 中本功能实际使用的最小接口，隔离第三方版本类型变化。 */
 export interface FormulaCalculationController {
+  /**
+   * 执行 formulaCalculation 的 execute Calculation 核心流程，并保持错误和结果语义稳定。
+   */
   executeCalculation(): void;
+  /**
+   * 响应 formulaCalculation 的 on Calculation Result Applied 事件，并协调相关状态和后续操作。
+   * @param timeout - timeout 对应的业务输入；具体类型和空值范围以方法签名为准。
+   */
   onCalculationResultApplied(timeout?: number): Promise<void>;
 }
 

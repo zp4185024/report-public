@@ -14,6 +14,7 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
     private long _nextId = 80_000;
     private readonly SqlSugarClient _database;
 
+    /// <summary>初始化 PocExternalParameterSourceServiceTests 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocExternalParameterSourceServiceTests()
     {
         _database = new SqlSugarClient(new ConnectionConfig
@@ -51,6 +52,8 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
         _database.CodeFirst.InitTables<PocExternalParameterSource>();
     }
 
+    /// <summary>验证 List Definitions Seeds Safe His Definition 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ListDefinitions_SeedsSafeHisDefinition()
     {
@@ -69,6 +72,8 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
             field.Code == "hisOrganizeName" && field.ResponsePath == "content.organName");
     }
 
+    /// <summary>验证 Resolve Async Sends Optional His Token In Body And Maps Requested Fields 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ResolveAsync_SendsOptionalHisTokenInBodyAndMapsRequestedFields()
     {
@@ -106,6 +111,8 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
             JObject.Parse(capturedBody!)["content"]!["token"]!.Value<string>());
     }
 
+    /// <summary>验证 Resolve Async Allows Missing Optional His Token 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ResolveAsync_AllowsMissingOptionalHisToken()
     {
@@ -124,6 +131,8 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
         Assert.Empty(JObject.Parse(capturedBody!).Properties());
     }
 
+    /// <summary>验证 Test Async Supports Embedded Header And Body Placeholders 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task TestAsync_SupportsEmbeddedHeaderAndBodyPlaceholders()
     {
@@ -163,6 +172,8 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
         Assert.Equal("李医生", result.Values["displayName"]);
     }
 
+    /// <summary>验证 Test Async Merges Generic Parameters With Configured Body And Headers 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task TestAsync_MergesGenericParametersWithConfiguredBodyAndHeaders()
     {
@@ -171,6 +182,7 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
         var service = CreateService(async request =>
         {
             captured = request;
+            // 第一阶段：调用 TestAsync_MergesGenericParametersWithConfiguredBodyAndHeaders 依赖的异步能力，等待并校验返回数据。
             body = await request.Content!.ReadAsStringAsync();
             return JsonResponse("{\"payload\":{\"result\":\"ok\"}}");
         });
@@ -196,6 +208,7 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
             [new PocExternalParameterFieldDefinition(
                 "result", "结果", "string", "payload.result")]));
 
+        // 第2阶段：调用 TestAsync_MergesGenericParametersWithConfiguredBodyAndHeaders 依赖的异步能力，等待并校验返回数据。
         var result = await service.TestAsync(
             "generic_request",
             new PocExternalParameterSourceTestRequest(new Dictionary<string, string?>
@@ -216,6 +229,8 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
         Assert.Equal("财务科", requestBody["payload"]!["department"]!.Value<string>());
     }
 
+    /// <summary>验证 Test Async Rejects Missing Required Dynamic Url Parameter Before Sending 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task TestAsync_RejectsMissingRequiredDynamicUrlParameterBeforeSending()
     {
@@ -249,6 +264,8 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
         Assert.False(sent);
     }
 
+    /// <summary>验证 Test Async Reports External Business Message When Mapped Content Is Empty 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task TestAsync_ReportsExternalBusinessMessageWhenMappedContentIsEmpty()
     {
@@ -268,21 +285,32 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
         Assert.Contains("token无效或用户不存在", exception.Message);
     }
 
+    /// <summary>释放 PocExternalParameterSourceServiceTests 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _database.Dispose();
     }
 
+    /// <summary>构建 PocExternalParameterSourceServiceTests 所需的 Create Service 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="response">上一步或远程调用返回的处理结果。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private PocExternalParameterSourceService CreateService(
         Func<HttpRequestMessage, Task<HttpResponseMessage>> response) =>
         new(
             new PocExternalParameterSourceStore(_database),
             new StubHttpClientFactory(new HttpClient(new StubHttpMessageHandler(response))));
 
+    /// <summary>构建 PocExternalParameterSourceServiceTests 所需的 Create Service 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="response">上一步或远程调用返回的处理结果。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private PocExternalParameterSourceService CreateService(
         Func<HttpRequestMessage, HttpResponseMessage> response) =>
         CreateService(request => Task.FromResult(response(request)));
 
+    /// <summary>负责 PocExternalParameterSourceServiceTests 的 External Parameter 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="fieldCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocParameterDefinition ExternalParameter(string code, string fieldCode) =>
         new(
             code,
@@ -296,6 +324,9 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
             SourceCode: "his",
             SourceFieldCode: fieldCode);
 
+    /// <summary>负责 PocExternalParameterSourceServiceTests 的 Json Response 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="json">json 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static HttpResponseMessage JsonResponse(string json) =>
         new(HttpStatusCode.OK)
         {
@@ -304,12 +335,19 @@ public sealed class PocExternalParameterSourceServiceTests : IDisposable
 
     private sealed class StubHttpClientFactory(HttpClient client) : IHttpClientFactory
     {
+        /// <summary>构建 PocExternalParameterSourceServiceTests 所需的 Create Client 内容，并保证生成结果符合调用约定。</summary>
+        /// <param name="name">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public HttpClient CreateClient(string name) => client;
     }
 
     private sealed class StubHttpMessageHandler(
         Func<HttpRequestMessage, Task<HttpResponseMessage>> response) : HttpMessageHandler
     {
+        /// <summary>执行 PocExternalParameterSourceServiceTests 的 Send Async 核心流程，并保持错误和结果语义稳定。</summary>
+        /// <param name="request">本次操作使用的输入数据。</param>
+        /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken) => response(request);

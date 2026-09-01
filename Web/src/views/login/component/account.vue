@@ -185,11 +185,20 @@ onUnmounted(() => {
 });
 
 // 检测大小写按键
+/**
+ * 响应 account 的 handle Key Press 事件，并协调相关状态和后续操作。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleKeyPress = (e: KeyboardEvent) => {
 	if (e.getModifierState != undefined) state.capsLockVisible = e.getModifierState('CapsLock');
 };
 
 // 获取验证码
+/**
+ * 查询或读取 account 所需的 get Captcha 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getCaptcha = async () => {
 	if (!state.captchaEnabled) return;
 
@@ -208,6 +217,10 @@ const currentTime = computed(() => {
 });
 
 // 登录
+/**
+ * 响应 account 的 on Sign In 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSignIn = async () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return false;
@@ -242,6 +255,11 @@ const onSignIn = async () => {
 };
 
 // 保持Token并初始化路由
+/**
+ * 更新 account 的 save Token And Init Routes 状态，并同步相关业务数据。
+ * @param accessToken - 调用受保护接口或校验请求身份所需的访问令牌。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const saveTokenAndInitRoutes = async (accessToken: string | any) => {
 	// 缓存token
 	Local.set(accessTokenKey, accessToken);
@@ -254,6 +272,11 @@ const saveTokenAndInitRoutes = async (accessToken: string | any) => {
 };
 
 // 登录成功后的跳转
+/**
+ * 负责 account 的 sign In Success 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param isNoPower - isNoPower 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const signInSuccess = (isNoPower: boolean | undefined) => {
 	if (isNoPower) {
 		ElMessage.warning('抱歉，您没有登录权限');
@@ -280,6 +303,10 @@ const signInSuccess = (isNoPower: boolean | undefined) => {
 };
 
 // 打开旋转验证
+/**
+ * 准备 account 的 open Rotate Verify 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openRotateVerify = () => {
 	state.rotateVerifyVisible = true;
 	state.isPassRotate = false;
@@ -287,6 +314,10 @@ const openRotateVerify = () => {
 };
 
 // 通过旋转验证
+/**
+ * 校验并规范化 account 的 pass Rotate Verify 输入，无效时返回安全默认值或明确错误。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const passRotateVerify = () => {
 	state.rotateVerifyVisible = false;
 	state.isPassRotate = true;
@@ -294,6 +325,10 @@ const passRotateVerify = () => {
 };
 
 // 登录处理
+/**
+ * 响应 account 的 handle Sign In 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSignIn = () => {
 	if (!state.ruleForm.account) {
 		accountRef.value?.focus();

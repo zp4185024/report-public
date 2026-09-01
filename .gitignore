@@ -8,6 +8,8 @@ bin-release/
 .settings/
 .codex-run/
 .playwright-cli/
+.playwright-mcp/
+output/
 output/playwright/
 
 # Executables

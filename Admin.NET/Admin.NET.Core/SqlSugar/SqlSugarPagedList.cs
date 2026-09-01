@@ -53,14 +53,12 @@ public class SqlSugarPagedList<TEntity>
 /// </summary>
 public static class SqlSugarPagedExtensions
 {
-    /// <summary>
-    /// 分页拓展
-    /// </summary>
+    /// <summary>根据 SqlSugarPagedExtensions 当前输入计算 To Paged List 结果，并按方法声明的类型返回。</summary>
     /// <param name="query"><see cref="ISugarQueryable{TEntity}"/>对象</param>
     /// <param name="pageIndex">当前页码，从1开始</param>
     /// <param name="pageSize">页码容量</param>
     /// <param name="expression">查询结果 Select 表达式</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static SqlSugarPagedList<TResult> ToPagedList<TEntity, TResult>(this ISugarQueryable<TEntity> query, int pageIndex, int pageSize,
         Expression<Func<TEntity, TResult>> expression)
     {
@@ -69,13 +67,11 @@ public static class SqlSugarPagedExtensions
         return CreateSqlSugarPagedList(items, total, pageIndex, pageSize);
     }
 
-    /// <summary>
-    /// 分页拓展
-    /// </summary>
+    /// <summary>根据 SqlSugarPagedExtensions 当前输入计算 To Paged List 结果，并按方法声明的类型返回。</summary>
     /// <param name="query"><see cref="ISugarQueryable{TEntity}"/>对象</param>
     /// <param name="pageIndex">当前页码，从1开始</param>
     /// <param name="pageSize">页码容量</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static SqlSugarPagedList<TEntity> ToPagedList<TEntity>(this ISugarQueryable<TEntity> query, int pageIndex, int pageSize)
     {
         var total = 0;
@@ -83,14 +79,12 @@ public static class SqlSugarPagedExtensions
         return CreateSqlSugarPagedList(items, total, pageIndex, pageSize);
     }
 
-    /// <summary>
-    /// 分页拓展
-    /// </summary>
+    /// <summary>调用 SqlSugarPagedExtensions 的异步依赖完成 To Paged List Async 操作，并按当前返回类型传递处理结果。</summary>
     /// <param name="query"><see cref="ISugarQueryable{TEntity}"/>对象</param>
     /// <param name="pageIndex">当前页码，从1开始</param>
     /// <param name="pageSize">页码容量</param>
     /// <param name="expression">查询结果 Select 表达式</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<SqlSugarPagedList<TResult>> ToPagedListAsync<TEntity, TResult>(this ISugarQueryable<TEntity> query, int pageIndex, int pageSize,
         Expression<Func<TEntity, TResult>> expression)
     {
@@ -99,13 +93,11 @@ public static class SqlSugarPagedExtensions
         return CreateSqlSugarPagedList(items, total, pageIndex, pageSize);
     }
 
-    /// <summary>
-    /// 分页拓展
-    /// </summary>
+    /// <summary>调用 SqlSugarPagedExtensions 的异步依赖完成 To Paged List Async 操作，并按当前返回类型传递处理结果。</summary>
     /// <param name="query"><see cref="ISugarQueryable{TEntity}"/>对象</param>
     /// <param name="pageIndex">当前页码，从1开始</param>
     /// <param name="pageSize">页码容量</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<SqlSugarPagedList<TEntity>> ToPagedListAsync<TEntity>(this ISugarQueryable<TEntity> query, int pageIndex, int pageSize)
     {
         RefAsync<int> total = 0;
@@ -113,13 +105,11 @@ public static class SqlSugarPagedExtensions
         return CreateSqlSugarPagedList(items, total, pageIndex, pageSize);
     }
 
-    /// <summary>
-    /// 脱敏分页拓展
-    /// </summary>
+    /// <summary>调用 SqlSugarPagedExtensions 的异步依赖完成 To Paged List Data Mask Async 操作，并按当前返回类型传递处理结果。</summary>
     /// <param name="query"><see cref="ISugarQueryable{TEntity}"/>对象</param>
     /// <param name="pageIndex">当前页码，从1开始</param>
     /// <param name="pageSize">页码容量</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<SqlSugarPagedList<TEntity>> ToPagedListDataMaskAsync<TEntity>(this ISugarQueryable<TEntity> query, int pageIndex, int pageSize) where TEntity : class
     {
         RefAsync<int> total = 0;
@@ -128,13 +118,11 @@ public static class SqlSugarPagedExtensions
         return CreateSqlSugarPagedList(items, total, pageIndex, pageSize);
     }
 
-    /// <summary>
-    /// 脱敏分页拓展
-    /// </summary>
+    /// <summary>遍历 SqlSugarPagedExtensions 当前数据并执行 To Paged List Data Mask 转换，生成调用方需要的结果集合。</summary>
     /// <param name="list">集合对象</param>
     /// <param name="pageIndex">当前页码，从1开始</param>
     /// <param name="pageSize">页码容量</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static SqlSugarPagedList<TEntity> ToPagedListDataMask<TEntity>(this IEnumerable<TEntity> list, int pageIndex, int pageSize) where TEntity : class
     {
         var total = list.Count();
@@ -143,13 +131,11 @@ public static class SqlSugarPagedExtensions
         return CreateSqlSugarPagedList(items, total, pageIndex, pageSize);
     }
 
-    /// <summary>
-    /// 分页拓展
-    /// </summary>
+    /// <summary>根据 SqlSugarPagedExtensions 当前输入计算 To Paged List 结果，并按方法声明的类型返回。</summary>
     /// <param name="list">集合对象</param>
     /// <param name="pageIndex">当前页码，从1开始</param>
     /// <param name="pageSize">页码容量</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static SqlSugarPagedList<TEntity> ToPagedList<TEntity>(this IEnumerable<TEntity> list, int pageIndex, int pageSize)
     {
         var total = list.Count();
@@ -157,15 +143,13 @@ public static class SqlSugarPagedExtensions
         return CreateSqlSugarPagedList(items, total, pageIndex, pageSize);
     }
 
-    /// <summary>
-    /// 创建 <see cref="SqlSugarPagedList{TEntity}"/> 对象
-    /// </summary>
+    /// <summary>构建 SqlSugarPagedList 所需的 Create Sql Sugar Paged List 内容，并保证生成结果符合调用约定。</summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <param name="items">分页内容的对象集合</param>
     /// <param name="total">总条数</param>
     /// <param name="pageIndex">当前页码，从1开始</param>
     /// <param name="pageSize">页码容量</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static SqlSugarPagedList<TEntity> CreateSqlSugarPagedList<TEntity>(IEnumerable<TEntity> items, int total, int pageIndex, int pageSize)
     {
         var totalPages = pageSize > 0 ? (int)Math.Ceiling(total / (double)pageSize) : 0;

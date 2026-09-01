@@ -17,6 +17,10 @@ public class DatabaseLoggingWriter : IDatabaseLoggingWriter, IDisposable
     private readonly IServiceScope _serviceScope;
     private readonly SqlSugarScopeProvider _db;
 
+    /// <summary>初始化 DatabaseLoggingWriter 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="serviceScopeFactory">当前方法执行时使用的 serviceScopeFactory 输入值。</param>
+    /// <param name="logger">当前方法执行时使用的 logger 输入值。</param>
+    /// <param name="eventPublisher">当前方法执行时使用的 eventPublisher 输入值。</param>
     public DatabaseLoggingWriter(
         IServiceScopeFactory serviceScopeFactory,
         ILogger<DatabaseLoggingWriter> logger,
@@ -31,9 +35,7 @@ public class DatabaseLoggingWriter : IDatabaseLoggingWriter, IDisposable
         _db = SqlSugarSetup.LogDb;
     }
 
-    /// <summary>
-    /// 批量写入日志
-    /// </summary>
+    /// <summary>更新 DatabaseLoggingWriter 的 Write Async 状态，并同步相关业务数据。</summary>
     /// <param name="batchLogMsgs">批量日志消息列表</param>
     /// <param name="flush">是否立即刷新</param>
     public async Task WriteAsync(IReadOnlyList<LogMessage> batchLogMsgs, bool flush)
@@ -270,9 +272,7 @@ public class DatabaseLoggingWriter : IDatabaseLoggingWriter, IDisposable
         Visit       // 访问日志（登录/退出）
     }
 
-    /// <summary>
-    /// 释放服务作用域
-    /// </summary>
+    /// <summary>释放 DatabaseLoggingWriter 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _serviceScope.Dispose();

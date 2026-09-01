@@ -17,6 +17,10 @@ const props = defineProps({
 	},
 	param: {
 		type: Object,
+		/**
+		 * 为 param 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => {},
 	},
 	url: {
@@ -45,10 +49,19 @@ watch(
 );
 
 // 上传文件
+/**
+ * 响应 index 的 on Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onClick = () => {
 	reffile.value.click();
 };
 
+/**
+ * 校验 index 的 file Change 文件输入，读取内容并更新目标数据或预览状态。
+ * @param event - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function fileChange(event: any) {
 	if (!event.currentTarget.files || event.currentTarget.files.length == 0) {
 		return;

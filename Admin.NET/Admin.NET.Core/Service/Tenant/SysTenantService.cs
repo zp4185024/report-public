@@ -27,6 +27,20 @@ public class SysTenantService : IDynamicApiController, ITransient
     private readonly SysCacheService _sysCacheService;
     private readonly UploadOptions _uploadOptions;
 
+    /// <summary>初始化 SysTenantService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysUserExtOrgRep">sysUserExtOrgRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysTenantMenuRep">sysTenantMenuRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysRoleMenuRep">sysRoleMenuRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userRoleRep">userRoleRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysTenantRep">sysTenantRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRep">sysUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysRoleRep">sysRoleRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysOrgRep">sysOrgRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysPosRep">sysPosRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="uploadOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="sysRoleMenuService">sysRoleMenuService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysConfigService">sysConfigService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysTenantService(
         SqlSugarRepository<SysUserExtOrg> sysUserExtOrgRep,
         SqlSugarRepository<SysTenantMenu> sysTenantMenuRep,
@@ -60,8 +74,8 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取租户分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取租户分页列表")]
     public async Task<SqlSugarPagedList<TenantOutput>> Page(PageTenantInput input)
     {
@@ -96,10 +110,8 @@ public class SysTenantService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 获取租户列表
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysTenantService 所需的 Get List 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("获取租户列表"), HttpGet]
     public async Task<dynamic> GetList()
@@ -118,7 +130,7 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取当前租户系统信息
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<SysTenant> GetCurrentTenantSysInfo()
     {
@@ -136,18 +148,16 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取库隔离的租户列表
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<SysTenant>> GetTenantDbList()
     {
         return await _sysTenantRep.GetListAsync(u => u.TenantType == TenantTypeEnum.Db && u.Status == StatusEnum.Enable);
     }
 
-    /// <summary>
-    /// 增加租户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysTenantService 所需的 Add Tenant 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加租户")]
@@ -195,12 +205,10 @@ public class SysTenantService : IDynamicApiController, ITransient
         await CacheTenant();
     }
 
-    /// <summary>
-    /// 设置logo
-    /// </summary>
-    /// <param name="tenant"></param>
-    /// <param name="logoBase64"></param>
-    /// <param name="logoFileName"></param>
+    /// <summary>更新 SysTenantService 的 Set Logo Url 状态，并同步相关业务数据。</summary>
+    /// <param name="tenant">tenant 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="logoBase64">logoBase64 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="logoFileName">需要读取、校验或转换的业务值。</param>
     [NonAction]
     public void SetLogoUrl(SysTenant tenant, string logoBase64, string logoFileName)
     {
@@ -239,11 +247,9 @@ public class SysTenantService : IDynamicApiController, ITransient
         tenant.Logo = $"/upload/{fileName}";
     }
 
-    /// <summary>
-    /// 设置租户状态 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysTenantService 的 Set Status 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("设置租户状态")]
     public async Task<int> SetStatus(TenantInput input)
     {
@@ -256,10 +262,8 @@ public class SysTenantService : IDynamicApiController, ITransient
         return await _sysTenantRep.AsUpdateable(tenant).UpdateColumns(u => new { u.Status }).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 新增租户初始化
-    /// </summary>
-    /// <param name="tenant"></param>
+    /// <summary>调用 SysTenantService 的异步依赖完成 Init New Tenant 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="tenant">tenant 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private async Task InitNewTenant(TenantOutput tenant)
     {
         var tenantId = tenant.Id;
@@ -310,7 +314,7 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// 获取租户默认菜单
     /// </summary>
     /// <param name="ignoreHome">如果某租户需要定制主页，可以忽略</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public IEnumerable<SysTenantMenu> GetTenantDefaultMenuList(bool ignoreHome = false)
     {
@@ -359,7 +363,7 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// 获取种子数据类型
     /// </summary>
     /// <param name="config">数据库连接配置</param>
-    /// <param name="typeName"></param>
+    /// <param name="typeName">需要读取、校验或转换的业务值。</param>
     /// <returns>种子数据类型列表</returns>
     [NonAction]
     private List<Type> GetSeedDataTypes(DbConnectionConfig config, string typeName)
@@ -374,7 +378,7 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取租户默认菜单
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public IEnumerable<SysTenantMenu> GetBaseRoleMenuIdList()
     {
@@ -397,11 +401,9 @@ public class SysTenantService : IDynamicApiController, ITransient
         });
     }
 
-    /// <summary>
-    /// 删除租户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysTenantService 中与 Delete Tenant 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除租户")]
@@ -440,11 +442,9 @@ public class SysTenantService : IDynamicApiController, ITransient
         await _sysPosRep.AsDeleteable().Where(u => u.TenantId == input.Id).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 更新租户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysTenantService 的 Update Tenant 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新租户")]
     public async Task UpdateTenant(UpdateTenantInput input)
@@ -496,11 +496,9 @@ public class SysTenantService : IDynamicApiController, ITransient
         await CacheTenant(input.Id);
     }
 
-    /// <summary>
-    /// 授权租户菜单 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysTenantService 的异步依赖完成 Grant Menu 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("授权租户菜单")]
     public async Task GrantMenu(TenantMenuInput input)
@@ -555,8 +553,8 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取租户菜单Id集合 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取租户菜单Id集合")]
     public async Task<List<long>> GetTenantMenuList([FromQuery] BaseIdInput input)
     {
@@ -567,8 +565,8 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 重置租户管理员密码 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("重置租户管理员密码")]
     public async Task<string> ResetPwd(TenantUserInput input)
     {
@@ -578,11 +576,9 @@ public class SysTenantService : IDynamicApiController, ITransient
         return password;
     }
 
-    /// <summary>
-    /// 切换租户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysTenantService 的 Change Tenant 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("切换租户")]
     public async Task<LoginOutput> ChangeTenant(BaseIdInput input)
@@ -595,11 +591,9 @@ public class SysTenantService : IDynamicApiController, ITransient
         return await GetAccessTokenInNotSingleLogin(user);
     }
 
-    /// <summary>
-    /// 进入租管端 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysTenantService 的异步依赖完成 Go Tenant 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("进入租管端")]
     public async Task<LoginOutput> GoTenant(BaseIdInput input)
     {
@@ -611,8 +605,8 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 同步授权菜单(用于版本更新后，同步授权数据) 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("同步授权菜单")]
     public async Task SyncGrantMenu(BaseIdInput input)
@@ -637,8 +631,8 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 在非单用户登录模式下获取登录令牌
     /// </summary>
-    /// <param name="user"></param>
-    /// <returns></returns>
+    /// <param name="user">user 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<LoginOutput> GetAccessTokenInNotSingleLogin(SysUser user)
     {
@@ -656,11 +650,9 @@ public class SysTenantService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 缓存所有租户
-    /// </summary>
-    /// <param name="tenantId"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysTenantService 的异步依赖完成 Cache Tenant 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="tenantId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task CacheTenant(long tenantId = 0)
     {
@@ -677,11 +669,9 @@ public class SysTenantService : IDynamicApiController, ITransient
         _sysCacheService.Set(CacheConst.KeyTenant, tenantList);
     }
 
-    /// <summary>
-    /// 创建租户数据库 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysTenantService 所需的 Create Db 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "CreateDb"), HttpPost]
     [DisplayName("创建租户数据库")]
     public async Task CreateDb(TenantInput input)
@@ -716,8 +706,8 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取租户下的用户列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取租户下的用户列表")]
     public async Task<List<SysUser>> UserList(TenantIdInput input)
     {
@@ -727,7 +717,7 @@ public class SysTenantService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取租户数据库连接
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public SqlSugarScopeProvider GetTenantDbConnectionScope(long tenantId)
     {

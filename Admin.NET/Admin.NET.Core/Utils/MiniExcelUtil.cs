@@ -16,7 +16,7 @@ public static class MiniExcelUtil
     /// <summary>
     /// 导出模板Excel
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IActionResult> ExportExcelTemplate<T>(string fileName = null) where T : class, new()
     {
         var values = Array.Empty<T>();
@@ -35,8 +35,8 @@ public static class MiniExcelUtil
     /// <summary>
     /// 获取导入数据Excel
     /// </summary>
-    /// <param name="file"></param>
-    /// <returns></returns>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IEnumerable<T>> GetImportExcelData<T>([Required] IFormFile file) where T : class, new()
     {
         using MemoryStream stream = new MemoryStream();
@@ -48,7 +48,7 @@ public static class MiniExcelUtil
     /// <summary>
     /// 获取导出数据excel地址
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<string> GetExportDataExcelUrl<T>(IEnumerable<T> exportData) where T : class, new()
     {
         var fileName = string.Format("{0}.xlsx", YitIdHelper.NextId());

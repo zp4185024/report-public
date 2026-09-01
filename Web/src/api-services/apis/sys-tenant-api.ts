@@ -727,6 +727,8 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTenantAddPost(body?: AddTenantInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysTenantApiFp 依赖的异步能力，等待并校验返回数据。
+            // 第一阶段：调用 SysTenantApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -758,6 +760,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantCreateDbPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysTenantApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -769,6 +772,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTenantDeletePost(body?: DeleteTenantInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第2阶段：调用 SysTenantApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantDeletePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -786,6 +790,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantGoTenantPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysTenantApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -810,6 +815,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTenantListGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultObject>>> {
+            // 第3阶段：调用 SysTenantApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantListGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -824,6 +830,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTenantPagePost(body?: PageTenantInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSqlSugarPagedListTenantOutput>>> {
+            // 第4阶段：调用 SysTenantApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantPagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -841,6 +848,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantResetPwdPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysTenantApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -855,6 +863,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantSetStatusPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第5阶段：整理 SysTenantApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -883,6 +892,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantTenantMenuListGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第5阶段：整理 SysTenantApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -894,6 +904,7 @@ export const SysTenantApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTenantUpdatePost(body?: UpdateTenantInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第6阶段：调用 SysTenantApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTenantApiAxiosParamCreator(configuration).apiSysTenantUpdatePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -931,6 +942,7 @@ export const SysTenantApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysTenantAddPost(body?: AddTenantInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysTenantApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTenantApiFp(configuration).apiSysTenantAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -961,6 +973,7 @@ export const SysTenantApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysTenantDeletePost(body?: DeleteTenantInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysTenantApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTenantApiFp(configuration).apiSysTenantDeletePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1000,6 +1013,7 @@ export const SysTenantApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysTenantPagePost(body?: PageTenantInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListTenantOutput>> {
+            // 第3阶段：整理 SysTenantApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTenantApiFp(configuration).apiSysTenantPagePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1040,6 +1054,7 @@ export const SysTenantApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysTenantTenantMenuListGet(id: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListInt64>> {
+            // 第4阶段：整理 SysTenantApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTenantApiFp(configuration).apiSysTenantTenantMenuListGet(id, options).then((request) => request(axios, basePath));
         },
         /**

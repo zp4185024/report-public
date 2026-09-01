@@ -236,6 +236,7 @@ export const SysWechatUserApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWechatUserAddPost(body?: SysWechatUser, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysWechatUserApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWechatUserApiAxiosParamCreator(configuration).apiSysWechatUserAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -264,6 +265,7 @@ export const SysWechatUserApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysWechatUserPagePost(body?: WechatUserInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSqlSugarPagedListSysWechatUser>>> {
+            // 第2阶段：调用 SysWechatUserApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysWechatUserApiAxiosParamCreator(configuration).apiSysWechatUserPagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -292,6 +294,7 @@ export const SysWechatUserApiFp = function(configuration?: Configuration) {
  * @export
  */
 export const SysWechatUserApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    // 第一阶段：整理 SysWechatUserApiFactory 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -321,6 +324,7 @@ export const SysWechatUserApiFactory = function (configuration?: Configuration, 
          * @throws {RequiredError}
          */
         async apiSysWechatUserPagePost(body?: WechatUserInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysWechatUser>> {
+            // 第2阶段：整理 SysWechatUserApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysWechatUserApiFp(configuration).apiSysWechatUserPagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

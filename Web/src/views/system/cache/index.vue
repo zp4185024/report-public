@@ -60,6 +60,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.cacheData = [];
 	state.cacheValue = undefined;
@@ -92,6 +96,10 @@ const handleQuery = async () => {
 };
 
 // 删除
+/**
+ * 从 index 移除 del Cache 对应数据，并清理相关缓存、选中项或临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delCache = () => {
 	if (currentNode.value.id == 0) {
 		ElMessage.warning('禁止删除顶层缓存');
@@ -113,6 +121,10 @@ const delCache = () => {
 };
 
 // 清空
+/**
+ * 移除 index 中与 clear Cache 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clearCache = () => {
 	ElMessageBox.confirm(`确认清空所有缓存?`, '提示', {
 		confirmButtonText: '确定',
@@ -130,6 +142,11 @@ const clearCache = () => {
 };
 
 // 树点击
+/**
+ * 负责 index 的 node Click 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const nodeClick = async (node: any) => {
 	if (node.id == 0) return;
 

@@ -65,6 +65,7 @@ foreach ($field in $fieldDefinitions) {
     $fieldBySource[$field.source] = $field
 }
 
+# 查询或读取 Import-JnpfPatientFeeReport 所需的 Find My Sql Connector Assembly 数据，并按调用约定返回结果。
 function Find-MySqlConnectorAssembly {
     $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
     $candidates = @(
@@ -80,6 +81,7 @@ function Find-MySqlConnectorAssembly {
     return $assembly
 }
 
+# 执行 Import-JnpfPatientFeeReport 的 Invoke Reader Rows 核心流程，并保持错误和结果语义稳定。
 function Invoke-ReaderRows {
     param(
         [System.Data.Common.DbConnection]$Connection,
@@ -87,6 +89,7 @@ function Invoke-ReaderRows {
         [hashtable]$Parameters = @{}
     )
 
+    # 第一阶段：构造 Invoke-ReaderRows 当前步骤需要的中间数据和执行参数。
     $command = $Connection.CreateCommand()
     try {
         $command.CommandText = $CommandText
@@ -105,6 +108,7 @@ function Invoke-ReaderRows {
                 $values = [ordered]@{}
                 for ($index = 0; $index -lt $reader.FieldCount; $index++) {
                     $values[$reader.GetName($index)] = if ($reader.IsDBNull($index)) {
+                        # 第2阶段：构造 Invoke-ReaderRows 当前步骤需要的中间数据和执行参数。
                         $null
                     }
                     else {
@@ -124,6 +128,7 @@ function Invoke-ReaderRows {
     }
 }
 
+# 执行 Import-JnpfPatientFeeReport 的 Require Single Row 核心流程，并保持错误和结果语义稳定。
 function Require-SingleRow {
     param(
         [object[]]$Rows,
@@ -136,6 +141,7 @@ function Require-SingleRow {
     return $Rows[0]
 }
 
+# 将 Import-JnpfPatientFeeReport 中的 Convert Jnpf Query 输入转换为调用方需要的稳定格式。
 function Convert-JnpfQuery {
     param([string]$QueryText)
 
@@ -166,6 +172,7 @@ function Convert-JnpfQuery {
     return $converted
 }
 
+# 将 Import-JnpfPatientFeeReport 中的 Convert Jnpf Snapshot 输入转换为调用方需要的稳定格式。
 function Convert-JnpfSnapshot {
     param(
         [string]$SnapshotJson,
@@ -174,6 +181,7 @@ function Convert-JnpfSnapshot {
 
     $snapshot = $SnapshotJson | ConvertFrom-Json -AsHashtable
     if (-not $snapshot.ContainsKey('sheets') -or -not $snapshot.ContainsKey('sheetOrder')) {
+        # 第一阶段：根据 Convert-JnpfSnapshot 当前分支转换输入数据，并保存该阶段产生的中间结果。
         throw 'JNPF 模板快照缺少 sheets 或 sheetOrder。'
     }
 
@@ -207,6 +215,7 @@ function Convert-JnpfSnapshot {
                         if (-not $fieldBySource.ContainsKey($sourceField)) {
                             throw "模板使用了尚未映射的字段 '$sourceField'。"
                         }
+                        # 第2阶段：构造 Convert-JnpfSnapshot 当前步骤需要的中间数据和执行参数。
                         $field = $fieldBySource[$sourceField]
                         $cell.v = "{{detail.$($field.code)}}"
                         $detailCoordinates += [pscustomobject]@{
@@ -236,6 +245,7 @@ function Convert-JnpfSnapshot {
     }
     $locations = @($detailCoordinates | Group-Object sheetId, row)
     if ($locations.Count -ne 1) {
+        # 第3阶段：根据 Convert-JnpfSnapshot 当前分支转换输入数据，并保存该阶段产生的中间结果。
         throw '当前报表中心只支持单工作表、单明细模板行；源模板不符合该约束。'
     }
 
@@ -263,6 +273,7 @@ function Convert-JnpfSnapshot {
     }
 }
 
+# 将 Import-JnpfPatientFeeReport 中的 Convert Field Presentations 输入转换为调用方需要的稳定格式。
 function Convert-FieldPresentations {
     param([string]$ConvertConfigJson)
 
@@ -292,6 +303,7 @@ function Convert-FieldPresentations {
     return $presentations | ConvertTo-Json -Depth 20 -Compress
 }
 
+# 构建 Import-JnpfPatientFeeReport 所需的 New Oracle Connection String 内容，并保证生成结果符合调用约定。
 function New-OracleConnectionString {
     param([pscustomobject]$DatabaseLink)
 
@@ -319,6 +331,7 @@ function New-OracleConnectionString {
         "Connection Timeout=30;$rolePart"
 }
 
+# 构建 Import-JnpfPatientFeeReport 所需的 Add Sql Parameter 内容，并保证生成结果符合调用约定。
 function Add-SqlParameter {
     param(
         [System.Data.SqlClient.SqlCommand]$Command,
@@ -337,6 +350,7 @@ function Add-SqlParameter {
     $parameter.Value = if ($null -eq $Value) { [DBNull]::Value } else { $Value }
 }
 
+# 执行 Import-JnpfPatientFeeReport 的 Invoke Target Insert 核心流程，并保持错误和结果语义稳定。
 function Invoke-TargetInsert {
     param(
         [string]$ConnectionString,
@@ -346,6 +360,7 @@ function Invoke-TargetInsert {
     $connection = [System.Data.SqlClient.SqlConnection]::new($ConnectionString)
     try {
         $connection.Open()
+        # 第一阶段：检查 Invoke-TargetInsert 当前条件，并按匹配分支执行对应处理。
         if ($connection.Database -cne 'hd_report_center') {
             throw "实际连接数据库为 '$($connection.Database)'，拒绝写入。"
         }
@@ -384,6 +399,7 @@ SELECT
                 throw '目标库已存在相同的数据源、数据集或报表编码，拒绝覆盖。'
             }
 
+            # 第2阶段：构造 Invoke-TargetInsert 当前步骤需要的中间数据和执行参数。
             $now = [DateTime]::Now
             $dataSource = $connection.CreateCommand()
             $dataSource.Transaction = $transaction
@@ -422,6 +438,7 @@ VALUES
 
             $report = $connection.CreateCommand()
             $report.Transaction = $transaction
+            # 第3阶段：构造 Invoke-TargetInsert 当前步骤需要的中间数据和执行参数。
             $report.CommandText = @'
 INSERT INTO dbo.RcReport
     (Id, Code, Name, SheetName, DatasetCode, PreviewSettingsJson,
@@ -460,6 +477,7 @@ VALUES
                 Add-SqlParameter $parameter '@ReportCode' NVarChar $Migration.ReportCode 64
                 Add-SqlParameter $parameter '@Code' NVarChar $definition.code 64
                 Add-SqlParameter $parameter '@DisplayName' NVarChar $definition.displayName 128
+                # 第4阶段：根据 Invoke-TargetInsert 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 Add-SqlParameter $parameter '@DataType' NVarChar $definition.dataType 32
                 Add-SqlParameter $parameter '@ControlType' NVarChar $definition.controlType 32
                 Add-SqlParameter $parameter '@UrlKey' NVarChar $definition.urlKey 64
@@ -498,6 +516,7 @@ SELECT
             Add-SqlParameter $verify '@DataSourceCode' NVarChar $Migration.DataSourceCode 64
             Add-SqlParameter $verify '@DatasetCode' NVarChar $Migration.DatasetCode 64
             Add-SqlParameter $verify '@ReportCode' NVarChar $Migration.ReportCode 64
+            # 第5阶段：构造 Invoke-TargetInsert 当前步骤需要的中间数据和执行参数。
             $reader = $verify.ExecuteReader()
             try {
                 if (-not $reader.Read()) {

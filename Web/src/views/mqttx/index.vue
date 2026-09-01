@@ -354,6 +354,10 @@ const connection = reactive({
 	isAC: null, //强电true
 });
 // 初始化主题
+/**
+ * 验证 init topic 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const init_topic = () => {
 	let st = 'mqtt/admintnet/#0#/out'; //订阅主题
 	let pt = 'mqtt/admintnet/#0#/into'; //发布主题
@@ -370,11 +374,21 @@ const init_topic = () => {
 };
 
 // 默认注册包同步和传感器包名一致，反之不动
+/**
+ * 更新 index 的 syncdhtreg 状态，并把变化同步到关联组件或业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const syncdhtreg = () => {
 	connection.dhtRegpack = connection.repacket;
 };
 
 // 字符串替换模拟  string.format(str,ar1,arn)
+/**
+ * 负责 index 的 string Format 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param formatted - formatted 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param args - args 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const stringFormat = (formatted, args) => {
 	for (let i = 0; i < args.length; i++) {
 		let regexp = new RegExp('\\{' + i + '\\}', 'gi');
@@ -402,6 +416,10 @@ const publish = ref({
 	payload: '55 AA AA AA AA 91 CF', //'{ "msg": "Hello, I am browser." }',
 });
 
+/**
+ * 初始化 index 的 init Data 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initData = () => {
 	client.value = {
 		connected: false,
@@ -411,6 +429,10 @@ const initData = () => {
 	subscribedSuccess.value = false;
 };
 
+/**
+ * 响应 index 的 handle On Re Connect 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleOnReConnect = () => {
 	retryTimes.value++;
 	connection.clientId = 'emqx_vue3_' + Math.random().toString(16).substring(2, 8);
@@ -438,6 +460,10 @@ const handleOnReConnect = () => {
  * please refer to https://github.com/mqttjs/MQTT.js#mqttconnecturl-options
  */
 // create MQTT connection 创建连接
+/**
+ * 构建 index 所需的 create Connection 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const createConnection = () => {
 	try {
 		btnLoadingType.value = 'connect';
@@ -488,6 +514,12 @@ const createConnection = () => {
 };
 
 // 处理事件
+/**
+ * 校验 index 的 do Action 输入后执行核心操作，并把成功或失败结果交给调用方。
+ * @param t - t 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param msg - msg 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const doAction = (t, msg) => {
 	let res = JSON.parse(msg.toString()); //必须规范的json格式否则出错，双引号不能是单引号；；；后不安全但强大 eval('(' + message.toString() + ')'); //JSON.parse(message.toString());//json对象
 
@@ -539,6 +571,11 @@ const doAction = (t, msg) => {
 };
 
 // 处理开关状态(自定义的指令，需要修改为您自己的指令)
+/**
+ * 负责 index 的 op 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param cmd - cmd 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const op = (cmd: any) => {
 	if (cmd == '55 AA AA AA AA 82 01 01') {
 		connection.ch1_Status = true;
@@ -546,6 +583,7 @@ const op = (cmd: any) => {
 	if (cmd == '55 AA AA AA AA 82 01 00') {
 		connection.ch1_Status = false;
 	}
+	// 第一阶段：检查 op 当前条件，并按匹配分支执行对应处理。
 	if (cmd == '55 AA AA AA AA 82 02 01') {
 		connection.ch2_Status = true;
 	}
@@ -573,6 +611,7 @@ const op = (cmd: any) => {
 	if (cmd == '55 AA AA AA AA 82 A4 00') {
 		connection.ch1_Status = false;
 		connection.ch2_Status = false;
+		// 第2阶段：更新 op 当前分支对应的业务状态，并保持关联数据一致。
 		connection.ch3_Status = false;
 		connection.ch4_Status = false;
 	}
@@ -597,6 +636,10 @@ const op = (cmd: any) => {
 };
 
 // 自动同步滚动（建议延时执行）textarea:any=null
+/**
+ * 更新 index 的 sync Bottom 状态，并把变化同步到关联组件或业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const syncBottom = () => {
 	const textarea = document.getElementById('recv');
 	if (textarea) {
@@ -606,6 +649,10 @@ const syncBottom = () => {
 
 // subscribe topic 开始订阅
 // https://github.com/mqttjs/MQTT.js#mqttclientsubscribetopictopic-arraytopic-object-options-callback
+/**
+ * 校验 index 的 do Subscribe 输入后执行核心操作，并把成功或失败结果交给调用方。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const doSubscribe = () => {
 	btnLoadingType.value = 'subscribe';
 	const { topic, qos } = subscription.value;
@@ -625,6 +672,10 @@ const doSubscribe = () => {
 
 // unsubscribe topic 取消订阅
 // https://github.com/mqttjs/MQTT.js#mqttclientunsubscribetopictopic-array-options-callback
+/**
+ * 校验 index 的 do Un Subscribe 输入后执行核心操作，并把成功或失败结果交给调用方。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const doUnSubscribe = () => {
 	btnLoadingType.value = 'unsubscribe';
 	const { topic, qos } = subscription.value;
@@ -641,6 +692,12 @@ const doUnSubscribe = () => {
 
 // publish message发布消息
 // https://github.com/mqttjs/MQTT.js#mqttclientpublishtopic-message-options-callback
+/**
+ * 校验 index 的 do Publish 输入后执行核心操作，并把成功或失败结果交给调用方。
+ * @param b - b 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param t - t 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const doPublish = (b, t) => {
 	//btnLoadingType.value = "publish";
 	const { topic, qos, payload, retain } = publish.value;
@@ -662,6 +719,11 @@ const doPublish = (b, t) => {
 };
 
 // 消息追加消息框
+/**
+ * 负责 index 的 appmessage 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param msg - msg 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const appmessage = (msg) => {
 	receivedMessages.value = receivedMessages.value.concat(
 		// 拼接字符串输出
@@ -670,6 +732,11 @@ const appmessage = (msg) => {
 };
 
 // 开关
+/**
+ * 更新 index 的 switch Light 状态，并把变化同步到关联组件或业务数据。
+ * @param cmd - cmd 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const switchLight = (cmd) => {
 	if (!client.value.connected) {
 		appmessage('尚未连接到服务!');
@@ -689,6 +756,10 @@ const switchLight = (cmd) => {
 
 // disconnect 端口连接
 // https://github.com/mqttjs/MQTT.js#mqttclientendforce-options-callback
+/**
+ * 停止 index 的 destroy Connection 流程，并释放监听器、连接或其他运行资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const destroyConnection = () => {
 	if (client.value.connected) {
 		btnLoadingType.value = 'disconnect';
@@ -707,11 +778,20 @@ const destroyConnection = () => {
 };
 
 // 端口随协议而改变
+/**
+ * 响应 index 的 handle Protocol Change 事件，并协调相关状态和后续操作。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleProtocolChange = (value: string) => {
 	connection.port = value === 'wss' ? 8084 : 8083;
 };
 
 // 清空消息框
+/**
+ * 负责 index 的 clsmsg 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clsmsg = () => {
 	receivedMessages.value = '';
 };

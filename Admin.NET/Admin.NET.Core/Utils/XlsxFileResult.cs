@@ -15,17 +15,18 @@ public class XlsxFileResult<T> : XlsxFileResultBase where T : class, new()
     public string FileDownloadName { get; }
     public ICollection<T> Data { get; }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="data"></param>
-    /// <param name="fileDownloadName"></param>
+    /// <summary>初始化 XlsxFileResult 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <param name="fileDownloadName">需要读取、校验或转换的业务值。</param>
     public XlsxFileResult(ICollection<T> data, string fileDownloadName = null)
     {
         FileDownloadName = fileDownloadName;
         Data = data;
     }
 
+    /// <summary>执行 XlsxFileResult 的 Execute Result Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task ExecuteResultAsync(ActionContext context)
     {
         var exporter = new ExcelExporter();
@@ -40,22 +41,18 @@ public class XlsxFileResult<T> : XlsxFileResultBase where T : class, new()
 /// </summary>
 public class XlsxFileResult : XlsxFileResultBase
 {
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="stream"></param>
-    /// <param name="fileDownloadName"></param>
+    /// <summary>初始化 XlsxFileResult 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="stream">stream 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="fileDownloadName">需要读取、校验或转换的业务值。</param>
     public XlsxFileResult(Stream stream, string fileDownloadName = null)
     {
         Stream = stream;
         FileDownloadName = fileDownloadName;
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="bytes"></param>
-    /// <param name="fileDownloadName"></param>
+    /// <summary>初始化 XlsxFileResult 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="bytes">bytes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="fileDownloadName">需要读取、校验或转换的业务值。</param>
 
     public XlsxFileResult(byte[] bytes, string fileDownloadName = null)
     {
@@ -66,6 +63,9 @@ public class XlsxFileResult : XlsxFileResultBase
     public Stream Stream { get; protected set; }
     public string FileDownloadName { get; protected set; }
 
+    /// <summary>执行 XlsxFileResult 的 Execute Result Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override async Task ExecuteResultAsync(ActionContext context)
     {
         await DownloadExcelFileAsync(context, Stream, FileDownloadName);
@@ -80,10 +80,10 @@ public class XlsxFileResultBase : ActionResult
     /// <summary>
     /// 下载Excel文件
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="stream"></param>
-    /// <param name="downloadFileName"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="stream">stream 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="downloadFileName">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     protected virtual async Task DownloadExcelFileAsync(ActionContext context, Stream stream, string downloadFileName)
     {
         var response = context.HttpContext.Response;

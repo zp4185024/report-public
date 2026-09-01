@@ -11,10 +11,21 @@ import type {
 
 export const localFilterSourceType = 'LocalFilter';
 
+/**
+ * 将 localDataQuery 中的 normalized Code 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizedCode(value: string): string {
   return value.trim().toUpperCase();
 }
 
+/**
+ * 按 request Value 规则筛选 localDataQuery 数据，并返回满足条件的结果。
+ * @param parameters - parameters 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param code - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function requestValue(
   parameters: Readonly<Record<string, string | null>>,
   code: string,
@@ -25,6 +36,11 @@ function requestValue(
   return matchingEntry?.[1]?.trim() || null;
 }
 
+/**
+ * 查询或读取 localDataQuery 所需的 read Multi Select Values 数据，并按调用约定返回结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function readMultiSelectValues(value: string | null | undefined): string[] {
   if (value === null || value === undefined || !value.trim()) return [];
   try {
@@ -41,15 +57,31 @@ export function readMultiSelectValues(value: string | null | undefined): string[
   return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
+/**
+ * 将 localDataQuery 中的 serialize Multi Select Values 输入转换为调用方需要的稳定格式。
+ * @param values - values 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function serializeMultiSelectValues(values: readonly string[]): string | null {
   const normalized = values.map((item) => item.trim()).filter(Boolean);
   return normalized.length === 0 ? null : JSON.stringify(normalized);
 }
 
+/**
+ * 负责 localDataQuery 的 comparable Value 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function comparableValue(value: DataRowValue): string {
   return value === null ? '' : String(value).trim().toUpperCase();
 }
 
+/**
+ * 将 localDataQuery 中的 mapped Label 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param mappings - mappings 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function mappedLabel(
   value: DataRowValue,
   mappings: readonly { value: string; label: string }[],
@@ -58,10 +90,22 @@ function mappedLabel(
   return mapping?.label ?? value;
 }
 
+/**
+ * 按 row Entry 规则筛选 localDataQuery 数据，并返回满足条件的结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param code - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function rowEntry(row: WorkloadRow, code: string): [string, DataRowValue] | undefined {
   return Object.entries(row).find(([rowCode]) => normalizedCode(rowCode) === normalizedCode(code));
 }
 
+/**
+ * 负责 localDataQuery 的 display Row 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param presentations - presentations 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function displayRow(
   row: WorkloadRow,
   presentations: readonly FieldPresentationDefinition[],
@@ -78,6 +122,11 @@ function displayRow(
   return displayed;
 }
 
+/**
+ * 校验 localDataQuery 的 is Local Filter Source 条件，并返回可供后续流程判断的结果。
+ * @param sourceType - sourceType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function isLocalFilterSource(sourceType: string): boolean {
   return sourceType.toLowerCase() === localFilterSourceType.toLowerCase();
 }
@@ -102,6 +151,12 @@ export function isLocalFilterParameter(
   );
 }
 
+/**
+ * 构造并发送 localDataQuery 的 parameter Request Values 接口请求，校验调用参数并返回类型化响应。
+ * @param parameter - parameter 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param request - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function parameterRequestValues(parameter: ParameterDefinition, request: ExecuteRequest): string[] {
   const value = requestValue(request.parameters, parameter.code);
   return parameter.controlType.toLowerCase() === 'multiselect'
@@ -109,6 +164,12 @@ function parameterRequestValues(parameter: ParameterDefinition, request: Execute
     : value === null ? [] : [value];
 }
 
+/**
+ * 按 display Parameter Value 规则筛选 localDataQuery 数据，并返回满足条件的结果。
+ * @param parameter - parameter 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function displayParameterValue(parameter: ParameterDefinition, value: string): string {
   const values = parameter.controlType.toLowerCase() === 'multiselect'
     ? readMultiSelectValues(value)

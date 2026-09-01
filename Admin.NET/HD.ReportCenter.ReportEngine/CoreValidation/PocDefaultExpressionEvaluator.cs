@@ -4,6 +4,11 @@ namespace HD.ReportCenter.ReportEngine.CoreValidation;
 
 public static class PocDefaultExpressionEvaluator
 {
+    /// <summary>解析并计算 PocDefaultExpressionEvaluator 的 Evaluate 结果，处理必要的边界条件。</summary>
+    /// <param name="expression">expression 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="now">now 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string? Evaluate(
         string? expression,
         string dataType,
@@ -17,6 +22,7 @@ public static class PocDefaultExpressionEvaluator
         var current = now ?? DateTimeOffset.Now;
         var normalized = string.Concat(expression.Where(character => !char.IsWhiteSpace(character)))
             .ToLowerInvariant();
+        // 第一阶段：构造 Evaluate 当前步骤需要的中间数据和执行参数。
         var value = normalized switch
         {
             "now()" => current,
@@ -70,6 +76,7 @@ public static class PocDefaultExpressionEvaluator
                 $"不支持默认表达式 '{expression}'。")
         };
 
+        // 第2阶段：整理 Evaluate 已计算的数据，并按方法契约返回最终结果。
         return dataType.Trim().ToLowerInvariant() switch
         {
             "date" => value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
@@ -79,6 +86,9 @@ public static class PocDefaultExpressionEvaluator
         };
     }
 
+    /// <summary>启动 PocDefaultExpressionEvaluator 的 Start Of Day 流程，并建立运行期间所需状态。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static DateTimeOffset StartOfDay(DateTimeOffset value) =>
         new(value.Year, value.Month, value.Day, 0, 0, 0, value.Offset);
 }

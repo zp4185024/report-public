@@ -27,6 +27,12 @@ public class SysAlipayService : IDynamicApiController, ITransient
     private readonly AlipayOptions _option;
     private readonly ISqlSugarClient _db;
 
+    /// <summary>初始化 SysAlipayService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="httpContext">本次操作共享的运行上下文。</param>
+    /// <param name="sysConfigService">当前方法执行时使用的 sysConfigService 输入值。</param>
+    /// <param name="webHostEnvironment">当前方法执行时使用的 webHostEnvironment 输入值。</param>
+    /// <param name="alipayOptions">控制本次处理行为的配置选项。</param>
     public SysAlipayService(
         ISqlSugarClient db,
         IHttpContextAccessor httpContext,
@@ -45,11 +51,9 @@ public class SysAlipayService : IDynamicApiController, ITransient
         foreach (var account in _option.AccountList) _alipayClientList.Add(_option.GetClient(account));
     }
 
-    /// <summary>
-    /// 获取授权信息 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysAlipayService 所需的 Get Auth Info 数据，并按调用约定返回结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonUnify]
     [AllowAnonymous]
     [DisplayName("获取授权信息")]
@@ -104,10 +108,8 @@ public class SysAlipayService : IDynamicApiController, ITransient
         return new RedirectResult(_option.AppAuthUrl + "/index.html");
     }
 
-    /// <summary>
-    /// 支付回调 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>遍历 SysAlipayService 当前数据并执行 Notify 转换，生成调用方需要的结果集合。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("支付回调")]
     [ApiDescriptionSettings(Name = "Notify"), HttpPost]
@@ -140,8 +142,8 @@ public class SysAlipayService : IDynamicApiController, ITransient
     /// <summary>
     ///  统一收单下单并支付页面接口 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("统一收单下单并支付页面接口")]
     [ApiDescriptionSettings(Name = "AlipayTradePagePay"), HttpPost]
     public string AlipayTradePagePay(AlipayTradePagePayInput input)
@@ -179,11 +181,9 @@ public class SysAlipayService : IDynamicApiController, ITransient
         return $"{_option.ServerUrl}?{response.Body}";
     }
 
-    /// <summary>
-    ///  交易预创建 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>检查 SysAlipayService 的 Alipay Pre Create 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("交易预创建")]
     [ApiDescriptionSettings(Name = "AlipayPreCreate"), HttpPost]
     public string AlipayPreCreate(AlipayPreCreateInput input)

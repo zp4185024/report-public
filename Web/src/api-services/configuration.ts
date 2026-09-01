@@ -72,6 +72,10 @@ export class Configuration {
      */
     baseOptions?: any;
 
+    /**
+     * 初始化 configuration 实例，保存依赖并建立组件所需的初始状态。
+     * @param param - 本次操作使用的输入数据。
+     */
     constructor(param: ConfigurationParameters = {}) {
         this.apiKey = param.apiKey;
         this.username = param.username;

@@ -270,6 +270,7 @@ export const DingTalkApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiDingTalkDingTalkCurrentEmployeesListAccessTokenSizeOffsetPost(accessToken: string, size: number, offset: number, body?: Array<string>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultEmployeeQueryOnJobResponse>>> {
+            // 第一阶段：调用 DingTalkApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await DingTalkApiAxiosParamCreator(configuration).apiDingTalkDingTalkCurrentEmployeesListAccessTokenSizeOffsetPost(accessToken, size, offset, body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -301,6 +302,7 @@ export const DingTalkApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiDingTalkDingTalkSendInteractiveCardsAccessTokenPost(accessToken: string, body?: DingTalkSendInteractiveCardsInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultDingTalkSendInteractiveCardsOutput>>> {
+            // 第2阶段：调用 DingTalkApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await DingTalkApiAxiosParamCreator(configuration).apiDingTalkDingTalkSendInteractiveCardsAccessTokenPost(accessToken, body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -328,6 +330,7 @@ export const DingTalkApiFp = function(configuration?: Configuration) {
  * @export
  */
 export const DingTalkApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    // 第一阶段：整理 DingTalkApiFactory 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -352,6 +355,7 @@ export const DingTalkApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiDingTalkDingTalkCurrentEmployeesRosterListAccessTokenAppAgentIdPost(accessToken: string, appAgentId: number, body?: Array<string>, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultRosterListsQueryResponse>> {
+            // 第2阶段：整理 DingTalkApiFactory 已计算的数据，并按方法契约返回最终结果。
             return DingTalkApiFp(configuration).apiDingTalkDingTalkCurrentEmployeesRosterListAccessTokenAppAgentIdPost(accessToken, appAgentId, body, options).then((request) => request(axios, basePath));
         },
         /**

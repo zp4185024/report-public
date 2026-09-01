@@ -18,19 +18,20 @@ public class SysEmailService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysTenant> _sysTenantRep;
     private readonly EmailOptions _emailOptions;
 
+    /// <summary>初始化 SysEmailService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="emailOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="sysTenantRep">sysTenantRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysEmailService(IOptions<EmailOptions> emailOptions, SqlSugarRepository<SysTenant> sysTenantRep)
     {
         _emailOptions = emailOptions.Value;
         _sysTenantRep = sysTenantRep;
     }
 
-    /// <summary>
-    /// 发送邮件 📧
-    /// </summary>
-    /// <param name="content"></param>
-    /// <param name="title"></param>
-    /// <param name="toEmail"></param>
-    /// <returns></returns>
+    /// <summary>执行 SysEmailService 的 Send Email 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="content">content 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="title">title 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="toEmail">toEmail 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("发送邮件")]
     public async Task SendEmail([Required] string content, string title = "", string toEmail = "")
     {

@@ -66,12 +66,22 @@ const state = reactive<ColumnsAsideState>({
 });
 
 // 设置菜单高亮位置移动
+/**
+ * 更新 columnsAside 的 set Columns Aside Move 状态，并同步相关业务数据。
+ * @param k - k 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setColumnsAsideMove = (k: number) => {
 	if (k === undefined) return false;
 	state.liIndex = k;
 	columnsAsideActiveRef.value.style.top = `${columnsAsideOffsetTopRefs.value[k].offsetTop + state.difference}px`;
 };
 // 菜单高亮点击事件
+/**
+ * 响应 columnsAside 的 on Columns Aside Menu Click 事件，并协调相关状态和后续操作。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsAsideMenuClick = async (v: RouteItem) => {
 	let { path, redirect } = v;
 	if (redirect) {
@@ -97,6 +107,12 @@ const onColumnsAsideMenuClick = async (v: RouteItem) => {
 	else if (v.children.length > 1) themeConfig.value.isCollapse = false;
 };
 // 鼠标移入时，显示当前的子级菜单
+/**
+ * 响应 columnsAside 的 on Columns Aside Menu Mouseenter 事件，并协调相关状态和后续操作。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param k - k 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsAsideMenuMouseenter = (v: RouteRecordRaw, k: number) => {
 	if (!themeConfig.value.isColumnsMenuHoverPreload) return false;
 	let { path } = v;
@@ -108,6 +124,10 @@ const onColumnsAsideMenuMouseenter = (v: RouteRecordRaw, k: number) => {
 	stores.setColumnsNavHover(true);
 };
 // 鼠标移走时，显示原来的子级菜单
+/**
+ * 响应 columnsAside 的 on Columns Aside Menu Mouseleave 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsAsideMenuMouseleave = async () => {
 	if (!themeConfig.value.isColumnsMenuHoverPreload) return false;
 	await stores.setColumnsNavHover(false);
@@ -117,6 +137,11 @@ const onColumnsAsideMenuMouseleave = async () => {
 	}, 100);
 };
 // 设置高亮动态位置
+/**
+ * 响应 columnsAside 的 on Columns Aside Down 事件，并协调相关状态和后续操作。
+ * @param k - k 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onColumnsAsideDown = (k: number) => {
 	nextTick(() => {
 		setColumnsAsideMove(k);
@@ -124,6 +149,11 @@ const onColumnsAsideDown = (k: number) => {
 };
 // 设置只有一个路由时设置自动收起菜单
 // https://gitee.com/lyt-top/vue-next-admin/issues/I6UW2I
+/**
+ * 更新 columnsAside 的 set Menu Auto Collaps 状态，并同步相关业务数据。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setMenuAutoCollaps = (path: string) => {
 	const resData: MittMenu = setSendChildren(path);
 	// https://gitee.com/lyt-top/vue-next-admin/issues/I6HW7H
@@ -133,6 +163,10 @@ const setMenuAutoCollaps = (path: string) => {
 	return resData;
 };
 // 设置/过滤路由（非静态路由/是否显示在菜单中）
+/**
+ * 更新 columnsAside 的 set Filter Routes 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setFilterRoutes = () => {
 	state.columnsAsideList = filterRoutesFun(routesList.value);
 	const resData: MittMenu = setMenuAutoCollaps(route.path);
@@ -143,6 +177,11 @@ const setFilterRoutes = () => {
 	}, 500);
 };
 // 传送当前子级数据到菜单中
+/**
+ * 更新 columnsAside 的 set Send Children 状态，并同步相关业务数据。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setSendChildren = (path: string) => {
 	const currentPathSplit = path.split('/');
 	let currentData: MittMenu = { children: [] };
@@ -157,6 +196,11 @@ const setSendChildren = (path: string) => {
 	return currentData;
 };
 // 路由过滤递归函数
+/**
+ * 按 filter Routes Fun 规则筛选 columnsAside 数据，并返回满足条件的结果。
+ * @param arr - arr 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const filterRoutesFun = <T extends RouteItem>(arr: T[]): T[] => {
 	return arr
 		.filter((item: T) => !item.meta?.isHide)
@@ -167,6 +211,11 @@ const filterRoutesFun = <T extends RouteItem>(arr: T[]): T[] => {
 		});
 };
 // tagsView 点击时，根据路由查找下标 columnsAsideList，实现左侧菜单高亮
+/**
+ * 更新 columnsAside 的 set Columns Menu Highlight 状态，并同步相关业务数据。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setColumnsMenuHighlight = (path: string) => {
 	state.routeSplit = path.split('/');
 	state.routeSplit.shift();

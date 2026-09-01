@@ -14,6 +14,8 @@ public class SysWechatUserService : IDynamicApiController, ITransient
 {
     private readonly SqlSugarRepository<SysWechatUser> _sysWechatUserRep;
 
+    /// <summary>初始化 SysWechatUserService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysWechatUserRep">sysWechatUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysWechatUserService(SqlSugarRepository<SysWechatUser> sysWechatUserRep)
     {
         _sysWechatUserRep = sysWechatUserRep;
@@ -22,8 +24,8 @@ public class SysWechatUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取微信用户列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取微信用户列表")]
     public async Task<SqlSugarPagedList<SysWechatUser>> Page(WechatUserInput input)
     {
@@ -34,11 +36,9 @@ public class SysWechatUserService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 增加微信用户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysWechatUserService 所需的 Add Wechat User 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加微信用户")]
     public async Task AddWechatUser(SysWechatUser input)
@@ -46,11 +46,9 @@ public class SysWechatUserService : IDynamicApiController, ITransient
         await _sysWechatUserRep.InsertAsync(input.Adapt<SysWechatUser>());
     }
 
-    /// <summary>
-    /// 更新微信用户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysWechatUserService 的 Update Wechat User 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新微信用户")]
     public async Task UpdateWechatUser(SysWechatUser input)
@@ -59,11 +57,9 @@ public class SysWechatUserService : IDynamicApiController, ITransient
         await _sysWechatUserRep.AsUpdateable(weChatUser).IgnoreColumns(true).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 删除微信用户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysWechatUserService 中与 Delete Wechat User 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除微信用户")]
     public async Task DeleteWechatUser(DeleteWechatUserInput input)

@@ -36,18 +36,35 @@ const setCarouselShow = computed(() => {
 	return state.sponsors.list.length <= 1 ? 'never' : 'hover';
 });
 // 关闭赞助商
+/**
+ * 响应 index 的 on Close Sponsors 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCloseSponsors = () => {
 	state.sponsors.isShow = false;
 };
 // 轮播图改变时
+/**
+ * 响应 index 的 on Carousel Change 事件，并协调相关状态和后续操作。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCarouselChange = (e: number) => {
 	state.sponsors.index = e;
 };
 // 当前项内容点击
+/**
+ * 响应 index 的 on Sponsors Click 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSponsorsClick = () => {
 	window.open(state.sponsors.list[state.sponsors.index].link);
 };
 // 延迟显示，防止影响其它界面加载
+/**
+ * 从 index 移除 delay Show 对应数据，并清理相关缓存、选中项或临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delayShow = () => {
 	setTimeout(() => {
 		state.sponsors.isShow = true;

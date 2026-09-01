@@ -121,10 +121,18 @@ const props = defineProps({
 	// 可带入comProps属性，和使用的控件属性对应
 	search: {
 		type: Array<TableSearchType>,
+		/**
+		 * 为 search 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
 	},
 	modelValue: {
 		type: Object,
+		/**
+		 * 为 modelValue 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => ({}),
 	},
     // 默认显示几个查询条件，超过则隐藏，点击更多展开
@@ -165,6 +173,11 @@ watch(
 );
 
 // 查询
+/**
+ * 响应 search 的 on Search 事件，并协调相关状态和后续操作。
+ * @param formEl - formEl 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSearch = (formEl: FormInstance | undefined) => {
 	if (!formEl) return;
 	formEl.validate((isValid: boolean): void => {
@@ -175,6 +188,11 @@ const onSearch = (formEl: FormInstance | undefined) => {
 };
 
 // 重置
+/**
+ * 响应 search 的 on Reset 事件，并协调相关状态和后续操作。
+ * @param formEl - formEl 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onReset = (formEl: FormInstance | undefined) => {
 	if (!formEl) return;
 	formEl.resetFields();
@@ -182,6 +200,11 @@ const onReset = (formEl: FormInstance | undefined) => {
 };
 
 const userStore = useUserInfo();
+/**
+ * 查询或读取 search 所需的 get Select Options 数据，并按调用约定返回结果。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getSelectOptions = (val: TableSearchType) => {
 	if (val.options) return val.options;
 	if (val.dictCode) return userStore.getDictDataByCode(val.dictCode);
@@ -194,6 +217,10 @@ const defaultTime = ref<[Date, Date]>([new Date(2000, 1, 1, 0, 0, 0), new Date(2
 const shortcuts = [
 	{
 		text: '7天内',
+		/**
+		 * 计算并返回 search 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const end = dayjs().endOf('day').toDate();
 			const start = dayjs().startOf('day').add(-7, 'day').toDate();
@@ -202,6 +229,10 @@ const shortcuts = [
 	},
 	{
 		text: '1个月内',
+		/**
+		 * 计算并返回 search 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const end = dayjs().endOf('day').toDate();
 			const start = dayjs().startOf('day').add(-1, 'month').toDate();
@@ -210,6 +241,10 @@ const shortcuts = [
 	},
 	{
 		text: '3个月内',
+		/**
+		 * 计算并返回 search 当前配置对应的值，供组件渲染或后续逻辑使用。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		value: () => {
 			const end = dayjs().endOf('day').toDate();
 			const start = dayjs().startOf('day').add(-3, 'month').toDate();

@@ -276,6 +276,7 @@ export const SysCommonApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysCommonApiListGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListApiOutput>>> {
+            // 第一阶段：调用 SysCommonApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysCommonApiAxiosParamCreator(configuration).apiSysCommonApiListGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -307,6 +308,7 @@ export const SysCommonApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysCommonApiAxiosParamCreator(configuration).apiSysCommonEncryptPlainTextPlainTextPost(plainText, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysCommonApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -353,6 +355,7 @@ export const SysCommonApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysCommonApiListGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListApiOutput>> {
+            // 第一阶段：整理 SysCommonApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCommonApiFp(configuration).apiSysCommonApiListGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -373,6 +376,7 @@ export const SysCommonApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysCommonEncryptPlainTextPlainTextPost(plainText: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultObject>> {
+            // 第2阶段：整理 SysCommonApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCommonApiFp(configuration).apiSysCommonEncryptPlainTextPlainTextPost(plainText, options).then((request) => request(axios, basePath));
         },
         /**

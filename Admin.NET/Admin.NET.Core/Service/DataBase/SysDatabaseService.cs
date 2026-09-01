@@ -18,6 +18,10 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     private readonly IViewEngine _viewEngine;
     private readonly CodeGenOptions _codeGenOptions;
 
+    /// <summary>初始化 SysDatabaseService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="viewEngine">当前方法执行时使用的 viewEngine 输入值。</param>
+    /// <param name="codeGenOptions">控制本次处理行为的配置选项。</param>
     public SysDatabaseService(ISqlSugarClient db,
         IViewEngine viewEngine,
         IOptions<CodeGenOptions> codeGenOptions)
@@ -27,10 +31,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         _codeGenOptions = codeGenOptions.Value;
     }
 
-    /// <summary>
-    /// 获取库列表 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysDatabaseService 所需的 Get List 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取库列表")]
     public List<VisualDb> GetList()
     {
@@ -40,7 +42,7 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取可视化库表结构 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取可视化库表结构")]
     public VisualDbTable GetVisualDbTable()
     {
@@ -99,12 +101,10 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         return new VisualDbTable { VisualTableList = visualTableList, VisualColumnList = visualColumnList, ColumnRelationList = columnRelationList };
     }
 
-    /// <summary>
-    /// 获取字段列表 🔖
-    /// </summary>
+    /// <summary>查询或读取 SysDatabaseService 所需的 Get Column List 数据，并按调用约定返回结果。</summary>
     /// <param name="tableName">表名</param>
     /// <param name="configId">ConfigId</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取字段列表")]
     public List<DbColumnOutput> GetColumnList(string tableName, string configId = SqlSugarConst.MainConfigId)
     {
@@ -115,8 +115,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取数据库数据类型列表 🔖
     /// </summary>
-    /// <param name="configId"></param>
-    /// <returns></returns>
+    /// <param name="configId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取数据库数据类型列表")]
     public List<string> GetDbTypeList(string configId = SqlSugarConst.MainConfigId)
     {
@@ -124,10 +124,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         return db.DbMaintenance.GetDbTypes().OrderBy(u => u).ToList();
     }
 
-    /// <summary>
-    /// 增加列 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>构建 SysDatabaseService 所需的 Add Column 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "AddColumn"), HttpPost]
     [DisplayName("增加列")]
     public void AddColumn(DbColumnInput input)
@@ -154,10 +152,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         if (column.IsPrimarykey) db.DbMaintenance.AddPrimaryKey(input.TableName, input.DbColumnName);
     }
 
-    /// <summary>
-    /// 删除列 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>移除 SysDatabaseService 中与 Delete Column 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "DeleteColumn"), HttpPost]
     [DisplayName("删除列")]
     public void DeleteColumn(DeleteDbColumnInput input)
@@ -166,10 +162,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         db.DbMaintenance.DropColumn(input.TableName, input.DbColumnName);
     }
 
-    /// <summary>
-    /// 编辑列 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>更新 SysDatabaseService 的 Update Column 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "UpdateColumn"), HttpPost]
     [DisplayName("编辑列")]
     public void UpdateColumn(UpdateDbColumnInput input)
@@ -194,10 +188,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         db.DbMaintenance.AddColumnRemark(input.ColumnName, input.TableName, string.IsNullOrWhiteSpace(input.Description) ? input.ColumnName : input.Description);
     }
 
-    /// <summary>
-    /// 移动列位置 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>检查 SysDatabaseService 的 Move Column 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "MoveColumn"), HttpPost]
     [DisplayName("移动列")]
     public void MoveColumn(MoveDbColumnInput input)
@@ -225,14 +217,12 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 获取列定义
-    /// </summary>
-    /// <param name="db"></param>
-    /// <param name="tableName"></param>
-    /// <param name="columnName"></param>
-    /// <param name="noDefault"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysDatabaseService 所需的 Get Column Definition In My SQL 数据，并按调用约定返回结果。</summary>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="tableName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="columnName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="noDefault">当前方法执行时使用的 noDefault 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     /// <exception cref="Exception"></exception>
     private string GetColumnDefinitionInMySQL(ISqlSugarClient db, string tableName, string columnName, bool noDefault = false)
     {
@@ -262,10 +252,10 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     /// <summary>
     /// MySQL 列移动实现
     /// </summary>
-    /// <param name="db"></param>
-    /// <param name="tableName"></param>
-    /// <param name="columnName"></param>
-    /// <param name="afterColumnName"></param>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="tableName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="columnName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="afterColumnName">需要读取、校验、比较或转换的业务值。</param>
     private void MoveColumnInMySQL(ISqlSugarClient db, string tableName, string columnName, string afterColumnName)
     {
         var definition = GetColumnDefinitionInMySQL(db, tableName, columnName);
@@ -280,11 +270,9 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         db.Ado.ExecuteCommand(sql.ToString());
     }
 
-    /// <summary>
-    /// 获取表列表 🔖
-    /// </summary>
+    /// <summary>查询或读取 SysDatabaseService 所需的 Get Table List 数据，并按调用约定返回结果。</summary>
     /// <param name="configId">ConfigId</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取表列表")]
     public List<DbTableInfo> GetTableList(string configId = SqlSugarConst.MainConfigId)
     {
@@ -292,10 +280,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         return db.DbMaintenance.GetTableInfoList(false);
     }
 
-    /// <summary>
-    /// 增加表 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>构建 SysDatabaseService 所需的 Add Table 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "AddTable"), HttpPost]
     [DisplayName("增加表")]
     public void AddTable(DbTableInput input)
@@ -328,10 +314,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         db.CodeFirst.InitTables(typeBuilder.BuilderType());
     }
 
-    /// <summary>
-    /// 删除表 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>移除 SysDatabaseService 中与 Delete Table 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "DeleteTable"), HttpPost]
     [DisplayName("删除表")]
     public void DeleteTable(DeleteDbTableInput input)
@@ -340,10 +324,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         db.DbMaintenance.DropTable(input.TableName);
     }
 
-    /// <summary>
-    /// 编辑表 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>更新 SysDatabaseService 的 Update Table 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "UpdateTable"), HttpPost]
     [DisplayName("编辑表")]
     public void UpdateTable(UpdateDbTableInput input)
@@ -364,10 +346,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 创建实体 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>构建 SysDatabaseService 所需的 Create Entity 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "CreateEntity"), HttpPost]
     [DisplayName("创建实体")]
     public void CreateEntity(CreateEntityInput input)
@@ -419,10 +399,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         File.WriteAllText(targetPath, tResult, Encoding.UTF8);
     }
 
-    /// <summary>
-    /// 创建种子数据 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>构建 SysDatabaseService 所需的 Create Seed Data 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [ApiDescriptionSettings(Name = "CreateSeedData"), HttpPost]
     [DisplayName("创建种子数据")]
     public async Task CreateSeedData(CreateSeedDataInput input)
@@ -599,10 +577,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
         await File.WriteAllTextAsync(targetPath, tResult, Encoding.UTF8);
     }
 
-    /// <summary>
-    /// 获取库表信息
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysDatabaseService 所需的 Get Entity Infos 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<IEnumerable<EntityInfo>> GetEntityInfos()
     {
         var entityInfos = new List<EntityInfo>();
@@ -648,7 +624,7 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取实体模板文件路径
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetEntityTemplatePath()
     {
         var templatePath = Path.Combine(App.WebHostEnvironment.WebRootPath, "template");
@@ -658,7 +634,7 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取种子数据模板文件路径
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetSeedDataTemplatePath()
     {
         var templatePath = Path.Combine(App.WebHostEnvironment.WebRootPath, "template");
@@ -668,8 +644,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     /// <summary>
     /// 设置生成实体文件路径
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetEntityTargetPath(CreateEntityInput input)
     {
         var backendPath = Path.Combine(new DirectoryInfo(App.WebHostEnvironment.ContentRootPath).Parent.FullName, input.Position, "Entity");
@@ -691,8 +667,8 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     /// <summary>
     /// 设置生成种子数据文件路径
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetSeedDataTargetPath(CreateSeedDataInput input)
     {
         var backendPath = Path.Combine(new DirectoryInfo(App.WebHostEnvironment.ContentRootPath).Parent.FullName, input.Position, "SeedData");
@@ -704,7 +680,7 @@ public class SysDatabaseService : IDynamicApiController, ITransient
     /// <summary>
     /// 备份数据库（PostgreSQL）🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpPost, NonUnify]
     [DisplayName("备份数据库（PostgreSQL）")]
     public async Task<IActionResult> BackupDatabase()

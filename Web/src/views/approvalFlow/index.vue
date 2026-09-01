@@ -127,11 +127,19 @@ onMounted(async () => {
 });
 
 // 改变高级查询的控件显示状态
+/**
+ * 更新 index 的 change Advance Query UI 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeAdvanceQueryUI = () => {
 	showAdvanceQueryUI.value = !showAdvanceQueryUI.value;
 };
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -142,45 +150,84 @@ const handleQuery = async () => {
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Approval Flow 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddApprovalFlow = () => {
 	state.dialogTitle = '添加审批流';
 	editDialogRef.value.openDialog({ status: 1 });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Approval Flow 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditApprovalFlow = (row: ApprovalFlowOutput) => {
 	state.dialogTitle = '编辑审批流';
 	editDialogRef.value.openDialog(row);
 };
 
 // 打开打印页面
+/**
+ * 准备 index 的 open Edit Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditDialog = (row: ApprovalFlowOutput) => {
 	state.dialogTitle = '编辑审批流';
 	editDialogRef.value.openDialog(row);
 };
 
 // 打开打印页面
+/**
+ * 准备 index 的 open Detail Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDetailDialog = (row: ApprovalFlowOutput) => {
 	state.dialogTitle = '查看审批流';
 	detailDialogRef.value.openDialog(row);
 };
 
+/**
+ * 准备 index 的 open Edit Form Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditFormDialog = (row: ApprovalFlowOutput) => {
 	state.dialogTitle = '编辑表单';
 	editFormDialogRef.value.openDialog(row);
 };
 
+/**
+ * 准备 index 的 open Edit Flow Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditFlowDialog = (row: ApprovalFlowOutput) => {
 	state.dialogTitle = '编辑流程';
 	editFlowDialogRef.value.openDialog(row);
 };
 
+/**
+ * 响应 index 的 handle Flow 事件，并协调相关状态和后续操作。
+ * @param json - json 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleFlow = (json: string) => {
 	console.log(JSON.stringify(json));
 	handleQuery();
 };
 
 // 删除
+/**
+ * 从 index 移除 del Approval Flow 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delApprovalFlow = (row: ApprovalFlowOutput) => {
 	ElMessageBox.confirm(`确定要删除吗?`, '提示', {
 		confirmButtonText: '确定',
@@ -198,12 +245,22 @@ const delApprovalFlow = (row: ApprovalFlowOutput) => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();

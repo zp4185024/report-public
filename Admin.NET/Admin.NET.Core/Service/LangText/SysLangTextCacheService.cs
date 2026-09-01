@@ -31,6 +31,9 @@ public class SysLangTextCacheService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysLangText> _sysLangTextRep;
     private TimeSpan expireSeconds = TimeSpan.FromHours(1);
 
+    /// <summary>初始化 SysLangTextCacheService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysLangTextRep">sysLangTextRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysLangTextCacheService(
         SysCacheService sysCacheService,
         SqlSugarRepository<SysLangText> sysLangTextRep)
@@ -39,6 +42,12 @@ public class SysLangTextCacheService : IDynamicApiController, ITransient
         _sysLangTextRep = sysLangTextRep;
     }
 
+    /// <summary>构建 SysLangTextCacheService 所需的 Build Key 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="entityName">需要读取、校验或转换的业务值。</param>
+    /// <param name="fieldName">需要读取、校验或转换的业务值。</param>
+    /// <param name="entityId">需要定位的业务记录标识。</param>
+    /// <param name="langCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private string BuildKey(string entityName, string fieldName, long entityId, string langCode)
     {
         return $"LangCache_{entityName}_{fieldName}_{entityId}_{langCode}";
@@ -84,7 +93,7 @@ public class SysLangTextCacheService : IDynamicApiController, ITransient
     /// <param name="fieldName">字段名称</param>
     /// <param name="entityId">实体主键ID</param>
     /// <param name="langCode">语言编码</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<SysLangText> GetTranslationEntity(string entityName, string fieldName, long entityId, string langCode)
     {
@@ -124,6 +133,7 @@ public class SysLangTextCacheService : IDynamicApiController, ITransient
         var missingIds = new HashSet<long>(); // 用 HashSet 提高后面 Contains 的性能
 
         foreach (var id in entityIds.Distinct()) // 先去重，防止重复缓存 Key
+        // 第一阶段：根据 GetTranslations 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             var key = BuildKey(entityName, fieldName, id, langCode);
             var value = _sysCacheService.Get<string>(key);
@@ -146,6 +156,7 @@ public class SysLangTextCacheService : IDynamicApiController, ITransient
                             u.LangCode == langCode)
                 .ToListAsync();
 
+            // 第2阶段：遍历 GetTranslations 当前数据集合，逐项转换并维护处理结果。
             foreach (var item in list)
             {
                 if (string.IsNullOrWhiteSpace(item.Content)) continue; // 跳过脏数据
@@ -314,27 +325,23 @@ public class SysLangTextCacheService : IDynamicApiController, ITransient
         return list;
     }
 
-    /// <summary>
-    /// 删除缓存
-    /// </summary>
-    /// <param name="entityName"></param>
-    /// <param name="fieldName"></param>
-    /// <param name="entityId"></param>
-    /// <param name="langCode"></param>
+    /// <summary>移除 SysLangTextCacheService 中与 Delete Cache 对应的数据，并清理关联状态。</summary>
+    /// <param name="entityName">需要读取、校验或转换的业务值。</param>
+    /// <param name="fieldName">需要读取、校验或转换的业务值。</param>
+    /// <param name="entityId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="langCode">需要读取、校验或转换的业务值。</param>
     public void DeleteCache(string entityName, string fieldName, long entityId, string langCode)
     {
         var key = BuildKey(entityName, fieldName, entityId, langCode);
         _sysCacheService.Remove(key);
     }
 
-    /// <summary>
-    /// 更新缓存
-    /// </summary>
-    /// <param name="entityName"></param>
-    /// <param name="fieldName"></param>
-    /// <param name="entityId"></param>
-    /// <param name="langCode"></param>
-    /// <param name="newValue"></param>
+    /// <summary>更新 SysLangTextCacheService 的 Update Cache 状态，并同步相关业务数据。</summary>
+    /// <param name="entityName">需要读取、校验或转换的业务值。</param>
+    /// <param name="fieldName">需要读取、校验或转换的业务值。</param>
+    /// <param name="entityId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="langCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="newValue">需要读取、校验或转换的业务值。</param>
     public void UpdateCache(string entityName, string fieldName, long entityId, string langCode, string newValue)
     {
         var key = BuildKey(entityName, fieldName, entityId, langCode);

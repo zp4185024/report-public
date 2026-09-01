@@ -45,6 +45,10 @@ const props = defineProps({
 	// 菜单列表
 	menuList: {
 		type: Array<RouteRecordRaw>,
+		/**
+		 * 为 menuList 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
 	},
 });
@@ -68,6 +72,11 @@ const getThemeConfig = computed(() => {
 	return themeConfig.value;
 });
 // 菜单高亮（详情时，父级高亮）
+/**
+ * 更新 vertical 的 set Parent Highlight 状态，并同步相关业务数据。
+ * @param currentRoute - currentRoute 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setParentHighlight = (currentRoute: RouteToFrom) => {
 	const { path, meta } = currentRoute;
 	const pathSplit = meta?.isDynamic ? meta.isDynamicPath!.split('/') : path!.split('/');
@@ -75,6 +84,11 @@ const setParentHighlight = (currentRoute: RouteToFrom) => {
 	else return path;
 };
 // 打开外部链接
+/**
+ * 响应 vertical 的 on ALink Click 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onALinkClick = (val: RouteItem) => {
 	other.handleOpenLink(val);
 };

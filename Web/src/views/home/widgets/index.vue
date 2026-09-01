@@ -195,6 +195,10 @@ const myCompsList = computed(() => {
 const nowCompsList = computed(() => grid.value.copmsList.flat());
 
 // 开启自定义
+/**
+ * 负责 index 的 custom 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const custom = () => {
 	customizing.value = true;
 	const oldWidth = widgetsRef.value?.offsetWidth || 0;
@@ -207,6 +211,11 @@ const custom = () => {
 };
 
 // 设置布局
+/**
+ * 更新 index 的 set Layout 状态，并同步相关业务数据。
+ * @param layout - layout 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setLayout = (layout: number[]) => {
 	grid.value.layout = layout;
 	const diff = grid.value.layout.length - grid.value.copmsList.length;
@@ -218,16 +227,30 @@ const setLayout = (layout: number[]) => {
 };
 
 // 追加
+/**
+ * 负责 index 的 push 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const push = (item: any) => {
 	grid.value.copmsList[0].push(item.key);
 };
 
 // 隐藏组件
+/**
+ * 移除 index 中与 remove 对应的数据，并清理关联状态。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const remove = (item: string) => {
 	grid.value.copmsList = grid.value.copmsList.map((list) => list.filter((comp) => comp !== item));
 };
 
 // 保存
+/**
+ * 更新 index 的 save 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const save = () => {
 	customizing.value = false;
 	widgetsRef.value?.style.removeProperty('transform');
@@ -235,6 +258,10 @@ const save = () => {
 };
 
 // 恢复默认
+/**
+ * 重置 index 的 back Default 状态，并重新加载当前流程依赖的数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const backDefault = () => {
 	customizing.value = false;
 	widgetsRef.value?.style.removeProperty('transform');
@@ -243,6 +270,10 @@ const backDefault = () => {
 };
 
 // 关闭
+/**
+ * 结束 index 的 close 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const close = () => {
 	customizing.value = false;
 	widgetsRef.value?.style.removeProperty('transform');

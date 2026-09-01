@@ -13,6 +13,8 @@ public class TableMapper : ITransient
 {
     private readonly Dictionary<string, string> _options = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>初始化 TableMapper 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
     public TableMapper(IOptions<Dictionary<string, string>> options)
     {
         foreach (var item in options.Value)
@@ -21,11 +23,9 @@ public class TableMapper : ITransient
         }
     }
 
-    /// <summary>
-    /// 获取表别名
-    /// </summary>
-    /// <param name="oldname"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 TableMapper 所需的 Get Table Name 数据，并按调用约定返回结果。</summary>
+    /// <param name="oldname">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetTableName(string oldname)
     {
         return _options.ContainsKey(oldname) ? _options[oldname] : oldname;

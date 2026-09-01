@@ -53,9 +53,9 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将字典转化为QueryString格式
     /// </summary>
-    /// <param name="dict"></param>
-    /// <param name="urlEncode"></param>
-    /// <returns></returns>
+    /// <param name="dict">当前方法执行时使用的 dict 输入值。</param>
+    /// <param name="urlEncode">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ToQueryString(this Dictionary<string, string> dict, bool urlEncode = true)
     {
         return string.Join("&", dict.Select(p => $"{(urlEncode ? p.Key?.UrlEncode() : "")}={(urlEncode ? p.Value?.UrlEncode() : "")}"));
@@ -64,8 +64,8 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将字符串URL编码
     /// </summary>
-    /// <param name="str"></param>
-    /// <returns></returns>
+    /// <param name="str">当前方法执行时使用的 str 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string UrlEncode(this string str)
     {
         return string.IsNullOrEmpty(str) ? "" : System.Uri.EscapeDataString(str);
@@ -74,14 +74,16 @@ public static partial class ObjectExtension
     /// <summary>
     /// 对象序列化成Json字符串
     /// </summary>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="obj">当前方法执行时使用的 obj 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ToJson(this object obj)
     {
         var jsonSettings = SetNewtonsoftJsonSetting();
         return JSON.GetJsonSerializer().Serialize(obj, jsonSettings);
     }
 
+    /// <summary>更新 ObjectExtension 的 Set Newtonsoft Json Setting 状态，并同步相关业务数据。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JsonSerializerSettings SetNewtonsoftJsonSetting()
     {
         JsonSerializerSettings setting = new JsonSerializerSettings();
@@ -97,8 +99,8 @@ public static partial class ObjectExtension
     /// Json字符串反序列化成对象
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="json"></param>
-    /// <returns></returns>
+    /// <param name="json">当前方法执行时使用的 json 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static T ToObject<T>(this string json)
     {
         return JSON.GetJsonSerializer().Deserialize<T>(json);
@@ -107,8 +109,8 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将object转换为long，若失败则返回0
     /// </summary>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="obj">当前方法执行时使用的 obj 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static long ParseToLong(this object obj)
     {
         try
@@ -124,9 +126,9 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将object转换为long，若失败则返回指定值
     /// </summary>
-    /// <param name="str"></param>
-    /// <param name="defaultValue"></param>
-    /// <returns></returns>
+    /// <param name="str">当前方法执行时使用的 str 输入值。</param>
+    /// <param name="defaultValue">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static long ParseToLong(this string str, long defaultValue)
     {
         try
@@ -142,8 +144,8 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将object转换为double，若失败则返回0
     /// </summary>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="obj">当前方法执行时使用的 obj 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static double ParseToDouble(this object obj)
     {
         try
@@ -159,9 +161,9 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将object转换为double，若失败则返回指定值
     /// </summary>
-    /// <param name="str"></param>
-    /// <param name="defaultValue"></param>
-    /// <returns></returns>
+    /// <param name="str">当前方法执行时使用的 str 输入值。</param>
+    /// <param name="defaultValue">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static double ParseToDouble(this object str, double defaultValue)
     {
         try
@@ -177,14 +179,15 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将string转换为DateTime，若失败则返回日期最小值
     /// </summary>
-    /// <param name="str"></param>
-    /// <returns></returns>
+    /// <param name="str">当前方法执行时使用的 str 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static DateTime ParseToDateTime(this string str)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(str))
             {
+                // 第一阶段：整理 ParseToDateTime 已计算的数据，并按方法契约返回最终结果。
                 return DateTime.MinValue;
             }
             if (str.Contains('-') || str.Contains('/'))
@@ -206,6 +209,7 @@ public static partial class ObjectExtension
                         return DateTime.ParseExact(str, "yyyyMMdd", System.Globalization.CultureInfo.CurrentCulture);
 
                     case 10:
+                        // 第2阶段：整理 ParseToDateTime 已计算的数据，并按方法契约返回最终结果。
                         return DateTime.ParseExact(str, "yyyyMMddHH", System.Globalization.CultureInfo.CurrentCulture);
 
                     case 12:
@@ -228,15 +232,16 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将string转换为DateTime，若失败则返回默认值
     /// </summary>
-    /// <param name="str"></param>
-    /// <param name="defaultValue"></param>
-    /// <returns></returns>
+    /// <param name="str">当前方法执行时使用的 str 输入值。</param>
+    /// <param name="defaultValue">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static DateTime ParseToDateTime(this string str, DateTime? defaultValue)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(str))
             {
+                // 第一阶段：整理 ParseToDateTime 已计算的数据，并按方法契约返回最终结果。
                 return defaultValue.GetValueOrDefault();
             }
             if (str.Contains('-') || str.Contains('/'))
@@ -258,6 +263,7 @@ public static partial class ObjectExtension
                         return DateTime.ParseExact(str, "yyyyMMdd", System.Globalization.CultureInfo.CurrentCulture);
 
                     case 10:
+                        // 第2阶段：整理 ParseToDateTime 已计算的数据，并按方法契约返回最终结果。
                         return DateTime.ParseExact(str, "yyyyMMddHH", System.Globalization.CultureInfo.CurrentCulture);
 
                     case 12:
@@ -280,8 +286,8 @@ public static partial class ObjectExtension
     /// <summary>
     /// 将 string 时间日期格式转换成字符串 如 {yyyy} => 2024
     /// </summary>
-    /// <param name="str"></param>
-    /// <returns></returns>
+    /// <param name="str">当前方法执行时使用的 str 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ParseToDateTimeForRep(this string str)
     {
         if (string.IsNullOrWhiteSpace(str))
@@ -298,22 +304,18 @@ public static partial class ObjectExtension
         return str;
     }
 
-    /// <summary>
-    /// 是否有值
-    /// </summary>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <summary>校验 ObjectExtension 的 Is Null Or Empty 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="obj">当前方法执行时使用的 obj 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool IsNullOrEmpty(this object obj)
     {
         return obj == null || string.IsNullOrEmpty(obj.ToString());
     }
 
-    /// <summary>
-    /// 字符串掩码
-    /// </summary>
+    /// <summary>根据 ObjectExtension 当前输入计算 Mask 结果，并按方法声明的类型返回。</summary>
     /// <param name="str">字符串</param>
     /// <param name="mask">掩码符</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string Mask(this string str, char mask = '*')
     {
         if (string.IsNullOrWhiteSpace(str?.Trim()))
@@ -333,12 +335,10 @@ public static partial class ObjectExtension
         };
     }
 
-    /// <summary>
-    /// 身份证号掩码
-    /// </summary>
+    /// <summary>根据 ObjectExtension 当前输入计算 Mask Id Card 结果，并按方法声明的类型返回。</summary>
     /// <param name="idCard">身份证号</param>
     /// <param name="mask">掩码符</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string MaskIdCard(this string idCard, char mask = '*')
     {
         if (!idCard.TryValidate(ValidationTypes.IDCard).IsValid) return idCard;
@@ -347,12 +347,10 @@ public static partial class ObjectExtension
         return Regex.Replace(idCard, @"^(.{6})(.*)(.{4})$", $"$1{masks}$3");
     }
 
-    /// <summary>
-    /// 邮箱掩码
-    /// </summary>
+    /// <summary>根据 ObjectExtension 当前输入计算 Mask Email 结果，并按方法声明的类型返回。</summary>
     /// <param name="email">邮箱</param>
     /// <param name="mask">掩码符</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string MaskEmail(this string email, char mask = '*')
     {
         if (!email.TryValidate(ValidationTypes.EmailAddress).IsValid) return email;
@@ -430,6 +428,7 @@ public static partial class ObjectExtension
             throw new ArgumentException("src == null || target == null ");
 
         var SourceType = src.GetType();
+        // 第一阶段：构造 CopyTo 当前步骤需要的中间数据和执行参数。
         var TargetType = target.GetType();
 
         if (changeProperties == null || changeProperties.Count == 0)
@@ -453,6 +452,7 @@ public static partial class ObjectExtension
             }
         }
         else
+        // 第2阶段：执行 CopyTo 当前分支的数据转换，并保存该步骤产生的中间结果。
         {
             foreach (var item in changeProperties)
             {
@@ -471,12 +471,10 @@ public static partial class ObjectExtension
         }
     }
 
-    /// <summary>
-    /// 深复制
-    /// </summary>
+    /// <summary>根据 ObjectExtension 当前输入计算 Deep Copy 结果，并按方法声明的类型返回。</summary>
     /// <typeparam name="T">深复制源对象</typeparam>
     /// <param name="obj">对象</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static T DeepCopy<T>(this T obj)
     {
         var jsonSettings = SetNewtonsoftJsonSetting();

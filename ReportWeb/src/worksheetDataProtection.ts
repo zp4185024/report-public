@@ -5,13 +5,32 @@ export interface WorksheetDataProtectionPoints<TPoint> {
 }
 
 export interface WorksheetPermissionLike<TPoint> {
+  /**
+   * 校验 worksheetDataProtection 的 is Protected 条件，并返回可供后续流程判断的结果。
+   */
   isProtected(): boolean;
+  /**
+   * 负责 worksheetDataProtection 的 protect 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+   * @param options - 控制本次处理行为的配置选项。
+   */
   protect(options: { allowViewByOthers: boolean; name: string }): Promise<unknown>;
+  /**
+   * 更新 worksheetDataProtection 的 set Editable 状态，并同步相关业务数据。
+   */
   setEditable(): Promise<void>;
+  /**
+   * 更新 worksheetDataProtection 的 set Point 状态，并同步相关业务数据。
+   * @param point - point 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @param allowed - allowed 对应的业务输入；具体类型和空值范围以方法签名为准。
+   */
   setPoint(point: TPoint, allowed: boolean): Promise<void>;
 }
 
 export interface WorksheetProtectionShadowController {
+  /**
+   * 更新 worksheetDataProtection 的 set Protected Range Shadow Strategy 状态，并同步相关业务数据。
+   * @param strategy - strategy 对应的业务输入；具体类型和空值范围以方法签名为准。
+   */
   setProtectedRangeShadowStrategy(
     strategy: 'always' | 'non-editable' | 'non-viewable' | 'none',
   ): void;

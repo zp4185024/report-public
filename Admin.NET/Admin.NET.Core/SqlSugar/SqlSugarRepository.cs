@@ -12,6 +12,7 @@ namespace Admin.NET.Core;
 /// <typeparam name="T"></typeparam>
 public class SqlSugarRepository<T> : SimpleClient<T>, ISqlSugarRepository<T> where T : class, new()
 {
+    /// <summary>初始化 SqlSugarRepository 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public SqlSugarRepository()
     {
         var iTenant = SqlSugarSetup.ITenant; // App.GetRequiredService<ISqlSugarClient>().AsTenant();
@@ -54,56 +55,89 @@ public class SqlSugarRepository<T> : SimpleClient<T>, ISqlSugarRepository<T> whe
 
     #region 分表操作
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Insert Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> SplitTableInsertAsync(T input)
     {
         return await base.AsInsertable(input).SplitTable().ExecuteCommandAsync() > 0;
     }
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Insert Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> SplitTableInsertAsync(List<T> input)
     {
         return await base.AsInsertable(input).SplitTable().ExecuteCommandAsync() > 0;
     }
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Update Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> SplitTableUpdateAsync(T input)
     {
         return await base.AsUpdateable(input).SplitTable().ExecuteCommandAsync() > 0;
     }
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Update Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> SplitTableUpdateAsync(List<T> input)
     {
         return await base.AsUpdateable(input).SplitTable().ExecuteCommandAsync() > 0;
     }
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Deleteable Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> SplitTableDeleteableAsync(T input)
     {
         return await base.Context.Deleteable(input).SplitTable().ExecuteCommandAsync() > 0;
     }
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Deleteable Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<bool> SplitTableDeleteableAsync(List<T> input)
     {
         return await base.Context.Deleteable(input).SplitTable().ExecuteCommandAsync() > 0;
     }
 
+    /// <summary>根据 SqlSugarRepository 当前输入计算 Split Table Get First Async 结果，并按方法声明的类型返回。</summary>
+    /// <param name="whereExpression">whereExpression 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task<T> SplitTableGetFirstAsync(Expression<Func<T, bool>> whereExpression)
     {
         return base.AsQueryable().SplitTable().FirstAsync(whereExpression);
     }
 
+    /// <summary>根据 SqlSugarRepository 当前输入计算 Split Table Is Any Async 结果，并按方法声明的类型返回。</summary>
+    /// <param name="whereExpression">whereExpression 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task<bool> SplitTableIsAnyAsync(Expression<Func<T, bool>> whereExpression)
     {
         return base.Context.Queryable<T>().Where(whereExpression).SplitTable().AnyAsync();
     }
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Get List Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task<List<T>> SplitTableGetListAsync()
     {
         return Context.Queryable<T>().SplitTable().ToListAsync();
     }
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Get List Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="whereExpression">whereExpression 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task<List<T>> SplitTableGetListAsync(Expression<Func<T, bool>> whereExpression)
     {
         return Context.Queryable<T>().Where(whereExpression).SplitTable().ToListAsync();
     }
 
+    /// <summary>调用 SqlSugarRepository 的异步依赖完成 Split Table Get List Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="whereExpression">whereExpression 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="tableNames">tableNames 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Task<List<T>> SplitTableGetListAsync(Expression<Func<T, bool>> whereExpression, string[] tableNames)
     {
         return Context.Queryable<T>().Where(whereExpression).SplitTable(t => t.InTableNames(tableNames)).ToListAsync();

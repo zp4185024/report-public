@@ -104,6 +104,11 @@ const state = reactive({
 onMounted(async () => {});
 
 // 打开弹窗
+/**
+ * 准备 editPrint 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	state.ruleForm = JSON.parse(JSON.stringify(row));
 	if (state.ruleForm?.template) {
@@ -118,6 +123,10 @@ const openDialog = (row: any) => {
 };
 
 // 加载模板
+/**
+ * 查询或读取 editPrint 所需的 load Template 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const loadTemplate = () => {
 	hiprintDesignRef.value?.hiprintTemplate.clear();
 	hiprintDesignRef.value?.setPrintDataDemo(state.ruleForm.printDataDemo);
@@ -128,11 +137,19 @@ const loadTemplate = () => {
 };
 
 // 取消
+/**
+ * 校验 editPrint 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editPrint 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = async () => {
 	state.showDialog2 = true;
 	if (state.ruleForm.orderNo == undefined) state.ruleForm.orderNo = 100;
@@ -141,11 +158,19 @@ const submit = async () => {
 };
 
 // 模板设置取消
+/**
+ * 负责 editPrint 的 template Cancel 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const templateCancel = () => {
 	state.showDialog2 = false;
 };
 
 // 模板设置提交
+/**
+ * 负责 editPrint 的 template Submit 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const templateSubmit = async () => {
 	let templateJson = hiprintDesignRef.value?.hiprintTemplate.getJson();
 	templateJson.panels[0].index = hiprintDesignRef.value?.mode;

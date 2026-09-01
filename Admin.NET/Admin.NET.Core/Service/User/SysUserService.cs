@@ -24,6 +24,18 @@ public class SysUserService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysUser> _sysUserRep;
     private readonly IEventPublisher _eventPublisher;
 
+    /// <summary>初始化 SysUserService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysOrgService">sysOrgService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserExtOrgService">sysUserExtOrgService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRoleService">sysUserRoleService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysConfigService">sysConfigService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysOnlineUserService">sysOnlineUserService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserLdapService">sysUserLdapService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRep">sysUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserMenuService">sysUserMenuService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="eventPublisher">eventPublisher 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysUserService(UserManager userManager,
         SysOrgService sysOrgService,
         SysUserExtOrgService sysUserExtOrgService,
@@ -52,8 +64,8 @@ public class SysUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取用户分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取用户分页列表")]
     public virtual async Task<SqlSugarPagedList<UserOutput>> Page(PageUserInput input)
     {
@@ -82,11 +94,9 @@ public class SysUserService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 增加用户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysUserService 所需的 Add User 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加用户")]
@@ -124,11 +134,9 @@ public class SysUserService : IDynamicApiController, ITransient
         return newUser.Id;
     }
 
-    /// <summary>
-    /// 注册用户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysUserService 的异步依赖完成 Register User 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public virtual async Task<long> RegisterUser(AddUserInput input)
     {
@@ -167,11 +175,9 @@ public class SysUserService : IDynamicApiController, ITransient
         return newUser.Id;
     }
 
-    /// <summary>
-    /// 更新用户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysUserService 的 Update User 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新用户")]
@@ -213,8 +219,8 @@ public class SysUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新当前用户语言 🔖
     /// </summary>
-    /// <param name="langCode"></param>
-    /// <returns></returns>
+    /// <param name="langCode">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "SetLangCode"), HttpPost]
     [DisplayName("更新当前用户语言")]
@@ -228,8 +234,8 @@ public class SysUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新角色和扩展机构
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task UpdateRoleAndExtOrg(AddUserInput input)
     {
         await GrantRole(new UserRoleInput { UserId = input.Id, RoleIdList = input.RoleIdList });
@@ -237,11 +243,9 @@ public class SysUserService : IDynamicApiController, ITransient
         await _sysUserExtOrgService.UpdateUserExtOrg(input.Id, input.ExtOrgIdList);
     }
 
-    /// <summary>
-    /// 删除用户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysUserService 中与 Delete User 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除用户")]
@@ -287,7 +291,7 @@ public class SysUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 查看用户基本信息 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("查看用户基本信息")]
     public virtual async Task<SysUser> GetBaseInfo()
     {
@@ -297,7 +301,7 @@ public class SysUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 查询用户组织机构信息 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("查询用户组织机构信息")]
     public virtual async Task<List<OrgTreeOutput>> GetOrgInfo()
     {
@@ -307,7 +311,7 @@ public class SysUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新用户基本信息 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "BaseInfo"), HttpPost]
     [DisplayName("更新用户基本信息")]
     public virtual async Task<int> UpdateBaseInfo(SysUser user)
@@ -316,11 +320,9 @@ public class SysUserService : IDynamicApiController, ITransient
             .IgnoreColumns(u => new { u.CreateTime, u.Account, u.Password, u.AccountType, u.OrgId, u.PosId }).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 设置用户状态 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysUserService 的 Set Status 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("设置用户状态")]
     public virtual async Task<int> SetStatus(UserInput input)
@@ -361,11 +363,9 @@ public class SysUserService : IDynamicApiController, ITransient
         return rows;
     }
 
-    /// <summary>
-    /// 授权用户角色 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysUserService 的异步依赖完成 Grant Role 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("授权用户角色")]
     public async Task GrantRole(UserRoleInput input)
@@ -380,11 +380,9 @@ public class SysUserService : IDynamicApiController, ITransient
         await _eventPublisher.PublishAsync(SysUserEventTypeEnum.UpdateRole, input);
     }
 
-    /// <summary>
-    /// 修改用户密码 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysUserService 的 Change Pwd 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("修改用户密码")]
     public virtual async Task<int> ChangePwd(ChangePwdInput input)
     {
@@ -432,11 +430,9 @@ public class SysUserService : IDynamicApiController, ITransient
         return rows;
     }
 
-    /// <summary>
-    /// 重置用户密码 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>重置或刷新 SysUserService 的 Reset Pwd 状态，并重新加载所需数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("重置用户密码")]
     public virtual async Task<string> ResetPwd(ResetPwdUserInput input)
     {
@@ -459,11 +455,9 @@ public class SysUserService : IDynamicApiController, ITransient
         return randomPassword;
     }
 
-    /// <summary>
-    /// 解除登录锁定 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysUserService 的异步依赖完成 Unlock Login 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("解除登录锁定")]
     public virtual async Task UnlockLogin(UnlockLoginInput input)
     {
@@ -484,8 +478,8 @@ public class SysUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取用户拥有角色集合 🔖
     /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取用户拥有角色集合")]
     public async Task<List<long>> GetOwnRoleList(long userId)
     {
@@ -495,8 +489,8 @@ public class SysUserService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取用户扩展机构集合 🔖
     /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取用户扩展机构集合")]
     public async Task<List<SysUserExtOrg>> GetOwnExtOrgList(long userId)
     {

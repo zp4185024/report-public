@@ -16,6 +16,8 @@ public class SysLdapService : IDynamicApiController, ITransient
 {
     private readonly SqlSugarRepository<SysLdap> _sysLdapRep;
 
+    /// <summary>初始化 SysLdapService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysLdapRep">当前方法执行时使用的 sysLdapRep 输入值。</param>
     public SysLdapService(SqlSugarRepository<SysLdap> sysLdapRep)
     {
         _sysLdapRep = sysLdapRep;
@@ -24,8 +26,8 @@ public class SysLdapService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取系统域登录配置分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取系统域登录配置分页列表")]
     public async Task<SqlSugarPagedList<SysLdap>> Page(SysLdapInput input)
     {
@@ -39,8 +41,8 @@ public class SysLdapService : IDynamicApiController, ITransient
     /// <summary>
     /// 增加系统域登录配置 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加系统域登录配置")]
     public async Task<long> Add(AddSysLdapInput input)
@@ -54,8 +56,8 @@ public class SysLdapService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新系统域登录配置 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新系统域登录配置")]
     public async Task Update(UpdateSysLdapInput input)
@@ -72,8 +74,8 @@ public class SysLdapService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除系统域登录配置 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除系统域登录配置")]
     public async Task Delete(DeleteSysLdapInput input)
@@ -86,8 +88,8 @@ public class SysLdapService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取系统域登录配置详情 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取系统域登录配置详情")]
     public async Task<SysLdap> GetDetail([FromQuery] DetailSysLdapInput input)
     {
@@ -97,20 +99,18 @@ public class SysLdapService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取系统域登录配置列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取系统域登录配置列表")]
     public async Task<List<SysLdap>> GetList()
     {
         return await _sysLdapRep.AsQueryable().Select<SysLdap>().ToListAsync();
     }
 
-    /// <summary>
-    /// 验证账号
-    /// </summary>
+    /// <summary>调用 SysLdapService 的异步依赖完成 Auth Account 操作，并按当前返回类型传递处理结果。</summary>
     /// <param name="account">域用户</param>
     /// <param name="password">密码</param>
     /// <param name="tenantId">租户</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<bool> AuthAccount(long? tenantId, string account, string password)
     {
@@ -153,11 +153,9 @@ public class SysLdapService : IDynamicApiController, ITransient
         return true;
     }
 
-    /// <summary>
-    /// 同步域用户 🔖
-    /// </summary>
-    /// <param name="tenantId"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysLdapService 的异步依赖完成 Sync User Tenant 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="tenantId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("同步域用户")]
     [NonAction]
     public async Task<List<SysUserLdap>> SyncUserTenant(long tenantId)
@@ -166,11 +164,9 @@ public class SysLdapService : IDynamicApiController, ITransient
         return await SysLdapService.SyncUser(sysLdap);
     }
 
-    /// <summary>
-    /// 同步域用户 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysLdapService 的异步依赖完成 Sync User 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("同步域用户")]
     public async Task<List<SysUserLdap>> SyncUser(SyncSysLdapInput input)
     {
@@ -178,11 +174,9 @@ public class SysLdapService : IDynamicApiController, ITransient
         return await SysLdapService.SyncUser(sysLdap);
     }
 
-    /// <summary>
-    /// 同步域用户 🔖
-    /// </summary>
-    /// <param name="sysLdap"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysLdapService 的异步依赖完成 Sync User 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="sysLdap">当前方法执行时使用的 sysLdap 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task<List<SysUserLdap>> SyncUser(SysLdap sysLdap)
     {
         if (sysLdap == null) throw Oops.Oh(ErrorCodeEnum.D1002);
@@ -191,6 +185,7 @@ public class SysLdapService : IDynamicApiController, ITransient
         {
             await ldapConn.ConnectAsync(sysLdap.Host, sysLdap.Port);
             string bindPass = CryptogramUtil.Decrypt(sysLdap.BindPass);
+            // 第一阶段：调用 SyncUser 依赖的异步能力，等待并校验返回数据。
             await ldapConn.BindAsync(sysLdap.Version, sysLdap.BindDn, bindPass);
             var ldapSearchResults = await ldapConn.SearchAsync(sysLdap.BaseDn, LdapConnection.ScopeOne, "(objectClass=*)", null, false);
             var userLdapList = new List<SysUserLdap>();
@@ -218,6 +213,7 @@ public class SysLdapService : IDynamicApiController, ITransient
                     var sysUserLdap = CreateSysUserLdap(attrs, sysLdap.BindAttrAccount, sysLdap.BindAttrEmployeeId, deptCode);
                     sysUserLdap.Dn = ldapEntry.Dn;
                     sysUserLdap.TenantId = sysLdap.TenantId;
+                    // 第2阶段：执行 SyncUser 当前分支的数据转换，并保存该步骤产生的中间结果。
                     userLdapList.Add(sysUserLdap);
                 }
             }
@@ -241,12 +237,10 @@ public class SysLdapService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 获取部门代码
-    /// </summary>
-    /// <param name="attrs"></param>
-    /// <param name="bindAttrCode"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysLdapService 所需的 Get Department Code 数据，并按调用约定返回结果。</summary>
+    /// <param name="attrs">当前方法执行时使用的 attrs 输入值。</param>
+    /// <param name="bindAttrCode">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetDepartmentCode(LdapAttributeSet attrs, string bindAttrCode)
     {
         return bindAttrCode == "objectGUID"
@@ -254,14 +248,12 @@ public class SysLdapService : IDynamicApiController, ITransient
             : attrs.GetAttribute(bindAttrCode)?.StringValue ?? "0";
     }
 
-    /// <summary>
-    /// 创建同步对象
-    /// </summary>
-    /// <param name="attrs"></param>
-    /// <param name="bindAttrAccount"></param>
-    /// <param name="bindAttrEmployeeId"></param>
-    /// <param name="deptCode"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysLdapService 所需的 Create Sys User Ldap 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="attrs">当前方法执行时使用的 attrs 输入值。</param>
+    /// <param name="bindAttrAccount">控制数据范围、数量或工作簿坐标的数值。</param>
+    /// <param name="bindAttrEmployeeId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="deptCode">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static SysUserLdap CreateSysUserLdap(LdapAttributeSet attrs, string bindAttrAccount, string bindAttrEmployeeId, string deptCode)
     {
         var userLdap = new SysUserLdap
@@ -282,14 +274,12 @@ public class SysLdapService : IDynamicApiController, ITransient
         return userLdap;
     }
 
-    /// <summary>
-    /// 遍历查询域用户
-    /// </summary>
-    /// <param name="ldapConn"></param>
-    /// <param name="sysLdap"></param>
-    /// <param name="userLdapList"></param>
-    /// <param name="baseDn"></param>
-    /// <param name="deptCode"></param>
+    /// <summary>查询或读取 SysLdapService 所需的 Search Dn Ldap User 数据，并按调用约定返回结果。</summary>
+    /// <param name="ldapConn">当前方法执行时使用的 ldapConn 输入值。</param>
+    /// <param name="sysLdap">当前方法执行时使用的 sysLdap 输入值。</param>
+    /// <param name="userLdapList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="baseDn">当前方法执行时使用的 baseDn 输入值。</param>
+    /// <param name="deptCode">需要读取、校验、比较或转换的业务值。</param>
     private static async Task SearchDnLdapUser(LdapConnection ldapConn, SysLdap sysLdap, List<SysUserLdap> userLdapList, string baseDn, string deptCode)
     {
         var ldapSearchResults = await ldapConn.SearchAsync(baseDn, LdapConnection.ScopeOne, "(objectClass=*)", null, false);
@@ -322,11 +312,9 @@ public class SysLdapService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 同步域组织 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysLdapService 的异步依赖完成 Sync Dept 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("同步域组织")]
     public async Task SyncDept(SyncSysLdapInput input)
     {
@@ -335,6 +323,7 @@ public class SysLdapService : IDynamicApiController, ITransient
         try
         {
             await ldapConn.ConnectAsync(sysLdap.Host, sysLdap.Port);
+            // 第一阶段：执行 SyncDept 当前分支的数据转换，并保存该步骤产生的中间结果。
             string bindPass = CryptogramUtil.Decrypt(sysLdap.BindPass);
             await ldapConn.BindAsync(sysLdap.Version, sysLdap.BindDn, bindPass);
             var ldapSearchResults = await ldapConn.SearchAsync(sysLdap.BaseDn, LdapConnection.ScopeOne, "(objectClass=*)", null, false);
@@ -361,6 +350,7 @@ public class SysLdapService : IDynamicApiController, ITransient
                 await SearchDnLdapDept(ldapConn, sysLdap, orgList, ldapEntry.Dn, sysOrg);
             }
 
+            // 第2阶段：检查 SyncDept 当前条件，并按匹配分支执行对应处理。
             if (orgList.Count == 0)
                 return;
 
@@ -380,14 +370,12 @@ public class SysLdapService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 遍历查询域用户
-    /// </summary>
-    /// <param name="ldapConn"></param>
-    /// <param name="sysLdap"></param>
-    /// <param name="listOrgs"></param>
-    /// <param name="baseDn"></param>
-    /// <param name="org"></param>
+    /// <summary>查询或读取 SysLdapService 所需的 Search Dn Ldap Dept 数据，并按调用约定返回结果。</summary>
+    /// <param name="ldapConn">当前方法执行时使用的 ldapConn 输入值。</param>
+    /// <param name="sysLdap">当前方法执行时使用的 sysLdap 输入值。</param>
+    /// <param name="listOrgs">当前方法执行时使用的 listOrgs 输入值。</param>
+    /// <param name="baseDn">当前方法执行时使用的 baseDn 输入值。</param>
+    /// <param name="org">当前方法执行时使用的 org 输入值。</param>
     private static async Task SearchDnLdapDept(LdapConnection ldapConn, SysLdap sysLdap, List<SysOrg> listOrgs, string baseDn, SysOrg org)
     {
         var ldapSearchResults = await ldapConn.SearchAsync(baseDn, LdapConnection.ScopeOne, "(objectClass=*)", null, false);
@@ -414,14 +402,12 @@ public class SysLdapService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 创建架构对象
-    /// </summary>
-    /// <param name="attrs"></param>
-    /// <param name="sysLdap"></param>
-    /// <param name="listOrgs"></param>
-    /// <param name="org"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysLdapService 所需的 Create Sys Org 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="attrs">当前方法执行时使用的 attrs 输入值。</param>
+    /// <param name="sysLdap">当前方法执行时使用的 sysLdap 输入值。</param>
+    /// <param name="listOrgs">当前方法执行时使用的 listOrgs 输入值。</param>
+    /// <param name="org">当前方法执行时使用的 org 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static SysOrg CreateSysOrg(LdapAttributeSet attrs, SysLdap sysLdap, List<SysOrg> listOrgs, SysOrg org)
     {
         return new SysOrg

@@ -105,6 +105,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
     state.loading = true;
     const pageNoticeInput = {
@@ -119,22 +123,41 @@ const handleQuery = async () => {
     state.loading = false;
 };
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
     state.queryParams.title = undefined;
     state.queryParams.type = undefined;
     handleQuery();
 };
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
     state.tableParams.pageSize = val;
     handleQuery();
 };
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
     state.tableParams.page = val;
     handleQuery();
 };
 // 查看详情
+/**
+ * 负责 index 的 view Detail 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const viewDetail = async (row: any) => {
     state.content = row.sysNotice.content;
     state.dialogVisible = true;
@@ -145,6 +168,10 @@ const viewDetail = async (row: any) => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
+/**
+ * 负责 index 的 table Row Class Name 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const tableRowClassName = ({ row, rowIndex }: { row: SysNoticeUser; rowIndex: number }) => {
     return row.readStatus === 1 ? 'info-row' : '';
 };

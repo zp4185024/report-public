@@ -60,6 +60,8 @@ public class UserManager : IScoped
 
     public string LangCode => _httpContextAccessor.HttpContext?.User.FindFirst(ClaimConst.LangCode)?.Value ?? "zh_CN";
 
+    /// <summary>初始化 UserManager 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="httpContextAccessor">httpContextAccessor 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public UserManager(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;

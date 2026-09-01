@@ -14,6 +14,8 @@ public class SysConstService : IDynamicApiController, ITransient
 {
     private readonly SysCacheService _sysCacheService;
 
+    /// <summary>初始化 SysConstService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysCacheService">当前方法执行时使用的 sysCacheService 输入值。</param>
     public SysConstService(SysCacheService sysCacheService)
     {
         _sysCacheService = sysCacheService;
@@ -22,7 +24,7 @@ public class SysConstService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取所有常量列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取所有常量列表")]
     public async Task<List<ConstOutput>> GetList()
     {
@@ -45,8 +47,8 @@ public class SysConstService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据类名获取常量数据 🔖
     /// </summary>
-    /// <param name="typeName"></param>
-    /// <returns></returns>
+    /// <param name="typeName">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据类名获取常量数据")]
     public async Task<List<ConstOutput>> GetData([Required] string typeName)
     {
@@ -75,7 +77,7 @@ public class SysConstService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取常量特性类型列表
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private List<Type> GetConstAttributeList()
     {
         return App.EffectiveTypes.Where(u => u.CustomAttributes.Any(c => c.AttributeType == typeof(ConstAttribute))).ToList();

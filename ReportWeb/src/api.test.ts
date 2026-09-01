@@ -170,6 +170,12 @@ const saveConfigurationRequest: SaveReportConfigurationRequest = {
 
 const fetchMock = vi.fn();
 
+/**
+ * 验证 json Response 场景下的预期行为，并防止相关逻辑回归。
+ * @param body - 符合当前接口契约的请求输入数据。
+ * @param status - status 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -178,6 +184,11 @@ function jsonResponse(body: unknown, status = 200): Response {
   } as unknown as Response;
 }
 
+/**
+ * 验证 invalid Json Response 场景下的预期行为，并防止相关逻辑回归。
+ * @param status - status 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function invalidJsonResponse(status: number): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -186,6 +197,11 @@ function invalidJsonResponse(status: number): Response {
   } as unknown as Response;
 }
 
+/**
+ * 验证 download Response 场景下的预期行为，并防止相关逻辑回归。
+ * @param filename - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function downloadResponse(filename: string): Response {
   return {
     ok: true,

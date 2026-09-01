@@ -11,6 +11,7 @@ public sealed class PocExchangeMappingStoreTests : IDisposable
     private readonly SqlSugarClient _database;
     private readonly PocExchangeMappingStore _store;
 
+    /// <summary>初始化 PocExchangeMappingStoreTests 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocExchangeMappingStoreTests()
     {
         _database = new SqlSugarClient(new ConnectionConfig
@@ -50,6 +51,8 @@ public sealed class PocExchangeMappingStoreTests : IDisposable
         _store = new PocExchangeMappingStore(_database);
     }
 
+    /// <summary>验证 Empty table is seeded once and returns current rules 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Empty_table_is_seeded_once_and_returns_current_rules()
     {
@@ -66,6 +69,8 @@ public sealed class PocExchangeMappingStoreTests : IDisposable
         Assert.Contains(first.Rules, rule => rule.RuleCode == "univer-to-xlsx-cell-formula");
     }
 
+    /// <summary>验证 Highest mapping version is selected and disabled rules are ignored 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Highest_mapping_version_is_selected_and_disabled_rules_are_ignored()
     {
@@ -80,6 +85,8 @@ public sealed class PocExchangeMappingStoreTests : IDisposable
         Assert.Equal("new-enabled", rule.RuleCode);
     }
 
+    /// <summary>验证 Rules are sorted by sort then rule code 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Rules_are_sorted_by_sort_then_rule_code()
     {
@@ -92,6 +99,8 @@ public sealed class PocExchangeMappingStoreTests : IDisposable
         Assert.Equal(["rule-a", "rule-b", "rule-z"], current.Rules.Select(rule => rule.RuleCode));
     }
 
+    /// <summary>验证 Duplicate rule codes are rejected by the database index 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Duplicate_rule_codes_are_rejected_by_the_database_index()
     {
@@ -101,11 +110,18 @@ public sealed class PocExchangeMappingStoreTests : IDisposable
             () => InsertRuleAsync("duplicate", 4, true, 20));
     }
 
+    /// <summary>释放 PocExchangeMappingStoreTests 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _database.Dispose();
     }
 
+    /// <summary>负责 PocExchangeMappingStoreTests 的 Insert Rule Async 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="mappingVersion">mappingVersion 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="enabled">enabled 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sort">sort 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private Task<int> InsertRuleAsync(string ruleCode, int mappingVersion, bool enabled, int sort) =>
         _database.Insertable(new PocExchangeMapping
         {

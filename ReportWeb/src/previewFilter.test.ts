@@ -8,6 +8,11 @@ import {
   shouldRepairPreviewFilterRange,
 } from './previewFilter';
 
+/**
+ * 验证 plan 场景下的预期行为，并防止相关逻辑回归。
+ * @param detail - detail 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function plan(detail: TemplatePreviewPlan['detail']): TemplatePreviewPlan {
   return { parameterWrites: [], detail };
 }

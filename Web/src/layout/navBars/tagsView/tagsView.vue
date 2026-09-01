@@ -104,6 +104,11 @@ const setTagsViewNameI18n = computed(() => {
 	};
 });
 // 设置 tagsView 高亮
+/**
+ * 校验 tagsView 的 is Active 条件，并返回可供后续流程判断的结果。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const isActive = (v: RouteItem) => {
 	if (getThemeConfig.value.isShareTagsView) {
 		return v.path === state.routePath;
@@ -119,10 +124,19 @@ const isActive = (v: RouteItem) => {
 	}
 };
 // 存储 tagsViewList 到浏览器临时缓存中，页面刷新时，保留记录
+/**
+ * 构建 tagsView 所需的 add Browser Set Session 内容，并保证生成结果符合调用约定。
+ * @param tagsViewList - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const addBrowserSetSession = (tagsViewList: Array<object>) => {
 	Session.set('tagsViewList', tagsViewList);
 };
 // 获取 pinia 中的 tagsViewRoutes 列表
+/**
+ * 查询或读取 tagsView 所需的 get Tags View Routes 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getTagsViewRoutes = async () => {
 	state.routeActive = await setTagsViewHighlight(route);
 	state.routePath = (await route.meta.isDynamic) ? route.meta.isDynamicPath : route.path;
@@ -131,6 +145,10 @@ const getTagsViewRoutes = async () => {
 	initTagsView();
 };
 // pinia 中获取路由信息：如果是设置了固定的（isAffix），进行初始化显示
+/**
+ * 遍历 tagsView 数据并执行 init Tags View 转换，生成后续流程需要的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initTagsView = async () => {
 	if (Session.get('tagsViewList') && getThemeConfig.value.isCacheTagsView) {
 		state.tagsViewList = await Session.get('tagsViewList');
@@ -148,6 +166,12 @@ const initTagsView = async () => {
 	getTagsRefsIndex(getThemeConfig.value.isShareTagsView ? state.routePath : state.routeActive);
 };
 // 处理可开启多标签详情，单标签详情（动态路由（xxx/:id/:name"），普通路由处理）
+/**
+ * 按 solve Add Tags View 规则筛选 tagsView 数据，并返回满足条件的结果。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param to - to 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const solveAddTagsView = async (path: string, to?: RouteToFrom) => {
 	let isDynamicPath = to?.meta?.isDynamic ? to.meta.isDynamicPath : path;
 	let current = state.tagsViewList.filter(
@@ -172,6 +196,12 @@ const solveAddTagsView = async (path: string, to?: RouteToFrom) => {
 	}
 };
 // 处理单标签时，第二次的值未覆盖第一次的 tagsViewList 值（Session Storage）
+/**
+ * 遍历 tagsView 数据并执行 single Add Tags View 转换，生成后续流程需要的结果。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param to - to 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const singleAddTagsView = (path: string, to?: RouteToFrom) => {
 	let isDynamicPath = to?.meta?.isDynamic ? to.meta.isDynamicPath : path;
 	state.tagsViewList.forEach((v) => {
@@ -189,6 +219,12 @@ const singleAddTagsView = (path: string, to?: RouteToFrom) => {
 	});
 };
 // 1、添加 tagsView：未设置隐藏（isHide）也添加到在 tagsView 中（可开启多标签详情，单标签详情）
+/**
+ * 构建 tagsView 所需的 add Tags View 内容，并保证生成结果符合调用约定。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param to - to 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const addTagsView = (path: string, to?: RouteToFrom) => {
 	// 防止拿取不到路由信息
 	nextTick(async () => {
@@ -226,6 +262,11 @@ const addTagsView = (path: string, to?: RouteToFrom) => {
 	});
 };
 // 2、刷新当前 tagsView：
+/**
+ * 重置或刷新 tagsView 的 refresh Current Tags View 状态，并重新加载所需数据。
+ * @param fullPath - fullPath 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const refreshCurrentTagsView = async (fullPath: string) => {
 	const decodeURIPath = decodeURI(fullPath);
 	let item: RouteToFrom = {};
@@ -243,6 +284,11 @@ const refreshCurrentTagsView = async (fullPath: string) => {
 	if (item.meta?.isKeepAlive) storesKeepALiveNames.addCachedView(item);
 };
 // 3、关闭当前 tagsView：如果是设置了固定的（isAffix），不可以关闭
+/**
+ * 结束 tagsView 的 close Current Tags View 交互并清理临时状态。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeCurrentTagsView = (path: string) => {
 	state.tagsViewList.map((v: RouteItem, k: number, arr: RouteItems) => {
 		if (!v.meta?.isAffix) {
@@ -280,6 +326,11 @@ const closeCurrentTagsView = (path: string) => {
 	addBrowserSetSession(state.tagsViewList);
 };
 // 4、关闭其它 tagsView：如果是设置了固定的（isAffix），不进行关闭
+/**
+ * 结束 tagsView 的 close Other Tags View 交互并清理临时状态。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeOtherTagsView = (path: string) => {
 	if (Session.get('tagsViewList')) {
 		state.tagsViewList = [];
@@ -295,6 +346,10 @@ const closeOtherTagsView = (path: string) => {
 	}
 };
 // 5、关闭全部 tagsView：如果是设置了固定的（isAffix），不进行关闭
+/**
+ * 结束 tagsView 的 close All Tags View 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeAllTagsView = () => {
 	if (Session.get('tagsViewList')) {
 		storesKeepALiveNames.delAllCachedViews();
@@ -310,6 +365,11 @@ const closeAllTagsView = () => {
 	}
 };
 // 6、开启当前页面全屏
+/**
+ * 准备 tagsView 的 open Curren Fullscreen 交互状态并打开对应界面。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openCurrenFullscreen = async (path: string) => {
 	const item = state.tagsViewList.find((v: RouteItem) => (getThemeConfig.value.isShareTagsView ? v.path === path : v.url === path));
 	if (item.meta.isDynamic) await router.push({ name: item.name, params: item.params });
@@ -319,6 +379,11 @@ const openCurrenFullscreen = async (path: string) => {
 // 当前项右键菜单点击，拿 `当前点击的路由路径` 对比 `tagsView 路由数组`，取当前点击项的详细路由信息
 // 防止 tagsView 非当前页演示时，操作异常
 // https://gitee.com/lyt-top/vue-next-admin/issues/I61VS9
+/**
+ * 查询或读取 tagsView 所需的 get Current Route Item 数据，并按调用约定返回结果。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getCurrentRouteItem = (item: RouteItem): any => {
 	let resItem: RouteToFrom = {};
 	state.tagsViewList.forEach((v: RouteItem) => {
@@ -335,6 +400,11 @@ const getCurrentRouteItem = (item: RouteItem): any => {
 	else return resItem;
 };
 // 当前项右键菜单点击
+/**
+ * 响应 tagsView 的 on Current Contextmenu Click 事件，并协调相关状态和后续操作。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCurrentContextmenuClick = async (item: RouteItem) => {
 	item.commonUrl = transUrlParams(item);
 	if (!getCurrentRouteItem(item)) return ElMessage({ type: 'warning', message: '请正确输入路径及完整参数（query、params）' });
@@ -367,6 +437,12 @@ const onCurrentContextmenuClick = async (item: RouteItem) => {
 	}
 };
 // 右键点击时：传 x,y 坐标值到子组件中（props）
+/**
+ * 响应 tagsView 的 on Contextmenu 事件，并协调相关状态和后续操作。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onContextmenu = (v: RouteItem, e: MouseEvent) => {
 	const { clientX, clientY } = e;
 	state.dropdown.x = clientX;
@@ -374,6 +450,12 @@ const onContextmenu = (v: RouteItem, e: MouseEvent) => {
 	contextmenuRef.value.openContextmenu(v);
 };
 // 鼠标按下时，判断是鼠标中键就关闭当前 tasgview
+/**
+ * 响应 tagsView 的 on Mousedown Menu 事件，并协调相关状态和后续操作。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onMousedownMenu = (v: RouteItem, e: MouseEvent) => {
 	if (!v.meta?.isAffix && e.button === 1) {
 		const item = Object.assign({}, { contextMenuClickId: 1, ...v });
@@ -381,6 +463,12 @@ const onMousedownMenu = (v: RouteItem, e: MouseEvent) => {
 	}
 };
 // 当前的 tagsView 项点击时
+/**
+ * 响应 tagsView 的 on Tags Click 事件，并协调相关状态和后续操作。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param k - k 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onTagsClick = (v: RouteItem, k: number) => {
 	state.tagsRefsIndex = k;
 	router.push(v);
@@ -393,6 +481,11 @@ const onTagsClick = (v: RouteItem, k: number) => {
 // 处理 url，地址栏链接有参数时，tagsview 右键菜单刷新功能失效问题，感谢 @ZzZz-RIPPER、@dejavuuuuu
 // https://gitee.com/lyt-top/vue-next-admin/issues/I5K3YO
 // https://gitee.com/lyt-top/vue-next-admin/issues/I61VS9
+/**
+ * 负责 tagsView 的 trans Url Params 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const transUrlParams = (v: RouteItem) => {
 	let params = v.query && Object.keys(v.query).length > 0 ? v.query : v.params;
 	if (!params) return '';
@@ -418,6 +511,11 @@ const transUrlParams = (v: RouteItem) => {
 	}
 };
 // 处理 tagsView 高亮（多标签详情时使用，单标签详情未使用）
+/**
+ * 更新 tagsView 的 set Tags View Highlight 状态，并同步相关业务数据。
+ * @param v - v 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setTagsViewHighlight = (v: RouteToFrom) => {
 	let params = v.query && Object.keys(v.query).length > 0 ? v.query : v.params;
 	if (!params || Object.keys(params).length <= 0) return v.path;
@@ -429,10 +527,19 @@ const setTagsViewHighlight = (v: RouteToFrom) => {
 	return `${v.meta?.isDynamic ? v.meta.isDynamicPath : v.path}-${path}`;
 };
 // 鼠标滚轮滚动
+/**
+ * 响应 tagsView 的 on Handle Scroll 事件，并协调相关状态和后续操作。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onHandleScroll = (e: WheelEventType) => {
 	scrollbarRef.value.$refs.wrapRef.scrollLeft += e.wheelDelta / 4;
 };
 // tagsView 横向滚动
+/**
+ * 负责 tagsView 的 tags Viewmove To Current Tag 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const tagsViewmoveToCurrentTag = () => {
 	nextTick(() => {
 		if (tagsRefs.value.length <= 0) return false;
@@ -485,6 +592,11 @@ const tagsViewmoveToCurrentTag = () => {
 	});
 };
 // 获取 tagsView 的下标：用于处理 tagsView 点击时的横向滚动
+/**
+ * 查询或读取 tagsView 所需的 get Tags Refs Index 数据，并按调用约定返回结果。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getTagsRefsIndex = (path: string | unknown) => {
 	nextTick(async () => {
 		// await 使用该写法，防止拿取不到 tagsViewList 列表数据不完整
@@ -501,6 +613,10 @@ const getTagsRefsIndex = (path: string | unknown) => {
 	});
 };
 // 设置 tagsView 可以进行拖拽
+/**
+ * 遍历 tagsView 数据并执行 init Sortable 转换，生成后续流程需要的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initSortable = async () => {
 	const el = <HTMLElement>document.querySelector('.layout-navbars-tagsview-ul');
 	if (!el) return false;
@@ -509,6 +625,10 @@ const initSortable = async () => {
 		animation: 300,
 		dataIdAttr: 'data-url',
 		disabled: getThemeConfig.value.isSortableTagsView ? false : true,
+		/**
+		 * 响应 tagsView 的 on End 事件，并协调相关状态和后续操作。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		onEnd: () => {
 			const sortEndList: RouteItem[] = [];
 			state.sortable.toArray().map((val: string) => {
@@ -521,6 +641,10 @@ const initSortable = async () => {
 	});
 };
 // 拖动问题，https://gitee.com/lyt-top/vue-next-admin/issues/I3ZRRI
+/**
+ * 响应 tagsView 的 on Sortable Resize 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSortableResize = async () => {
 	await initSortable();
 	if (other.isMobile()) state.sortable.el && state.sortable.destroy();

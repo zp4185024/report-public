@@ -18,6 +18,8 @@ public class SeedDataAttribute : Attribute
     /// </summary>
     public int Order { get; set; } = 0;
 
+    /// <summary>初始化 SeedDataAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="orderNo">当前方法执行时使用的 orderNo 输入值。</param>
     public SeedDataAttribute(int orderNo)
     {
         Order = orderNo;

@@ -11,6 +11,10 @@ import './app.css';
 // 入口只负责挂载 React；Univer/Worker 的重量级初始化延迟到模板数据加载完成后的宿主组件中。
 const path = window.location.pathname.replace(/\/$/, '') || '/';
 
+/**
+ * 根据 main 当前状态渲染 route 界面内容，并绑定所需交互。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function route() {
   if (path.startsWith('/share/reports/')) {
     const reportCode = decodeURIComponent(path.slice('/share/reports/'.length));

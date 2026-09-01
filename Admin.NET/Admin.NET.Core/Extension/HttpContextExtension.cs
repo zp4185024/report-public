@@ -10,6 +10,9 @@ namespace Admin.NET.Core;
 
 public static class HttpContextExtension
 {
+    /// <summary>查询或读取 HttpContextExtension 所需的 Get External Providers Async 数据，并按调用约定返回结果。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<AuthenticationScheme[]> GetExternalProvidersAsync(this HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -21,6 +24,10 @@ public static class HttpContextExtension
                 select scheme).ToArray();
     }
 
+    /// <summary>校验 HttpContextExtension 的 Is Provider Supported Async 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="provider">当前方法执行时使用的 provider 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<bool> IsProviderSupportedAsync(this HttpContext context, string provider)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -30,11 +37,9 @@ public static class HttpContextExtension
                 select scheme).Any();
     }
 
-    /// <summary>
-    /// 获取设备信息
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 HttpContextExtension 所需的 Get Client Device Info 数据，并按调用约定返回结果。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetClientDeviceInfo(this HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -42,11 +47,9 @@ public static class HttpContextExtension
         return CommonUtil.GetClientDeviceInfo(context.Request.Headers.UserAgent);
     }
 
-    /// <summary>
-    /// 获取浏览器信息
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 HttpContextExtension 所需的 Get Client Browser 数据，并按调用约定返回结果。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetClientBrowser(this HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -70,8 +73,8 @@ public static class HttpContextExtension
     /// <summary>
     /// 获取操作系统信息
     /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetClientOs(this HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);

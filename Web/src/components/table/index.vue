@@ -153,21 +153,37 @@ const props = defineProps({
 	// 列属性，和elementUI的Table-column 属性相同，附加属性：isCheck-是否默认勾选展示，hideCheck-是否隐藏该列的可勾选和拖拽
 	columns: {
 		type: Array<any>,
+		/**
+		 * 为 columns 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
 	},
 	// 配置项：isBorder-是否显示表格边框，isSerialNo-是否显示表格序号，showSelection-是否显示表格可多选，isSelection-是否默认选中表格多选，pageSize-每页条数，hideExport-是否隐藏导出按钮，exportFileName-导出表格的文件名，空值默认用应用名称作为文件名
 	config: {
 		type: Object,
+		/**
+		 * 为 config 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => ({}),
 	},
 	// 筛选参数
 	param: {
 		type: Object,
+		/**
+		 * 为 param 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => ({}),
 	},
 	// 默认排序方式，{prop:"排序字段",order:"ascending or descending"}
 	defaultSort: {
 		type: Object,
+		/**
+		 * 为 defaultSort 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => ({}),
 	},
 	// 导出报表自定义数据转换方法，不传按字段值导出
@@ -177,6 +193,10 @@ const props = defineProps({
 	// 打印标题
 	printName: {
 		type: String,
+		/**
+		 * 为 printName 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => '',
 	},
 });
@@ -217,6 +237,12 @@ const hideTool = computed(() => {
 	return props.config.hideTool ?? false;
 });
 
+/**
+ * 查询或读取 index 所需的 get Property 数据，并按调用约定返回结果。
+ * @param obj - obj 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param property - property 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getProperty = (obj: any, property: any) => {
 	const keys = property.split('.');
 	let value = obj;
@@ -243,52 +269,93 @@ const setHeader = computed(() => {
 	return state.columns.filter((v) => v.isCheck);
 });
 // tool 列显示全选改变时
+/**
+ * 响应 index 的 on Check All Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCheckAllChange = <T,>(val: T) => {
 	if (val) state.columns.forEach((v) => (v.isCheck = true));
 	else state.columns.forEach((v) => (v.isCheck = false));
 	state.checkListIndeterminate = false;
 };
 // tool 列显示当前项改变时
+/**
+ * 响应 index 的 on Check Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCheckChange = () => {
 	const headers = state.columns.filter((v) => v.isCheck).length;
 	state.checkListAll = headers === state.columns.length;
 	state.checkListIndeterminate = headers > 0 && headers < state.columns.length;
 };
 // 表格多选改变时
+/**
+ * 响应 index 的 on Selection Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSelectionChange = (val: EmptyObjectType[]) => {
 	state.selectlist = val;
 	emit('selectionChange', state.selectlist);
 };
 // 分页改变
+/**
+ * 响应 index 的 on Handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onHandleSizeChange = (val: number) => {
 	state.page.pageSize = val;
 	onRefreshTable();
 	emit('pageChange', state.page);
 };
 // 改变当前页
+/**
+ * 响应 index 的 on Handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onHandleCurrentChange = (val: number) => {
 	state.page.page = val;
 	onRefreshTable();
 	emit('pageChange', state.page);
 };
 // 列排序
+/**
+ * 按 sort Change 条件比较、筛选或整理 index 数据，并返回顺序稳定的结果。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const sortChange = (column: any) => {
 	state.page.field = column.prop;
 	state.page.order = column.order;
 	onRefreshTable();
 };
 // 重置列表
+/**
+ * 从 index 查询 page Reset 所需数据，处理空结果并按调用约定返回。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const pageReset = () => {
 	tableRef.value.clearSelection();
 	state.page.page = 1;
 	onRefreshTable();
 };
 // 导出当前页
+/**
+ * 响应 index 的 on Export Table 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onExportTable = () => {
 	if (setHeader.value.length <= 0) return ElMessage.error('没有勾选要导出的列');
 	exportData(state.data);
 };
 // 全部导出
+/**
+ * 响应 index 的 on Export Table All 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onExportTableAll = async () => {
 	if (setHeader.value.length <= 0) return ElMessage.error('没有勾选要导出的列');
 	state.exportLoading = true;
@@ -299,6 +366,11 @@ const onExportTableAll = async () => {
 	exportData(data);
 };
 // 导出方法
+/**
+ * 整理 index 的 export Data 数据，并生成可供调用方使用的输出。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const exportData = (data: Array<EmptyObjectType>) => {
 	if (data.length <= 0) return ElMessage.error('没有数据可以导出');
 	state.exportLoading = true;
@@ -317,6 +389,10 @@ const exportData = (data: Array<EmptyObjectType>) => {
 	state.exportLoading = false;
 };
 // 打印
+/**
+ * 响应 index 的 on Print Table 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onPrintTable = () => {
     let printDiv = document.createElement('div');
     let printTitle = document.createElement('div');
@@ -393,12 +469,20 @@ const onPrintTable = () => {
 };
 
 // 拖拽设置
+/**
+ * 响应 index 的 on Set Table 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSetTable = () => {
 	nextTick(() => {
 		const sortable = Sortable.create(toolSetRef.value, {
 			//handle: '.handle',
 			dataIdAttr: 'data-key',
 			animation: 150,
+            /**
+             * 响应 index 的 on Start 事件，并协调相关状态和后续操作。
+             * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+             */
             onStart: () => {
                 // 为了区分固定列和非固定列，拖动时给非固定列加背景色
                 toolSetRef.value.children.forEach((element: HTMLElement) => {
@@ -407,6 +491,11 @@ const onSetTable = () => {
                     }
                 });
             },
+            /**
+             * 响应 index 的 on Move 事件，并协调相关状态和后续操作。
+             * @param evt - evt 对应的业务输入；具体类型和空值范围以方法签名为准。
+             * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+             */
             onMove: (evt) => {
                 // 禁止固定列拖动
                 const srcItem = evt.dragged.dataset.fixed; // 拖动项
@@ -415,6 +504,10 @@ const onSetTable = () => {
                     return false;
                 }
             },
+			/**
+			 * 响应 index 的 on End 事件，并协调相关状态和后续操作。
+			 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+			 */
 			onEnd: () => {
 				const headerList: EmptyObjectType[] = [];
 				sortable.toArray().forEach((val: any) => {
@@ -434,6 +527,10 @@ const onSetTable = () => {
 	});
 };
 
+/**
+ * 响应 index 的 on Refresh Table 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onRefreshTable = async () => {
 	state.loading = true;
 	let param = Object.assign({}, props.param, { ...state.page });
@@ -450,14 +547,30 @@ const onRefreshTable = async () => {
 	}
 };
 
+/**
+ * 更新 index 的 toggle Selection 状态，并把变化同步到关联组件或业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param statu - statu 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const toggleSelection = (row: any, statu?: boolean) => {
 	tableRef.value!.toggleRowSelection(row, statu);
 };
 
+/**
+ * 查询或读取 index 所需的 get Table Data 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getTableData = () => {
 	return state.data;
 };
 
+/**
+ * 更新 index 的 set Table Data 状态，并同步相关业务数据。
+ * @param data - 本次操作使用的输入数据。
+ * @param add - add 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setTableData = (data: Array<EmptyObjectType>, add: boolean = false) => {
 	if (add) {
 		// 追加, 去重
@@ -479,10 +592,18 @@ const setTableData = (data: Array<EmptyObjectType>, add: boolean = false) => {
 	}
 };
 
+/**
+ * 移除 index 中与 clear Fixed 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const clearFixed = () => {
 	for (let item of state.columns) delete item['fixed'];
 };
 
+/**
+ * 更新 index 的 switch Fixed 状态，并把变化同步到关联组件或业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const switchFixed = () => {
 	state.currentFixed = !state.currentFixed;
 	state.switchFixedContent = state.currentFixed ? '取消固定列' : '启用固定列';
@@ -495,6 +616,10 @@ const switchFixed = () => {
 	}
 };
 
+/**
+ * 重置或刷新 index 的 refresh Columns 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const refreshColumns = () => {
 	state.oldColumns = JSON.parse(JSON.stringify(props.columns));
 	state.columns = props.columns;

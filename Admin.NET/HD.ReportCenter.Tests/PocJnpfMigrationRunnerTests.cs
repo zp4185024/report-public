@@ -9,6 +9,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
     private readonly SqlSugarClient _database;
     private readonly PocJnpfMigrationRunner _runner;
 
+    /// <summary>初始化 PocJnpfMigrationRunnerTests 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocJnpfMigrationRunnerTests()
     {
         _database = new SqlSugarClient(new ConnectionConfig
@@ -28,6 +29,8 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         _runner = new PocJnpfMigrationRunner(new PocDataAssetStore(_database), _database);
     }
 
+    /// <summary>验证 Resolve Data Source Async Reads Stored Jnpf Credential 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ResolveDataSourceAsync_ReadsStoredJnpfCredential()
     {
@@ -46,6 +49,8 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Equal("jnpf-secret", jnpf.Password);
     }
 
+    /// <summary>验证 Resolve Data Source Async Rejects Wrong Database Type 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ResolveDataSourceAsync_RejectsWrongDatabaseType()
     {
@@ -63,6 +68,8 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
                 "JNPF 来源"));
     }
 
+    /// <summary>验证 Resolve Data Source Async Allows Selected Report Runtime Database Type 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ResolveDataSourceAsync_AllowsSelectedReportRuntimeDatabaseType()
     {
@@ -81,6 +88,8 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Equal("orclpdb", reportSource.Database);
     }
 
+    /// <summary>验证 Resolve Target Connection String Async Uses Current Report Center Connection 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ResolveTargetConnectionStringAsync_UsesCurrentReportCenterConnection()
     {
@@ -94,6 +103,8 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Equal(connectionString, resolved);
     }
 
+    /// <summary>验证 Resolve Target Connection String Async Rejects Non Sql Server Current Connection 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ResolveTargetConnectionStringAsync_RejectsNonSqlServerCurrentConnection()
     {
@@ -102,6 +113,8 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         await Assert.ThrowsAnyAsync<Exception>(() => _runner.ResolveTargetConnectionStringAsync());
     }
 
+    /// <summary>验证 Resolve Target Connection String Async Rejects Wrong Current Database 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task ResolveTargetConnectionStringAsync_RejectsWrongCurrentDatabase()
     {
@@ -112,6 +125,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         await Assert.ThrowsAnyAsync<Exception>(() => _runner.ResolveTargetConnectionStringAsync());
     }
 
+    /// <summary>验证 Converter Transforms Fields Sql Parameters And Template Without Power Shell 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Converter_TransformsFieldsSqlParametersAndTemplateWithoutPowerShell()
     {
@@ -123,6 +137,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             ]
             """);
 
+        // 第一阶段：构造 Converter_TransformsFieldsSqlParametersAndTemplateWithoutPowerShell 当前步骤需要的中间数据和执行参数。
         var sql = PocJnpfMigrationConverter.ConvertSql(
             "SELECT PID, 患者姓名, AGE FROM V_YB_FEE_DETAIL WHERE CREATE_DATE >= {sdate} AND CREATE_DATE < {edate}",
             fields,
@@ -151,6 +166,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "门诊数据集",
             fields);
 
+        // 第2阶段：根据 Converter_TransformsFieldsSqlParametersAndTemplateWithoutPowerShell 当前分支转换输入数据，并保存该阶段产生的中间结果。
         Assert.Equal(3, fields.Count);
         Assert.Equal("PID", fields[0].Code);
         Assert.Equal("field_02", fields[1].Code);
@@ -167,6 +183,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Equal(2, template.DetailFieldCount);
     }
 
+    /// <summary>验证 Create Candidate Preserves Rich Text Heading From Jnpf Template 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void CreateCandidate_PreservesRichTextHeadingFromJnpfTemplate()
     {
@@ -176,6 +193,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "{}",
             "[]",
             "[{\"field\":\"医疗类别\",\"fieldName\":\"医疗类别\",\"dataType\":\"string\"}]");
+        // 第一阶段：构造 CreateCandidate_PreservesRichTextHeadingFromJnpfTemplate 当前步骤需要的中间数据和执行参数。
         var package = new JnpfSourcePackage(
             "report-1",
             "医保-锦州市城镇职工医疗保险费用申报表-异地",
@@ -219,6 +237,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
                 new JnpfDatabaseLink("database-1", "DATA_TRANSFER", "Oracle"),
                 "SELECT 医疗类别 FROM V_YB_FEE_DETAIL")]);
 
+        // 第2阶段：构造 CreateCandidate_PreservesRichTextHeadingFromJnpfTemplate 当前步骤需要的中间数据和执行参数。
         var candidate = PocJnpfMigrationConverter.CreateCandidate(package, "report_oracle", "Oracle");
 
         var migration = Assert.IsType<JnpfMigration>(candidate.Migration);
@@ -229,6 +248,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Null(snapshot["sheets"]?["sheet1"]?["cellData"]?["1"]?["3"]?["v"]);
     }
 
+    /// <summary>验证 Converter Rejects Unclosed Jnpf Parameter Marker 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Converter_RejectsUnclosedJnpfParameterMarker()
     {
@@ -244,6 +264,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Contains("未识别的 JNPF 参数标记", exception.Message);
     }
 
+    /// <summary>验证 Create Candidate Uses Template Name For Dataset Display Name 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void CreateCandidate_UsesTemplateNameForDatasetDisplayName()
     {
@@ -253,6 +274,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "{}",
             "[]",
             "[{\"field\":\"PID\",\"fieldName\":\"病历号\",\"dataType\":\"string\"}]");
+        // 第一阶段：构造 CreateCandidate_UsesTemplateNameForDatasetDisplayName 当前步骤需要的中间数据和执行参数。
         var package = new JnpfSourcePackage(
             "report-1",
             "\t 门诊护士材料统计 ",
@@ -282,6 +304,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
                 new JnpfDatabaseLink("database-1", "DATA_TRANSFER", "Oracle"),
                 "SELECT PID FROM PATIENT")]);
 
+        // 第2阶段：构造 CreateCandidate_UsesTemplateNameForDatasetDisplayName 当前步骤需要的中间数据和执行参数。
         var candidate = PocJnpfMigrationConverter.CreateCandidate(
             package,
             "data_source_5",
@@ -293,6 +316,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Equal(migration.ReportName, migration.DatasetName);
     }
 
+    /// <summary>验证 Create Candidate Uses Jnpf Query Parameter Metadata Before Name Heuristics 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void CreateCandidate_UsesJnpfQueryParameterMetadataBeforeNameHeuristics()
     {
@@ -302,6 +326,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "{}",
             "[{\"id\":\"49d00c\",\"field\":\"med_type\",\"dataType\":\"varchar\",\"defaultValue\":\"\",\"required\":0,\"fieldName\":\"\"},{\"id\":\"92063c\",\"field\":\"localType\",\"dataType\":\"varchar\",\"defaultValue\":\"\",\"required\":0,\"fieldName\":\"\"},{\"id\":\"848528\",\"field\":\"startDate\",\"dataType\":\"varchar\",\"defaultValue\":\"\",\"required\":0,\"fieldName\":\"\"}]",
             "[{\"field\":\"AMOUNT\",\"fieldName\":\"金额\",\"dataType\":\"number\"}]");
+        // 第一阶段：构造 CreateCandidate_UsesJnpfQueryParameterMetadataBeforeNameHeuristics 当前步骤需要的中间数据和执行参数。
         var package = new JnpfSourcePackage(
             "report-1",
             "医保结算查询",
@@ -339,6 +364,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
                 new JnpfDatabaseLink("database-1", "DATA_TRANSFER", "Oracle"),
                 "SELECT AMOUNT FROM V_YB_FEE_O WHERE FEE_DATE >= TO_DATE({startDate} || '-01', 'YYYY-MM-DD') AND MED_TYPE = {med_type} AND LOCAL_TYPE = {localType} AND ORG_ID = @hisYbOrgId")]);
 
+        // 第2阶段：构造 CreateCandidate_UsesJnpfQueryParameterMetadataBeforeNameHeuristics 当前步骤需要的中间数据和执行参数。
         var candidate = PocJnpfMigrationConverter.CreateCandidate(
             package,
             "data_source_5",
@@ -373,6 +399,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Equal("his", organizationName.SourceCode);
         Assert.Equal("hisOrganizeName", organizationName.SourceFieldCode);
         Assert.False(organizationName.IsVisible);
+        // 第3阶段：根据 CreateCandidate_UsesJnpfQueryParameterMetadataBeforeNameHeuristics 当前分支转换输入数据，并保存该阶段产生的中间结果。
         Assert.True(organizationName.IsReadOnly);
 
         var insuranceOrganization = Assert.Single(
@@ -401,6 +428,8 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Contains("LEGACY_MERGE_COORDINATE_NORMALIZED:5", candidate.Markers);
     }
 
+    /// <summary>验证 Write Migration Async Inserts Configuration Graph And Skips Existing Report 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task WriteMigrationAsync_InsertsConfigurationGraphAndSkipsExistingReport()
     {
@@ -410,6 +439,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "Oracle",
             PocDatabaseProvider.BuildConnectionString(
                 "Oracle", "192.168.2.5", 2521, "orclpdb", "report-reader", "report-secret", 30));
+        // 第一阶段：构造 WriteMigrationAsync_InsertsConfigurationGraphAndSkipsExistingReport 当前步骤需要的中间数据和执行参数。
         var migration = new JnpfMigration(
             "source-report-1",
             "source-version-1",
@@ -435,6 +465,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             1,
             1);
 
+        // 第2阶段：调用 WriteMigrationAsync_InsertsConfigurationGraphAndSkipsExistingReport 依赖的异步能力，等待并校验返回数据。
         var inserted = await _runner.WriteMigrationAsync(migration);
         var skipped = await _runner.WriteMigrationAsync(migration);
 
@@ -446,6 +477,11 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Equal(1, Assert.Single(_database.Queryable<PocReportTemplate>().ToList()).Revision);
     }
 
+    /// <summary>负责 PocJnpfMigrationRunnerTests 的 Insert Data Source 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="id">需要定位的业务记录标识。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="dbType">dbType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="connectionString">connectionString 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private void InsertDataSource(long id, string code, string dbType, string connectionString)
     {
         _database.Insertable(new PocDataSource
@@ -468,6 +504,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         }).ExecuteCommand();
     }
 
+    /// <summary>释放 PocJnpfMigrationRunnerTests 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _database.Dispose();

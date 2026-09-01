@@ -106,6 +106,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	var res = await getAPI(SysPosApi).apiSysPosListGet(state.queryParams.name, state.queryParams.code, state.queryParams.tenantId);
@@ -114,6 +118,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.name = undefined;
 	state.queryParams.code = undefined;
@@ -121,18 +129,32 @@ const resetQuery = () => {
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Pos 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddPos = () => {
 	state.editPosTitle = '添加职位';
 	editPosRef.value?.openDialog({ status: 1, tenantId: state.queryParams.tenantId, orderNo: 100 });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Pos 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditPos = (row: any) => {
 	state.editPosTitle = '编辑职位';
 	editPosRef.value?.openDialog(row);
 };
 
 // 打开复制页面
+/**
+ * 准备 index 的 open Copy Menu 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openCopyMenu = (row: any) => {
 	state.editPosTitle = '复制职位';
 	var copyRow = JSON.parse(JSON.stringify(row)) as UpdatePosInput;
@@ -142,6 +164,11 @@ const openCopyMenu = (row: any) => {
 };
 
 // 删除
+/**
+ * 从 index 移除 del Pos 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delPos = (row: any) => {
 	ElMessageBox.confirm(`确定删除职位：【${row.name}】?`, '提示', {
 		confirmButtonText: '确定',

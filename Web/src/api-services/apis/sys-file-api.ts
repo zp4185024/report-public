@@ -765,6 +765,7 @@ export const SysFileApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysFileDeletePost(body?: BaseIdInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysFileApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysFileApiAxiosParamCreator(configuration).apiSysFileDeletePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -796,6 +797,7 @@ export const SysFileApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysFileApiAxiosParamCreator(configuration).apiSysFileDownloadFilePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysFileApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -834,6 +836,7 @@ export const SysFileApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysFileFolderGet(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListTreeNode>>> {
+            // 第3阶段：调用 SysFileApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysFileApiAxiosParamCreator(configuration).apiSysFileFolderGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -865,6 +868,7 @@ export const SysFileApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysFileApiAxiosParamCreator(configuration).apiSysFilePreviewIdGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysFileApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -904,6 +908,7 @@ export const SysFileApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysFileUploadFileFromBase64Post(body?: UploadFileFromBase64Input, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysFile>>> {
+            // 第5阶段：调用 SysFileApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysFileApiAxiosParamCreator(configuration).apiSysFileUploadFileFromBase64Post(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -938,6 +943,7 @@ export const SysFileApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysFileUploadFilesPostForm(files?: Array<Blob>, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListSysFile>>> {
+            // 第6阶段：调用 SysFileApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysFileApiAxiosParamCreator(configuration).apiSysFileUploadFilesPostForm(files, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -975,6 +981,7 @@ export const SysFileApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysFileDeletePost(body?: BaseIdInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysFileApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileApiFp(configuration).apiSysFileDeletePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1015,6 +1022,7 @@ export const SysFileApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysFileFileGet(id?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSysFile>> {
+            // 第2阶段：整理 SysFileApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileApiFp(configuration).apiSysFileFileGet(id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1044,6 +1052,7 @@ export const SysFileApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysFilePreviewIdGet(id: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultIActionResult>> {
+            // 第3阶段：整理 SysFileApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileApiFp(configuration).apiSysFilePreviewIdGet(id, options).then((request) => request(axios, basePath));
         },
         /**
@@ -1090,6 +1099,7 @@ export const SysFileApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysFileUploadFilePostForm(file?: Blob, fileType?: string, isPublic?: boolean, allowSuffix?: string, bucketName?: string, providerId?: number, dataId?: number, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSysFile>> {
+            // 第4阶段：整理 SysFileApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysFileApiFp(configuration).apiSysFileUploadFilePostForm(file, fileType, isPublic, allowSuffix, bucketName, providerId, dataId, options).then((request) => request(axios, basePath));
         },
         /**

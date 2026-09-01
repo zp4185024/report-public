@@ -18,6 +18,11 @@ const resultDefinition = {
   ],
 };
 
+/**
+ * 验证 workbook With Sheets 场景下的预期行为，并防止相关逻辑回归。
+ * @param sheets - sheets 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function workbookWithSheets(sheets: IWorkbookData['sheets']): IWorkbookData {
   return {
     id: 'template-workbook',
@@ -30,6 +35,11 @@ function workbookWithSheets(sheets: IWorkbookData['sheets']): IWorkbookData {
   };
 }
 
+/**
+ * 验证 workbook 场景下的预期行为，并防止相关逻辑回归。
+ * @param cellData - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function workbook(cellData: NonNullable<IWorkbookData['sheets'][string]['cellData']>): IWorkbookData {
   return workbookWithSheets({
     'sheet-1': {
@@ -40,6 +50,11 @@ function workbook(cellData: NonNullable<IWorkbookData['sheets'][string]['cellDat
   });
 }
 
+/**
+ * 验证 execute Result 场景下的预期行为，并防止相关逻辑回归。
+ * @param overrides - overrides 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function executeResult(overrides: Partial<ExecuteResult> = {}): ExecuteResult {
   return {
     page: 1,
@@ -57,6 +72,11 @@ function executeResult(overrides: Partial<ExecuteResult> = {}): ExecuteResult {
   };
 }
 
+/**
+ * 验证 detail Binding 场景下的预期行为，并防止相关逻辑回归。
+ * @param overrides - overrides 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function detailBinding(
   overrides: Partial<NonNullable<TemplateBinding['detailBinding']>> = {},
 ): TemplateBinding {
@@ -78,6 +98,11 @@ function detailBinding(
   };
 }
 
+/**
+ * 验证 workload Rows 场景下的预期行为，并防止相关逻辑回归。
+ * @param count - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function workloadRows(count: number): ExecuteResult['rows'] {
   return Array.from({ length: count }, (_, index) => ({
     sequence: index + 1,
@@ -87,6 +112,12 @@ function workloadRows(count: number): ExecuteResult['rows'] {
   }));
 }
 
+/**
+ * 验证 expect Preview Error 场景下的预期行为，并防止相关逻辑回归。
+ * @param action - action 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param expected - expected 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function expectPreviewError(
   action: () => unknown,
   expected: {

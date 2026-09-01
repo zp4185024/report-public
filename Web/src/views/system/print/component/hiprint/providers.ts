@@ -3,9 +3,28 @@ import { hiprint } from 'vue-plugin-hiprint';
 import logoImg from '/@/assets/logo.png';
 
 // 自定义设计元素1
+/**
+ * 创建并返回 providers 的 a Provider 配置对象，集中提供相关状态和操作入口。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const aProvider = function () {
+	/**
+	 * 构建 providers 所需的 add Element Types 内容，并保证生成结果符合调用约定。
+	 * @param context - 本次操作共享的运行上下文。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
+	// 第3阶段：构造 aProvider 当前阶段需要的中间数据和执行参数。
+	/**
+	 * 构建 providers 所需的 add Element Types 内容，并保证生成结果符合调用约定。
+	 * @param context - 本次操作共享的运行上下文。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	var addElementTypes = function (context: any) {
+		// 第2阶段：根据 addElementTypes 当前分支转换输入数据，并保存该阶段产生的中间结果。
+		// 第2阶段：根据 aProvider 当前分支转换输入数据，并保存该阶段产生的中间结果。
 		context.removePrintElementTypes('aProviderModule');
+		// 第一阶段：根据 addElementTypes 当前分支转换输入数据，并保存该阶段产生的中间结果。
+		// 第一阶段：根据 aProvider 当前分支转换输入数据，并保存该阶段产生的中间结果。
 		context.addPrintElementTypes('aProviderModule', [
 			new hiprint.PrintElementTypeGroup('【公共组件】', [
 				{
@@ -181,15 +200,35 @@ export const aProvider = function () {
 			]),
 		]);
 	};
+	// 第4阶段：整理 aProvider 已计算的数据，并按方法契约返回最终结果。
 	return {
 		addElementTypes: addElementTypes,
 	};
 };
 
 // 自定义设计元素2
+/**
+ * 创建并返回 providers 的 b Provider 配置对象，集中提供相关状态和操作入口。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export const bProvider = function () {
+	/**
+	 * 构建 providers 所需的 add Element Types 内容，并保证生成结果符合调用约定。
+	 * @param context - 本次操作共享的运行上下文。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
+	// 第3阶段：构造 bProvider 当前阶段需要的中间数据和执行参数。
+	/**
+	 * 构建 providers 所需的 add Element Types 内容，并保证生成结果符合调用约定。
+	 * @param context - 本次操作共享的运行上下文。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	var addElementTypes = function (context: any) {
+		// 第2阶段：根据 addElementTypes 当前分支转换输入数据，并保存该阶段产生的中间结果。
+		// 第2阶段：根据 bProvider 当前分支转换输入数据，并保存该阶段产生的中间结果。
 		context.removePrintElementTypes('bProviderModule');
+		// 第一阶段：根据 addElementTypes 当前分支转换输入数据，并保存该阶段产生的中间结果。
+		// 第一阶段：根据 bProvider 当前分支转换输入数据，并保存该阶段产生的中间结果。
 		context.addPrintElementTypes('bProviderModule', [
 			new hiprint.PrintElementTypeGroup('【常规】', [
 				{
@@ -425,6 +464,7 @@ export const bProvider = function () {
 			]),
 		]);
 	};
+	// 第4阶段：整理 bProvider 已计算的数据，并按方法契约返回最终结果。
 	return {
 		addElementTypes: addElementTypes,
 	};

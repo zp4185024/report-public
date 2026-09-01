@@ -41,10 +41,15 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
     /// </summary>
     public string LockPrefix { get; set; } = "lock_";
 
+    /// <summary>初始化 IdempotentAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public IdempotentAttribute()
     {
     }
 
+    /// <summary>响应 IdempotentAttribute 的 On Action Execution Async 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="next">当前方法执行时使用的 next 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var httpContext = context.HttpContext;
@@ -52,6 +57,7 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
         var userId = httpContext.User?.FindFirstValue(ClaimConst.UserId);
         var cacheExpireTime = TimeSpan.FromSeconds(IntervalTime);
 
+        // 第一阶段：构造 OnActionExecutionAsync 当前步骤需要的中间数据和执行参数。
         var parameters = JsonConvert.SerializeObject(context.ActionArguments, Formatting.None, new JsonSerializerSettings
         {
             NullValueHandling = NullValueHandling.Include,
@@ -76,6 +82,7 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
             {
                 var resultContext = await next();
                 // 缓存请求结果,null值不缓存
+                // 第2阶段：检查 OnActionExecutionAsync 当前条件，并按匹配分支执行对应处理。
                 if (resultContext.Result is ObjectResult { Value: { } } objectResult)
                 {
                     var typeName = objectResult.Value.GetType().Name;

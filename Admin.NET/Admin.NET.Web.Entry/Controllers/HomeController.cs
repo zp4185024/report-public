@@ -19,6 +19,8 @@ namespace Admin.NET.Web.Entry.Controllers
         //    _systemService = systemService;
         //}
 
+        /// <summary>根据 HomeController 当前输入计算 Index 结果，并按方法声明的类型返回。</summary>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public IActionResult Index()
         {
             //ViewBag.Description = _systemService.GetDescription();

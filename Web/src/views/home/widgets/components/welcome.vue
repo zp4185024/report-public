@@ -51,6 +51,10 @@ export default {
 </script>
 
 <script setup lang="ts" name="welcome">
+/**
+ * 负责 welcome 的 godoc 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const godoc = () => {
 	window.open('https://adminnet.top/');
 };

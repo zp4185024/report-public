@@ -201,6 +201,10 @@ onMounted(async () => {
 });
 
 // db改变
+/**
+ * 按 db Changed 规则筛选 editCodeGenDialog 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const dbChanged = async () => {
 	if (!state.ruleForm.configId) return;
     state.tableData = await getAPI(SysCodeGenApi).apiSysCodeGenTableListConfigIdGet(state.ruleForm.configId as string).then(res => res.data.result ?? []);
@@ -211,6 +215,11 @@ const dbChanged = async () => {
 };
 
 // table改变
+/**
+ * 负责 editCodeGenDialog 的 table Changed 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const tableChanged = (item: any) => {
 	state.ruleForm.tableName = item.tableName;
 	state.ruleForm.entityName = item.entityName;
@@ -220,12 +229,22 @@ const tableChanged = (item: any) => {
 };
 
 // 表唯一约束配置项字段改变事件
+/**
+ * 更新 editCodeGenDialog 的 change Table Unique Column 状态，并同步相关业务数据。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeTableUniqueColumn = (value: any, index: number) => {
   if (value?.length === 1 && !state.ruleForm.tableUniqueList[index].message) {
     state.ruleForm.tableUniqueList[index].message = state.columnData.find((u: any) => u.propertyName === value[0])?.columnComment;
   }
 }
 
+/**
+ * 查询或读取 editCodeGenDialog 所需的 get Column Info List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getColumnInfoList = async () => {
 	if (!state.ruleForm.configId || !state.ruleForm.tableName) return;
   state.columnData = await getAPI(SysCodeGenApi)
@@ -235,11 +254,20 @@ const getColumnInfoList = async () => {
 };
 
 // 菜单改变
+/**
+ * 按 menu Change 规则筛选 editCodeGenDialog 数据，并返回满足条件的结果。
+ * @param menu - menu 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const menuChange = (menu: any) => {
 	state.ruleForm.pagePath = state.menuData.find((x) => x.id == menu)?.name;
 };
 
 // print改变
+/**
+ * 整理 editCodeGenDialog 的 print Type Changed 数据，生成可下载、导出或打印的最终内容。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const printTypeChanged = () => {
 	if (state.ruleForm.printType === '') return;
 	if (state.ruleForm.printType == 'off') state.ruleForm.printName = '';
@@ -251,6 +279,11 @@ const getGlobalComponentSize = computed(() => {
 });
 
 // 打开弹窗
+/**
+ * 准备 editCodeGenDialog 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	state.ruleForm = JSON.parse(JSON.stringify(row));
   dbChanged().then(() => getColumnInfoList());
@@ -260,17 +293,29 @@ const openDialog = (row: any) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 editCodeGenDialog 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('handleQuery');
 	state.isShowDialog = false;
 };
 
 // 取消
+/**
+ * 校验 editCodeGenDialog 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editCodeGenDialog 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;

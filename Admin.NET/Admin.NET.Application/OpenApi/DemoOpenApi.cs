@@ -15,11 +15,15 @@ public class DemoOpenApi : IDynamicApiController
 {
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 DemoOpenApi 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">当前方法执行时使用的 userManager 输入值。</param>
     public DemoOpenApi(UserManager userManager)
     {
         _userManager = userManager;
     }
 
+    /// <summary>根据 DemoOpenApi 当前输入计算 Hello Word 结果，并按方法声明的类型返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [HttpGet("helloWord")]
     public Task<string> HelloWord()
     {

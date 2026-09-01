@@ -15,6 +15,9 @@ public class SysLogDiffService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysLogDiff> _sysLogDiffRep;
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 SysLogDiffService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysLogDiffRep">sysLogDiffRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysLogDiffService(UserManager userManager, SqlSugarRepository<SysLogDiff> sysLogDiffRep)
     {
         _sysLogDiffRep = sysLogDiffRep;
@@ -24,7 +27,7 @@ public class SysLogDiffService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取差异日志分页列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [SuppressMonitor]
     [DisplayName("获取差异日志分页列表")]
     public async Task<SqlSugarPagedList<SysLogDiff>> Page(PageLogInput input)
@@ -40,7 +43,7 @@ public class SysLogDiffService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取差异日志详情 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [SuppressMonitor]
     [DisplayName("获取差异日志详情")]
     public async Task<SysLogDiff> GetDetail(long id)

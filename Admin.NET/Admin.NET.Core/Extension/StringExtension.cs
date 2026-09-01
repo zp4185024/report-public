@@ -11,9 +11,7 @@ namespace Admin.NET.Core;
 /// </summary>
 public static class StringExtension
 {
-    /// <summary>
-    /// 字符串截断
-    /// </summary>
+    /// <summary>根据 StringExtension 当前输入计算 Truncate 结果，并按方法声明的类型返回。</summary>
     public static string Truncate(this string str, int maxLength, string ellipsis = "...")
     {
         if (string.IsNullOrWhiteSpace(str)) return str;
@@ -71,9 +69,7 @@ public static class StringExtension
         return Regex.IsMatch(str, @"<\s*[^>]+>.*<\s*/\s*[^>]+>|<\s*[^>]+\s*/>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
     }
 
-    /// <summary>
-    /// 字符串反转
-    /// </summary>
+    /// <summary>根据 StringExtension 当前输入计算 Reverse 结果，并按方法声明的类型返回。</summary>
     public static string Reverse(this string str)
     {
         if (string.IsNullOrEmpty(str)) return str;
@@ -87,9 +83,7 @@ public static class StringExtension
         return new string(charSpan);
     }
 
-    /// <summary>
-    /// 转首字母小写
-    /// </summary>
+    /// <summary>根据 StringExtension 当前输入计算 To First Letter Lower Case 结果，并按方法声明的类型返回。</summary>
     public static string ToFirstLetterLowerCase(this string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return input;
@@ -103,7 +97,7 @@ public static class StringExtension
     /// </summary>
     /// <param name="template">模板内容</param>
     /// <param name="parameters">参数对象</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string Render(this string template, object parameters)
     {
         if (string.IsNullOrWhiteSpace(template)) return template;
@@ -126,12 +120,10 @@ public static class StringExtension
         });
     }
 
-    /// <summary>
-    /// 驼峰转下划线
-    /// </summary>
-    /// <param name="str"></param>
-    /// <param name="isToUpper"></param>
-    /// <returns></returns>
+    /// <summary>根据 StringExtension 当前输入计算 To Under Line 结果，并按方法声明的类型返回。</summary>
+    /// <param name="str">当前方法执行时使用的 str 输入值。</param>
+    /// <param name="isToUpper">当前方法执行时使用的 isToUpper 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ToUnderLine(this string str, bool isToUpper = false)
     {
         if (string.IsNullOrEmpty(str) || str.Contains("_"))

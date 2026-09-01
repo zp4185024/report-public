@@ -91,6 +91,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -101,24 +105,42 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.accessKey = undefined;
 	handleQuery();
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Open Access 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddOpenAccess = () => {
 	state.editOpenAccessTitle = '添加开放接口身份';
 	editOpenAccessRef.value?.openDialog({ type: 1 });
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Open Access 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditOpenAccess = (row: any) => {
 	state.editOpenAccessTitle = '编辑开放接口身份';
 	editOpenAccessRef.value?.openDialog(row);
 };
 
 // 删除
+/**
+ * 从 index 移除 del Open Access 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delOpenAccess = (row: any) => {
 	ElMessageBox.confirm(`确定删除开放接口身份：【${row.accessKey}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -134,23 +156,42 @@ const delOpenAccess = (row: any) => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();
 };
 
 // 打开说明页面
+/**
+ * 准备 index 的 open Help 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openHelp = () => {
 	helpViewRef.value?.openDialog();
 };
 
 // 打开生成签名
+/**
+ * 准备 index 的 open Generate Sign 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openGenerateSign = (row: any) => {
 	generateSignRef.value?.openDialog(row);
 };

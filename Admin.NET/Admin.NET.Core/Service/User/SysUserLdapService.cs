@@ -13,17 +13,17 @@ public class SysUserLdapService : ITransient
 {
     private readonly SqlSugarRepository<SysUserLdap> _sysUserLdapRep;
 
+    /// <summary>初始化 SysUserLdapService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysUserLdapRep">sysUserLdapRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysUserLdapService(SqlSugarRepository<SysUserLdap> sysUserLdapRep)
     {
         _sysUserLdapRep = sysUserLdapRep;
     }
 
-    /// <summary>
-    /// 批量插入域账号
-    /// </summary>
-    /// <param name="tenantId"></param>
-    /// <param name="sysUserLdapList"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysUserLdapService 的异步依赖完成 Insert User Ldap List 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="tenantId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="sysUserLdapList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task InsertUserLdapList(long tenantId, List<SysUserLdap> sysUserLdapList)
     {
         await _sysUserLdapRep.DeleteAsync(u => u.TenantId == tenantId);
@@ -37,14 +37,12 @@ public class SysUserLdapService : ITransient
             .ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 增加域账号
-    /// </summary>
-    /// <param name="tenantId"></param>
-    /// <param name="userId"></param>
-    /// <param name="account"></param>
-    /// <param name="domainAccount"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysUserLdapService 所需的 Add User Ldap 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="tenantId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="account">控制数据范围或位置的数值。</param>
+    /// <param name="domainAccount">控制数据范围或位置的数值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task AddUserLdap(long tenantId, long userId, string account, string domainAccount)
     {
         var userLdap = await _sysUserLdapRep.GetFirstAsync(u => u.TenantId == tenantId && (u.Account == account || u.UserId == userId || u.EmployeeId == domainAccount));
@@ -54,11 +52,9 @@ public class SysUserLdapService : ITransient
             await _sysUserLdapRep.InsertAsync(new SysUserLdap { EmployeeId = account, TenantId = tenantId, UserId = userId, Account = domainAccount });
     }
 
-    /// <summary>
-    /// 删除域账号
-    /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysUserLdapService 中与 Delete User Ldap By User Id 对应的数据，并清理关联状态。</summary>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task DeleteUserLdapByUserId(long userId)
     {
         await _sysUserLdapRep.DeleteAsync(u => u.UserId == userId);

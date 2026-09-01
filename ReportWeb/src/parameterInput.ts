@@ -11,10 +11,21 @@ export interface ParameterInputAttributes {
   step?: number;
 }
 
+/**
+ * 校验 parameterInput 的 is Temporal Control Type 条件，并返回可供后续流程判断的结果。
+ * @param controlType - controlType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function isTemporalControlType(controlType: string): boolean {
   return ['date', 'datetime', 'month', 'year'].includes(controlType.toLowerCase());
 }
 
+/**
+ * 创建并返回 parameterInput 的 default Data Type For Control 初始数据，避免不同调用方共享可变对象。
+ * @param controlType - controlType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param currentDataType - currentDataType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function defaultDataTypeForControl(controlType: string, currentDataType: string): string {
   switch (controlType.toLowerCase()) {
     case 'date':
@@ -30,6 +41,11 @@ export function defaultDataTypeForControl(controlType: string, currentDataType: 
   }
 }
 
+/**
+ * 创建并返回 parameterInput 的 parameter Input Attributes 配置对象，集中提供相关状态和操作入口。
+ * @param parameter - parameter 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function parameterInputAttributes(parameter: ParameterShape): ParameterInputAttributes {
   switch (parameter.controlType.toLowerCase()) {
     case 'date':
@@ -52,6 +68,12 @@ export function parameterInputAttributes(parameter: ParameterShape): ParameterIn
   }
 }
 
+/**
+ * 负责 parameterInput 的 parameter Input Value 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param parameter - parameter 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function parameterInputValue(parameter: ParameterShape, value: string): string {
   if (parameterInputAttributes(parameter).type !== 'datetime-local') return value;
   return value.replace(' ', 'T');

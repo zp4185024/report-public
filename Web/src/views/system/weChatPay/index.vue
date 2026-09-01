@@ -166,6 +166,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -177,6 +181,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.keyword = undefined;
 	state.queryParams.createTimeRange = undefined;
@@ -184,6 +192,11 @@ const resetQuery = () => {
 };
 
 // 退款
+/**
+ * 校验 index 的 do Refund 输入后执行核心操作，并把成功或失败结果交给调用方。
+ * @param orderInfo - orderInfo 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const doRefund = async (orderInfo: any) => {
 	ElMessageBox.prompt(`确定进行退款：${orderInfo.total / 100}元？请输入退款理由`, '提示', {
 		confirmButtonText: '确定',
@@ -207,11 +220,23 @@ const doRefund = async (orderInfo: any) => {
 		});
 };
 
+/**
+ * 根据 index 当前状态渲染 amount Formatter 界面内容，并绑定所需交互。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @param cellValue - 需要读取、校验或转换的业务值。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const amountFormatter = (row: any, column: any, cellValue: number, index: number) => {
 	return (cellValue / 100).toFixed(2);
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Dialog 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddDialog = () => {
 	addData.value = {
 		description: null,
@@ -222,11 +247,20 @@ const openAddDialog = () => {
 };
 
 // 关闭新增页面
+/**
+ * 结束 index 的 close Add Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeAddDialog = () => {
 	showAddDialog.value = false;
 };
 
 // 打开扫码页面
+/**
+ * 准备 index 的 open Qr Dialog 交互状态并打开对应界面。
+ * @param code - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openQrDialog = (code: string) => {
 	showQrDialog.value = true;
 	nextTick(() => {
@@ -242,6 +276,11 @@ const openQrDialog = (code: string) => {
 };
 
 // 打开退款页面
+/**
+ * 准备 index 的 open Refund Dialog 交互状态并打开对应界面。
+ * @param code - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openRefundDialog = async (code: string) => {
 	var res = await getRefundListByID(code);
 	if (res.data.code === 200) {
@@ -254,6 +293,10 @@ const openRefundDialog = async (code: string) => {
 };
 
 // 保存数据
+/**
+ * 更新 index 的 save Data 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const saveData = async () => {
 	var res = await createPay(addData.value);
 	if (res.data.code === 200) {
@@ -267,12 +310,22 @@ const saveData = async () => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = (val: number) => {
 	state.tableParams.pageSize = val;
 	handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = (val: number) => {
 	state.tableParams.page = val;
 	handleQuery();

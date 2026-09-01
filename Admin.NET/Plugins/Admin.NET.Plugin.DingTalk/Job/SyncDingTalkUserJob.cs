@@ -22,6 +22,10 @@ public class SyncDingTalkUserJob : IJob
     private readonly IDingTalkApi _dingTalkApi;
     private readonly ILogger _logger;
 
+    /// <summary>初始化 SyncDingTalkUserJob 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="scopeFactory">scopeFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="dingTalkApi">dingTalkApi 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="loggerFactory">loggerFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SyncDingTalkUserJob(IServiceScopeFactory scopeFactory, IDingTalkApi dingTalkApi, ILoggerFactory loggerFactory)
     {
         _scopeFactory = scopeFactory;
@@ -29,6 +33,10 @@ public class SyncDingTalkUserJob : IJob
         _logger = loggerFactory.CreateLogger(CommonConst.SysLogCategoryName);
     }
 
+    /// <summary>执行 SyncDingTalkUserJob 的 Execute Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
         using var serviceScope = _scopeFactory.CreateScope();

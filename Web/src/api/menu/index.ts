@@ -12,6 +12,11 @@ import request from '/@/utils/request';
  */
 export function useMenuApi() {
 	return {
+		/**
+		 * 查询或读取 index 所需的 get Admin Menu 数据，并按调用约定返回结果。
+		 * @param params - 本次操作使用的输入数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		getAdminMenu: (params?: object) => {
 			return request({
 				url: '/gitee/lyt-top/vue-next-admin-images/raw/master/menu/adminMenu.json',
@@ -19,6 +24,11 @@ export function useMenuApi() {
 				params,
 			});
 		},
+		/**
+		 * 查询或读取 index 所需的 get Test Menu 数据，并按调用约定返回结果。
+		 * @param params - 本次操作使用的输入数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		getTestMenu: (params?: object) => {
 			return request({
 				url: '/gitee/lyt-top/vue-next-admin-images/raw/master/menu/testMenu.json',

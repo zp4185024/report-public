@@ -28,11 +28,14 @@ public sealed class PocStreamingTemplateDataExporter
 
     private readonly PocXlsxExchangeConverter _exchangeConverter;
 
+    /// <summary>初始化 PocStreamingTemplateDataExporter 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocStreamingTemplateDataExporter()
         : this(new PocXlsxExchangeConverter())
     {
     }
 
+    /// <summary>初始化 PocStreamingTemplateDataExporter 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="exchangeConverter">exchangeConverter 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocStreamingTemplateDataExporter(PocXlsxExchangeConverter exchangeConverter)
     {
         _exchangeConverter = exchangeConverter;
@@ -54,6 +57,7 @@ public sealed class PocStreamingTemplateDataExporter
             throw new ArgumentException("大文件导出输出流必须可写。", nameof(destination));
         }
         if (!plan.Export.LargeExportEnabled)
+        // 第一阶段：根据 WriteLargeAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             throw new InvalidOperationException("当前模板未启用大文件导出。");
         }
@@ -88,6 +92,7 @@ public sealed class PocStreamingTemplateDataExporter
             foreach (var entry in templateArchive.Entries)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // 第2阶段：检查 WriteLargeAsync 当前条件，并按匹配分支执行对应处理。
                 if (string.Equals(entry.FullName, worksheetPath, StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -116,6 +121,15 @@ public sealed class PocStreamingTemplateDataExporter
         }
     }
 
+    /// <summary>调用 PocStreamingTemplateDataExporter 的异步依赖完成 Rewrite Worksheet Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="output">output 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="worksheet">当前读取或修改的工作表对象。</param>
+    /// <param name="sharedStrings">sharedStrings 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="pages">pages 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="progress">progress 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task RewriteWorksheetAsync(
         Stream output,
         XDocument worksheet,
@@ -134,6 +148,7 @@ public sealed class PocStreamingTemplateDataExporter
         var templateRow = sheetData.Elements(SpreadsheetNamespace + "row")
             .SingleOrDefault(row => ReadRowNumber(row) == templateRowNumber)
             ?? throw new InvalidDataException($"模板工作表缺少第 {templateRowNumber} 行明细模板。");
+        // 第一阶段：遍历 RewriteWorksheetAsync 当前数据集合，逐项转换并维护处理结果。
         var headerRows = sheetData.Elements(SpreadsheetNamespace + "row")
             .Where(row => ReadRowNumber(row) < templateRowNumber)
             .ToArray();
@@ -170,6 +185,7 @@ public sealed class PocStreamingTemplateDataExporter
         }
         foreach (var attribute in root.Attributes().Where(attribute => !attribute.IsNamespaceDeclaration))
         {
+            // 第2阶段：调用 RewriteWorksheetAsync 依赖的异步能力，等待并校验返回数据。
             await writer.WriteAttributeStringAsync(
                 root.GetPrefixOfNamespace(attribute.Name.Namespace),
                 attribute.Name.LocalName,
@@ -208,6 +224,7 @@ public sealed class PocStreamingTemplateDataExporter
             foreach (var row in page)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // 第3阶段：检查 RewriteWorksheetAsync 当前条件，并按匹配分支执行对应处理。
                 if (writtenRows >= plan.Export.RowsPerSheet)
                 {
                     throw new InvalidOperationException(
@@ -245,6 +262,7 @@ public sealed class PocStreamingTemplateDataExporter
 
         var insertedRowCount = checked((int)Math.Max(0, writtenRows - 1));
         foreach (var tail in tailRows)
+        // 第4阶段：根据 RewriteWorksheetAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             cancellationToken.ThrowIfCancellationRequested();
             var sourceRow = ReadRowNumber(tail);
@@ -275,6 +293,17 @@ public sealed class PocStreamingTemplateDataExporter
         await writer.FlushAsync();
     }
 
+    /// <summary>构建 PocStreamingTemplateDataExporter 所需的 Create Template Row 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="sourceRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="targetRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="sharedStrings">sharedStrings 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="parameterBindings">模板字段与工作簿坐标之间的绑定定义。</param>
+    /// <param name="parameterValues">parameterValues 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="detailFields">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="detailRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="insertion">insertion 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static XElement CreateTemplateRow(
         XElement source,
         int sourceRow,
@@ -293,6 +322,7 @@ public sealed class PocStreamingTemplateDataExporter
             var sourceReference = cell.Attribute("r")?.Value
                 ?? throw new InvalidDataException("模板单元格缺少 r 引用。");
             var parsedReference = ReferenceParser.ParseA1(sourceReference);
+            // 第一阶段：构造 CreateTemplateRow 当前步骤需要的中间数据和执行参数。
             var column = parsedReference.First.ColumnValue;
             cell.SetAttributeValue("r", $"{ColumnName(column)}{targetRow}");
 
@@ -323,6 +353,7 @@ public sealed class PocStreamingTemplateDataExporter
             }
 
             var formula = cell.Element(SpreadsheetNamespace + "f");
+            // 第2阶段：检查 CreateTemplateRow 当前条件，并按匹配分支执行对应处理。
             if (formula is null)
             {
                 continue;
@@ -348,6 +379,10 @@ public sealed class PocStreamingTemplateDataExporter
         return clone;
     }
 
+    /// <summary>更新 PocStreamingTemplateDataExporter 的 Set Detail Value 状态，并同步相关业务数据。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
     private static void SetDetailValue(XElement cell, string code, PocDataRow row)
     {
         if (!row.TryGetValue(code, out var value))
@@ -382,9 +417,15 @@ public sealed class PocStreamingTemplateDataExporter
         }
     }
 
+    /// <summary>更新 PocStreamingTemplateDataExporter 的 Set Number 状态，并同步相关业务数据。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void SetNumber(XElement cell, double value) =>
         SetNumber(cell, value.ToString("R", CultureInfo.InvariantCulture));
 
+    /// <summary>更新 PocStreamingTemplateDataExporter 的 Set Number 状态，并同步相关业务数据。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void SetNumber(XElement cell, string value)
     {
         cell.SetAttributeValue("t", null);
@@ -392,6 +433,9 @@ public sealed class PocStreamingTemplateDataExporter
         cell.Add(new XElement(SpreadsheetNamespace + "v", value));
     }
 
+    /// <summary>更新 PocStreamingTemplateDataExporter 的 Set Boolean 状态，并同步相关业务数据。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void SetBoolean(XElement cell, bool value)
     {
         cell.SetAttributeValue("t", "b");
@@ -399,6 +443,9 @@ public sealed class PocStreamingTemplateDataExporter
         cell.Add(new XElement(SpreadsheetNamespace + "v", value ? "1" : "0"));
     }
 
+    /// <summary>更新 PocStreamingTemplateDataExporter 的 Set Inline Text 状态，并同步相关业务数据。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void SetInlineText(XElement cell, string value)
     {
         cell.SetAttributeValue("t", "inlineStr");
@@ -412,12 +459,18 @@ public sealed class PocStreamingTemplateDataExporter
         cell.Add(new XElement(SpreadsheetNamespace + "is", text));
     }
 
+    /// <summary>移除 PocStreamingTemplateDataExporter 中与 Clear Cell Value 对应的数据，并清理关联状态。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ClearCellValue(XElement cell)
     {
         cell.SetAttributeValue("t", null);
         cell.RemoveNodes();
     }
 
+    /// <summary>查询或读取 PocStreamingTemplateDataExporter 所需的 Read Cell Text 数据，并按调用约定返回结果。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sharedStrings">sharedStrings 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ReadCellText(XElement cell, IReadOnlyList<string> sharedStrings)
     {
         var type = cell.Attribute("t")?.Value;
@@ -438,6 +491,9 @@ public sealed class PocStreamingTemplateDataExporter
         return cell.Element(SpreadsheetNamespace + "v")?.Value ?? string.Empty;
     }
 
+    /// <summary>解析并计算 PocStreamingTemplateDataExporter 的 Resolve Parameter Values 结果，处理必要的边界条件。</summary>
+    /// <param name="plan">plan 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IReadOnlyDictionary<string, string> ResolveParameterValues(
         PocTemplateDataExportPlan plan)
     {
@@ -446,6 +502,10 @@ public sealed class PocStreamingTemplateDataExporter
         return new Dictionary<string, string>(parameters, StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>遍历 PocStreamingTemplateDataExporter 当前数据并执行 Adjust Worksheet References 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="element">element 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="insertAfterRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="insertedRowCount">控制数据范围或位置的数值。</param>
     private static void AdjustWorksheetReferences(
         XElement element,
         int insertAfterRow,
@@ -474,6 +534,11 @@ public sealed class PocStreamingTemplateDataExporter
         }
     }
 
+    /// <summary>根据 PocStreamingTemplateDataExporter 当前输入计算 Adjust Reference 结果，并按方法声明的类型返回。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="insertAfterRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="insertedRowCount">控制数据范围或位置的数值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string AdjustReference(
         string value,
         int insertAfterRow,
@@ -482,6 +547,7 @@ public sealed class PocStreamingTemplateDataExporter
         ReferenceArea area;
         try
         {
+            // 第一阶段：更新 AdjustReference 当前分支对应的业务状态，并保持关联数据一致。
             area = ReferenceParser.ParseA1(value);
         }
         catch (ParsingException)
@@ -503,6 +569,7 @@ public sealed class PocStreamingTemplateDataExporter
         var adjustedSecond = secondRow > insertAfterRow
             ? checked(secondRow + insertedRowCount)
             : secondRow;
+        // 第2阶段：检查 AdjustReference 当前条件，并按匹配分支执行对应处理。
         if (value.Contains(':') &&
             firstRow <= insertAfterRow &&
             secondRow <= insertAfterRow &&
@@ -522,9 +589,16 @@ public sealed class PocStreamingTemplateDataExporter
             CopyWithRow(second, adjustedSecond)).GetDisplayStringA1();
     }
 
+    /// <summary>按照 PocStreamingTemplateDataExporter 的业务约束完成 Copy With Row 数据合并或复制。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static RowCol CopyWithRow(RowCol source, int row) =>
         new(source.RowType, row, source.ColumnType, source.ColumnValue, source.Style);
 
+    /// <summary>查询或读取 PocStreamingTemplateDataExporter 所需的 Read Row Number 数据，并按调用约定返回结果。</summary>
+    /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int ReadRowNumber(XElement row)
     {
         var value = row.Attribute("r")?.Value;
@@ -536,6 +610,9 @@ public sealed class PocStreamingTemplateDataExporter
         return number;
     }
 
+    /// <summary>查询或读取 PocStreamingTemplateDataExporter 所需的 Load Shared Strings 数据，并按调用约定返回结果。</summary>
+    /// <param name="archive">archive 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IReadOnlyList<string> LoadSharedStrings(ZipArchive archive)
     {
         var entry = archive.GetEntry(SharedStringsPath);
@@ -552,6 +629,10 @@ public sealed class PocStreamingTemplateDataExporter
             .ToArray() ?? Array.Empty<string>();
     }
 
+    /// <summary>解析并计算 PocStreamingTemplateDataExporter 的 Resolve Worksheet Path 结果，处理必要的边界条件。</summary>
+    /// <param name="archive">archive 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sheetName">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ResolveWorksheetPath(ZipArchive archive, string sheetName)
     {
         var workbook = LoadXml(archive, WorkbookPath);
@@ -578,6 +659,10 @@ public sealed class PocStreamingTemplateDataExporter
             : $"xl/{normalized}";
     }
 
+    /// <summary>查询或读取 PocStreamingTemplateDataExporter 所需的 Load Xml 数据，并按调用约定返回结果。</summary>
+    /// <param name="archive">archive 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="path">path 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static XDocument LoadXml(ZipArchive archive, string path)
     {
         var entry = archive.GetEntry(path)
@@ -586,6 +671,11 @@ public sealed class PocStreamingTemplateDataExporter
         return XDocument.Load(stream, LoadOptions.None);
     }
 
+    /// <summary>按照 PocStreamingTemplateDataExporter 的业务约束完成 Copy Entry Async 数据合并或复制。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="destination">destination 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static async Task CopyEntryAsync(
         ZipArchiveEntry source,
         ZipArchive destination,
@@ -597,6 +687,9 @@ public sealed class PocStreamingTemplateDataExporter
         await input.CopyToAsync(output, 128 * 1024, cancellationToken);
     }
 
+    /// <summary>把零基列序号转换为 Excel 列名，供工作表单元格引用使用。</summary>
+    /// <param name="number">number 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ColumnName(int number)
     {
         Span<char> buffer = stackalloc char[3];

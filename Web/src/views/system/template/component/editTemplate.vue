@@ -123,23 +123,40 @@ const state = reactive({
 	ruleForm: {} as UpdateTemplateInput,
 });
 
+/**
+ * 查询或读取 editTemplate 所需的 get Render Data 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getRenderData = () => {
 	const data = {} as any;
 	state.renderData.forEach((e: [string, string]) => data[e[0]] = e[1]);
 	return data;
 }
 
+/**
+ * 查询或读取 editTemplate 所需的 get Render Content 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getRenderContent = async () => {
 	const res = await getAPI(SysTemplateApi).apiSysTemplateRenderPost({ content: state.ruleForm.content, data: getRenderData() })
 	state.result = res.data.result;
 }
 
+/**
+ * 准备 editTemplate 的 show Pre View 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const showPreView = () => {
 	getRenderContent();
 	state.selectedTabName = '2';
 }
 
 // 打开弹窗
+/**
+ * 准备 editTemplate 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any) => {
 	state.ruleForm = JSON.parse(JSON.stringify(row));
 	state.selectedTabName = "1";
@@ -148,17 +165,29 @@ const openDialog = (row: any) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 editTemplate 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('updateData');
 	state.isShowDialog = false;
 };
 
 // 取消
+/**
+ * 校验 editTemplate 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editTemplate 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;

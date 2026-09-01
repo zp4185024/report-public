@@ -35,6 +35,12 @@ export function createPreviewFilterTarget(
   };
 }
 
+/**
+ * 校验 previewFilter 的 is Same Filter Range 条件，并返回可供后续流程判断的结果。
+ * @param left - left 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param right - right 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function isSameFilterRange(left: IRange, right: IRange): boolean {
   return left.startRow === right.startRow
     && left.endRow === right.endRow
@@ -57,6 +63,13 @@ export function isPreviewFilterAnchor(
     && selection.startColumn === expectedRange.startColumn;
 }
 
+/**
+ * 负责 previewFilter 的 should Repair Preview Filter Range 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param selection - 需要读取、修改或校验的单元格范围。
+ * @param actualRange - 需要读取、修改或校验的单元格范围。
+ * @param expectedRange - 需要读取、修改或校验的单元格范围。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function shouldRepairPreviewFilterRange(
   selection: IRange | null,
   actualRange: IRange,
@@ -66,6 +79,11 @@ export function shouldRepairPreviewFilterRange(
     && !isSameFilterRange(actualRange, expectedRange);
 }
 
+/**
+ * 将 previewFilter 的 column Name 输入转换为稳定格式，保留后续计算或展示需要的信息。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function columnName(column: number): string {
   let remaining = column + 1;
   let result = '';

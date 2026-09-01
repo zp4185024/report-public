@@ -23,6 +23,14 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     private readonly IViewEngine _viewEngine;
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 SysCodeGenService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="db">当前方法执行时使用的 db 输入值。</param>
+    /// <param name="dbConnectionOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="codeGenConfigService">当前方法执行时使用的 codeGenConfigService 输入值。</param>
+    /// <param name="codeGenOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="sysMenuService">当前方法执行时使用的 sysMenuService 输入值。</param>
+    /// <param name="userManager">当前方法执行时使用的 userManager 输入值。</param>
+    /// <param name="viewEngine">当前方法执行时使用的 viewEngine 输入值。</param>
     public SysCodeGenService(ISqlSugarClient db,
         IOptions<DbConnectionOptions> dbConnectionOptions,
         SysCodeGenConfigService codeGenConfigService,
@@ -43,8 +51,8 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取代码生成分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取代码生成分页列表")]
     public async Task<SqlSugarPagedList<SysCodeGen>> Page(CodeGenInput input)
     {
@@ -54,11 +62,9 @@ public class SysCodeGenService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 增加代码生成 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysCodeGenService 所需的 Add Code Gen 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加代码生成")]
     public async Task AddCodeGen(AddCodeGenInput input)
@@ -75,11 +81,9 @@ public class SysCodeGenService : IDynamicApiController, ITransient
         _codeGenConfigService.AddList(GetColumnList(input), newCodeGen);
     }
 
-    /// <summary>
-    /// 更新代码生成 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysCodeGenService 的 Update Code Gen 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新代码生成")]
     public async Task UpdateCodeGen(UpdateCodeGenInput input)
@@ -126,8 +130,8 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 同步代码字段(保留历史作用类型) 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "SyncField"), HttpPost]
     [DisplayName("同步代码字段")]
     public async Task SyncCodeFieldGen(UpdateCodeGenInput input)
@@ -148,11 +152,9 @@ public class SysCodeGenService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 删除代码生成 🔖
-    /// </summary>
-    /// <param name="inputs"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysCodeGenService 中与 Delete Code Gen 对应的数据，并清理关联状态。</summary>
+    /// <param name="inputs">当前方法执行时使用的 inputs 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除代码生成")]
     public async Task DeleteCodeGen(List<DeleteCodeGenInput> inputs)
@@ -173,8 +175,8 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取代码生成详情 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取代码生成详情")]
     public async Task<SysCodeGen> GetDetail([FromQuery] QueryCodeGenInput input)
     {
@@ -184,7 +186,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取数据库库集合 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取数据库库集合")]
     public async Task<List<DatabaseOutput>> GetDatabaseList()
     {
@@ -195,7 +197,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取数据库表(实体)集合 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取数据库表(实体)集合")]
     public async Task<List<TableOutput>> GetTableList(string configId = SqlSugarConst.MainConfigId)
     {
@@ -229,7 +231,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据表名获取列集合 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据表名获取列集合")]
     public List<ColumnOuput> GetColumnListByTableName([Required] string tableName, string configId = SqlSugarConst.MainConfigId)
     {
@@ -269,7 +271,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取数据表列（实体属性）集合
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private List<ColumnOuput> GetColumnList([FromQuery] AddCodeGenInput input)
     {
         var entityType = GetEntityInfos(input.ConfigId).GetAwaiter().GetResult().FirstOrDefault(u => u.EntityName == input.TableName);
@@ -332,10 +334,8 @@ public class SysCodeGenService : IDynamicApiController, ITransient
         return result;
     }
 
-    /// <summary>
-    /// 获取库表信息
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysCodeGenService 所需的 Get Entity Infos 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<IEnumerable<EntityInfo>> GetEntityInfos(string configId)
     {
         var config = _dbConnectionOptions.ConnectionConfigs.FirstOrDefault(u => u.ConfigId.ToString() == configId) ?? throw Oops.Oh(ErrorCodeEnum.D1401);
@@ -379,17 +379,15 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取程序保存位置 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取程序保存位置")]
     public List<string> GetApplicationNamespaces()
     {
         return _codeGenOptions.BackendApplicationNamespaces;
     }
 
-    /// <summary>
-    /// 代码生成到本地 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>执行 SysCodeGenService 的 Run Local 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("代码生成到本地")]
     public async Task<dynamic> RunLocal(SysCodeGen input)
@@ -436,7 +434,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取代码生成预览 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取代码生成预览")]
     public async Task<Dictionary<string, string>> Preview(SysCodeGen input)
     {
@@ -444,16 +442,15 @@ public class SysCodeGenService : IDynamicApiController, ITransient
         return result;
     }
 
-    /// <summary>
-    /// 渲染模板
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysCodeGenService 的异步依赖完成 Render Template Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<(List<CodeGenConfig> tableFieldList, Dictionary<string, string> result)> RenderTemplateAsync(SysCodeGen input)
     {
         var tableFieldList = await _codeGenConfigService.GetList(new CodeGenConfig { CodeGenId = input.Id }); // 字段集合
         var joinTableList = tableFieldList.Where(u => u.EffectType is "Upload" or "ForeignKey" or "ApiTreeSelector").ToList(); // 需要连表查询的字段
 
+        // 第一阶段：遍历 RenderTemplateAsync 当前数据集合，逐项转换并维护处理结果。
         var data = new CustomViewEngine
         {
             ConfigId = input.ConfigId,
@@ -486,6 +483,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
         };
 
         // 获取模板文件并替换
+        // 第2阶段：构造 RenderTemplateAsync 当前步骤需要的中间数据和执行参数。
         var templatePathList = GetTemplatePathList();
         var templatePath = Path.Combine(App.WebHostEnvironment.WebRootPath, "template");
 
@@ -510,16 +508,14 @@ public class SysCodeGenService : IDynamicApiController, ITransient
         return (tableFieldList, result);
     }
 
-    /// <summary>
-    /// 添加或更新菜单
-    /// </summary>
-    /// <param name="className"></param>
-    /// <param name="busName"></param>
-    /// <param name="pid"></param>
-    /// <param name="menuIcon"></param>
-    /// <param name="pagePath"></param>
-    /// <param name="tableFieldList"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysCodeGenService 所需的 Add Or Update Menu 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="className">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="busName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="pid">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="menuIcon">当前方法执行时使用的 menuIcon 输入值。</param>
+    /// <param name="pagePath">目标资源、页面或接口使用的地址。</param>
+    /// <param name="tableFieldList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task AddOrUpdateMenu(string className, string busName, long pid, string menuIcon, string pagePath, List<CodeGenConfig> tableFieldList)
     {
         var title = $"{busName}管理";
@@ -631,16 +627,14 @@ public class SysCodeGenService : IDynamicApiController, ITransient
             await _sysMenuService.DeleteMenu(new DeleteMenuInput { Id = del.Id });
     }
 
-    /// <summary>
-    /// 增加菜单
-    /// </summary>
-    /// <param name="className"></param>
-    /// <param name="busName"></param>
-    /// <param name="pid"></param>
-    /// <param name="menuIcon"></param>
-    /// <param name="pagePath"></param>
-    /// <param name="tableFieldList"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysCodeGenService 所需的 Add Menu 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="className">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="busName">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="pid">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="menuIcon">当前方法执行时使用的 menuIcon 输入值。</param>
+    /// <param name="pagePath">目标资源、页面或接口使用的地址。</param>
+    /// <param name="tableFieldList">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task AddMenu(string className, string busName, long pid, string menuIcon, string pagePath, List<CodeGenConfig> tableFieldList)
     {
         // 删除已存在的菜单
@@ -692,8 +686,8 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据菜单名称和类型删除关联的菜单树
     /// </summary>
-    /// <param name="title"></param>
-    /// <param name="type"></param>
+    /// <param name="title">当前方法执行时使用的 title 输入值。</param>
+    /// <param name="type">决定处理分支、数据类型或运行状态的枚举值。</param>
     private async Task DeleteMenuTree(string title, MenuTypeEnum type)
     {
         var menuList = await _db.Queryable<SysMenu>().Where(u => u.Title == title && u.Type == type).ToListAsync() ?? new();
@@ -703,7 +697,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取模板文件路径集合
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static List<string> GetTemplatePathList(SysCodeGen input)
     {
         if (input.GenerateType!.Substring(1, 1).Contains('1')) return new() { "index.vue.vm", "editDialog.vue.vm", "api.ts.vm" };
@@ -714,14 +708,14 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取模板文件路径集合
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static List<string> GetTemplatePathList() => new() { "Service.cs.vm", "Input.cs.vm", "Output.cs.vm", "Dto.cs.vm", "index.vue.vm", "editDialog.vue.vm", "api.ts.vm" };
 
     /// <summary>
     /// 设置生成文件路径
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private List<string> GetTargetPathList(SysCodeGen input)
     {
         //var backendPath = Path.Combine(new DirectoryInfo(App.WebHostEnvironment.ContentRootPath).Parent.FullName, _codeGenOptions.BackendApplicationNamespace, "Service", input.TableName);
@@ -773,8 +767,8 @@ public class SysCodeGenService : IDynamicApiController, ITransient
     /// <summary>
     /// 设置生成文件路径
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private List<string> GetZipPathList(SysCodeGen input)
     {
         var zipPath = Path.Combine(App.WebHostEnvironment.WebRootPath, "CodeGen", input.TableName!);
@@ -782,6 +776,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
         var firstLowerTableName = input.TableName!.ToFirstLetterLowerCase();
         //var backendPath = Path.Combine(zipPath, _codeGenOptions.BackendApplicationNamespace, "Service", input.TableName);
         var backendPath = Path.Combine(zipPath, input.NameSpace!, "Service", input.TableName);
+        // 第一阶段：构造 GetZipPathList 当前步骤需要的中间数据和执行参数。
         var servicePath = Path.Combine(backendPath, input.TableName + "Service.cs");
         var inputPath = Path.Combine(backendPath, "Dto", input.TableName + "Input.cs");
         var outputPath = Path.Combine(backendPath, "Dto", input.TableName + "Output.cs");
@@ -802,6 +797,7 @@ public class SysCodeGenService : IDynamicApiController, ITransient
 
         if (input.GenerateType.StartsWith("12"))
         {
+            // 第2阶段：整理 GetZipPathList 已计算的数据，并按方法契约返回最终结果。
             return new List<string>
             {
                 servicePath,

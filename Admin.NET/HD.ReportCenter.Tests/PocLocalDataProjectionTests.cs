@@ -4,6 +4,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocLocalDataProjectionTests
 {
+    /// <summary>验证 Projection keeps parameter options separate from field display mappings 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Projection_keeps_parameter_options_separate_from_field_display_mappings()
     {
@@ -25,6 +26,7 @@ public sealed class PocLocalDataProjectionTests
         Assert.Equal("F", source[0]["GENDER_CODE"]);
     }
 
+    /// <summary>验证 Projection supports multi select values without sql changes 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Projection_supports_multi_select_values_without_sql_changes()
     {
@@ -41,6 +43,9 @@ public sealed class PocLocalDataProjectionTests
         Assert.Contains(rows, row => Equals(row["GENDER_CODE"], "女"));
     }
 
+    /// <summary>负责 PocLocalDataProjectionTests 的 Definition 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="controlType">controlType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocReportDefinition Definition(string controlType) => new(
         "generic-people",
         "人员明细",
@@ -64,6 +69,8 @@ public sealed class PocLocalDataProjectionTests
             "GENDER_CODE",
             [new PocValueOption("M", "男"), new PocValueOption("F", "女")])]);
 
+    /// <summary>负责 PocLocalDataProjectionTests 的 Rows 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDataRow[] Rows() =>
     [
         new PocDataRow { ["GENDER_CODE"] = "F" },

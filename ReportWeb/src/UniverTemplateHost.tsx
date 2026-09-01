@@ -103,11 +103,17 @@ interface UniverRichTextRunData {
 }
 
 interface UniverRichTextValue {
+  /**
+   * 查询或读取 UniverTemplateHost 所需的 get Data 数据，并按调用约定返回结果。
+   */
   getData(): { body?: { textRuns?: UniverRichTextRunData[] | null } | null };
 }
 
 interface UniverRichTextRange extends UniverRange {
   // Univer 0.25.1 运行时已提供该 beta facade，当前类型声明遗漏了读取方法。
+  /**
+   * 查询或读取 UniverTemplateHost 所需的 get Rich Text Values 数据，并按调用约定返回结果。
+   */
   getRichTextValues(): Array<Array<UniverRichTextValue | null>>;
 }
 
@@ -137,6 +143,11 @@ const hostStyle: CSSProperties = {
   height: '100%',
 };
 
+/**
+ * 将 UniverTemplateHost 中的 normalize Error 输入转换为调用方需要的稳定格式。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function normalizeError(value: unknown): Error {
   if (value instanceof Error) {
     return value;
@@ -147,11 +158,24 @@ function normalizeError(value: unknown): Error {
   return new Error('Univer 操作失败，未返回可诊断的错误信息。');
 }
 
+/**
+ * 负责 UniverTemplateHost 的 operation Error 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param message - message 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param cause - cause 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function operationError(message: string, cause: unknown): Error {
   const detail = normalizeError(cause).message;
   return new Error(detail.length > 0 ? `${message}：${detail}` : message);
 }
 
+/**
+ * 执行 UniverTemplateHost 的 require Worksheet 核心流程，并保持错误和结果语义稳定。
+ * @param workbook - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @param purpose - purpose 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function requireWorksheet(
   workbook: UniverWorkbook,
   sheetId: string,
@@ -170,6 +194,17 @@ function requireWorksheet(
   return worksheet;
 }
 
+/**
+ * 执行 UniverTemplateHost 的 require Range 核心流程，并保持错误和结果语义稳定。
+ * @param worksheet - 当前读取或修改的工作表对象。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param column - 参与映射、显示或数据写入的字段集合。
+ * @param numRows - 需要遍历、筛选或写入的业务数据集合。
+ * @param numColumns - 参与映射、显示或数据写入的字段集合。
+ * @param purpose - purpose 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function requireRange(
   worksheet: UniverWorksheet,
   sheetId: string,
@@ -196,6 +231,11 @@ function requireRange(
   return range;
 }
 
+/**
+ * 更新 UniverTemplateHost 的 set Range Value 状态，并同步相关业务数据。
+ * @param range - 需要读取、修改或校验的单元格范围。
+ * @param value - 需要读取、校验或转换的业务值。
+ */
 function setRangeValue(
   range: UniverRange,
   value: string | number | boolean | null,
@@ -204,6 +244,10 @@ function setRangeValue(
   range.setValue(value === null ? { v: null } : value);
 }
 
+/**
+ * 等待 UniverTemplateHost 的 wait For Two Animation Frames 前置条件满足后继续执行，避免读取尚未就绪的状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function waitForTwoAnimationFrames(): Promise<void> {
   // 第一个动画帧让 Univer 提交内部布局，第二个帧再计时/切换状态，得到用户实际可见的渲染完成点。
   return new Promise((resolve) => {
@@ -213,6 +257,11 @@ function waitForTwoAnimationFrames(): Promise<void> {
   });
 }
 
+/**
+ * 创建并返回 UniverTemplateHost 的 to Printable Border 配置对象，集中提供相关状态和操作入口。
+ * @param edge - edge 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function toPrintableBorder(
   edge: UniverPrintableBorderEdge | null | undefined,
 ): PrintableBorder | undefined {
@@ -240,6 +289,16 @@ function toPrintableBorder(
   };
 }
 
+/**
+ * 按 to Printable Cell Style 规则筛选 UniverTemplateHost 数据，并返回满足条件的结果。
+ * @param textStyle - textStyle 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param richText - 需要读取、校验或转换的业务值。
+ * @param background - background 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param horizontal - horizontal 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param vertical - vertical 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param wrap - wrap 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function toPrintableCellStyle(
   textStyle: UniverTextStyle | null | undefined,
   richText: UniverRichTextValue | null | undefined,
@@ -278,6 +337,12 @@ function toPrintableCellStyle(
   return applyPrintableRichTextStyle(cellStyle, richTextStyle);
 }
 
+/**
+ * 构建 UniverTemplateHost 所需的 create Printable Sheet 内容，并保证生成结果符合调用约定。
+ * @param worksheet - 当前读取或修改的工作表对象。
+ * @param reportName - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function createPrintableSheet(
   worksheet: UniverWorksheet,
   reportName?: string,
@@ -288,6 +353,7 @@ function createPrintableSheet(
     dataRange = worksheet.getDataRange();
     mergeRanges = worksheet.getMergeData().map((range) => ({ ...range.getRange() }));
   } catch (error) {
+    // 第一阶段：根据 createPrintableSheet 当前分支转换输入数据，并保存该阶段产生的中间结果。
     throw operationError('Univer 读取打印范围失败', error);
   }
 
@@ -316,6 +382,7 @@ function createPrintableSheet(
     throw operationError('Univer 创建打印数据范围失败', error);
   }
 
+  // 第2阶段：遍历 createPrintableSheet 当前数据集合，逐项转换并维护处理结果。
   try {
     const values = range.getDisplayValues();
     if (!values.some((row) => row.some((value) => value.length > 0))) {
@@ -339,6 +406,7 @@ function createPrintableSheet(
         `工作表 '${worksheet.getSheetId()}' 第 ${startColumn + index + 1} 列的打印宽度`,
       )
     ));
+    // 第3阶段：遍历 createPrintableSheet 当前数据集合，逐项转换并维护处理结果。
     const styles = values.map((row, rowIndex) => row.map((_value, columnIndex) => (
       toPrintableCellStyle(
         textStyles[rowIndex]?.[columnIndex],
@@ -560,6 +628,12 @@ export const UniverTemplateHost = forwardRef<
     let newWorkbook: UniverWorkbook | null = null;
     let newSubscription: CommandSubscription | null = null;
 
+    /**
+     * 查询或读取 UniverTemplateHost 所需的 get Workbook Id 数据，并按调用约定返回结果。
+     * @param workbook - 包含工作簿结构、单元格和样式信息的快照数据。
+     * @param context - 本次操作共享的运行上下文。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const getWorkbookId = (workbook: UniverWorkbook, context: string): string => {
       try {
         return workbook.getId();
@@ -568,6 +642,11 @@ export const UniverTemplateHost = forwardRef<
       }
     };
 
+    /**
+     * 停止 UniverTemplateHost 的 dispose Workbook 流程，并释放监听器、连接或其他运行资源。
+     * @param workbook - 包含工作簿结构、单元格和样式信息的快照数据。
+     * @param context - 本次操作共享的运行上下文。
+     */
     const disposeWorkbook = (workbook: UniverWorkbook, context: string): void => {
       const workbookId = getWorkbookId(workbook, `${context}时读取工作簿标识失败`);
       let disposed: boolean;
@@ -581,6 +660,9 @@ export const UniverTemplateHost = forwardRef<
       }
     };
 
+    /**
+     * 遍历 UniverTemplateHost 数据并执行 restore Previous Workbook 转换，生成后续流程需要的结果。
+     */
     const restorePreviousWorkbook = (): void => {
       if (
         previousWorkbook === null ||
@@ -757,6 +839,10 @@ export const UniverTemplateHost = forwardRef<
     let resizeObserver: ResizeObserver | null = null;
     let mutationObserver: MutationObserver | null = null;
     let resizeFrame: number | null = null;
+    /**
+     * 更新 UniverTemplateHost 的 sync Workbench Height 状态，并把变化同步到关联组件或业务数据。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const syncWorkbenchHeight = () => {
       // Univer 内层 workbench 使用自己的高度；观察容器和子节点可处理侧栏/工具栏挂载导致的尺寸变化。
       const workbench = container.firstElementChild as HTMLElement | null;
@@ -809,6 +895,10 @@ export const UniverTemplateHost = forwardRef<
         title: '网格线',
         tooltip: '显示/隐藏网格线',
         icon: 'HideGridlinesDoubleIcon',
+        /**
+         * 响应 UniverTemplateHost 的 action 事件，更新界面状态并触发必要的后续操作。
+         * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+         */
         action: () => {
           void runtime?.univerAPI
             .executeCommand('sheet.command.toggle-gridlines')
@@ -985,6 +1075,10 @@ export const UniverTemplateHost = forwardRef<
   }, []);
 
   useImperativeHandle(ref, () => ({
+    /**
+     * 更新 UniverTemplateHost 的 save Draft 状态，并同步相关业务数据。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     saveDraft() {
       // saveDraft 只序列化活动工作簿，不改变模式；归一化后快照才能进入扫描器和 .NET 后端。
       try {
@@ -1009,6 +1103,11 @@ export const UniverTemplateHost = forwardRef<
       }
     },
 
+    /**
+     * 查询或读取 UniverTemplateHost 所需的 load Design 数据，并按调用约定返回结果。
+     * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     loadDesign(snapshot) {
       // 设计模式永远从保留 token 的 draftSnapshot 创建新工作簿，不复用已经写入后台数据的预览对象。
       const startedAt = performance.now();
@@ -1041,6 +1140,12 @@ export const UniverTemplateHost = forwardRef<
       });
     },
 
+    /**
+     * 负责 UniverTemplateHost 的 insert Binding 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+     * @param token - 调用受保护接口或校验请求身份所需的访问令牌。
+     * @param kind - kind 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     insertBinding(token, kind) {
       try {
         // 先检查模板级操作和 editable 状态，避免在预览切换/异步复制期间写进即将被释放的工作簿。
@@ -1124,6 +1229,10 @@ export const UniverTemplateHost = forwardRef<
       }
     },
 
+    /**
+     * 整理 UniverTemplateHost 的 print Current Sheet 数据，生成可下载、导出或打印的最终内容。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     async printCurrentSheet() {
       try {
         if (
@@ -1160,6 +1269,10 @@ export const UniverTemplateHost = forwardRef<
       }
     },
 
+    /**
+     * 更新 UniverTemplateHost 的 toggle Filter 状态，并把变化同步到关联组件或业务数据。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     async toggleFilter() {
       try {
         if (
@@ -1169,6 +1282,7 @@ export const UniverTemplateHost = forwardRef<
           throw new Error('模板操作进行中，暂时不能切换筛选。');
         }
 
+        // 第一阶段：构造 toggleFilter 当前阶段需要的中间数据和执行参数。
         const runtime = runtimeRef.current;
         if (runtime === null) {
           throw new Error('Univer 编辑器尚未初始化。');
@@ -1201,6 +1315,7 @@ export const UniverTemplateHost = forwardRef<
             commandTarget,
           );
           if (!removed) {
+            // 第2阶段：根据 toggleFilter 当前分支转换输入数据，并保存该阶段产生的中间结果。
             throw new Error('Univer 未能移除当前筛选范围。');
           }
           return null;
@@ -1234,6 +1349,7 @@ export const UniverTemplateHost = forwardRef<
             expectedRange,
           )
         ) {
+          // 第3阶段：调用 toggleFilter 依赖的异步能力，等待并校验返回数据。
           const removed = await runtime.univerAPI.executeCommand<object, boolean>(
             RemoveSheetFilterCommand.id,
             commandTarget,
@@ -1260,6 +1376,11 @@ export const UniverTemplateHost = forwardRef<
       }
     },
 
+    /**
+     * 更新 UniverTemplateHost 的 set Data Protected 状态，并同步相关业务数据。
+     * @param protectedMode - protectedMode 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     async setDataProtected(protectedMode) {
       try {
         if (
@@ -1292,6 +1413,12 @@ export const UniverTemplateHost = forwardRef<
       }
     },
 
+    /**
+     * 遍历 UniverTemplateHost 数据并执行 render Preview 转换，生成后续流程需要的结果。
+     * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+     * @param plan - plan 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     async renderPreview(snapshot, plan) {
       // 预览始终基于草稿克隆：先替换参数，再展开/复制明细模板行，最后覆盖绑定字段并切只读。
       const startedAt = performance.now();

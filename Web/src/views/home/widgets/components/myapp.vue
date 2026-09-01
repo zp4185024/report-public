@@ -75,6 +75,10 @@ onMounted(() => {
 });
 
 // 请求已收藏菜单列表
+/**
+ * 查询或读取 myapp 所需的 get Favorite Menu List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getFavoriteMenuList = async () => {
 	try {
 		const res = await getAPI(SysUserMenuApi).apiSysUserMenuUserMenuListGet();
@@ -84,10 +88,18 @@ const getFavoriteMenuList = async () => {
 	}
 };
 
+/**
+ * 构建 myapp 所需的 add Mods 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const addMods = () => {
 	modsDrawer.value = true;
 };
 
+/**
+ * 查询或读取 myapp 所需的 get Mods 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getMods = async () => {
 	var menuTree = (useRequestOldRoutes().requestOldRoutes as MenuOutput[]) || [];
 	filterMenu(menuTree);
@@ -101,6 +113,11 @@ const getMods = async () => {
 };
 
 // 递归拿到所有可显示非iframe的2级菜单
+/**
+ * 遍历 myapp 数据并执行 filter Menu 转换，生成后续流程需要的结果。
+ * @param map - map 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const filterMenu = (map: MenuOutput[]) => {
 	map.forEach((item: MenuOutput) => {
 		if (item.meta?.isHide || item.type == 3 || item.status != 1) {
@@ -118,6 +135,10 @@ const filterMenu = (map: MenuOutput[]) => {
 };
 
 // 保存我的常用
+/**
+ * 更新 myapp 的 save Mods 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const saveMods = async () => {
 	const menuIds = myMods.value.map((v: MenuOutput) => v.id) as any;
 	await getAPI(SysUserMenuApi).apiSysUserMenuAddPost({ menuIdList: menuIds });
@@ -126,6 +147,10 @@ const saveMods = async () => {
 };
 
 // 取消
+/**
+ * 响应 myapp 的 before Close 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const beforeClose = async () => {
 	myMods.value = await getFavoriteMenuList();
 	myModsName.value = myMods.value.map((v: MenuOutput) => v.name);

@@ -16,6 +16,7 @@ public sealed class PocExternalParameterAlignmentTests
         ],
         ["token"]);
 
+    /// <summary>验证 Align External Parameters Overrides Sql Parameter And Adds Template Fields 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void AlignExternalParameters_OverridesSqlParameterAndAddsTemplateFields()
     {
@@ -56,6 +57,7 @@ public sealed class PocExternalParameterAlignmentTests
         Assert.Equal("Form", aligned.Single(item => item.Code == "PATIENT_SEX").SourceType);
     }
 
+    /// <summary>验证 Align External Parameters Does Not Add Source Fields Without External Dataset Binding 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void AlignExternalParameters_DoesNotAddSourceFieldsWithoutExternalDatasetBinding()
     {
@@ -74,6 +76,7 @@ public sealed class PocExternalParameterAlignmentTests
         Assert.Equal("System", aligned[0].SourceType);
     }
 
+    /// <summary>验证 Align External Parameters Keeps External Binding When Source Definition Is Missing 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void AlignExternalParameters_KeepsExternalBindingWhenSourceDefinitionIsMissing()
     {
@@ -105,6 +108,11 @@ public sealed class PocExternalParameterAlignmentTests
         Assert.Equal("hisOrganizeId", parameter.SourceFieldCode);
     }
 
+    /// <summary>负责 PocExternalParameterAlignmentTests 的 Parameter 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="displayName">需要读取、校验或转换的业务值。</param>
+    /// <param name="sourceType">sourceType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocParameterDefinition Parameter(
         string code,
         string displayName,

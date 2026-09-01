@@ -81,6 +81,10 @@ public static class PocFormulaTranslator
         private readonly int _insertAfterRow;
         private readonly int _insertedRowCount;
 
+        /// <summary>初始化 InsertRowsVisitor 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+        /// <param name="insertedSheet">当前读取或修改的工作表对象。</param>
+        /// <param name="insertAfterRow">需要遍历、筛选或写入的业务数据集合。</param>
+        /// <param name="insertedRowCount">控制数据范围或位置的数值。</param>
         public InsertRowsVisitor(
             string insertedSheet,
             int insertAfterRow,
@@ -91,21 +95,48 @@ public static class PocFormulaTranslator
             _insertedRowCount = insertedRowCount;
         }
 
+        /// <summary>负责 InsertRowsVisitor 的 Logical Value 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="value">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol LogicalValue(ModContext context, SymbolRange range, bool value) =>
             _copy.LogicalValue(context, range, value);
 
+        /// <summary>负责 InsertRowsVisitor 的 Number Value 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="value">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol NumberValue(ModContext context, SymbolRange range, double value) =>
             _copy.NumberValue(context, range, value);
 
+        /// <summary>负责 InsertRowsVisitor 的 Text Value 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="text">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol TextValue(ModContext context, SymbolRange range, string text) =>
             _copy.TextValue(context, range, text);
 
+        /// <summary>负责 InsertRowsVisitor 的 Error Value 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="error">error 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ErrorValue(
             ModContext context,
             SymbolRange range,
             ReadOnlySpan<char> error) =>
             _copy.ErrorValue(context, range, error);
 
+        /// <summary>负责 InsertRowsVisitor 的 Array Node 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="rows">需要遍历、筛选或写入的业务数据集合。</param>
+        /// <param name="columns">参与映射、显示或数据写入的字段集合。</param>
+        /// <param name="elements">elements 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ArrayNode(
             ModContext context,
             SymbolRange range,
@@ -114,24 +145,53 @@ public static class PocFormulaTranslator
             IReadOnlyList<TransformedSymbol> elements) =>
             _copy.ArrayNode(context, range, rows, columns, elements);
 
+        /// <summary>负责 InsertRowsVisitor 的 Blank Node 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol BlankNode(ModContext context, SymbolRange range) =>
             _copy.BlankNode(context, range);
 
+        /// <summary>负责 InsertRowsVisitor 的 Logical Node 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="value">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol LogicalNode(ModContext context, SymbolRange range, bool value) =>
             _copy.LogicalNode(context, range, value);
 
+        /// <summary>负责 InsertRowsVisitor 的 Error Node 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="error">error 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ErrorNode(
             ModContext context,
             SymbolRange range,
             ReadOnlySpan<char> error) =>
             _copy.ErrorNode(context, range, error);
 
+        /// <summary>负责 InsertRowsVisitor 的 Number Node 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="value">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol NumberNode(ModContext context, SymbolRange range, double value) =>
             _copy.NumberNode(context, range, value);
 
+        /// <summary>负责 InsertRowsVisitor 的 Text Node 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="text">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol TextNode(ModContext context, SymbolRange range, string text) =>
             _copy.TextNode(context, range, text);
 
+        /// <summary>负责 InsertRowsVisitor 的 Reference 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol Reference(
             ModContext context,
             SymbolRange range,
@@ -141,6 +201,12 @@ public static class PocFormulaTranslator
                 range,
                 IsInsertedSheet(context.Sheet) ? Transform(context, range, reference) : reference);
 
+        /// <summary>负责 InsertRowsVisitor 的 Sheet Reference 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="sheet">当前读取或修改的工作表对象。</param>
+        /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol SheetReference(
             ModContext context,
             SymbolRange range,
@@ -152,6 +218,11 @@ public static class PocFormulaTranslator
                 sheet,
                 IsInsertedSheet(sheet) ? Transform(context, range, reference) : reference);
 
+        /// <summary>负责 InsertRowsVisitor 的 Bang Reference 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol BangReference(
             ModContext context,
             SymbolRange range,
@@ -161,6 +232,13 @@ public static class PocFormulaTranslator
                 range,
                 IsInsertedSheet(context.Sheet) ? Transform(context, range, reference) : reference);
 
+        /// <summary>负责 InsertRowsVisitor 的 Reference3 D 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="firstSheet">当前读取或修改的工作表对象。</param>
+        /// <param name="lastSheet">当前读取或修改的工作表对象。</param>
+        /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol Reference3D(
             ModContext context,
             SymbolRange range,
@@ -176,6 +254,13 @@ public static class PocFormulaTranslator
                     ? Transform(context, range, reference)
                     : reference);
 
+        /// <summary>负责 InsertRowsVisitor 的 External Sheet Reference 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="workbookIndex">控制数据范围或位置的数值。</param>
+        /// <param name="sheet">当前读取或修改的工作表对象。</param>
+        /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ExternalSheetReference(
             ModContext context,
             SymbolRange range,
@@ -184,6 +269,14 @@ public static class PocFormulaTranslator
             ReferenceArea reference) =>
             _copy.ExternalSheetReference(context, range, workbookIndex, sheet, reference);
 
+        /// <summary>负责 InsertRowsVisitor 的 External Reference3 D 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="workbookIndex">控制数据范围或位置的数值。</param>
+        /// <param name="firstSheet">当前读取或修改的工作表对象。</param>
+        /// <param name="lastSheet">当前读取或修改的工作表对象。</param>
+        /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ExternalReference3D(
             ModContext context,
             SymbolRange range,
@@ -199,6 +292,12 @@ public static class PocFormulaTranslator
                 lastSheet,
                 reference);
 
+        /// <summary>负责 InsertRowsVisitor 的 Function 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="functionName">需要读取、校验或转换的业务值。</param>
+        /// <param name="arguments">arguments 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol Function(
             ModContext context,
             SymbolRange range,
@@ -206,6 +305,13 @@ public static class PocFormulaTranslator
             IReadOnlyList<TransformedSymbol> arguments) =>
             _copy.Function(context, range, functionName, arguments);
 
+        /// <summary>负责 InsertRowsVisitor 的 Function 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="sheetName">需要读取、校验或转换的业务值。</param>
+        /// <param name="functionName">需要读取、校验或转换的业务值。</param>
+        /// <param name="arguments">arguments 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol Function(
             ModContext context,
             SymbolRange range,
@@ -214,6 +320,14 @@ public static class PocFormulaTranslator
             IReadOnlyList<TransformedSymbol> arguments) =>
             _copy.Function(context, range, sheetName, functionName, arguments);
 
+        /// <summary>负责 InsertRowsVisitor 的 External Function 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="workbookIndex">控制数据范围或位置的数值。</param>
+        /// <param name="sheetName">需要读取、校验或转换的业务值。</param>
+        /// <param name="functionName">需要读取、校验或转换的业务值。</param>
+        /// <param name="arguments">arguments 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ExternalFunction(
             ModContext context,
             SymbolRange range,
@@ -229,6 +343,13 @@ public static class PocFormulaTranslator
                 functionName,
                 arguments);
 
+        /// <summary>负责 InsertRowsVisitor 的 External Function 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="workbookIndex">控制数据范围或位置的数值。</param>
+        /// <param name="functionName">需要读取、校验或转换的业务值。</param>
+        /// <param name="arguments">arguments 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ExternalFunction(
             ModContext context,
             SymbolRange range,
@@ -242,6 +363,12 @@ public static class PocFormulaTranslator
                 functionName,
                 arguments);
 
+        /// <summary>负责 InsertRowsVisitor 的 Cell Function 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="arguments">arguments 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol CellFunction(
             ModContext context,
             SymbolRange range,
@@ -249,6 +376,13 @@ public static class PocFormulaTranslator
             IReadOnlyList<TransformedSymbol> arguments) =>
             _copy.CellFunction(context, range, cell, arguments);
 
+        /// <summary>负责 InsertRowsVisitor 的 Structure Reference 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="area">area 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="firstColumn">参与映射、显示或数据写入的字段集合。</param>
+        /// <param name="lastColumn">参与映射、显示或数据写入的字段集合。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol StructureReference(
             ModContext context,
             SymbolRange range,
@@ -257,6 +391,14 @@ public static class PocFormulaTranslator
             string? lastColumn) =>
             _copy.StructureReference(context, range, area, firstColumn, lastColumn);
 
+        /// <summary>负责 InsertRowsVisitor 的 Structure Reference 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="table">table 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="area">area 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="firstColumn">参与映射、显示或数据写入的字段集合。</param>
+        /// <param name="lastColumn">参与映射、显示或数据写入的字段集合。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol StructureReference(
             ModContext context,
             SymbolRange range,
@@ -266,6 +408,15 @@ public static class PocFormulaTranslator
             string? lastColumn) =>
             _copy.StructureReference(context, range, table, area, firstColumn, lastColumn);
 
+        /// <summary>负责 InsertRowsVisitor 的 External Structure Reference 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="workbookIndex">控制数据范围或位置的数值。</param>
+        /// <param name="table">table 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="area">area 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="firstColumn">参与映射、显示或数据写入的字段集合。</param>
+        /// <param name="lastColumn">参与映射、显示或数据写入的字段集合。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ExternalStructureReference(
             ModContext context,
             SymbolRange range,
@@ -283,9 +434,20 @@ public static class PocFormulaTranslator
                 firstColumn,
                 lastColumn);
 
+        /// <summary>负责 InsertRowsVisitor 的 Name 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="name">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol Name(ModContext context, SymbolRange range, string name) =>
             _copy.Name(context, range, name);
 
+        /// <summary>负责 InsertRowsVisitor 的 Sheet Name 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="sheet">当前读取或修改的工作表对象。</param>
+        /// <param name="name">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol SheetName(
             ModContext context,
             SymbolRange range,
@@ -293,9 +455,20 @@ public static class PocFormulaTranslator
             string name) =>
             _copy.SheetName(context, range, sheet, name);
 
+        /// <summary>负责 InsertRowsVisitor 的 Bang Name 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="name">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol BangName(ModContext context, SymbolRange range, string name) =>
             _copy.BangName(context, range, name);
 
+        /// <summary>负责 InsertRowsVisitor 的 External Name 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="workbookIndex">控制数据范围或位置的数值。</param>
+        /// <param name="name">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ExternalName(
             ModContext context,
             SymbolRange range,
@@ -303,6 +476,13 @@ public static class PocFormulaTranslator
             string name) =>
             _copy.ExternalName(context, range, workbookIndex, name);
 
+        /// <summary>负责 InsertRowsVisitor 的 External Sheet Name 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="workbookIndex">控制数据范围或位置的数值。</param>
+        /// <param name="sheet">当前读取或修改的工作表对象。</param>
+        /// <param name="name">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol ExternalSheetName(
             ModContext context,
             SymbolRange range,
@@ -311,6 +491,13 @@ public static class PocFormulaTranslator
             string name) =>
             _copy.ExternalSheetName(context, range, workbookIndex, sheet, name);
 
+        /// <summary>负责 InsertRowsVisitor 的 Binary Node 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="operation">operation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="leftNode">leftNode 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="rightNode">rightNode 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol BinaryNode(
             ModContext context,
             SymbolRange range,
@@ -319,6 +506,12 @@ public static class PocFormulaTranslator
             TransformedSymbol rightNode) =>
             _copy.BinaryNode(context, range, operation, leftNode, rightNode);
 
+        /// <summary>负责 InsertRowsVisitor 的 Unary 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="operation">operation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="node">node 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol Unary(
             ModContext context,
             SymbolRange range,
@@ -326,15 +519,28 @@ public static class PocFormulaTranslator
             TransformedSymbol node) =>
             _copy.Unary(context, range, operation, node);
 
+        /// <summary>负责 InsertRowsVisitor 的 Nested 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="node">node 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public TransformedSymbol Nested(
             ModContext context,
             SymbolRange range,
             TransformedSymbol node) =>
             _copy.Nested(context, range, node);
 
+        /// <summary>校验 PocFormulaTranslator 的 Is Inserted Sheet 条件，并返回可供后续流程判断的结果。</summary>
+        /// <param name="sheet">当前读取或修改的工作表对象。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         private bool IsInsertedSheet(string? sheet) =>
             string.Equals(sheet, _insertedSheet, StringComparison.OrdinalIgnoreCase);
 
+        /// <summary>将 PocFormulaTranslator 中的 Transform 输入转换为调用方需要的稳定格式。</summary>
+        /// <param name="context">本次操作共享的运行上下文。</param>
+        /// <param name="range">需要读取、修改或校验的单元格范围。</param>
+        /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         private ReferenceArea Transform(
             ModContext context,
             SymbolRange range,
@@ -377,9 +583,16 @@ public static class PocFormulaTranslator
                 CopyWithRow(second, adjustedSecondRow));
         }
 
+        /// <summary>负责 InsertRowsVisitor 的 Shift Row 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+        /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         private int ShiftRow(int row) =>
             row > _insertAfterRow ? checked(row + _insertedRowCount) : row;
 
+        /// <summary>按照 PocFormulaTranslator 的业务约束完成 Copy With Row 数据合并或复制。</summary>
+        /// <param name="source">本次转换或写入使用的数据对象。</param>
+        /// <param name="row">需要遍历、筛选或写入的业务数据集合。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         private static RowCol CopyWithRow(RowCol source, int row) =>
             new(
                 source.RowType,

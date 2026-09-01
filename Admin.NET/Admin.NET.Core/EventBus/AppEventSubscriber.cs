@@ -14,16 +14,16 @@ public class AppEventSubscriber : IEventSubscriber, ISingleton, IDisposable
     private static readonly ISugarQueryable<SysTenant> SysTenantQueryable = App.GetService<ISqlSugarClient>().Queryable<SysTenant>();
     private readonly IServiceScope _serviceScope;
 
+    /// <summary>初始化 AppEventSubscriber 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="scopeFactory">当前方法执行时使用的 scopeFactory 输入值。</param>
     public AppEventSubscriber(IServiceScopeFactory scopeFactory)
     {
         _serviceScope = scopeFactory.CreateScope();
     }
 
-    /// <summary>
-    /// 增加异常日志
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>构建 AppEventSubscriber 所需的 Create Ex Log 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(CommonConst.AddExLog)]
     public async Task CreateExLog(EventHandlerExecutingContext context)
     {
@@ -34,11 +34,9 @@ public class AppEventSubscriber : IEventSubscriber, ISingleton, IDisposable
         await db.CopyNew().Insertable((SysLogEx)context.Source.Payload).ExecuteCommandAsync();
     }
 
-    /// <summary>
-    /// 发送异常邮件
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <summary>执行 AppEventSubscriber 的 Send Order Error Mail 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次处理共享的运行上下文和依赖状态。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [EventSubscribe(CommonConst.SendErrorMail)]
     public async Task SendOrderErrorMail(EventHandlerExecutingContext context)
     {
@@ -48,9 +46,7 @@ public class AppEventSubscriber : IEventSubscriber, ISingleton, IDisposable
         await _serviceScope.ServiceProvider.GetRequiredService<SysEmailService>().SendEmail(JSON.Serialize(context.Source.Payload), title);
     }
 
-    /// <summary>
-    /// 释放服务作用域
-    /// </summary>
+    /// <summary>释放 AppEventSubscriber 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _serviceScope.Dispose();

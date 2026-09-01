@@ -35,9 +35,7 @@ public class RabbitMQEventSourceStore : IEventSourceStorer, IDisposable
     /// </summary>
     private IChannel _channel;
 
-    /// <summary>
-    /// 构造函数
-    /// </summary>
+    /// <summary>初始化 RabbitMQEventSourceStore 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     /// <param name="factory">连接工厂</param>
     /// <param name="routeKey">路由键</param>
     /// <param name="capacity">存储器最多能够处理多少消息，超过该容量进入等待写入</param>
@@ -135,9 +133,7 @@ public class RabbitMQEventSourceStore : IEventSourceStorer, IDisposable
         return eventSource;
     }
 
-    /// <summary>
-    /// 释放非托管资源
-    /// </summary>
+    /// <summary>释放 RabbitMQEventSourceStore 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _channel.Dispose();

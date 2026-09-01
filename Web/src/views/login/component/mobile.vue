@@ -69,6 +69,10 @@ const state = reactive({
 });
 
 // 获取短信验证码
+/**
+ * 查询或读取 mobile 所需的 get Sms Code 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getSmsCode = async () => {
 	state.ruleForm.code = '';
 	if (!verifyPhone(state.ruleForm.phone)) {
@@ -98,6 +102,10 @@ const getSmsCode = async () => {
 };
 
 // 登录
+/**
+ * 响应 mobile 的 on Sign In 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onSignIn = async () => {
 	state.ruleForm.tenantId ??= props.tenantInfo.id ?? props.tenantInfo.list[0]?.value ?? undefined;
 	const res = await getAPI(SysAuthApi).apiSysAuthLoginPhonePost(state.ruleForm);

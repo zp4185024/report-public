@@ -75,13 +75,13 @@ public class CustomViewEngine : ViewEngineModel
     /// <param name="separator">分隔符</param>
     /// <param name="format">模板字符串</param>
     /// <param name="lowerFirstLetter">字段首字母小写</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string PrimaryKeysFormat(string separator, string format, bool lowerFirstLetter = false) => string.Join(separator, PrimaryKeyFieldList.Select(u => string.Format(format, lowerFirstLetter ? u.LowerPropertyName : u.PropertyName)));
 
     /// <summary>
     /// 注入的服务
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Dictionary<string, string> InjectServiceMap
     {
         get
@@ -107,29 +107,29 @@ public class CustomViewEngine : ViewEngineModel
     /// <summary>
     /// 判断字段是否为状态字段
     /// </summary>
-    /// <param name="column"></param>
-    /// <returns></returns>
+    /// <param name="column">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public bool IsStatus(CodeGenConfig column) => column.NetType == nameof(StatusEnum);
 
     /// <summary>
     /// 获取首字母小写字符串
     /// </summary>
-    /// <param name="text"></param>
-    /// <returns></returns>
+    /// <param name="text">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string ToLowerFirstLetter(string text) => string.IsNullOrWhiteSpace(text) ? text : text[..1].ToLower() + text[1..];
 
     /// <summary>
     /// 将基本字段类型转为可空类型
     /// </summary>
-    /// <param name="netType"></param>
-    /// <returns></returns>
+    /// <param name="netType">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetNullableNetType(string netType) => Regex.IsMatch(netType, "(.*?Enum|bool|char|int|long|double|float|decimal)[?]?") ? netType.TrimEnd('?') + "?" : netType;
 
     /// <summary>
     /// 获取前端表格列定义的属性
     /// </summary>
-    /// <param name="column"></param>
-    /// <returns></returns>
+    /// <param name="column">参与映射、显示或数据写入的字段集合。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetElTableColumnCustomProperty(CodeGenConfig column)
     {
         var content = $"prop='{column.LowerPropertyName}' label='{column.ColumnComment}'";
@@ -138,10 +138,8 @@ public class CustomViewEngine : ViewEngineModel
         return content;
     }
 
-    /// <summary>
-    /// 设置默认值
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 CustomViewEngine 所需的 Get Add Default Value 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public string GetAddDefaultValue()
     {
         var content = "";

@@ -9,25 +9,53 @@ import { defineStore } from 'pinia';
  * @methods delAllCachedViews 右键菜单`全部关闭`，删除要缓存的路由 names（关闭 Tagsview）
  */
 export const useKeepALiveNames = defineStore('keepALiveNames', {
+	/**
+	 * 创建并返回 keepAliveNames 状态仓库的初始数据，供页面和操作方法共享。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	state: (): KeepAliveNamesState => ({
 		keepAliveNames: [],
 		cachedViews: [],
 	}),
 	actions: {
+		/**
+		 * 更新 keepAliveNames 的 set Cache Keep Alive 状态，并同步相关业务数据。
+		 * @param data - 本次操作使用的输入数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		async setCacheKeepAlive(data: Array<string>) {
 			this.keepAliveNames = data;
 		},
+		/**
+		 * 构建 keepAliveNames 所需的 add Cached View 内容，并保证生成结果符合调用约定。
+		 * @param view - view 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		async addCachedView(view: any) {
 			if (view.meta.isKeepAlive) this.cachedViews?.push(view.name);
 		},
+		/**
+		 * 从 keepAliveNames 移除 del Cached View 对应数据，并清理相关缓存、选中项或临时状态。
+		 * @param view - view 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		async delCachedView(view: any) {
 			const index = this.cachedViews.indexOf(view.name);
 			index > -1 && this.cachedViews.splice(index, 1);
 		},
+		/**
+		 * 从 keepAliveNames 移除 del Others Cached Views 对应数据，并清理相关缓存、选中项或临时状态。
+		 * @param view - view 对应的业务输入；具体类型和空值范围以方法签名为准。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		async delOthersCachedViews(view: any) {
 			if (view.meta.isKeepAlive) this.cachedViews = [view.name];
 			else this.cachedViews = [];
 		},
+		/**
+		 * 从 keepAliveNames 移除 del All Cached Views 对应数据，并清理相关缓存、选中项或临时状态。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		async delAllCachedViews() {
 			this.cachedViews = [];
 		},

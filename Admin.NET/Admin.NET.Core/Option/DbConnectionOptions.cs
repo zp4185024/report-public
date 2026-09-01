@@ -26,6 +26,9 @@ public sealed class DbConnectionOptions : IConfigurableOptions<DbConnectionOptio
     /// </summary>
     public List<DbConnectionConfig> ConnectionConfigs { get; set; }
 
+    /// <summary>遍历 DbConnectionOptions 当前数据并执行 Post Configure 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <param name="configuration">控制本次调用行为、超时或展示方式的配置选项。</param>
     public void PostConfigure(DbConnectionOptions options, IConfiguration configuration)
     {
         ApplyReportCenterDatabaseSecret(options);
@@ -39,6 +42,8 @@ public sealed class DbConnectionOptions : IConfigurableOptions<DbConnectionOptio
         }
     }
 
+    /// <summary>校验 DbConnectionOptions 的 Ensure Report Center Uses Sql Server 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
     private static void EnsureReportCenterUsesSqlServer(DbConnectionOptions options)
     {
         var mainConfig = options.ConnectionConfigs?.FirstOrDefault();
@@ -53,6 +58,8 @@ public sealed class DbConnectionOptions : IConfigurableOptions<DbConnectionOptio
         }
     }
 
+    /// <summary>执行 DbConnectionOptions 的 Apply Report Center Database Secret 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
     private static void ApplyReportCenterDatabaseSecret(DbConnectionOptions options)
     {
         var mainConfig = options.ConnectionConfigs?.FirstOrDefault();

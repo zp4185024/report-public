@@ -10,11 +10,14 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocTemplateDataExporterTests
 {
+    /// <summary>验证 Write Normal Async Exports All Rows With Parameters Styles And Formulas 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task WriteNormalAsync_ExportsAllRowsWithParametersStylesAndFormulas()
     {
         var snapshot = LoadSeedSnapshotWithSummaryRow();
         var binding = PocTemplateValidator.Scan(snapshot.ToString(Formatting.None));
+        // 第一阶段：构造 WriteNormalAsync_ExportsAllRowsWithParametersStylesAndFormulas 当前步骤需要的中间数据和执行参数。
         var query = new PocExecuteRequest(
             3,
             "H01",
@@ -44,6 +47,7 @@ public sealed class PocTemplateDataExporterTests
         var sheet = workbook.Worksheet("科室工作量");
         Assert.Equal("医院：H01", sheet.Cell("A2").GetString());
         Assert.Equal("科室：D02", sheet.Cell("C2").GetString());
+        // 第2阶段：根据 WriteNormalAsync_ExportsAllRowsWithParametersStylesAndFormulas 当前分支转换输入数据，并保存该阶段产生的中间结果。
         Assert.Equal("人员：P03", sheet.Cell("E2").GetString());
         Assert.Equal("统计期间：2026-07-01 至 2026-07-14", sheet.Cell("A3").GetString());
 
@@ -66,6 +70,8 @@ public sealed class PocTemplateDataExporterTests
             cell => cell.GetString().Contains("{{", StringComparison.Ordinal));
     }
 
+    /// <summary>查询或读取 PocTemplateDataExporterTests 所需的 Load Seed Snapshot With Summary Row 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject LoadSeedSnapshotWithSummaryRow()
     {
         const string resourceName =
@@ -86,6 +92,8 @@ public sealed class PocTemplateDataExporterTests
         return snapshot;
     }
 
+    /// <summary>根据 PocTemplateDataExporterTests 当前输入计算 Current Rules 结果，并按方法声明的类型返回。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExchangeRuleSet CurrentRules()
     {
         var rules = PocExchangeMappingDefaults.Create()

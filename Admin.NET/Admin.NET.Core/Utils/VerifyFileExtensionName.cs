@@ -14,6 +14,7 @@ public static class VerifyFileExtensionName
     private static readonly IDictionary<string, string> DicsExt = new Dictionary<string, string>();
     private static readonly IDictionary<string, HashSet<int>> ExtDics = new Dictionary<string, HashSet<int>>();
 
+    /// <summary>初始化 VerifyFileExtensionName 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     static VerifyFileExtensionName()
     {
         DicsExt.Add("FFD8FFE0", ".jpg");
@@ -93,9 +94,9 @@ public static class VerifyFileExtensionName
     /// <summary>
     /// 文件格式和文件内容格式是否一致
     /// </summary>
-    /// <param name="stream"></param>
-    /// <param name="suffix"></param>
-    /// <returns></returns>
+    /// <param name="stream">stream 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="suffix">suffix 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static bool IsSameType(Stream stream, string suffix = ".jpg")
     {
         if (stream == null)
@@ -128,6 +129,9 @@ public static class VerifyFileExtensionName
      * @return 文件头信息
      */
 
+    /// <summary>查询或读取 VerifyFileExtensionName 所需的 Get File Header 数据，并按调用约定返回结果。</summary>
+    /// <param name="b">b 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string GetFileHeader(byte[] b)
     {
         string value = BytesToHexString(b);
@@ -145,6 +149,9 @@ public static class VerifyFileExtensionName
      * @return 文件头信息
      */
 
+    /// <summary>根据 VerifyFileExtensionName 当前输入计算 Bytes To Hex String 结果，并按方法声明的类型返回。</summary>
+    /// <param name="src">src 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string BytesToHexString(byte[] src)
     {
         var builder = new StringBuilder();

@@ -17,6 +17,10 @@ public class GoViewSysService : IDynamicApiController
     private readonly SqlSugarRepository<SysUser> _sysUserRep;
     private readonly SysCacheService _sysCacheService;
 
+    /// <summary>初始化 GoViewSysService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysAuthService">sysAuthService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRep">sysUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public GoViewSysService(SysAuthService sysAuthService,
         SqlSugarRepository<SysUser> sysUserRep,
         SysCacheService sysCacheService)
@@ -29,7 +33,7 @@ public class GoViewSysService : IDynamicApiController
     /// <summary>
     /// GoView 登录 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("GoView 登录")]
     public async Task<GoViewLoginOutput> Login(GoViewLoginInput input)
@@ -76,7 +80,7 @@ public class GoViewSysService : IDynamicApiController
     /// <summary>
     /// 获取 OSS 上传接口 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [ApiDescriptionSettings(Name = "GetOssInfo")]
     [DisplayName("获取 OSS 上传接口")]

@@ -27,7 +27,7 @@ public static class SqlSugarSetup
     /// <summary>
     /// SqlSugar 上下文初始化
     /// </summary>
-    /// <param name="services"></param>
+    /// <param name="services">services 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public static void AddSqlSugar(this IServiceCollection services)
     {
         // 注册雪花Id
@@ -71,10 +71,8 @@ public static class SqlSugarSetup
         });
     }
 
-    /// <summary>
-    /// 配置连接属性
-    /// </summary>
-    /// <param name="config"></param>
+    /// <summary>更新 SqlSugarSetup 的 Set Db Config 状态，并同步相关业务数据。</summary>
+    /// <param name="config">控制本次处理行为的配置选项。</param>
     public static void SetDbConfig(DbConnectionConfig config)
     {
         if (config.DbSettings.EnableConnStringEncrypt)
@@ -126,12 +124,10 @@ public static class SqlSugarSetup
             config.MoreSettings.MaxParameterNameLength = 30;
     }
 
-    /// <summary>
-    /// 配置Aop
-    /// </summary>
-    /// <param name="db"></param>
-    /// <param name="enableConsoleSql"></param>
-    /// <param name="superAdminIgnoreIDeletedFilter"></param>
+    /// <summary>更新 SqlSugarSetup 的 Set Db Aop 状态，并同步相关业务数据。</summary>
+    /// <param name="db">db 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="enableConsoleSql">enableConsoleSql 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="superAdminIgnoreIDeletedFilter">superAdminIgnoreIDeletedFilter 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public static void SetDbAop(SqlSugarScopeProvider db, bool enableConsoleSql, bool superAdminIgnoreIDeletedFilter)
     {
         // 设置超时时间
@@ -295,8 +291,8 @@ public static class SqlSugarSetup
     /// <summary>
     /// 开启库表差异化日志
     /// </summary>
-    /// <param name="db"></param>
-    /// <param name="config"></param>
+    /// <param name="db">db 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="config">控制本次处理行为的配置选项。</param>
     private static void SetDbDiffLog(SqlSugarScopeProvider db, DbConnectionConfig config)
     {
         if (!config.DbSettings.EnableDiffLog) return;
@@ -347,10 +343,8 @@ public static class SqlSugarSetup
         db.Aop.OnDiffLogEvent = AopOnDiffLogEvent;
     }
 
-    /// <summary>
-    /// 初始化视图
-    /// </summary>
-    /// <param name="dbProvider"></param>
+    /// <summary>遍历 SqlSugarSetup 当前数据并执行 Init View 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="dbProvider">dbProvider 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void InitView(SqlSugarScopeProvider dbProvider)
     {
         var totalWatch = Stopwatch.StartNew(); // 开始总计时
@@ -389,10 +383,8 @@ public static class SqlSugarSetup
         Console.WriteLine($"初始化视图 {dbProvider.CurrentConnectionConfig.DbType} - {dbProvider.CurrentConnectionConfig.ConfigId} 总耗时：{totalWatch.ElapsedMilliseconds:N0} ms");
     }
 
-    /// <summary>
-    /// 等待数据库就绪
-    /// </summary>
-    /// <param name="dbProvider"></param>
+    /// <summary>根据 SqlSugarSetup 当前输入计算 Wait For Database Ready 结果，并按方法声明的类型返回。</summary>
+    /// <param name="dbProvider">dbProvider 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WaitForDatabaseReady(SqlSugarScopeProvider dbProvider)
     {
         do
@@ -414,9 +406,7 @@ public static class SqlSugarSetup
         } while (true);
     }
 
-    /// <summary>
-    /// 初始化数据库
-    /// </summary>
+    /// <summary>初始化 SqlSugarSetup 的 Init Database 状态，创建依赖并注册运行期间需要的资源。</summary>
     /// <param name="db">SqlSugarScope 实例</param>
     /// <param name="config">数据库连接配置</param>
     private static void InitDatabase(SqlSugarScope db, DbConnectionConfig config)
@@ -489,9 +479,7 @@ public static class SqlSugarSetup
         }
     }
 
-    /// <summary>
-    /// 初始化表结构
-    /// </summary>
+    /// <summary>遍历 SqlSugarSetup 当前数据并执行 Initialize Tables 转换，生成调用方需要的结果集合。</summary>
     /// <param name="dbProvider">SqlSugarScopeProvider 实例</param>
     /// <param name="entityTypes">实体类型列表</param>
     /// <param name="config">数据库连接配置</param>
@@ -537,9 +525,7 @@ public static class SqlSugarSetup
         }
     }
 
-    /// <summary>
-    /// 初始化表
-    /// </summary>
+    /// <summary>初始化 SqlSugarSetup 的 Initialize Table 状态，创建依赖并注册运行期间需要的资源。</summary>
     /// <param name="dbProvider">SqlSugarScopeProvider 实例</param>
     /// <param name="entityType">实体类型</param>
     private static void InitializeTable(SqlSugarScopeProvider dbProvider, Type entityType)
@@ -557,9 +543,7 @@ public static class SqlSugarSetup
         }, maxRetry: 3, retryIntervalMs: 1000);
     }
 
-    /// <summary>
-    /// 初始化种子数据
-    /// </summary>
+    /// <summary>遍历 SqlSugarSetup 当前数据并执行 Init Seed Data 转换，生成调用方需要的结果集合。</summary>
     /// <param name="db">SqlSugarScope 实例</param>
     /// <param name="config">数据库连接配置</param>
     private static void InitSeedData(SqlSugarScope db, DbConnectionConfig config)
@@ -601,9 +585,7 @@ public static class SqlSugarSetup
             .ToList();
     }
 
-    /// <summary>
-    /// 获取种子数据
-    /// </summary>
+    /// <summary>查询或读取 SqlSugarSetup 所需的 Get Seed Data 数据，并按调用约定返回结果。</summary>
     /// <param name="seedType">种子数据类型</param>
     /// <returns>种子数据列表</returns>
     private static IEnumerable<object> GetSeedData(Type seedType)
@@ -685,8 +667,8 @@ public static class SqlSugarSetup
     /// <summary>
     /// 初始化租户业务数据库
     /// </summary>
-    /// <param name="iTenant"></param>
-    /// <param name="config"></param>
+    /// <param name="iTenant">iTenant 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="config">控制本次处理行为的配置选项。</param>
     public static void InitTenantDatabase(ITenant iTenant, DbConnectionConfig config)
     {
         SetDbConfig(config);
@@ -713,12 +695,10 @@ public static class SqlSugarSetup
         }
     }
 
-    /// <summary>
-    /// 简单的重试机制
-    /// </summary>
-    /// <param name="action"></param>
-    /// <param name="maxRetry"></param>
-    /// <param name="retryIntervalMs"></param>
+    /// <summary>检查 SqlSugarSetup 的 Retry 约束；条件不满足时抛出包含业务上下文的异常。</summary>
+    /// <param name="action">action 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="maxRetry">maxRetry 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="retryIntervalMs">retryIntervalMs 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void Retry(Action action, int maxRetry, int retryIntervalMs)
     {
         int attempt = 0;

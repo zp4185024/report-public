@@ -11,6 +11,10 @@ import type {
   ExternalParameterSourceDocument,
 } from './types';
 
+/**
+ * 负责 DatasetPreviewPage 的 back Url 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function backUrl(): string {
   const search = new URLSearchParams(window.location.search);
   search.delete('datasetCode');
@@ -18,16 +22,32 @@ function backUrl(): string {
   return `/data-assets${query ? `?${query}` : ''}`;
 }
 
+/**
+ * 创建并返回 DatasetPreviewPage 的 value From Url 初始数据，避免不同调用方共享可变对象。
+ * @param variable - variable 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function valueFromUrl(variable: DatasetVariableDefinition): string {
   return new URLSearchParams(window.location.search).get(variable.code) ?? '';
 }
 
+/**
+ * 负责 DatasetPreviewPage 的 input Type 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param variable - variable 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function inputType(variable: DatasetVariableDefinition): 'date' | 'number' | 'text' {
   if (variable.dataType === 'date') return 'date';
   if (['int', 'long', 'decimal'].includes(variable.dataType)) return 'number';
   return 'text';
 }
 
+/**
+ * 按照 DatasetPreviewPage 的业务约束完成 merge Field Names 数据合并或复制。
+ * @param previewFields - 参与映射、显示或数据写入的字段集合。
+ * @param savedFields - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function mergeFieldNames(
   previewFields: readonly DatasetFieldDefinition[],
   savedFields: readonly DatasetFieldDefinition[],
@@ -38,6 +58,10 @@ function mergeFieldNames(
   });
 }
 
+/**
+ * 按 Dataset Preview Page 规则筛选 DatasetPreviewPage 数据，并返回满足条件的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export default function DatasetPreviewPage() {
   const [datasets, setDatasets] = useState<DatasetDocument[]>([]);
   const [externalSources, setExternalSources] = useState<ExternalParameterSourceDocument[]>([]);
@@ -46,6 +70,7 @@ export default function DatasetPreviewPage() {
   );
   const [values, setValues] = useState<Record<string, string>>({});
   const [result, setResult] = useState<DatasetPreviewResult | null>(null);
+  // 第一阶段：构造 DatasetPreviewPage 当前阶段需要的中间数据和执行参数。
   const [loading, setLoading] = useState(true);
   const [previewing, setPreviewing] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -54,6 +79,10 @@ export default function DatasetPreviewPage() {
 
   useEffect(() => {
     let active = true;
+    /**
+     * 查询或读取 DatasetPreviewPage 所需的 load 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const load = async () => {
       try {
         const [next, nextExternalSources] = await Promise.all([
@@ -79,6 +108,7 @@ export default function DatasetPreviewPage() {
     () => datasets.find((item) => item.code === datasetCode) ?? null,
     [datasetCode, datasets],
   );
+  // 第2阶段：构造 DatasetPreviewPage 当前阶段需要的中间数据和执行参数。
   const synchronizedFields = useMemo(
     () => result === null || dataset === null
       ? []
@@ -88,6 +118,11 @@ export default function DatasetPreviewPage() {
   const fieldsChanged = dataset !== null && result !== null &&
     JSON.stringify(dataset.fields) !== JSON.stringify(synchronizedFields);
 
+  /**
+   * 负责 DatasetPreviewPage 的 select Dataset 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+   * @param code - 需要读取、校验或转换的业务值。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const selectDataset = (code: string) => {
     setDatasetCode(code);
     setValues({});
@@ -99,6 +134,10 @@ export default function DatasetPreviewPage() {
     window.history.replaceState(null, '', `${window.location.pathname}?${search.toString()}`);
   };
 
+  /**
+   * 按 preview 规则筛选 DatasetPreviewPage 数据，并返回满足条件的结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const preview = async () => {
     if (dataset === null) return;
     setPreviewing(true);
@@ -115,6 +154,7 @@ export default function DatasetPreviewPage() {
         parameters,
         context: externalParameterDocumentContext(externalSources),
       });
+      // 第3阶段：根据 DatasetPreviewPage 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setResult(next);
       setStatus(`返回 ${next.rows.length} 行，耗时 ${next.durationMilliseconds} ms`);
     } catch (exception) {
@@ -125,6 +165,10 @@ export default function DatasetPreviewPage() {
     }
   };
 
+  /**
+   * 遍历 DatasetPreviewPage 数据并执行 sync Fields 转换，生成后续流程需要的结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   const syncFields = async () => {
     if (dataset === null || result === null || !fieldsChanged) return;
     setSyncing(true);
@@ -140,6 +184,7 @@ export default function DatasetPreviewPage() {
     }
   };
 
+  // 第4阶段：遍历 DatasetPreviewPage 当前数据集合，逐项转换并维护处理结果。
   return (
     <main className="dataset-preview-page">
       <header className="asset-header">

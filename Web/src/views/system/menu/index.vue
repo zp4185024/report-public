@@ -108,6 +108,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	const res = await getAPI(SysMenuApi).apiSysMenuListGet(state.queryParams.title, state.queryParams.type, state.queryParams.tenantId);
@@ -116,6 +120,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = () => {
 	state.queryParams.title = undefined;
 	state.queryParams.type = undefined;
@@ -123,6 +131,10 @@ const resetQuery = () => {
 };
 
 // 获取菜单树数据
+/**
+ * 查询或读取 index 所需的 get Menu Tree Data 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getMenuTreeData = async () => {
 	const res = await getAPI(SysMenuApi).apiSysMenuListGet(undefined, undefined, state.queryParams.tenantId);
 	state.allMenuData = res.data.result ?? [];
@@ -130,6 +142,10 @@ const getMenuTreeData = async () => {
 }
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Menu 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddMenu = () => {
 	getMenuTreeData();
 	const data = { type: 2, isHide: false, isKeepAlive: true, isAffix: false, isIframe: false, tenantId: undefined, status: 1, orderNo: 100 };
@@ -139,6 +155,11 @@ const openAddMenu = () => {
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Menu 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditMenu = (row: any) => {
 	getMenuTreeData();
 	state.editMenuTitle = '编辑菜单';
@@ -146,6 +167,11 @@ const openEditMenu = (row: any) => {
 };
 
 // 打开复制页面
+/**
+ * 准备 index 的 open Copy Menu 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openCopyMenu = (row: any) => {
 	state.editMenuTitle = '复制菜单';
 	var copyRow = JSON.parse(JSON.stringify(row)) as UpdateMenuInput;
@@ -155,6 +181,11 @@ const openCopyMenu = (row: any) => {
 };
 
 // 删除当前行
+/**
+ * 从 index 移除 del Menu 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delMenu = (row: any) => {
 	ElMessageBox.confirm(`确定删除菜单：【${row.title}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -170,6 +201,11 @@ const delMenu = (row: any) => {
 };
 
 // 修改状态
+/**
+ * 更新 index 的 change Status 状态，并同步相关业务数据。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const changeStatus = async (row: any) => {
 	await getAPI(SysMenuApi)
 		.apiSysMenuSetStatusPost({ id: row.id, status: row.status })

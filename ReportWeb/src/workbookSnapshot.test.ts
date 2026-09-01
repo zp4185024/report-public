@@ -5,6 +5,10 @@ import {
   normalizeWorkbookSnapshot,
 } from './workbookSnapshot';
 
+/**
+ * 验证 workbook With Runtime Merge Coordinates 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function workbookWithRuntimeMergeCoordinates(): IWorkbookData {
   return {
     id: 'runtime-workbook',
@@ -36,7 +40,13 @@ function workbookWithRuntimeMergeCoordinates(): IWorkbookData {
   } as unknown as IWorkbookData;
 }
 
+/**
+ * 验证 workbook With Runtime Layout Numbers 场景下的预期行为，并防止相关逻辑回归。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function workbookWithRuntimeLayoutNumbers(): IWorkbookData {
+  // 第一阶段：整理 workbookWithRuntimeLayoutNumbers 已计算的数据，并按方法契约返回最终结果。
+  // 第一阶段：整理 workbookWithRuntimeLayoutNumbers 已计算的数据，并按方法契约返回最终结果。
   return {
     id: 'runtime-layout-workbook',
     rev: '2',
@@ -127,6 +137,32 @@ describe('normalizeWorkbookSnapshot', () => {
     expect(sheet?.cellData?.[0]?.[0]?.v).toBe('001');
     expect((snapshot.sheets['report-sheet']?.freeze as unknown as { ySplit: unknown }).ySplit)
       .toBe('5');
+  });
+
+  it('defaults unspecified text overflow to overflow while preserving explicit strategies', () => {
+    const snapshot = workbookWithRuntimeLayoutNumbers();
+    const runtimeSnapshot = snapshot as unknown as {
+      styles: Record<string, Record<string, unknown>>;
+    };
+    runtimeSnapshot.styles = {
+      missing: { fs: '12' },
+      unspecified: { tb: '0' },
+      nullValue: { tb: null },
+      clip: { tb: 2 },
+      wrap: { tb: '3' },
+    };
+
+    const normalized = normalizeWorkbookSnapshot(snapshot) as unknown as typeof runtimeSnapshot;
+
+    expect(normalized.styles).toEqual({
+      missing: { fs: '12', tb: 1 },
+      unspecified: { tb: 1 },
+      nullValue: { tb: 1 },
+      clip: { tb: 2 },
+      wrap: { tb: '3' },
+    });
+    expect(runtimeSnapshot.styles.missing).toEqual({ fs: '12' });
+    expect(runtimeSnapshot.styles.unspecified).toEqual({ tb: '0' });
   });
 
   it('preserves Univer no-freeze sentinel values after cancelling frozen panes', () => {

@@ -11,6 +11,12 @@ const LOCALE_FILE = path.resolve(__dirname, '../lang/index.json');
 const cliProgress = require('cli-progress');
 const colors = require('colors');
 
+/**
+ * 构造并发送 translate 的 translate Batch 网络请求，随后按接口类型返回响应结果。
+ * @param texts - texts 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param targetLang - targetLang 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 async function translateBatch(texts, targetLang) {
 	// 构建批量内容：每行以[index]开头
 	const batchContent = texts.map((text, index) => `[${index}] ${text}`).join('\n');
@@ -105,6 +111,11 @@ async function translateBatch(texts, targetLang) {
 	return translations;
 }
 
+/**
+ * 按 extract Target Langs 条件比较、筛选或整理 translate 数据，并返回顺序稳定的结果。
+ * @param localeData - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function extractTargetLangs(localeData) {
 	const allLangs = new Set();
 	for (const translations of Object.values(localeData)) {
@@ -117,6 +128,12 @@ function extractTargetLangs(localeData) {
 	return [...allLangs];
 }
 
+/**
+ * 按 group Tasks By Lang 条件比较、筛选或整理 translate 数据，并返回顺序稳定的结果。
+ * @param localeData - 本次操作使用的输入数据。
+ * @param targetLangs - targetLangs 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function groupTasksByLang(localeData, targetLangs) {
 	const tasks = {};
 
@@ -145,6 +162,10 @@ function groupTasksByLang(localeData, targetLangs) {
 	return tasks;
 }
 
+/**
+ * 组织 translate 的启动流程，执行初始化并向调用环境返回最终状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 async function main() {
 	// 读取语言文件
 	const rawData = fs.readFileSync(LOCALE_FILE);

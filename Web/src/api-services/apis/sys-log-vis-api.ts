@@ -168,6 +168,7 @@ export const SysLogVisApiAxiosParamCreator = function (configuration?: Configura
  * @export
  */
 export const SysLogVisApiFp = function(configuration?: Configuration) {
+    // 第一阶段：整理 SysLogVisApiFp 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -192,6 +193,7 @@ export const SysLogVisApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysLogVisApiAxiosParamCreator(configuration).apiSysLogVisListGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysLogVisApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },

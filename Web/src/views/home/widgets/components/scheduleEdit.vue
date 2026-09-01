@@ -67,6 +67,12 @@ const state = reactive({
 onMounted(() => {});
 
 // 打开弹窗
+/**
+ * 准备 scheduleEdit 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @param showRemove - showRemove 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: any, showRemove: boolean = false) => {
 	ruleFormRef.value?.resetFields();
 	state.showRemove = showRemove;
@@ -77,17 +83,29 @@ const openDialog = (row: any, showRemove: boolean = false) => {
 };
 
 // 关闭弹窗
+/**
+ * 结束 scheduleEdit 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emits('handleQuery', true);
 	state.isShowDialog = false;
 };
 
 // 取消
+/**
+ * 校验 scheduleEdit 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
 // 提交
+/**
+ * 校验当前输入并提交保存请求，成功后同步 scheduleEdit 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return;
@@ -101,6 +119,10 @@ const submit = () => {
 };
 
 // 删除
+/**
+ * 移除 scheduleEdit 中与 remove 对应的数据，并清理关联状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const remove = () => {
 	ElMessageBox.confirm(`确定删除吗?`, '提示', {
 		confirmButtonText: '确定',
@@ -116,6 +138,10 @@ const remove = () => {
 };
 
 // 开始时间改变
+/**
+ * 更新 scheduleEdit 的 Change End Time 状态，并同步相关业务数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const ChangeEndTime = () => {
 	// 转成日期
 	var timeStr = state.ruleForm.startTime;

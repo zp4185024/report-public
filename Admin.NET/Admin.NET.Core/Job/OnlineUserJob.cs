@@ -18,12 +18,19 @@ public class OnlineUserJob : IJob
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger _logger;
 
+    /// <summary>初始化 OnlineUserJob 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="scopeFactory">当前方法执行时使用的 scopeFactory 输入值。</param>
+    /// <param name="loggerFactory">当前方法执行时使用的 loggerFactory 输入值。</param>
     public OnlineUserJob(IServiceScopeFactory scopeFactory, ILoggerFactory loggerFactory)
     {
         _scopeFactory = scopeFactory;
         _logger = loggerFactory.CreateLogger(CommonConst.SysLogCategoryName);
     }
 
+    /// <summary>执行 OnlineUserJob 的 Execute Async 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="stoppingToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task ExecuteAsync(JobExecutingContext context, CancellationToken stoppingToken)
     {
         using var serviceScope = _scopeFactory.CreateScope();

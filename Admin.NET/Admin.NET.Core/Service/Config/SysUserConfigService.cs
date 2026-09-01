@@ -18,6 +18,11 @@ public class SysUserConfigService : IDynamicApiController, ITransient
     public readonly ISugarQueryable<SysConfig> VSysConfig;
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 SysUserConfigService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysCacheService">当前方法执行时使用的 sysCacheService 输入值。</param>
+    /// <param name="sysConfigRep">当前方法执行时使用的 sysConfigRep 输入值。</param>
+    /// <param name="sysConfigDataRep">当前方法执行时使用的 sysConfigDataRep 输入值。</param>
+    /// <param name="userManager">当前方法执行时使用的 userManager 输入值。</param>
     public SysUserConfigService(SysCacheService sysCacheService,
         SqlSugarRepository<SysUserConfig> sysConfigRep,
         SqlSugarRepository<SysUserConfigData> sysConfigDataRep,
@@ -40,8 +45,8 @@ public class SysUserConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取配置参数分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取配置参数分页列表")]
     public async Task<SqlSugarPagedList<SysConfig>> Page(PageConfigInput input)
     {
@@ -56,7 +61,7 @@ public class SysUserConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取配置参数列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取配置参数列表")]
     public async Task<List<SysConfig>> List(PageConfigInput input)
     {
@@ -65,11 +70,9 @@ public class SysUserConfigService : IDynamicApiController, ITransient
             .ToListAsync();
     }
 
-    /// <summary>
-    /// 增加配置参数 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysUserConfigService 所需的 Add Config 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加配置参数")]
     public async Task AddConfig(AddConfigInput input)
@@ -86,11 +89,9 @@ public class SysUserConfigService : IDynamicApiController, ITransient
         });
     }
 
-    /// <summary>
-    /// 更新配置参数 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysUserConfigService 的 Update Config 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新配置参数")]
     [UnitOfWork]
@@ -113,11 +114,9 @@ public class SysUserConfigService : IDynamicApiController, ITransient
         RemoveConfigCache(config);
     }
 
-    /// <summary>
-    /// 删除配置参数 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysUserConfigService 中与 Delete Config 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除配置参数")]
     public async Task DeleteConfig(DeleteConfigInput input)
@@ -135,8 +134,8 @@ public class SysUserConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 批量删除配置参数 🔖
     /// </summary>
-    /// <param name="ids"></param>
-    /// <returns></returns>
+    /// <param name="ids">当前方法执行时使用的 ids 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "BatchDelete"), HttpPost]
     [DisplayName("批量删除配置参数")]
     public async Task BatchDeleteConfig(List<long> ids)
@@ -157,8 +156,8 @@ public class SysUserConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取配置参数详情 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取配置参数详情")]
     public async Task<SysConfig> GetDetail([FromQuery] ConfigInput input)
     {
@@ -168,8 +167,8 @@ public class SysUserConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据Code获取配置参数 🔖
     /// </summary>
-    /// <param name="code"></param>
-    /// <returns></returns>
+    /// <param name="code">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<SysConfig> GetConfig(string code)
     {
@@ -180,46 +179,40 @@ public class SysUserConfigService : IDynamicApiController, ITransient
     /// 根据Code获取配置参数值 🔖
     /// </summary>
     /// <param name="code">编码</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据Code获取配置参数值")]
     public async Task<string> GetConfigValueByCode(string code)
     {
         return await GetConfigValueByCode<string>(code);
     }
 
-    /// <summary>
-    /// 获取配置参数值
-    /// </summary>
+    /// <summary>查询或读取 SysUserConfigService 所需的 Get Config Value By Code 数据，并按调用约定返回结果。</summary>
     /// <param name="code">编码</param>
     /// <param name="defaultValue">默认值</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<string> GetConfigValueByCode(string code, string defaultValue = default)
     {
         return await GetConfigValueByCode<string>(code, defaultValue);
     }
 
-    /// <summary>
-    /// 获取配置参数值
-    /// </summary>
+    /// <summary>查询或读取 SysUserConfigService 所需的 Get Config Value By Code 数据，并按调用约定返回结果。</summary>
     /// <typeparam name="T">类型</typeparam>
     /// <param name="code">编码</param>
     /// <param name="defaultValue">默认值</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<T> GetConfigValueByCode<T>(string code, T defaultValue = default)
     {
         return await GetConfigValueByCode<T>(code, _userManager.UserId, defaultValue);
     }
 
-    /// <summary>
-    /// 获取配置参数值
-    /// </summary>
+    /// <summary>查询或读取 SysUserConfigService 所需的 Get Config Value By Code 数据，并按调用约定返回结果。</summary>
     /// <typeparam name="T">类型</typeparam>
     /// <param name="code">编码</param>
     /// <param name="userId">用户Id</param>
     /// <param name="defaultValue">默认值</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<T> GetConfigValueByCode<T>(string code, long userId, T defaultValue = default)
     {
@@ -235,12 +228,10 @@ public class SysUserConfigService : IDynamicApiController, ITransient
         return (T)Convert.ChangeType(value, typeof(T));
     }
 
-    /// <summary>
-    /// 更新配置参数值
-    /// </summary>
-    /// <param name="code"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysUserConfigService 的 Update Config Value 状态，并同步相关业务数据。</summary>
+    /// <param name="code">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task UpdateConfigValue(string code, string value)
     {
@@ -253,10 +244,8 @@ public class SysUserConfigService : IDynamicApiController, ITransient
         RemoveConfigCache(config);
     }
 
-    /// <summary>
-    /// 获取分组列表 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysUserConfigService 所需的 Get Group List 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取分组列表")]
     public async Task<List<string>> GetGroupList()
     {
@@ -268,8 +257,8 @@ public class SysUserConfigService : IDynamicApiController, ITransient
     /// <summary>
     /// 批量更新配置参数值 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "BatchUpdate"), HttpPost]
     [DisplayName("批量更新配置参数值")]
     public async Task BatchUpdateConfig(List<BatchConfigInput> input)
@@ -280,10 +269,8 @@ public class SysUserConfigService : IDynamicApiController, ITransient
         }
     }
 
-    /// <summary>
-    /// 清除配置缓存
-    /// </summary>
-    /// <param name="config"></param>
+    /// <summary>移除 SysUserConfigService 中与 Remove Config Cache 对应的数据，并清理关联状态。</summary>
+    /// <param name="config">控制本次调用行为、超时或展示方式的配置选项。</param>
     private void RemoveConfigCache(SysUserConfig config)
     {
         _sysCacheService.Remove($"{CacheConst.KeyUserConfig}{_userManager.UserId}{config.Code}");

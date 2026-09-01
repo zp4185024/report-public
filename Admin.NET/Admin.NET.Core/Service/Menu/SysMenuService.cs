@@ -22,6 +22,16 @@ public class SysMenuService : IDynamicApiController, ITransient
     private readonly SysLangTextCacheService _sysLangTextCacheService;
     private readonly SysLangTextService _sysLangTextService;
 
+    /// <summary>初始化 SysMenuService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysTenantMenuRep">sysTenantMenuRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysMenuRep">sysMenuRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysRoleMenuService">sysRoleMenuService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRoleService">sysUserRoleService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserMenuService">sysUserMenuService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysLangTextCacheService">sysLangTextCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysLangTextService">sysLangTextService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysMenuService(
         SqlSugarRepository<SysTenantMenu> sysTenantMenuRep,
         SqlSugarRepository<SysMenu> sysMenuRep,
@@ -44,10 +54,8 @@ public class SysMenuService : IDynamicApiController, ITransient
         _sysLangTextService = sysLangTextService;
     }
 
-    /// <summary>
-    /// 获取登录菜单树 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysMenuService 所需的 Get Login Menu Tree 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取登录菜单树")]
     public async Task<List<MenuOutput>> GetLoginMenuTree()
     {
@@ -95,10 +103,8 @@ public class SysMenuService : IDynamicApiController, ITransient
         return menuTree.Adapt<List<MenuOutput>>();
     }
 
-    /// <summary>
-    /// 获取菜单列表 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysMenuService 所需的 Get List 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取菜单列表")]
     public async Task<List<SysMenu>> GetList([FromQuery] MenuInput input)
     {
@@ -160,11 +166,9 @@ public class SysMenuService : IDynamicApiController, ITransient
         return menuTree.ToList();
     }
 
-    /// <summary>
-    /// 增加菜单 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysMenuService 所需的 Add Menu 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加菜单")]
     public async Task<long> AddMenu(AddMenuInput input)
@@ -194,11 +198,9 @@ public class SysMenuService : IDynamicApiController, ITransient
         return sysMenu.Id;
     }
 
-    /// <summary>
-    /// 更新菜单 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysMenuService 的 Update Menu 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新菜单")]
     public async Task UpdateMenu(UpdateMenuInput input)
@@ -249,11 +251,9 @@ public class SysMenuService : IDynamicApiController, ITransient
         DeleteMenuCache();
     }
 
-    /// <summary>
-    /// 删除菜单 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysMenuService 中与 Delete Menu 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除菜单")]
@@ -279,11 +279,9 @@ public class SysMenuService : IDynamicApiController, ITransient
         DeleteMenuCache();
     }
 
-    /// <summary>
-    /// 设置菜单状态 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysMenuService 的 Set Status 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("设置菜单状态")]
     public virtual async Task<int> SetStatus(MenuStatusInput input)
@@ -300,7 +298,7 @@ public class SysMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 增加和编辑时检查菜单数据
     /// </summary>
-    /// <param name="menu"></param>
+    /// <param name="menu">menu 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void CheckMenuParam(SysMenu menu)
     {
         var permission = menu.Permission;
@@ -329,7 +327,7 @@ public class SysMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取用户拥有按钮权限集合（缓存） 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取按钮权限集合")]
     public async Task<List<string>> GetOwnBtnPermList()
     {
@@ -358,7 +356,7 @@ public class SysMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取系统所有按钮权限集合（缓存）
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<string>> GetAllBtnPermList()
     {
@@ -376,8 +374,8 @@ public class SysMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据租户id获取构建菜单联表查询实例
     /// </summary>
-    /// <param name="tenantId"></param>
-    /// <returns></returns>
+    /// <param name="tenantId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public (ISugarQueryable<SysMenu, SysTenantMenu> query, long tenantId) GetSugarQueryableAndTenantId(long tenantId)
     {
@@ -424,7 +422,7 @@ public class SysMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取当前用户菜单Id集合
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<long>> GetMenuIdList()
     {
@@ -435,7 +433,7 @@ public class SysMenuService : IDynamicApiController, ITransient
     /// <summary>
     /// 排除前端存在全选的父级菜单
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task<List<long>> ExcludeParentMenuOfFullySelected(List<long> menuIds)
     {

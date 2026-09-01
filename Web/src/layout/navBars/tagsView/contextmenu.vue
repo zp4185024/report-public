@@ -29,6 +29,10 @@ import { computed, reactive, onMounted, onUnmounted, watch } from 'vue';
 const props = defineProps({
 	dropdown: {
 		type: Object,
+		/**
+		 * 为 dropdown 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => {
 			return {
 				x: 0,
@@ -73,10 +77,20 @@ const dropdowns = computed(() => {
 	}
 });
 // 当前项菜单点击
+/**
+ * 响应 contextmenu 的 on Current Contextmenu Click 事件，并协调相关状态和后续操作。
+ * @param contextMenuClickId - 需要定位的业务记录标识。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCurrentContextmenuClick = (contextMenuClickId: number) => {
 	emit('currentContextmenuClick', Object.assign({}, { contextMenuClickId }, state.item));
 };
 // 打开右键菜单：判断是否固定，固定则不显示关闭按钮
+/**
+ * 准备 contextmenu 的 open Contextmenu 交互状态并打开对应界面。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openContextmenu = (item: RouteItem) => {
 	state.item = item;
 	item.meta?.isAffix ? (state.dropdownList[1].affix = true) : (state.dropdownList[1].affix = false);
@@ -86,6 +100,10 @@ const openContextmenu = (item: RouteItem) => {
 	}, 10);
 };
 // 关闭右键菜单
+/**
+ * 结束 contextmenu 的 close Contextmenu 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeContextmenu = () => {
 	state.isShow = false;
 };

@@ -14,6 +14,9 @@ public class SysUserRoleService : ITransient
     private readonly SysCacheService _sysCacheService;
     private readonly SqlSugarRepository<SysUserRole> _sysUserRoleRep;
 
+    /// <summary>初始化 SysUserRoleService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRoleRep">sysUserRoleRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysUserRoleService(SysCacheService sysCacheService,
         SqlSugarRepository<SysUserRole> sysUserRoleRep)
     {
@@ -21,11 +24,9 @@ public class SysUserRoleService : ITransient
         _sysUserRoleRep = sysUserRoleRep;
     }
 
-    /// <summary>
-    /// 授权用户角色
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysUserRoleService 的异步依赖完成 Grant User Role 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task GrantUserRole(UserRoleInput input)
     {
         await _sysUserRoleRep.DeleteAsync(u => u.UserId == input.UserId);
@@ -43,8 +44,8 @@ public class SysUserRoleService : ITransient
     /// <summary>
     /// 根据角色Id删除用户角色
     /// </summary>
-    /// <param name="roleId"></param>
-    /// <returns></returns>
+    /// <param name="roleId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task DeleteUserRoleByRoleId(long roleId)
     {
         await _sysUserRoleRep.AsQueryable()
@@ -61,8 +62,8 @@ public class SysUserRoleService : ITransient
     /// <summary>
     /// 根据用户Id删除用户角色
     /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task DeleteUserRoleByUserId(long userId)
     {
         await _sysUserRoleRep.DeleteAsync(u => u.UserId == userId);
@@ -72,8 +73,8 @@ public class SysUserRoleService : ITransient
     /// <summary>
     /// 根据用户Id获取角色集合
     /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<List<SysRole>> GetUserRoleList(long userId)
     {
         var sysUserRoleList = await _sysUserRoleRep.AsQueryable()
@@ -85,8 +86,8 @@ public class SysUserRoleService : ITransient
     /// <summary>
     /// 根据用户Id获取角色Id集合
     /// </summary>
-    /// <param name="userId"></param>
-    /// <returns></returns>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<List<long>> GetUserRoleIdList(long userId)
     {
         return await _sysUserRoleRep.AsQueryable()
@@ -96,8 +97,8 @@ public class SysUserRoleService : ITransient
     /// <summary>
     /// 根据角色Id获取用户Id集合
     /// </summary>
-    /// <param name="roleId"></param>
-    /// <returns></returns>
+    /// <param name="roleId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<List<long>> GetUserIdList(long roleId)
     {
         return await _sysUserRoleRep.AsQueryable()

@@ -31,7 +31,16 @@ const props = defineProps({
 
 });
 const tenantModelValue = computed({
+    /**
+     * 查询或读取 tenantSelect 所需的 get 数据，并按调用约定返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     get: () => props.modelValue,
+    /**
+     * 更新 tenantSelect 的 set 状态，并同步相关业务数据。
+     * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     set: (val) => emit('update:modelValue', val),
 });
 

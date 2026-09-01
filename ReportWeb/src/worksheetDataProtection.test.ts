@@ -20,6 +20,10 @@ describe('预览工作表数据保护', () => {
   it('保持格式可编辑，只关闭数据写入和直接取消保护', async () => {
     const calls: string[] = [];
     const permission = {
+      /**
+       * 验证 is Protected 场景下的预期行为，并防止相关逻辑回归。
+       * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+       */
       isProtected: () => false,
       protect: vi.fn(async () => {
         calls.push('protect');
@@ -55,6 +59,10 @@ describe('预览工作表数据保护', () => {
 
   it('解除数据保护时恢复工作表编辑权限', async () => {
     const permission = {
+      /**
+       * 验证 is Protected 场景下的预期行为，并防止相关逻辑回归。
+       * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+       */
       isProtected: () => true,
       protect: vi.fn(async () => undefined),
       setEditable: vi.fn(async () => undefined),

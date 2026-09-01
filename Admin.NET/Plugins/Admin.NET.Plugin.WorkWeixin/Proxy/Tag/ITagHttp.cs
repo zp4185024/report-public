@@ -15,9 +15,9 @@ public interface ITagHttp : IHttpDeclarative
     /// 创建标签
     /// https://developer.work.weixin.qq.com/document/path/90210
     /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="body"></param>
-    /// <returns></returns>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="body">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Post("https://qyapi.weixin.qq.com/cgi-bin/tag/create")]
     Task<BaseWorkIdOutput> Create([QueryParam("access_token")] string accessToken, [Body] TagHttpInput body);
 
@@ -25,9 +25,9 @@ public interface ITagHttp : IHttpDeclarative
     /// 更新标签名字
     /// https://developer.work.weixin.qq.com/document/path/90211
     /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="body"></param>
-    /// <returns></returns>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="body">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Post("https://qyapi.weixin.qq.com/cgi-bin/tag/update")]
     Task<TagIdHttpOutput> Update([QueryParam("access_token")] string accessToken, [Body] TagHttpInput body);
 
@@ -35,9 +35,9 @@ public interface ITagHttp : IHttpDeclarative
     /// 删除标签
     /// https://developer.work.weixin.qq.com/document/path/90212
     /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="tagId"></param>
-    /// <returns></returns>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="tagId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Get("https://qyapi.weixin.qq.com/cgi-bin/tag/delete")]
     Task<BaseWorkOutput> Delete([QueryParam("access_token")] string accessToken, [QueryParam("tagid")] long tagId);
 
@@ -45,9 +45,9 @@ public interface ITagHttp : IHttpDeclarative
     /// 获取标签详情
     /// https://developer.work.weixin.qq.com/document/path/90213
     /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="tagId"></param>
-    /// <returns></returns>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="tagId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Get("https://qyapi.weixin.qq.com/cgi-bin/tag/get")]
     Task<DepartmentOutput> Get([QueryParam("access_token")] string accessToken, [QueryParam("tagid")] long tagId);
 
@@ -55,9 +55,9 @@ public interface ITagHttp : IHttpDeclarative
     /// 增加标签成员
     /// https://developer.work.weixin.qq.com/document/path/90214
     /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="body"></param>
-    /// <returns></returns>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="body">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Post("https://qyapi.weixin.qq.com/cgi-bin/tag/addtagusers")]
     Task<DepartmentOutput> AddTagUsers([QueryParam("access_token")] string accessToken, [Body] TagUsersTagInput body);
 
@@ -65,9 +65,9 @@ public interface ITagHttp : IHttpDeclarative
     /// 删除标签成员
     /// https://developer.work.weixin.qq.com/document/path/90215
     /// </summary>
-    /// <param name="accessToken"></param>
-    /// <param name="body"></param>
-    /// <returns></returns>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="body">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Post("https://qyapi.weixin.qq.com/cgi-bin/tag/deltagusers")]
     Task<DepartmentOutput> DelTagUsers([QueryParam("access_token")] string accessToken, [Body] TagUsersTagInput body);
 
@@ -75,8 +75,8 @@ public interface ITagHttp : IHttpDeclarative
     /// 获取标签列表
     /// https://developer.work.weixin.qq.com/document/path/90216
     /// </summary>
-    /// <param name="accessToken"></param>
-    /// <returns></returns>
+    /// <param name="accessToken">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Get("https://qyapi.weixin.qq.com/cgi-bin/tag/list")]
     Task<TagListHttpOutput> List([QueryParam("access_token")] string accessToken);
 }

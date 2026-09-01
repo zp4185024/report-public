@@ -15,6 +15,8 @@ public class ThemeAttribute : Attribute
 {
     public string Theme { get; private set; }
 
+    /// <summary>初始化 ThemeAttribute 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="theme">当前方法执行时使用的 theme 输入值。</param>
     public ThemeAttribute(string theme)
     {
         this.Theme = theme;

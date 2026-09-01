@@ -631,6 +631,7 @@ export const SysCodeGenApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysCodeGenAddPost(body?: AddCodeGenInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysCodeGenApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysCodeGenApiAxiosParamCreator(configuration).apiSysCodeGenAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -662,6 +663,7 @@ export const SysCodeGenApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysCodeGenApiAxiosParamCreator(configuration).apiSysCodeGenColumnListByTableNameTableNameConfigIdGet(tableName, configId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysCodeGenApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -700,6 +702,7 @@ export const SysCodeGenApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysCodeGenDetailGet(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysCodeGen>>> {
+            // 第3阶段：调用 SysCodeGenApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysCodeGenApiAxiosParamCreator(configuration).apiSysCodeGenDetailGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -731,6 +734,7 @@ export const SysCodeGenApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysCodeGenApiAxiosParamCreator(configuration).apiSysCodeGenPreviewPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysCodeGenApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -770,6 +774,7 @@ export const SysCodeGenApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysCodeGenTableListConfigIdGet(configId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListTableOutput>>> {
+            // 第5阶段：调用 SysCodeGenApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysCodeGenApiAxiosParamCreator(configuration).apiSysCodeGenTableListConfigIdGet(configId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -807,6 +812,7 @@ export const SysCodeGenApiFactory = function (configuration?: Configuration, bas
          * @throws {RequiredError}
          */
         async apiSysCodeGenAddPost(body?: AddCodeGenInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysCodeGenApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCodeGenApiFp(configuration).apiSysCodeGenAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -836,6 +842,7 @@ export const SysCodeGenApiFactory = function (configuration?: Configuration, bas
          * @throws {RequiredError}
          */
         async apiSysCodeGenDatabaseListGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListDatabaseOutput>> {
+            // 第2阶段：整理 SysCodeGenApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCodeGenApiFp(configuration).apiSysCodeGenDatabaseListGet(options).then((request) => request(axios, basePath));
         },
         /**
@@ -866,6 +873,7 @@ export const SysCodeGenApiFactory = function (configuration?: Configuration, bas
          * @throws {RequiredError}
          */
         async apiSysCodeGenPagePost(body?: CodeGenInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysCodeGen>> {
+            // 第3阶段：整理 SysCodeGenApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCodeGenApiFp(configuration).apiSysCodeGenPagePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -896,6 +904,7 @@ export const SysCodeGenApiFactory = function (configuration?: Configuration, bas
          * @throws {RequiredError}
          */
         async apiSysCodeGenSyncFieldPost(body?: UpdateCodeGenInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第4阶段：整理 SysCodeGenApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCodeGenApiFp(configuration).apiSysCodeGenSyncFieldPost(body, options).then((request) => request(axios, basePath));
         },
         /**

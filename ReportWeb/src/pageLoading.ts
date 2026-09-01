@@ -18,6 +18,11 @@ export interface PageLoadingPresentation {
   detail: string;
 }
 
+/**
+ * 整理 pageLoading 的 export Progress 数据，并生成可供调用方使用的输出。
+ * @param job - job 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function exportProgress(job: ExportJob | null): string {
   if (job === null || (job.status !== 'Pending' && job.status !== 'Running')) {
     return '正在准备并生成下载文件，请勿关闭页面。';
@@ -43,6 +48,7 @@ export function createPageLoadingPresentation(
         };
   }
 
+  // 第一阶段：检查 createPageLoadingPresentation 当前条件，并按匹配分支执行对应处理。
   if (state.exportingData) {
     return state.cancellingExport
       ? {
@@ -69,6 +75,7 @@ export function createPageLoadingPresentation(
     };
   }
 
+  // 第2阶段：检查 createPageLoadingPresentation 当前条件，并按匹配分支执行对应处理。
   if (state.printing) {
     return {
       title: '正在准备打印',

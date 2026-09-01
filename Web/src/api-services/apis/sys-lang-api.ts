@@ -335,6 +335,7 @@ export const SysLangApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLangAddPost(body?: AddSysLangInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultInt64>>> {
+            // 第一阶段：调用 SysLangApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLangApiAxiosParamCreator(configuration).apiSysLangAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -363,6 +364,7 @@ export const SysLangApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLangDetailGet(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysLang>>> {
+            // 第2阶段：调用 SysLangApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLangApiAxiosParamCreator(configuration).apiSysLangDetailGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -390,6 +392,7 @@ export const SysLangApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLangPagePost(body?: PageSysLangInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSqlSugarPagedListSysLangOutput>>> {
+            // 第3阶段：调用 SysLangApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLangApiAxiosParamCreator(configuration).apiSysLangPagePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -427,6 +430,7 @@ export const SysLangApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysLangAddPost(body?: AddSysLangInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt64>> {
+            // 第一阶段：整理 SysLangApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLangApiFp(configuration).apiSysLangAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -456,6 +460,7 @@ export const SysLangApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysLangDropdownDataPost(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultObject>> {
+            // 第2阶段：整理 SysLangApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLangApiFp(configuration).apiSysLangDropdownDataPost(options).then((request) => request(axios, basePath));
         },
         /**

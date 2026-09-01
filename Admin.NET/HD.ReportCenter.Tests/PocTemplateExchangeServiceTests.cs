@@ -13,8 +13,10 @@ public sealed class PocTemplateExchangeServiceTests : IDisposable
     private readonly PocTemplateService _templateService;
     private readonly PocTemplateExchangeService _exchangeService;
 
+    /// <summary>初始化 PocTemplateExchangeServiceTests 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     public PocTemplateExchangeServiceTests()
     {
+        // 第一阶段：更新 PocTemplateExchangeServiceTests 当前分支对应的业务状态，并保持关联数据一致。
         _database = new SqlSugarClient(new ConnectionConfig
         {
             ConnectionString = "Data Source=:memory:",
@@ -38,6 +40,7 @@ public sealed class PocTemplateExchangeServiceTests : IDisposable
                 !entityInfo.EntityColumnInfo.IsPrimarykey ||
                 entityInfo.EntityColumnInfo.PropertyInfo.PropertyType != typeof(long))
             {
+                // 第2阶段：整理 PocTemplateExchangeServiceTests 已计算的数据，并按方法契约返回最终结果。
                 return;
             }
 
@@ -56,6 +59,8 @@ public sealed class PocTemplateExchangeServiceTests : IDisposable
             new PocXlsxExchangeConverter());
     }
 
+    /// <summary>验证 Current template can round trip through the exchange service 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Current_template_can_round_trip_through_the_exchange_service()
     {
@@ -83,6 +88,8 @@ public sealed class PocTemplateExchangeServiceTests : IDisposable
         Assert.True(imported.UsedCellCount > 0);
     }
 
+    /// <summary>验证 Import rejects a non xlsx extension 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Import_rejects_a_non_xlsx_extension()
     {
@@ -94,6 +101,8 @@ public sealed class PocTemplateExchangeServiceTests : IDisposable
         Assert.Equal("TEMPLATE_XLSX_EXTENSION_REQUIRED", exception.Code);
     }
 
+    /// <summary>验证 Import rejects a file larger than the configured limit 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
     public async Task Import_rejects_a_file_larger_than_the_configured_limit()
     {
@@ -106,6 +115,7 @@ public sealed class PocTemplateExchangeServiceTests : IDisposable
         Assert.Equal("TEMPLATE_XLSX_FILE_TOO_LARGE", exception.Code);
     }
 
+    /// <summary>释放 PocTemplateExchangeServiceTests 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _database.Dispose();

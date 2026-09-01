@@ -13,11 +13,15 @@ public class SwaggerService : IDynamicApiController, ITransient
 {
     private readonly SwaggerGenOptions _genOptions;
 
+    /// <summary>初始化 SwaggerService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="genOptions">控制本次处理行为的配置选项。</param>
     public SwaggerService(IOptions<SwaggerGenOptions> genOptions)
     {
         _genOptions = genOptions.Value;
     }
 
+    /// <summary>查询或读取 SwaggerService 所需的 Get Swagger Groups 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取Swagger接口分组列表"), HttpGet]
     public async Task<IActionResult> GetSwaggerGroups()
     {

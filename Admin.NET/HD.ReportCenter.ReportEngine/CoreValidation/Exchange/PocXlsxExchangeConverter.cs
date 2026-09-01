@@ -27,6 +27,7 @@ public sealed class PocXlsxExchangeConverter
             throw new ArgumentException("XLSX输入流必须可读。", nameof(input));
         }
         if (limits.MaxFileBytes <= 0 || limits.MaxWorksheets <= 0 || limits.MaxUsedCells <= 0)
+        // 第一阶段：根据 Import 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             throw new ArgumentOutOfRangeException(nameof(limits), "XLSX导入上限必须全部大于零。");
         }
@@ -63,6 +64,7 @@ public sealed class PocXlsxExchangeConverter
         var usedCellCount = 0;
         var sheetNumber = 0;
 
+        // 第2阶段：遍历 Import 当前数据集合，逐项转换并维护处理结果。
         foreach (var sourceSheet in workbook.Worksheets)
         {
             var sheetId = $"xlsx-sheet-{++sheetNumber}";
@@ -99,6 +101,7 @@ public sealed class PocXlsxExchangeConverter
         ArgumentNullException.ThrowIfNull(output);
         if (!output.CanWrite)
         {
+            // 第一阶段：根据 Export 当前分支转换输入数据，并保存该阶段产生的中间结果。
             throw new ArgumentException("XLSX输出流必须可写。", nameof(output));
         }
 
@@ -127,6 +130,7 @@ public sealed class PocXlsxExchangeConverter
             ?? throw InvalidSnapshot("工作簿缺少 sheetOrder 数组。");
 
         foreach (var sheetIdToken in sheetOrder)
+        // 第2阶段：根据 Export 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             var sheetId = sheetIdToken.Value<string>();
             if (string.IsNullOrWhiteSpace(sheetId) || sheets[sheetId] is not JObject sheetData)
@@ -149,6 +153,11 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>更新 PocXlsxExchangeConverter 的 Write Worksheet 状态，并同步相关业务数据。</summary>
+    /// <param name="workbook">包含工作簿结构、单元格和样式信息的快照数据。</param>
+    /// <param name="sheetData">本次操作使用的输入数据。</param>
+    /// <param name="styles">styles 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteWorksheet(
         XLWorkbook workbook,
         JObject sheetData,
@@ -160,6 +169,7 @@ public sealed class PocXlsxExchangeConverter
         var sheet = workbook.Worksheets.Add(sheetName);
 
         var tabColor = sheetData.Value<string>("tabColor");
+        // 第一阶段：检查 WriteWorksheet 当前条件，并按匹配分支执行对应处理。
         if (TryColor(tabColor, out var parsedTabColor))
         {
             sheet.TabColor = parsedTabColor;
@@ -184,6 +194,7 @@ public sealed class PocXlsxExchangeConverter
                 {
                     var columnIndex = ParseCoordinate(columnProperty.Name, "单元格列");
                     if (columnProperty.Value is not JObject cellDataObject)
+                    // 第2阶段：根据 WriteWorksheet 当前分支转换输入数据，并保存该阶段产生的中间结果。
                     {
                         throw InvalidSnapshot(
                             $"工作表 '{sheetName}' 第 {rowIndex + 1} 行第 {columnIndex + 1} 列不是对象。");
@@ -204,6 +215,15 @@ public sealed class PocXlsxExchangeConverter
         ApplyFreeze(sheet, sheetData["freeze"] as JObject);
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Read Worksheet 数据，并按调用约定返回结果。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="sheetId">需要定位的业务记录标识。</param>
+    /// <param name="workbookStyles">workbookStyles 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="warnings">warnings 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="limits">limits 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="usedCellCount">控制数据范围或位置的数值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject ReadWorksheet(
         IXLWorksheet source,
         string sheetId,
@@ -219,6 +239,7 @@ public sealed class PocXlsxExchangeConverter
         var lastColumn = source.LastColumnUsed(options)?.ColumnNumber() ?? 0;
 
         foreach (var cell in source.CellsUsed(options))
+        // 第一阶段：根据 ReadWorksheet 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             usedCellCount++;
             if (usedCellCount > limits.MaxUsedCells)
@@ -245,6 +266,7 @@ public sealed class PocXlsxExchangeConverter
         }
 
         // 合并范围中的非左上单元格可能只有格式；删除转换后仍为空的稀疏行，保持快照紧凑。
+        // 第2阶段：遍历 ReadWorksheet 当前数据集合，逐项转换并维护处理结果。
         foreach (var emptyRow in cellData.Properties().Where(property =>
                      property.Value is JObject row && !row.HasValues).ToArray())
         {
@@ -263,6 +285,7 @@ public sealed class PocXlsxExchangeConverter
 
         var splitRows = Math.Max(0, source.SheetView.SplitRow);
         var splitColumns = Math.Max(0, source.SheetView.SplitColumn);
+        // 第3阶段：整理 ReadWorksheet 已计算的数据，并按方法契约返回最终结果。
         return new JObject
         {
             ["id"] = sheetId,
@@ -294,6 +317,12 @@ public sealed class PocXlsxExchangeConverter
         };
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Read Cell 数据，并按调用约定返回结果。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="workbookStyles">workbookStyles 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="warnings">warnings 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject ReadCell(
         IXLCell source,
         JObject workbookStyles,
@@ -340,6 +369,9 @@ public sealed class PocXlsxExchangeConverter
         return result;
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Read Formula Cached Value 数据，并按调用约定返回结果。</summary>
+    /// <param name="cachedValue">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static (JToken Value, int Type) ReadFormulaCachedValue(XLCellValue cachedValue)
     {
         return cachedValue.Type switch
@@ -354,6 +386,10 @@ public sealed class PocXlsxExchangeConverter
         };
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Read Cell Value 数据，并按调用约定返回结果。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="warnings">warnings 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static (JToken? Value, int Type) ReadCellValue(
         IXLCell cell,
         List<PocExchangeDiagnostic> warnings)
@@ -371,6 +407,10 @@ public sealed class PocXlsxExchangeConverter
         };
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Read Error Cell 数据，并按调用约定返回结果。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="warnings">warnings 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static (JToken Value, int Type) ReadErrorCell(
         IXLCell cell,
         List<PocExchangeDiagnostic> warnings)
@@ -383,6 +423,10 @@ public sealed class PocXlsxExchangeConverter
         return (new JValue(cell.GetString()), 1);
     }
 
+    /// <summary>从 ClosedXML 样式构造 Univer 样式；未启用换行时保留历史模板允许文字延伸的显示语义。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject ReadStyle(IXLStyle source, RuleLookup mapping)
     {
         var style = new JObject();
@@ -402,7 +446,8 @@ public sealed class PocXlsxExchangeConverter
 
         SetMapped(style, mapping, "xlsx-to-univer-style-horizontal", FromHorizontalAlignment(source.Alignment.Horizontal));
         SetMapped(style, mapping, "xlsx-to-univer-style-vertical", FromVerticalAlignment(source.Alignment.Vertical));
-        if (source.Alignment.WrapText) SetMapped(style, mapping, "xlsx-to-univer-style-wrap", 3);
+        // Excel 未启用 WrapText 对应 Univer 的 OVERFLOW；显式换行仍使用 WRAP 策略。
+        SetMapped(style, mapping, "xlsx-to-univer-style-wrap", source.Alignment.WrapText ? 3 : 1);
         if (source.Alignment.TextRotation != 0)
             SetMapped(style, mapping, "xlsx-to-univer-style-rotation", source.Alignment.TextRotation);
 
@@ -413,6 +458,11 @@ public sealed class PocXlsxExchangeConverter
         return style;
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Read Rows 数据，并按调用约定返回结果。</summary>
+    /// <param name="sheet">当前读取或修改的工作表对象。</param>
+    /// <param name="lastRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject ReadRows(IXLWorksheet sheet, int lastRow, RuleLookup mapping)
     {
         var result = new JObject();
@@ -434,6 +484,11 @@ public sealed class PocXlsxExchangeConverter
         return result;
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Read Columns 数据，并按调用约定返回结果。</summary>
+    /// <param name="sheet">当前读取或修改的工作表对象。</param>
+    /// <param name="lastColumn">参与映射、显示或数据写入的字段集合。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject ReadColumns(IXLWorksheet sheet, int lastColumn, RuleLookup mapping)
     {
         var result = new JObject();
@@ -455,6 +510,11 @@ public sealed class PocXlsxExchangeConverter
         return result;
     }
 
+    /// <summary>更新 PocXlsxExchangeConverter 的 Set Mapped 状态，并同步相关业务数据。</summary>
+    /// <param name="target">本次转换或写入使用的数据对象。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void SetMapped(
         JObject target,
         RuleLookup mapping,
@@ -469,6 +529,10 @@ public sealed class PocXlsxExchangeConverter
         SetToken(target, rule.TargetPath, JToken.FromObject(value));
     }
 
+    /// <summary>更新 PocXlsxExchangeConverter 的 Set Token 状态，并同步相关业务数据。</summary>
+    /// <param name="target">本次转换或写入使用的数据对象。</param>
+    /// <param name="relativePath">relativePath 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void SetToken(JObject target, string relativePath, object value)
     {
         var segments = relativePath.Split('.', StringSplitOptions.RemoveEmptyEntries);
@@ -490,6 +554,10 @@ public sealed class PocXlsxExchangeConverter
         current[segments[^1]] = value is JToken token ? token : JToken.FromObject(value);
     }
 
+    /// <summary>根据 PocXlsxExchangeConverter 当前输入计算 Store Style 结果，并按方法声明的类型返回。</summary>
+    /// <param name="workbookStyles">workbookStyles 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="style">style 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string StoreStyle(JObject workbookStyles, JObject style)
     {
         var normalized = style.ToString(Newtonsoft.Json.Formatting.None);
@@ -500,6 +568,10 @@ public sealed class PocXlsxExchangeConverter
         return styleId;
     }
 
+    /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Read Border 数据，并按调用约定返回结果。</summary>
+    /// <param name="style">style 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="color">color 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JObject? ReadBorder(XLBorderStyleValues style, XLColor color)
     {
         var univerStyle = FromBorderStyle(style);
@@ -515,6 +587,9 @@ public sealed class PocXlsxExchangeConverter
         };
     }
 
+    /// <summary>根据 PocXlsxExchangeConverter 当前输入计算 To Rgb 结果，并按方法声明的类型返回。</summary>
+    /// <param name="color">color 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string? ToRgb(XLColor? color)
     {
         if (color is null || color.Equals(XLColor.NoColor))
@@ -534,6 +609,9 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>负责 PocXlsxExchangeConverter 的 From Horizontal Alignment 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int FromHorizontalAlignment(XLAlignmentHorizontalValues value) => value switch
     {
         XLAlignmentHorizontalValues.Left => 1,
@@ -544,6 +622,9 @@ public sealed class PocXlsxExchangeConverter
         _ => 0
     };
 
+    /// <summary>负责 PocXlsxExchangeConverter 的 From Vertical Alignment 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int FromVerticalAlignment(XLAlignmentVerticalValues value) => value switch
     {
         XLAlignmentVerticalValues.Top => 1,
@@ -552,6 +633,9 @@ public sealed class PocXlsxExchangeConverter
         _ => 0
     };
 
+    /// <summary>负责 PocXlsxExchangeConverter 的 From Border Style 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int FromBorderStyle(XLBorderStyleValues value) => value switch
     {
         XLBorderStyleValues.Thin => 1,
@@ -570,15 +654,27 @@ public sealed class PocXlsxExchangeConverter
         _ => 0
     };
 
+    /// <summary>根据 PocXlsxExchangeConverter 当前输入计算 Points To Pixels 结果，并按方法声明的类型返回。</summary>
+    /// <param name="points">points 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static double PointsToPixels(double points, RuleLookup mapping)
     {
         var factor = (double)(mapping.GetOptional("xlsx-to-univer-row-height")?.Factor ?? 1.33333333m);
         return Math.Round(points * factor, 4, MidpointRounding.AwayFromZero);
     }
 
+    /// <summary>负责 PocXlsxExchangeConverter 的 Excel Column Width To Pixels 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="width">width 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static double ExcelColumnWidthToPixels(double width) =>
         Math.Round(width <= 1d ? width * 12d : width * 7d + 5d, 4, MidpointRounding.AwayFromZero);
 
+    /// <summary>更新 PocXlsxExchangeConverter 的 Write Cell 状态，并同步相关业务数据。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cellData">本次操作使用的输入数据。</param>
+    /// <param name="styles">styles 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteCell(
         IXLCell cell,
         JObject cellData,
@@ -620,6 +716,9 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>更新 PocXlsxExchangeConverter 的 Write Cell Value 状态，并同步相关业务数据。</summary>
+    /// <param name="cell">cell 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
     private static void WriteCellValue(IXLCell cell, JToken? token)
     {
         if (token is null || token.Type is JTokenType.Null or JTokenType.Undefined)
@@ -646,6 +745,10 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>尝试或判断 PocXlsxExchangeConverter 的 Try Read Rich Text 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="paragraph">paragraph 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="text">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool TryReadRichText(JToken? paragraph, out string text)
     {
         text = string.Empty;
@@ -661,6 +764,10 @@ public sealed class PocXlsxExchangeConverter
         return text.Length > 0;
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Style 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="target">本次转换或写入使用的数据对象。</param>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyStyle(IXLStyle target, JObject source, RuleLookup mapping)
     {
         ApplyString(source, mapping, "univer-to-xlsx-style-font-name", value => target.Font.FontName = value);
@@ -689,6 +796,10 @@ public sealed class PocXlsxExchangeConverter
         ApplyBorder(source, mapping, "univer-to-xlsx-border-left", target.Border, BorderSide.Left);
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Merges 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="sheet">当前读取或修改的工作表对象。</param>
+    /// <param name="mergeData">本次操作使用的输入数据。</param>
+    /// <param name="sheetName">需要读取、校验或转换的业务值。</param>
     private static void ApplyMerges(IXLWorksheet sheet, JArray? mergeData, string sheetName)
     {
         if (mergeData is null)
@@ -710,6 +821,10 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Rows 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="sheet">当前读取或修改的工作表对象。</param>
+    /// <param name="rowData">本次操作使用的输入数据。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyRows(IXLWorksheet sheet, JObject? rowData, RuleLookup mapping)
     {
         if (rowData is null)
@@ -738,6 +853,10 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Columns 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="sheet">当前读取或修改的工作表对象。</param>
+    /// <param name="columnData">本次操作使用的输入数据。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyColumns(IXLWorksheet sheet, JObject? columnData, RuleLookup mapping)
     {
         if (columnData is null)
@@ -766,6 +885,9 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Freeze 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="sheet">当前读取或修改的工作表对象。</param>
+    /// <param name="freeze">freeze 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyFreeze(IXLWorksheet sheet, JObject? freeze)
     {
         if (freeze is null)
@@ -785,6 +907,11 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply String 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="apply">apply 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyString(
         JObject source,
         RuleLookup mapping,
@@ -799,6 +926,11 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Number 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="apply">apply 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyNumber(
         JObject source,
         RuleLookup mapping,
@@ -813,6 +945,11 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Boolean 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="apply">apply 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyBoolean(
         JObject source,
         RuleLookup mapping,
@@ -836,6 +973,10 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>尝试或判断 PocXlsxExchangeConverter 的 Try Read Number 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool TryReadNumber(JToken? token, out double value)
     {
         value = 0;
@@ -853,6 +994,11 @@ public sealed class PocXlsxExchangeConverter
                    out value);
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Color 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="apply">apply 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyColor(
         JObject source,
         RuleLookup mapping,
@@ -867,6 +1013,12 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Apply Border 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="mapping">mapping 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="target">本次转换或写入使用的数据对象。</param>
+    /// <param name="side">side 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void ApplyBorder(
         JObject source,
         RuleLookup mapping,
@@ -904,6 +1056,10 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>遍历 PocXlsxExchangeConverter 当前数据并执行 Select Token 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="source">本次转换或写入使用的数据对象。</param>
+    /// <param name="relativePath">relativePath 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static JToken? SelectToken(JToken source, string relativePath)
     {
         JToken? current = source;
@@ -918,6 +1074,10 @@ public sealed class PocXlsxExchangeConverter
         return current;
     }
 
+    /// <summary>尝试或判断 PocXlsxExchangeConverter 的 Try Color 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="color">color 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool TryColor(string? value, out XLColor color)
     {
         color = XLColor.NoColor;
@@ -943,6 +1103,9 @@ public sealed class PocXlsxExchangeConverter
         }
     }
 
+    /// <summary>将 PocXlsxExchangeConverter 中的 Normalize Css Color 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string? NormalizeCssColor(string value)
     {
         var trimmed = value.Trim();
@@ -978,6 +1141,10 @@ public sealed class PocXlsxExchangeConverter
         return $"#{red:X2}{green:X2}{blue:X2}";
     }
 
+    /// <summary>尝试或判断 PocXlsxExchangeConverter 的 Try Css Color Component 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="component">component 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool TryCssColorComponent(string value, out byte component)
     {
         component = 0;
@@ -996,6 +1163,9 @@ public sealed class PocXlsxExchangeConverter
         return byte.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out component);
     }
 
+    /// <summary>尝试或判断 PocXlsxExchangeConverter 的 Try Css Alpha 条件，并以明确结果表示是否匹配。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool TryCssAlpha(string value) =>
         value.EndsWith('%')
             ? decimal.TryParse(value[..^1], NumberStyles.Number, CultureInfo.InvariantCulture, out var percentage) &&
@@ -1003,6 +1173,9 @@ public sealed class PocXlsxExchangeConverter
             : decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var alpha) &&
               alpha is >= 0 and <= 1;
 
+    /// <summary>将 PocXlsxExchangeConverter 的 To Horizontal Alignment 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static XLAlignmentHorizontalValues ToHorizontalAlignment(int value) => value switch
     {
         1 => XLAlignmentHorizontalValues.Left,
@@ -1013,6 +1186,9 @@ public sealed class PocXlsxExchangeConverter
         _ => XLAlignmentHorizontalValues.General
     };
 
+    /// <summary>将 PocXlsxExchangeConverter 的 To Vertical Alignment 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static XLAlignmentVerticalValues ToVerticalAlignment(int value) => value switch
     {
         1 => XLAlignmentVerticalValues.Top,
@@ -1021,6 +1197,9 @@ public sealed class PocXlsxExchangeConverter
         _ => XLAlignmentVerticalValues.Bottom
     };
 
+    /// <summary>将 PocXlsxExchangeConverter 的 To Border Style 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static XLBorderStyleValues ToBorderStyle(int value) => value switch
     {
         1 => XLBorderStyleValues.Thin,
@@ -1039,9 +1218,16 @@ public sealed class PocXlsxExchangeConverter
         _ => XLBorderStyleValues.None
     };
 
+    /// <summary>负责 PocXlsxExchangeConverter 的 Pixel To Excel Column Width 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="pixels">pixels 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static double PixelToExcelColumnWidth(double pixels) =>
         Math.Max(0.1d, pixels <= 12d ? pixels / 12d : (pixels - 5d) / 7d);
 
+    /// <summary>将 PocXlsxExchangeConverter 中的 Parse Coordinate 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="label">label 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int ParseCoordinate(string value, string label)
     {
         if (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var coordinate) || coordinate < 0)
@@ -1051,6 +1237,11 @@ public sealed class PocXlsxExchangeConverter
         return coordinate;
     }
 
+    /// <summary>执行 PocXlsxExchangeConverter 的 Required Coordinate 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="item">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="name">需要读取、校验或转换的业务值。</param>
+    /// <param name="sheetName">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static int RequiredCoordinate(JObject item, string name, string sheetName)
     {
         var token = item[name];
@@ -1061,6 +1252,10 @@ public sealed class PocXlsxExchangeConverter
         return token.Value<int>();
     }
 
+    /// <summary>构建 PocXlsxExchangeConverter 所需的 Create Unique Sheet Name 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="workbook">包含工作簿结构、单元格和样式信息的快照数据。</param>
+    /// <param name="requestedName">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string CreateUniqueSheetName(XLWorkbook workbook, string requestedName)
     {
         var safeName = string.Concat(requestedName.Where(character => !"[]:*?/\\".Contains(character)));
@@ -1075,6 +1270,9 @@ public sealed class PocXlsxExchangeConverter
         return candidate;
     }
 
+    /// <summary>负责 PocXlsxExchangeConverter 的 Invalid Snapshot 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocExchangeConversionException InvalidSnapshot(string message) =>
         new("TEMPLATE_XLSX_SNAPSHOT_INVALID", message);
 
@@ -1091,6 +1289,9 @@ public sealed class PocXlsxExchangeConverter
     {
         private readonly IReadOnlyDictionary<string, PocExchangeRule> _rules;
 
+        /// <summary>初始化 RuleLookup 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+        /// <param name="rules">rules 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="direction">direction 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
         public RuleLookup(PocExchangeRuleSet rules, string direction)
         {
             _rules = rules.Rules
@@ -1104,9 +1305,14 @@ public sealed class PocXlsxExchangeConverter
                 $"缺少Excel转换映射规则 '{ruleCode}'。",
                 ruleCode);
 
+        /// <summary>查询或读取 PocXlsxExchangeConverter 所需的 Get Optional 数据，并按调用约定返回结果。</summary>
+        /// <param name="ruleCode">需要读取、校验或转换的业务值。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public PocExchangeRule? GetOptional(string ruleCode) =>
             _rules.GetValueOrDefault(ruleCode);
 
+        /// <summary>执行 PocXlsxExchangeConverter 的 Require 核心流程，并保持错误和结果语义稳定。</summary>
+        /// <param name="ruleCodes">ruleCodes 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
         public void Require(params string[] ruleCodes)
         {
             foreach (var ruleCode in ruleCodes)

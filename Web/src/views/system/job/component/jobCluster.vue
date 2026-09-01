@@ -36,6 +36,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 jobCluster 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	var res = await getAPI(SysJobApi).apiSysJobJobClusterListGet();
@@ -44,6 +48,10 @@ const handleQuery = async () => {
 };
 
 // 打开页面
+/**
+ * 准备 jobCluster 的 open Drawer 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDrawer = () => {
 	state.isVisible = true;
 };

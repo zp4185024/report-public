@@ -14,11 +14,9 @@ public class GiteeHelper
     private const string BaseUrl = "https://gitee.com/api/v5/repos/";
     private static readonly HttpClient Client = new();
 
-    /// <summary>
-    /// 下载仓库 zip
-    /// </summary>
+    /// <summary>整理 GiteeHelper 的 Download Repo Zip 数据，并生成可供调用方使用的输出。</summary>
     /// <remarks>https://gitee.com/api/v5/swagger#/getV5ReposOwnerRepoZipball</remarks>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<Stream> DownloadRepoZip(string owner, string repo, string accessToken = null, string @ref = null)
     {
         if (string.IsNullOrWhiteSpace(owner)) throw Oops.Bah($"参数 {nameof(owner)} 不能为空");
@@ -34,7 +32,7 @@ public class GiteeHelper
     /// <summary>
     /// 构建Query参数
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string BuilderQueryString([System.Diagnostics.CodeAnalysis.NotNull] object obj)
     {
         if (obj == null) return string.Empty;

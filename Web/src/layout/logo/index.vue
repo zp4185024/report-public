@@ -28,6 +28,10 @@ const showLogo = computed(() => {
 	return layout !== 'columns';
 });
 // logo 点击实现菜单展开/收起
+/**
+ * 响应 index 的 on Theme Config Change 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onThemeConfigChange = () => {
 	if (themeConfig.value.layout === 'transverse') return false;
 	themeConfig.value.isCollapse = !themeConfig.value.isCollapse;

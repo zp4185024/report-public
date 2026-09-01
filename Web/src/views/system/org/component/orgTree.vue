@@ -85,6 +85,10 @@ watch(filterText, (val) => {
 	treeRef.value!.filter(val);
 });
 
+/**
+ * 初始化 orgTree 的 init Tree Data 状态，创建依赖并注册运行期间需要的资源。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const initTreeData = async () => {
 	state.loading = true;
 	const res = await getAPI(SysOrgApi).apiSysOrgTreeGet(0, undefined, undefined, undefined, state.tenantId);
@@ -93,6 +97,11 @@ const initTreeData = async () => {
 };
 
 // 设置默认选择
+/**
+ * 更新 orgTree 的 set Checked Keys 状态，并同步相关业务数据。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const setCheckedKeys = (data: any) => {
 	const isArray = Array.isArray(data);
 	treeRef.value!.setCheckedKeys([]);
@@ -105,15 +114,30 @@ const setCheckedKeys = (data: any) => {
 };
 
 // 获取已经选择
+/**
+ * 查询或读取 orgTree 所需的 get Checked Keys 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getCheckedKeys = () => {
 	return treeRef.value!.getCheckedKeys();
 };
 
+/**
+ * 按 filter Node 条件比较、筛选或整理 orgTree 数据，并返回顺序稳定的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const filterNode = (value: string, data: any) => {
 	if (!value) return true;
 	return data.name.includes(value);
 };
 
+/**
+ * 响应 orgTree 的 handle Command 事件，并协调相关状态和后续操作。
+ * @param command - command 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCommand = async (command: string | number | object) => {
 	if ('expandAll' == command) {
 		for (let i = 0; i < treeRef.value!.store._getAllNodes().length; i++) {
@@ -132,6 +156,11 @@ const handleCommand = async (command: string | number | object) => {
 
 // 与父组件的交互逻辑
 const emits = defineEmits(['node-click']);
+/**
+ * 负责 orgTree 的 node Click 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const nodeClick = (node: any) => {
 	emits('node-click', node);
 };

@@ -15,42 +15,36 @@ public class GoViewResultProvider : IUnifyResultProvider
     /// <summary>
     /// JWT 授权异常返回值
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="metadata"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="metadata">metadata 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IActionResult OnAuthorizeException(DefaultHttpContext context, ExceptionMetadata metadata)
     {
         return new JsonResult(RESTfulResult(metadata.StatusCode, data: metadata.Data, errors: metadata.Errors));
     }
 
-    /// <summary>
-    /// 异常返回值
-    /// </summary>
-    /// <param name="context"></param>
-    /// <param name="metadata"></param>
-    /// <returns></returns>
+    /// <summary>响应 GoViewResultProvider 的 On Exception 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="metadata">metadata 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IActionResult OnException(ExceptionContext context, ExceptionMetadata metadata)
     {
         return new JsonResult(RESTfulResult(metadata.StatusCode, data: metadata.Data, errors: metadata.Errors));
     }
 
-    /// <summary>
-    /// 成功返回值
-    /// </summary>
-    /// <param name="context"></param>
-    /// <param name="data"></param>
-    /// <returns></returns>
+    /// <summary>响应 GoViewResultProvider 的 On Succeeded 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IActionResult OnSucceeded(ActionExecutedContext context, object data)
     {
         return new JsonResult(RESTfulResult(StatusCodes.Status200OK, true, data));
     }
 
-    /// <summary>
-    /// 验证失败返回值
-    /// </summary>
-    /// <param name="context"></param>
-    /// <param name="metadata"></param>
-    /// <returns></returns>
+    /// <summary>响应 GoViewResultProvider 的 On Validate Failed 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="metadata">metadata 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IActionResult OnValidateFailed(ActionExecutingContext context, ValidationMetadata metadata)
     {
         return new JsonResult(RESTfulResult(metadata.StatusCode ?? StatusCodes.Status400BadRequest, data: metadata.Data, errors: metadata.ValidationResult));
@@ -59,10 +53,10 @@ public class GoViewResultProvider : IUnifyResultProvider
     /// <summary>
     /// 特定状态码返回值
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="statusCode"></param>
-    /// <param name="unifyResultSettings"></param>
-    /// <returns></returns>
+    /// <param name="context">本次操作共享的运行上下文。</param>
+    /// <param name="statusCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="unifyResultSettings">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task OnResponseStatusCodes(HttpContext context, int statusCode, UnifyResultSettingsOptions unifyResultSettings)
     {
         // 设置响应状态码
@@ -88,11 +82,11 @@ public class GoViewResultProvider : IUnifyResultProvider
     /// <summary>
     /// 返回 RESTful 风格结果集
     /// </summary>
-    /// <param name="statusCode"></param>
-    /// <param name="succeeded"></param>
-    /// <param name="data"></param>
-    /// <param name="errors"></param>
-    /// <returns></returns>
+    /// <param name="statusCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="succeeded">succeeded 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <param name="errors">errors 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static GoViewResult<object> RESTfulResult(int statusCode, bool succeeded = default, object data = default, object errors = default)
     {
         return new GoViewResult<object>

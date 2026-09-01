@@ -15,6 +15,9 @@ public class SysLogExService : IDynamicApiController, ITransient
     private readonly SqlSugarRepository<SysLogEx> _sysLogExRep;
     private readonly UserManager _userManager;
 
+    /// <summary>初始化 SysLogExService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysLogExRep">sysLogExRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysLogExService(UserManager userManager, SqlSugarRepository<SysLogEx> sysLogExRep)
     {
         _sysLogExRep = sysLogExRep;
@@ -24,7 +27,7 @@ public class SysLogExService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取异常日志分页列表 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [SuppressMonitor]
     [DisplayName("获取异常日志分页列表")]
     public async Task<SqlSugarPagedList<SysLogEx>> Page(PageExLogInput input)
@@ -49,7 +52,7 @@ public class SysLogExService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取异常日志详情 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [SuppressMonitor]
     [DisplayName("获取异常日志详情")]
     public async Task<SysLogEx> GetDetail(long id)
@@ -57,10 +60,8 @@ public class SysLogExService : IDynamicApiController, ITransient
         return await _sysLogExRep.GetFirstAsync(u => u.Id == id);
     }
 
-    /// <summary>
-    /// 清空异常日志 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>移除 SysLogExService 中与 Clear 对应的数据，并清理关联状态。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Clear"), HttpPost]
     [DisplayName("清空异常日志")]
     public void Clear()
@@ -68,10 +69,8 @@ public class SysLogExService : IDynamicApiController, ITransient
         _sysLogExRep.AsSugarClient().DbMaintenance.TruncateTable<SysLogEx>();
     }
 
-    /// <summary>
-    /// 导出异常日志 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>整理 SysLogExService 的 Export Log Ex 数据，并生成可供调用方使用的输出。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Export"), NonUnify]
     [DisplayName("导出异常日志")]
     public async Task<IActionResult> ExportLogEx(LogInput input)

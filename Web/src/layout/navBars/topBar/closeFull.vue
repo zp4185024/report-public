@@ -15,6 +15,10 @@ const stores = useTagsViewRoutes();
 const { isTagsViewCurrenFull } = storeToRefs(stores);
 
 // 关闭当前全屏
+/**
+ * 响应 closeFull 的 on Close Fullscreen 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onCloseFullscreen = () => {
 	stores.setCurrenFullscreen(false);
 };

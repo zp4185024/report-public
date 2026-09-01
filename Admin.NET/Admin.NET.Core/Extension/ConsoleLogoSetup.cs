@@ -11,6 +11,8 @@ namespace Admin.NET.Core;
 /// </summary>
 public static class ConsoleLogoSetup
 {
+    /// <summary>构建 ConsoleLogoSetup 所需的 Add Console Logo 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="services">当前方法执行时使用的 services 输入值。</param>
     public static void AddConsoleLogo(this IServiceCollection services)
     {
         Console.ForegroundColor = ConsoleColor.Blue;

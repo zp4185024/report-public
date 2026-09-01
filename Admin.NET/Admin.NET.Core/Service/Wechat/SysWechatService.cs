@@ -17,6 +17,11 @@ public class SysWechatService : IDynamicApiController, ITransient
     private readonly WechatApiClientFactory _wechatApiClientFactory;
     private readonly WechatApiClient _wechatApiClient;
 
+    /// <summary>初始化 SysWechatService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="sysWechatUserRep">sysWechatUserRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysConfigService">sysConfigService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="wechatApiClientFactory">wechatApiClientFactory 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysWechatService(SqlSugarRepository<SysWechatUser> sysWechatUserRep,
         SysConfigService sysConfigService,
         WechatApiClientFactory wechatApiClientFactory,
@@ -31,8 +36,8 @@ public class SysWechatService : IDynamicApiController, ITransient
     /// <summary>
     /// 生成网页授权Url 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("生成网页授权Url")]
     public string GenAuthUrl(GenAuthUrlInput input)
@@ -43,7 +48,7 @@ public class SysWechatService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取微信用户OpenId 🔖
     /// </summary>
-    /// <param name="input"></param>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     [AllowAnonymous]
     [DisplayName("获取微信用户OpenId")]
     public async Task<string> SnsOAuth2([FromQuery] WechatOAuth2Input input)
@@ -87,8 +92,8 @@ public class SysWechatService : IDynamicApiController, ITransient
     /// <summary>
     /// 微信用户登录OpenId 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [AllowAnonymous]
     [DisplayName("微信用户登录OpenId")]
     public async Task<dynamic> OpenIdLogin(WechatUserLogin input)
@@ -113,7 +118,7 @@ public class SysWechatService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取配置签名参数(wx.config) 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取配置签名参数(wx.config)")]
     public async Task<dynamic> GenConfigPara(SignatureInput input)
     {
@@ -121,9 +126,7 @@ public class SysWechatService : IDynamicApiController, ITransient
         return _wechatApiClient.GenerateParametersForJSSDKConfig(ticket, input.Url);
     }
 
-    /// <summary>
-    /// 获取模板列表 🔖
-    /// </summary>
+    /// <summary>查询或读取 SysWechatService 所需的 Get Message Template List 数据，并按调用约定返回结果。</summary>
     [DisplayName("获取模板列表")]
     public async Task<dynamic> GetMessageTemplateList()
     {
@@ -139,11 +142,9 @@ public class SysWechatService : IDynamicApiController, ITransient
         return resTemplate.TemplateList;
     }
 
-    /// <summary>
-    /// 发送模板消息 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>执行 SysWechatService 的 Send Template Message 核心流程，并保持错误和结果语义稳定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("发送模板消息")]
     public async Task<dynamic> SendTemplateMessage(MessageTemplateSendInput input)
     {
@@ -172,11 +173,9 @@ public class SysWechatService : IDynamicApiController, ITransient
         return resMessage;
     }
 
-    /// <summary>
-    /// 删除模板 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysWechatService 中与 Delete Message Template 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "DeleteMessageTemplate"), HttpPost]
     [DisplayName("删除模板")]
     public async Task<dynamic> DeleteMessageTemplate(DeleteMessageTemplateInput input)

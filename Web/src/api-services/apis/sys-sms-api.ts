@@ -375,6 +375,7 @@ export const SysSmsApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysSmsAliyunSendSmsPhoneNumberTemplateIdPost(phoneNumber: string, templateId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysSmsApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysSmsApiAxiosParamCreator(configuration).apiSysSmsAliyunSendSmsPhoneNumberTemplateIdPost(phoneNumber, templateId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -406,6 +407,7 @@ export const SysSmsApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysSmsCustomSendSmsPhoneNumberTemplateIdPost(phoneNumber: string, templateId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第2阶段：调用 SysSmsApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysSmsApiAxiosParamCreator(configuration).apiSysSmsCustomSendSmsPhoneNumberTemplateIdPost(phoneNumber, templateId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -436,6 +438,7 @@ export const SysSmsApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysSmsTencentSendSmsPhoneNumberTemplateIdPost(phoneNumber: string, templateId: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第3阶段：调用 SysSmsApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysSmsApiAxiosParamCreator(configuration).apiSysSmsTencentSendSmsPhoneNumberTemplateIdPost(phoneNumber, templateId, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -474,6 +477,7 @@ export const SysSmsApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysSmsAliyunSendSmsPhoneNumberTemplateIdPost(phoneNumber: string, templateId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysSmsApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysSmsApiFp(configuration).apiSysSmsAliyunSendSmsPhoneNumberTemplateIdPost(phoneNumber, templateId, options).then((request) => request(axios, basePath));
         },
         /**
@@ -508,6 +512,7 @@ export const SysSmsApiFactory = function (configuration?: Configuration, basePat
          * @throws {RequiredError}
          */
         async apiSysSmsSendSmsPhoneNumberTemplateIdPost(phoneNumber: string, templateId: string, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysSmsApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysSmsApiFp(configuration).apiSysSmsSendSmsPhoneNumberTemplateIdPost(phoneNumber, templateId, options).then((request) => request(axios, basePath));
         },
         /**

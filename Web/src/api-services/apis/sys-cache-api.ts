@@ -396,6 +396,7 @@ export const SysCacheApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysCacheBeginCacheLockKeyMsTimeoutMsExpireThrowOnFailurePost(key: string, msTimeout: number, msExpire: number, throwOnFailure: boolean, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultIDisposable>>> {
+            // 第一阶段：调用 SysCacheApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysCacheApiAxiosParamCreator(configuration).apiSysCacheBeginCacheLockKeyMsTimeoutMsExpireThrowOnFailurePost(key, msTimeout, msExpire, throwOnFailure, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -426,6 +427,7 @@ export const SysCacheApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysCacheApiAxiosParamCreator(configuration).apiSysCacheDeleteByPreKeyPrefixKeyPost(prefixKey, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysCacheApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -464,6 +466,7 @@ export const SysCacheApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysCacheKeysByPrefixKeyPrefixKeyGet(prefixKey: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListString>>> {
+            // 第3阶段：调用 SysCacheApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysCacheApiAxiosParamCreator(configuration).apiSysCacheKeysByPrefixKeyPrefixKeyGet(prefixKey, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -504,6 +507,7 @@ export const SysCacheApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiSysCacheBeginCacheLockKeyMsTimeoutMsExpireThrowOnFailurePost(key: string, msTimeout: number, msExpire: number, throwOnFailure: boolean, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultIDisposable>> {
+            // 第一阶段：整理 SysCacheApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCacheApiFp(configuration).apiSysCacheBeginCacheLockKeyMsTimeoutMsExpireThrowOnFailurePost(key, msTimeout, msExpire, throwOnFailure, options).then((request) => request(axios, basePath));
         },
         /**
@@ -533,6 +537,7 @@ export const SysCacheApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiSysCacheDeleteKeyPost(key: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultInt32>> {
+            // 第2阶段：整理 SysCacheApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCacheApiFp(configuration).apiSysCacheDeleteKeyPost(key, options).then((request) => request(axios, basePath));
         },
         /**

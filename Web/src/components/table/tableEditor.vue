@@ -48,10 +48,18 @@ import { isDate, isString } from 'lodash-es';
 const props = defineProps({
 	value: {
 		type: Array<any>,
+		/**
+		 * 为 value 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
 	},
 	columns: {
 		type: Array<any>,
+		/**
+		 * 为 columns 属性创建独立默认值，避免组件实例之间共享可变数据。
+		 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+		 */
 		default: () => [],
 	},
 	rules: {
@@ -67,6 +75,11 @@ const props = defineProps({
 });
 const emit = defineEmits(['add', 'delete', 'update:value']);
 var vm = reactive({ formData: {} as any, value: [] as any[] });
+/**
+ * 根据 tableEditor 当前数据渲染 render Component Prop 内容，并同步所需样式和交互状态。
+ * @param item - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function renderComponentProp(item: any) {
 	let componentProps = item.componentProps || {};
 
@@ -79,16 +92,27 @@ function renderComponentProp(item: any) {
 	return propsData;
 }
 
+/**
+ * 从 tableEditor 移除 del 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param record - record 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function del(record: any, index: number) {
 	vm.value.splice(index, 1);
 	emit('update:value', vm.value);
 	emit('delete', { value: vm.value, record });
 }
 
+/**
+ * 构建 tableEditor 所需的 add 内容，并保证生成结果符合调用约定。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 async function add() {
 	let msgs: string[] = [];
 
 	for (const field in props.rules) {
+		// 第一阶段：构造 add 当前阶段需要的中间数据和执行参数。
 		let rule = props.rules[field];
 
 		let val = vm.formData[field];
@@ -110,6 +134,7 @@ async function add() {
 				console.error(error);
 			}
 			if (errors) {
+				// 第2阶段：根据 add 当前分支转换输入数据，并保存该阶段产生的中间结果。
 				msgs.push((_b = (_a = errors == null ? void 0 : errors[0]) == null ? void 0 : _a.message) != null ? _b : `${field} 必填！`);
 			}
 		});

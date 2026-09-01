@@ -530,6 +530,7 @@ export const SysTenantConfigApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTenantConfigAddPost(body?: AddConfigInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysTenantConfigApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTenantConfigApiAxiosParamCreator(configuration).apiSysTenantConfigAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -561,6 +562,7 @@ export const SysTenantConfigApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysTenantConfigApiAxiosParamCreator(configuration).apiSysTenantConfigBatchUpdatePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysTenantConfigApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -600,6 +602,7 @@ export const SysTenantConfigApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysTenantConfigDetailGet(id: number, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysConfig>>> {
+            // 第3阶段：调用 SysTenantConfigApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysTenantConfigApiAxiosParamCreator(configuration).apiSysTenantConfigDetailGet(id, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -630,6 +633,7 @@ export const SysTenantConfigApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysTenantConfigApiAxiosParamCreator(configuration).apiSysTenantConfigListPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysTenantConfigApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -678,6 +682,7 @@ export const SysTenantConfigApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysTenantConfigAddPost(body?: AddConfigInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysTenantConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTenantConfigApiFp(configuration).apiSysTenantConfigAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -708,6 +713,7 @@ export const SysTenantConfigApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysTenantConfigConfigValueByCodeCodeGet(code: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultString>> {
+            // 第2阶段：整理 SysTenantConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTenantConfigApiFp(configuration).apiSysTenantConfigConfigValueByCodeCodeGet(code, options).then((request) => request(axios, basePath));
         },
         /**
@@ -747,6 +753,7 @@ export const SysTenantConfigApiFactory = function (configuration?: Configuration
          * @throws {RequiredError}
          */
         async apiSysTenantConfigListPost(body?: PageConfigInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListSysConfig>> {
+            // 第3阶段：整理 SysTenantConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysTenantConfigApiFp(configuration).apiSysTenantConfigListPost(body, options).then((request) => request(axios, basePath));
         },
         /**

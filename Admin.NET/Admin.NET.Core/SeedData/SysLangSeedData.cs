@@ -11,14 +11,13 @@ namespace Admin.NET.Core;
 /// </summary>
 public class SysLangSeedData : ISqlSugarEntitySeedData<SysLang>
 {
-    /// <summary>
-    /// 种子数据
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>校验 SysLangSeedData 的 Has Data 条件，并返回可供后续流程判断的结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public IEnumerable<SysLang> HasData()
     {
         return new[]
         {
+            // 第一阶段：定义默认启用的中文、意大利文和美式英文语言环境。
             new SysLang{ Id=1300000000001,Name="Chinese (Simplified) / 简体中文", Code="zh-CN", IsoCode="zh_CN", UrlCode="zh-cn", Direction=DirectionEnum.Ltr, DateFormat="%Y年%m月%d日", TimeFormat="%H时%M分%S秒",WeekStart=WeekEnum.Sunday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=true},
             new SysLang{ Id=1300000000002,Name="Chinese (HK) / 繁體中文", Code="zh-HK", IsoCode="zh_HK", UrlCode="zh-hk", Direction=DirectionEnum.Ltr, DateFormat="%Y年%m月%d日 %A", TimeFormat="%I時%M分%S秒",WeekStart=WeekEnum.Sunday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=true},
             new SysLang{ Id=1300000000003,Name="Chinese (Traditional) / 繁體中文", Code="zh-TW", IsoCode="zh_TW", UrlCode="zh-tw", Direction=DirectionEnum.Ltr, DateFormat="%Y年%m月%d日", TimeFormat="%H時%M分%S秒",WeekStart=WeekEnum.Sunday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=true},
@@ -38,6 +37,7 @@ public class SysLangSeedData : ISqlSugarEntitySeedData<SysLang>
             new SysLang{ Id=1300000000017,Name="Danish / Dansk", Code="da-DK", IsoCode="da_DK", UrlCode="da-dk", Direction=DirectionEnum.Ltr, DateFormat="%d-%m-%Y", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Monday,Grouping="[3,0]",DecimalPoint=",",ThousandsSep=".",Active=false},
             new SysLang{ Id=1300000000018,Name="Dutch (BE) / Nederlands (BE)", Code="nl-BE", IsoCode="nl_BE", UrlCode="nl-be", Direction=DirectionEnum.Ltr, DateFormat="%d-%m-%Y", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Monday,Grouping="[3,0]",DecimalPoint=",",ThousandsSep=".",Active=false},
             new SysLang{ Id=1300000000019,Name="Dutch / Nederlands", Code="nl-NL", IsoCode="nl", UrlCode="nl", Direction=DirectionEnum.Ltr, DateFormat="%d-%m-%Y", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Monday,Grouping="[3,0]",DecimalPoint=",",ThousandsSep=".",Active=false},
+            // 第二阶段：补充英语、法语、德语等欧洲及区域化语言格式。
             new SysLang{ Id=1300000000020,Name="English (AU)", Code="en-AU", IsoCode="en_AU", UrlCode="en-au", Direction=DirectionEnum.Ltr, DateFormat="%d/%m/%Y", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Sunday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=false},
             new SysLang{ Id=1300000000021,Name="English (CA)", Code="en-CA", IsoCode="en_CA", UrlCode="en-ca", Direction=DirectionEnum.Ltr, DateFormat="%Y-%m-%d", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Sunday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=false},
             new SysLang{ Id=1300000000022,Name="English (UK)", Code="en-GB", IsoCode="en_GB", UrlCode="en-gb", Direction=DirectionEnum.Ltr, DateFormat="%d/%m/%Y", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Monday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=false},
@@ -63,6 +63,7 @@ public class SysLangSeedData : ISqlSugarEntitySeedData<SysLang>
             new SysLang{ Id=1300000000042,Name="Khmer / ភាសាខ្មែរ", Code="km-KH", IsoCode="km", UrlCode="km", Direction=DirectionEnum.Ltr, DateFormat="%d %B %Y", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Sunday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=false},
             new SysLang{ Id=1300000000043,Name="Korean (KP) / 한국어 (KP)", Code="ko-KP", IsoCode="ko_KP", UrlCode="ko-kp", Direction=DirectionEnum.Ltr, DateFormat="%m/%d/%Y", TimeFormat="%I:%M:%S %p",WeekStart=WeekEnum.Monday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=false},
             new SysLang{ Id=1300000000044,Name="Korean (KR) / 한국어 (KR)", Code="ko-KR", IsoCode="ko_KR", UrlCode="ko-kr", Direction=DirectionEnum.Ltr, DateFormat="%Y년 %m월 %d일", TimeFormat="%H시 %M분 %S초",WeekStart=WeekEnum.Sunday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=false},
+            // 第三阶段：补充亚洲、中东及其余语言环境，并保留各自书写方向和数字格式。
             new SysLang{ Id=1300000000045,Name="Lao / ພາສາລາວ", Code="lo-LA", IsoCode="lo", UrlCode="lo", Direction=DirectionEnum.Ltr, DateFormat="%d/%m/y", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Sunday,Grouping="[3,0]",DecimalPoint=".",ThousandsSep=",",Active=false},
             new SysLang{ Id=1300000000046,Name="Latvian / latviešu valoda", Code="lv-LV", IsoCode="lv", UrlCode="lv", Direction=DirectionEnum.Ltr, DateFormat="%Y.%m.%d.", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Monday,Grouping="[3,0]",DecimalPoint=",",ThousandsSep=" ",Active=false},
             new SysLang{ Id=1300000000047,Name="Lithuanian / Lietuvių kalba", Code="lt-LT", IsoCode="lt", UrlCode="lt", Direction=DirectionEnum.Ltr, DateFormat="%Y-%m-%d", TimeFormat="%H:%M:%S",WeekStart=WeekEnum.Monday,Grouping="[3,0]",DecimalPoint=",",ThousandsSep=".",Active=false},

@@ -24,9 +24,9 @@ public static class CommonUtil
     /// <summary>
     /// 根据字符串获取固定整型哈希值
     /// </summary>
-    /// <param name="str"></param>
-    /// <param name="startNumber"></param>
-    /// <returns></returns>
+    /// <param name="str">str 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="startNumber">startNumber 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static long GetFixedHashCode(string str, long startNumber = 0)
     {
         if (string.IsNullOrWhiteSpace(str)) return 0;
@@ -44,12 +44,10 @@ public static class CommonUtil
         }
     }
 
-    /// <summary>
-    /// 生成百分数
-    /// </summary>
-    /// <param name="passCount"></param>
-    /// <param name="allCount"></param>
-    /// <returns></returns>
+    /// <summary>根据 CommonUtil 当前输入计算 Exec Percent 结果，并按方法声明的类型返回。</summary>
+    /// <param name="passCount">控制数据范围或位置的数值。</param>
+    /// <param name="allCount">控制数据范围或位置的数值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string ExecPercent(decimal passCount, decimal allCount)
     {
         string res = "";
@@ -65,10 +63,8 @@ public static class CommonUtil
         return res + "%";
     }
 
-    /// <summary>
-    /// 获取服务地址
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 CommonUtil 所需的 Get Localhost 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetLocalhost()
     {
         string result = $"{App.HttpContext.Request.Scheme}://{App.HttpContext.Request.Host.Value}";
@@ -89,8 +85,8 @@ public static class CommonUtil
     /// 对象序列化XML
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="obj"></param>
-    /// <returns></returns>
+    /// <param name="obj">obj 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string SerializeObjectToXml<T>(T obj)
     {
         if (obj == null) return string.Empty;
@@ -114,8 +110,8 @@ public static class CommonUtil
     /// <summary>
     /// 字符串转XML格式
     /// </summary>
-    /// <param name="xmlStr"></param>
-    /// <returns></returns>
+    /// <param name="xmlStr">xmlStr 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static XElement SerializeStringToXml(string xmlStr)
     {
         try
@@ -131,7 +127,7 @@ public static class CommonUtil
     /// <summary>
     /// 导出模板Excel
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IActionResult> ExportExcelTemplate<T>(string fileName = null) where T : class, new()
     {
         IImporter importer = new ExcelImporter();
@@ -143,7 +139,7 @@ public static class CommonUtil
     /// <summary>
     /// 导出数据excel
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IActionResult> ExportExcelData<T>(ICollection<T> data, string fileName = null) where T : class, new()
     {
         var export = new ExcelExporter();
@@ -155,7 +151,7 @@ public static class CommonUtil
     /// <summary>
     /// 导出数据excel,包括字典转换
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<IActionResult> ExportExcelData<TSource, TTarget>(ISugarQueryable<TSource> query, Func<TSource, TTarget, TTarget> action = null)
         where TSource : class, new() where TTarget : class, new()
     {
@@ -164,6 +160,7 @@ public static class CommonUtil
         //相同属性复制值，字典值转换
         var result = new List<TTarget>();
         foreach (var item in data)
+        // 第一阶段：根据 ExportExcelData 当前分支转换输入数据，并保存该阶段产生的中间结果。
         {
             var newData = new TTarget();
             foreach (var dict in propMappings)
@@ -190,6 +187,7 @@ public static class CommonUtil
                             targetProp.SetValue(newData, sourceVal);
                         }
                         else
+                        // 第2阶段：根据 ExportExcelData 当前分支转换输入数据，并保存该阶段产生的中间结果。
                         {
                             var newVal = sourceVal.ToString().ParseTo(targetProp.PropertyType);
                             targetProp.SetValue(newData, newVal);
@@ -212,8 +210,8 @@ public static class CommonUtil
     /// <summary>
     /// 导入数据Excel
     /// </summary>
-    /// <param name="file"></param>
-    /// <returns></returns>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<ICollection<T>> ImportExcelData<T>([Required] IFormFile file) where T : class, new()
     {
         IImporter importer = new ExcelImporter();
@@ -238,9 +236,9 @@ public static class CommonUtil
     /// 导入Excel数据并错误标记
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="file"></param>
-    /// <param name="importResultCallback"></param>
-    /// <returns></returns>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="importResultCallback">处理完成或状态变化时调用的回调。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<ICollection<T>> ImportExcelData<T>([Required] IFormFile file, Func<ImportResult<T>, ImportResult<T>> importResultCallback = null) where T : class, new()
     {
         IImporter importer = new ExcelImporter();
@@ -273,8 +271,8 @@ public static class CommonUtil
     /// 导入数据Excel
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="file"></param>
-    /// <returns></returns>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<List<T>> ImportExcelDataAsync<T>([Required] IFormFile file) where T : class, new()
     {
         var newFile = await SysFileService.UploadFile(new UploadFileInput { File = file });
@@ -303,9 +301,9 @@ public static class CommonUtil
     /// </summary>
     /// <typeparam name="TSource"></typeparam>
     /// <typeparam name="TTarget"></typeparam>
-    /// <param name="data"></param>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <param name="data">符合当前接口契约的请求输入数据。</param>
+    /// <param name="action">action 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static List<TTarget> ParseList<TSource, TTarget>(IEnumerable<TSource> data, Func<TSource, TTarget, TTarget> action = null) where TTarget : new()
     {
         var propMappings = GetImportPropertMap<TSource, TTarget>();
@@ -313,6 +311,7 @@ public static class CommonUtil
         var result = new List<TTarget>();
         foreach (var item in data)
         {
+            // 第一阶段：构造 ParseList 当前步骤需要的中间数据和执行参数。
             var newData = new TTarget();
             foreach (var dict in propMappings)
             {
@@ -334,6 +333,7 @@ public static class CommonUtil
                     {
                         if (targeProp.PropertyType.FullName == propertyInfo.PropertyType.FullName)
                         {
+                            // 第2阶段：根据 ParseList 当前分支转换输入数据，并保存该阶段产生的中间结果。
                             targeProp.SetValue(newData, sourceVal);
                         }
                         else
@@ -436,9 +436,7 @@ public static class CommonUtil
         return propMappings;
     }
 
-    /// <summary>
-    /// 获取属性映射
-    /// </summary>
+    /// <summary>查询或读取 CommonUtil 所需的 Get Export Dict Map 数据，并按调用约定返回结果。</summary>
     /// <typeparam name="TTarget"></typeparam>
     /// <returns>整理导入对象的 属性名称， 字典数据，原属性信息，目标属性信息 </returns>
     private static Dictionary<string, Tuple<string, string>> GetExportDictMap<TTarget>() where TTarget : new()
@@ -458,11 +456,9 @@ public static class CommonUtil
         return propMappings;
     }
 
-    /// <summary>
-    /// 解析IP地址
-    /// </summary>
-    /// <param name="ip"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 CommonUtil 所需的 Get Ip Address 数据，并按调用约定返回结果。</summary>
+    /// <param name="ip">ip 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static (string ipLocation, double? longitude, double? latitude) GetIpAddress(string ip)
     {
         try
@@ -481,8 +477,8 @@ public static class CommonUtil
     /// <summary>
     /// 获取客户端设备信息（操作系统+浏览器）
     /// </summary>
-    /// <param name="userAgent"></param>
-    /// <returns></returns>
+    /// <param name="userAgent">userAgent 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetClientDeviceInfo(string userAgent)
     {
         try

@@ -122,6 +122,12 @@ function createInitialRequest(
   return createInitialReportRequest(definition, sharedParameters);
 }
 
+/**
+ * 按 parameter Display Value 规则筛选 App 数据，并返回满足条件的结果。
+ * @param parameter - parameter 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function parameterDisplayValue(
   parameter: ReportDefinition['parameters'][number],
   value: string,
@@ -141,6 +147,11 @@ function parameterDisplayValue(
   return value;
 }
 
+/**
+ * 按照 App 的业务约束完成 copy Text 数据合并或复制。
+ * @param text - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 async function copyText(text: string): Promise<void> {
   if (navigator.clipboard?.writeText !== undefined) {
     await navigator.clipboard.writeText(text);
@@ -158,6 +169,11 @@ async function copyText(text: string): Promise<void> {
   if (!copied) throw new Error('浏览器未允许复制到剪贴板。');
 }
 
+/**
+ * 创建并返回 App 的 to Report Definition 配置对象，集中提供相关状态和操作入口。
+ * @param configuration - configuration 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function toReportDefinition(configuration: ReportConfigurationDocument): ReportDefinition {
   return {
     code: configuration.reportCode,
@@ -197,6 +213,10 @@ interface AppProps {
   shared?: boolean;
 }
 
+/**
+ * 初始化 App 的 App 监听流程，并在状态变化时同步执行相关操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export default function App({ reportCode, shared = false }: AppProps) {
   const reportApi = useMemo(() => createReportApi(reportCode), [reportCode]);
   const linkedParameters = useMemo(
@@ -207,6 +227,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
   const [definition, setDefinition] = useState<ReportDefinition | null>(null);
   const [templateDocument, setTemplateDocument] = useState<TemplateDocument | null>(null);
   const [request, setRequest] = useState<ExecuteRequest>(createInitialRequest);
+  // 第一阶段：构造 App 当前阶段需要的中间数据和执行参数。
   const [result, setResult] = useState<ExecuteResult | null>(null);
   const [mode, setMode] = useState<TemplateEditorMode>(shared ? 'preview' : 'design');
   const [draftSnapshot, setDraftSnapshot] = useState<IWorkbookData | null>(null);
@@ -249,6 +270,10 @@ export default function App({ reportCode, shared = false }: AppProps) {
     // active 标记阻止组件卸载后继续 setState，不试图取消已经发出的普通 GET 请求。
     let active = true;
 
+    /**
+     * 初始化 App 的 initialize 状态，创建依赖并注册运行期间需要的资源。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const initialize = async () => {
       setLoading(true);
       setError(null);
@@ -286,6 +311,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
 
     void initialize();
     return () => {
+      // 第3阶段：更新 App 当前分支对应的业务状态，并保持关联数据一致。
       active = false;
     };
   }, [linkedParameters, reportApi, shared]);
@@ -296,6 +322,11 @@ export default function App({ reportCode, shared = false }: AppProps) {
     }
 
     // 只有真正的用户命令把 dirty 置为 true；Univer 初始化 mutation 已在宿主中过滤。
+    /**
+     * 负责 App 的 warn Before Unload 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+     * @param event - 触发当前处理流程的界面或业务事件。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
@@ -328,6 +359,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
     setPreviewing(true);
     setError(null);
     // designSnapshot 只用于本次失败回滚；draftSnapshotRef 保存跨页预览都应复用的原始设计草稿。
+    // 第4阶段：构造 App 当前阶段需要的中间数据和执行参数。
     let designSnapshot: IWorkbookData | null = null;
     let renderAttempted = false;
     try {
@@ -368,6 +400,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
         definition,
         nextRequest.parameters,
       );
+      // 第5阶段：检查 App 当前条件，并按匹配分支执行对应处理。
       if (missingParameterCodes.length > 0) {
         const missingLabels = missingParameterCodes.map((code) => {
           const parameter = definition.parameters.find((item) => item.code === code);
@@ -406,6 +439,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
         try {
           editorRef.current?.loadDesign(designSnapshot);
         } catch (restoreError) {
+          // 第6阶段：更新 App 当前分支对应的业务状态，并保持关联数据一致。
           message = `${message}；${errorMessage(restoreError, '恢复模板设计失败')}`;
         }
       }
@@ -439,6 +473,10 @@ export default function App({ reportCode, shared = false }: AppProps) {
 
     let cancelled = false;
     let timer = 0;
+    /**
+     * 负责 App 的 preview When Ready 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
     const previewWhenReady = () => {
       if (cancelled) return;
       if (editorRef.current === null) {
@@ -446,6 +484,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
         return;
       }
       sharedAutoPreviewAttemptedRef.current = true;
+      // 第7阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
       void enterPreview(1);
     };
     timer = window.setTimeout(previewWhenReady, 0);
@@ -487,6 +526,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
     const snapshot = selectSnapshotForSave(
       mode,
       () => {
+        // 第8阶段：构造 App 当前阶段需要的中间数据和执行参数。
         const editor = editorRef.current;
         if (editor === null) {
           throw new Error('模板编辑器尚未准备完成。');
@@ -526,6 +566,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
       setError(errorMessage(exception, '模板保存失败'));
     } finally {
       operationRef.current = false;
+      // 第9阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setSaving(false);
     }
   }, [mode, persistTemplate]);
@@ -566,6 +607,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
       setDraftSnapshot(imported.snapshot);
       setResult(null);
       setDirty(true);
+      // 第10阶段：构造 App 当前阶段需要的中间数据和执行参数。
       const warningText = imported.warnings.length > 0
         ? `，有 ${imported.warnings.length} 条兼容提示`
         : '';
@@ -613,6 +655,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
       draftSnapshotRef.current = snapshot;
       setDraftSnapshot(snapshot);
       await reportApi.exportTemplate(snapshot, fileName);
+      // 第11阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setExchangeStatus('当前模板草稿已导出为 XLSX');
     } catch (exception) {
       setError(errorMessage(exception, '模板导出失败'));
@@ -642,7 +685,15 @@ export default function App({ reportCode, shared = false }: AppProps) {
       const savedRevision = await prepareSavedRevisionForExport({
         revision: templateDocument.revision,
         dirty,
+        /**
+         * 负责 App 的 confirm Save 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+         * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+         */
         confirmSave: () => window.confirm(saveBeforeDataExportMessage),
+        /**
+         * 更新 App 的 save 状态，并同步相关业务数据。
+         * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+         */
         save: async () => {
           setSaving(true);
           try {
@@ -656,6 +707,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
         return;
       }
 
+      // 第12阶段：构造 App 当前阶段需要的中间数据和执行参数。
       const exportQuery = { ...request, page: 1 };
       if (definition.export.defaultMode === 'Large') {
         const started = await reportApi.startLargeDataExport(savedRevision, exportQuery);
@@ -696,6 +748,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
       || result === null
       || !initialized
     ) {
+      // 第13阶段：整理 App 已计算的数据，并按方法契约返回最终结果。
       return;
     }
 
@@ -732,6 +785,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
         throw new Error('报表预览尚未准备完成。');
       }
       const appliedRange = await editor.toggleFilter();
+      // 第14阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setExchangeStatus(
         appliedRange === null
           ? '已关闭列筛选'
@@ -773,6 +827,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
         throw new Error('模板编辑器尚未准备完成。');
       }
       editor.insertBinding(token, kind);
+      // 第15阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setError(null);
     } catch (exception) {
       setError(errorMessage(exception, '插入模板字段失败'));
@@ -813,6 +868,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
     const nextDefinition = toReportDefinition(saved);
     setConfigurationDocument(saved);
     setDefinition(nextDefinition);
+    // 第16阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
     setRequest(createInitialRequest(nextDefinition));
     setResult(null);
     setExchangeStatus(`报表配置已保存（修订号 ${saved.revision}）`);
@@ -847,11 +903,16 @@ export default function App({ reportCode, shared = false }: AppProps) {
     [reportCode, request.parameters, shareIncludesParameters, visibleShareParameterCodes],
   );
   const copyShareLink = useCallback(async () => {
+    // 第29阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
     setError(null);
+    // 第28阶段：执行 App 可能失败的核心操作，并由异常分支统一收尾。
     try {
+      // 第27阶段：调用 App 依赖的异步能力，等待并校验返回数据。
       await copyText(shareUrl);
+      // 第26阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setExchangeStatus('分享链接已复制');
     } catch (exception) {
+      // 第17阶段：根据 App 当前分支转换输入数据，并保存该阶段产生的中间结果。
       setError(errorMessage(exception, '复制分享链接失败'));
     }
   }, [shareUrl]);
@@ -876,6 +937,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
   }, [exportData, exportNameKind, exportTemplate]);
 
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
+  // 第25阶段：构造 App 当前阶段需要的中间数据和执行参数。
   const busy = loading
     || saving
     || importing
@@ -883,6 +945,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
     || exportingData
     || printing
     || previewing;
+  // 第24阶段：构造 App 当前阶段需要的中间数据和执行参数。
   const pageLoading = createPageLoadingPresentation({
     loading,
     saving,
@@ -895,11 +958,14 @@ export default function App({ reportCode, shared = false }: AppProps) {
     mode,
     exportJob,
   });
+  // 第23阶段：构造 App 当前阶段需要的中间数据和执行参数。
   const revision = templateDocument?.revision;
+  // 第20阶段：构造 App 当前阶段需要的中间数据和执行参数。
   const previewToolbar = createPreviewToolbarPresentation(
     definition?.preview.mode ?? 'Full',
     result,
   );
+  // 第18阶段：构造 App 当前阶段需要的中间数据和执行参数。
   const pager = mode === 'preview' && previewToolbar.showPager ? (
     <div className="pager" role="group" aria-label="分页">
       <button
@@ -925,6 +991,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
     </div>
   ) : null;
 
+  // 第19阶段：遍历 App 当前数据集合，逐项转换并维护处理结果。
   return (
     <main
       className={shared ? 'app-shell shared-report-shell' : 'app-shell'}
@@ -1106,8 +1173,11 @@ export default function App({ reportCode, shared = false }: AppProps) {
             </button>
           )}
           {!shared && (
-            <div className="template-state" title={dirty ? '模板有未保存修改' : '模板已保存'}>
-              <span>{revision === undefined ? 'revision --' : `revision ${revision}`}</span>
+            <div
+              className="template-state"
+              title={dirty ? '模板有未保存修改' : '模板已保存；修订号用于并发校验，不是历史版本'}
+            >
+              <span>{revision === undefined ? '修订号 --' : `修订号 ${revision}`}</span>
               <span className={dirty ? 'dirty-state' : 'saved-state'}>
                 {dirty ? '未保存' : '已保存'}
               </span>
@@ -1135,7 +1205,9 @@ export default function App({ reportCode, shared = false }: AppProps) {
         {definition?.parameters
           .filter((parameter) => parameter.visible && parameter.controlType !== 'hidden')
           .map((parameter) => {
+            // 第21阶段：构造 App 当前阶段需要的中间数据和执行参数。
             const inputAttributes = parameterInputAttributes(parameter);
+            // 第22阶段：遍历 App 当前数据集合，逐项转换并维护处理结果。
             return (
             <label key={parameter.code}>
               <span>{parameter.displayName}</span>

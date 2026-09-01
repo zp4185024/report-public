@@ -4,6 +4,10 @@ import * as svg from '@element-plus/icons-vue';
 import { iconfonntClassList, fontAwesomeClassList } from '../assets/icons';
 
 // 获取阿里字体图标
+/**
+ * 查询或读取 getStyleSheets 所需的 get Alicdn Iconfont 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getAlicdnIconfont = () => {
 	return new Promise((resolve, reject) => {
 		nextTick(() => {
@@ -36,6 +40,10 @@ const getAlicdnIconfont = () => {
 };
 
 // 初始化获取 css 样式，获取 element plus 自带 svg 图标，增加了 ele- 前缀，使用时：ele-Aim
+/**
+ * 查询或读取 getStyleSheets 所需的 get Element Plus Iconfont 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getElementPlusIconfont = () => {
 	return new Promise((resolve, reject) => {
 		nextTick(() => {
@@ -51,6 +59,10 @@ const getElementPlusIconfont = () => {
 };
 
 // 初始化获取 css 样式，这里使用 fontawesome 的图标
+/**
+ * 查询或读取 getStyleSheets 所需的 get Awesome Iconfont 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getAwesomeIconfont = () => {
 	return new Promise((resolve, reject) => {
 		nextTick(() => {
@@ -92,14 +104,26 @@ const getAwesomeIconfont = () => {
  */
 const initIconfont = {
 	// iconfont
+	/**
+	 * 负责 getStyleSheets 的 ali 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	ali: () => {
 		return getAlicdnIconfont();
 	},
 	// element plus
+	/**
+	 * 负责 getStyleSheets 的 ele 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	ele: () => {
 		return getElementPlusIconfont();
 	},
 	// fontawesome
+	/**
+	 * 负责 getStyleSheets 的 awe 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	awe: () => {
 		return getAwesomeIconfont();
 	},

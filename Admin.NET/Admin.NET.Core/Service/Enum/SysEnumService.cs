@@ -14,6 +14,8 @@ public class SysEnumService : IDynamicApiController, ITransient
 {
     private readonly EnumOptions _enumOptions;
 
+    /// <summary>初始化 SysEnumService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="enumOptions">控制本次处理行为的配置选项。</param>
     public SysEnumService(IOptions<EnumOptions> enumOptions)
     {
         _enumOptions = enumOptions.Value;
@@ -22,7 +24,7 @@ public class SysEnumService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取所有枚举类型 🔖
     /// </summary>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取所有枚举类型")]
     public List<EnumTypeOutput> GetEnumTypeList()
     {
@@ -43,11 +45,9 @@ public class SysEnumService : IDynamicApiController, ITransient
         return list;
     }
 
-    /// <summary>
-    /// 获取字典描述
-    /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysEnumService 所需的 Get Enum Description 数据，并按调用约定返回结果。</summary>
+    /// <param name="type">决定处理分支、数据类型或运行状态的枚举值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static EnumTypeOutput GetEnumDescription(Type type)
     {
         string description = type.Name;
@@ -71,8 +71,8 @@ public class SysEnumService : IDynamicApiController, ITransient
     /// <summary>
     /// 通过枚举类型获取枚举值集合 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("通过枚举类型获取枚举值集合")]
     public List<EnumEntity> GetEnumDataList([FromQuery] EnumInput input)
     {
@@ -85,8 +85,8 @@ public class SysEnumService : IDynamicApiController, ITransient
     /// <summary>
     /// 通过实体的字段名获取相关枚举值集合（目前仅支持枚举类型） 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("通过实体的字段名获取相关枚举值集合")]
     public static List<EnumEntity> GetEnumDataListByField([FromQuery] QueryEnumDataInput input)
     {

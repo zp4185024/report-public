@@ -26,11 +26,16 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
     // 日期时间格式化配置
     private readonly string _dateTimeFormat;
 
+    /// <summary>初始化 CustomJsonPropertyConverter 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="dateTimeFormat">dateTimeFormat 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public CustomJsonPropertyConverter(string dateTimeFormat = "yyyy-MM-dd HH:mm:ss")
     {
         _dateTimeFormat = dateTimeFormat;
     }
 
+    /// <summary>校验 CustomJsonPropertyConverter 的 Can Convert 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="typeToConvert">typeToConvert 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override bool CanConvert(Type typeToConvert)
     {
         return PropertyCache.GetOrAdd(typeToConvert, type =>
@@ -41,6 +46,11 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
         ).Count > 0;
     }
 
+    /// <summary>查询或读取 CustomJsonPropertyConverter 所需的 Read 数据，并按调用约定返回结果。</summary>
+    /// <param name="reader">reader 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="typeToConvert">typeToConvert 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public override object Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         var jsonDoc = JsonDocument.ParseValue(ref reader);
@@ -74,6 +84,10 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
         return instance;
     }
 
+    /// <summary>更新 CustomJsonPropertyConverter 的 Write 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
     public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
@@ -99,6 +113,9 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
         writer.WriteEndObject();
     }
 
+    /// <summary>构建 CustomJsonPropertyConverter 所需的 Build Property Meta 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="type">type 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IReadOnlyList<PropertyMeta> BuildPropertyMeta(Type type)
     {
         return type.GetProperties()
@@ -106,6 +123,10 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
             .ToList().AsReadOnly();
     }
 
+    /// <summary>响应 CustomJsonPropertyConverter 的 Handle Date Time Value 事件，并协调相关状态和后续操作。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <param name="targetType">targetType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private object HandleDateTimeValue(JsonElement value, Type targetType)
     {
         var dateStr = value.GetString();
@@ -117,6 +138,9 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
             : (object)date;
     }
 
+    /// <summary>将 CustomJsonPropertyConverter 中的 Format Date Time 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dateTime">dateTime 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private string FormatDateTime(object dateTime)
     {
         return dateTime switch
@@ -127,6 +151,9 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
         };
     }
 
+    /// <summary>校验 CustomJsonPropertyConverter 的 Is Date Time Type 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="type">type 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static bool IsDateTimeType(Type type)
     {
         var actualType = Nullable.GetUnderlyingType(type) ?? type;
@@ -142,6 +169,8 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
         public string JsonName { get; }
         public Type PropertyType => _property.PropertyType;
 
+        /// <summary>初始化 PropertyMeta 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+        /// <param name="property">property 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
         public PropertyMeta(PropertyInfo property)
         {
             _property = property;
@@ -175,8 +204,14 @@ public class CustomJsonPropertyConverter : JsonConverter<object>
             }
         }
 
+        /// <summary>查询或读取 CustomJsonPropertyConverter 所需的 Get Value 数据，并按调用约定返回结果。</summary>
+        /// <param name="instance">instance 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
         public object GetValue(object instance) => _getter(instance);
 
+        /// <summary>更新 CustomJsonPropertyConverter 的 Set Value 状态，并同步相关业务数据。</summary>
+        /// <param name="instance">instance 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+        /// <param name="value">需要读取、校验或转换的业务值。</param>
         public void SetValue(object instance, object value)
         {
             if (_setter != null)

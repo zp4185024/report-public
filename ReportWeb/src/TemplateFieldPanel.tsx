@@ -56,6 +56,7 @@ export function TemplateFieldPanel({
     <aside className="field-panel" aria-label="模板字段">
       {parameterGroups.map((group) => {
         const Icon = group.icon;
+        // 第一阶段：遍历 TemplateFieldPanel 当前数据集合，逐项转换并维护处理结果。
         return (
           <div className="field-group" key={group.category}>
             <div className="field-group-title">
@@ -90,6 +91,7 @@ export function TemplateFieldPanel({
         </div>
         <div className="field-list">
           {detailFields.map((field) => {
+            // 第2阶段：构造 TemplateFieldPanel 当前阶段需要的中间数据和执行参数。
             const token = `{{detail.${field.code}}}`;
             return (
               <button

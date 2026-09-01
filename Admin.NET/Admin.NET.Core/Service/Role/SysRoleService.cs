@@ -21,6 +21,15 @@ public class SysRoleService : IDynamicApiController, ITransient
     private readonly SysOrgService _sysOrgService;
     private readonly SysCacheService _sysCacheService;
 
+    /// <summary>初始化 SysRoleService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysOrgService">sysOrgService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysMenuService">sysMenuService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysRoleOrgService">sysRoleOrgService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysRoleRep">sysRoleRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysRoleMenuService">sysRoleMenuService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysUserRoleService">sysUserRoleService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysCacheService">sysCacheService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysRoleService(UserManager userManager,
         SysOrgService sysOrgService,
         SysMenuService sysMenuService,
@@ -43,8 +52,8 @@ public class SysRoleService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取角色分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取角色分页列表")]
     public async Task<SqlSugarPagedList<SysRole>> Page(PageRoleInput input)
     {
@@ -60,10 +69,8 @@ public class SysRoleService : IDynamicApiController, ITransient
             .ToPagedListAsync(input.Page, input.PageSize);
     }
 
-    /// <summary>
-    /// 获取角色列表 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysRoleService 所需的 Get List 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取角色列表")]
     public async Task<List<RoleOutput>> GetList()
     {
@@ -77,11 +84,9 @@ public class SysRoleService : IDynamicApiController, ITransient
             .OrderBy(u => new { u.OrderNo, u.Id }).Select<RoleOutput>().ToListAsync();
     }
 
-    /// <summary>
-    /// 增加角色 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>构建 SysRoleService 所需的 Add Role 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Add"), HttpPost]
     [DisplayName("增加角色")]
     public async Task AddRole(AddRoleInput input)
@@ -97,8 +102,8 @@ public class SysRoleService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新角色菜单权限
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task UpdateRoleMenu(AddRoleInput input)
     {
         if (input.MenuIdList == null || input.MenuIdList.Count < 1) return;
@@ -109,11 +114,9 @@ public class SysRoleService : IDynamicApiController, ITransient
         });
     }
 
-    /// <summary>
-    /// 更新角色 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysRoleService 的 Update Role 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新角色")]
     public async Task UpdateRole(UpdateRoleInput input)
@@ -127,11 +130,9 @@ public class SysRoleService : IDynamicApiController, ITransient
         await UpdateRoleMenu(input);
     }
 
-    /// <summary>
-    /// 删除角色 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysRoleService 中与 Delete Role 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除角色")]
@@ -158,11 +159,9 @@ public class SysRoleService : IDynamicApiController, ITransient
         await _sysRoleMenuService.DeleteRoleMenuByRoleId(sysRole.Id);
     }
 
-    /// <summary>
-    /// 授权角色菜单 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>调用 SysRoleService 的异步依赖完成 Grant Menu 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("授权角色菜单")]
     public async Task GrantMenu(RoleMenuInput input)
@@ -177,8 +176,8 @@ public class SysRoleService : IDynamicApiController, ITransient
     /// <summary>
     /// 授权角色数据范围 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [UnitOfWork]
     [DisplayName("授权角色数据范围")]
     public async Task GrantDataScope(RoleOrgInput input)
@@ -223,8 +222,8 @@ public class SysRoleService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据角色Id获取菜单Id集合 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据角色Id获取菜单Id集合")]
     public async Task<List<long>> GetOwnMenuList([FromQuery] RoleInput input)
     {
@@ -235,19 +234,17 @@ public class SysRoleService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据角色Id获取机构Id集合 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据角色Id获取机构Id集合")]
     public async Task<List<long>> GetOwnOrgList([FromQuery] RoleInput input)
     {
         return await _sysRoleOrgService.GetRoleOrgIdList(new List<long> { input.Id });
     }
 
-    /// <summary>
-    /// 设置角色状态 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysRoleService 的 Set Status 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("设置角色状态")]
     public async Task<int> SetStatus(RoleInput input)
     {
@@ -262,8 +259,8 @@ public class SysRoleService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除与该角色相关的用户接口缓存
     /// </summary>
-    /// <param name="roleId"></param>
-    /// <returns></returns>
+    /// <param name="roleId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task ClearUserApiCache(long roleId)
     {

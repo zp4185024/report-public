@@ -19,8 +19,8 @@ public static class SqlSugarFilter
     /// <summary>
     /// 删除用户机构缓存
     /// </summary>
-    /// <param name="userId"></param>
-    /// <param name="dbConfigId"></param>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="dbConfigId">需要查询、更新或删除的业务记录标识。</param>
     public static void DeleteUserOrgCache(long userId, string dbConfigId)
     {
         // 删除用户机构集合缓存
@@ -34,8 +34,8 @@ public static class SqlSugarFilter
     /// <summary>
     /// 删除自定义过滤器缓存
     /// </summary>
-    /// <param name="userId"></param>
-    /// <param name="dbConfigId"></param>
+    /// <param name="userId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="dbConfigId">需要查询、更新或删除的业务记录标识。</param>
     public static void DeleteCustomCache(long userId, string dbConfigId)
     {
         // 删除自定义缓存——过滤器
@@ -179,10 +179,8 @@ public static class SqlSugarFilter
 /// </summary>
 public interface IEntityFilter
 {
-    /// <summary>
-    /// 实体过滤器
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>构建 SqlSugarFilter 所需的 Add Entity Filter 内容，并保证生成结果符合调用约定。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     IEnumerable<TableFilterItem<object>> AddEntityFilter();
 }
 

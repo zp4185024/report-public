@@ -65,6 +65,11 @@ public static class PocExcelExporter
             writer => WriteWorksheet(writer, rows, progress, cancellationToken));
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Worksheet 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="rows">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <param name="progress">progress 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
     private static void WriteWorksheet(
         XmlWriter writer,
         IEnumerable<PocWorkloadRow> rows,
@@ -129,6 +134,8 @@ public static class PocExcelExporter
         writer.WriteEndDocument();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Content Types 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteContentTypes(XmlWriter writer)
     {
         writer.WriteStartDocument();
@@ -141,6 +148,12 @@ public static class PocExcelExporter
         writer.WriteEndDocument();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Content Type 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="elementName">需要读取、校验或转换的业务值。</param>
+    /// <param name="keyName">需要读取、校验或转换的业务值。</param>
+    /// <param name="keyValue">需要读取、校验或转换的业务值。</param>
+    /// <param name="contentType">contentType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteContentType(
         XmlWriter writer,
         string elementName,
@@ -154,6 +167,8 @@ public static class PocExcelExporter
         writer.WriteEndElement();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Package Relationships 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WritePackageRelationships(XmlWriter writer)
     {
         writer.WriteStartDocument();
@@ -167,6 +182,8 @@ public static class PocExcelExporter
         writer.WriteEndDocument();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Workbook Relationships 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteWorkbookRelationships(XmlWriter writer)
     {
         writer.WriteStartDocument();
@@ -180,6 +197,11 @@ public static class PocExcelExporter
         writer.WriteEndDocument();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Relationship 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="id">需要定位的业务记录标识。</param>
+    /// <param name="type">type 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="target">本次转换或写入使用的数据对象。</param>
     private static void WriteRelationship(XmlWriter writer, string id, string type, string target)
     {
         writer.WriteStartElement("Relationship", PackageRelationshipsNamespace);
@@ -189,6 +211,8 @@ public static class PocExcelExporter
         writer.WriteEndElement();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Workbook 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteWorkbook(XmlWriter writer)
     {
         writer.WriteStartDocument();
@@ -211,6 +235,8 @@ public static class PocExcelExporter
         writer.WriteEndDocument();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Columns 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteColumns(XmlWriter writer)
     {
         double[] widths = [10, 26, 16, 16, 16, 16];
@@ -228,12 +254,19 @@ public static class PocExcelExporter
         writer.WriteEndElement();
     }
 
+    /// <summary>启动 PocExcelExporter 的 Start Row 流程，并建立运行期间所需状态。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="rowIndex">控制数据范围或位置的数值。</param>
     private static void StartRow(XmlWriter writer, uint rowIndex)
     {
         writer.WriteStartElement("row", SpreadsheetNamespace);
         writer.WriteAttributeString("r", rowIndex.ToString(CultureInfo.InvariantCulture));
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Text Cell 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void WriteTextCell(XmlWriter writer, string reference, string value)
     {
         // 使用 inlineStr 可省去 sharedStrings.xml 及其全量去重缓存，更符合大文件流式目标。
@@ -246,6 +279,10 @@ public static class PocExcelExporter
         writer.WriteEndElement();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Number Cell 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
     private static void WriteNumberCell(XmlWriter writer, string reference, int value)
     {
         writer.WriteStartElement("c", SpreadsheetNamespace);
@@ -254,6 +291,10 @@ public static class PocExcelExporter
         writer.WriteEndElement();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Formula Cell 状态，并同步相关业务数据。</summary>
+    /// <param name="writer">writer 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="reference">reference 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="formula">formula 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteFormulaCell(XmlWriter writer, string reference, string formula)
     {
         writer.WriteStartElement("c", SpreadsheetNamespace);
@@ -262,6 +303,10 @@ public static class PocExcelExporter
         writer.WriteEndElement();
     }
 
+    /// <summary>更新 PocExcelExporter 的 Write Entry 状态，并同步相关业务数据。</summary>
+    /// <param name="archive">archive 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="path">path 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="write">write 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     private static void WriteEntry(ZipArchive archive, string path, Action<XmlWriter> write)
     {
         // Fastest 用较低 CPU 换取足够的压缩率；XmlWriter 禁止缩进，减少临时字节和最终文件体积。
@@ -279,6 +324,9 @@ public static class PocExcelExporter
         write(writer);
     }
 
+    /// <summary>把零基列序号转换为 Excel 列名，供工作表单元格引用使用。</summary>
+    /// <param name="number">number 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ColumnName(int number)
     {
         // Open XML 单元格地址使用 A..Z、AA..ZZ 的 26 进制字母列名；stackalloc 避免逐行小数组分配。

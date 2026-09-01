@@ -527,6 +527,7 @@ export const SysAuthApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSwaggerCheckUrlPost(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<number>>> {
+            // 第一阶段：调用 SysAuthApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysAuthApiAxiosParamCreator(configuration).apiSwaggerCheckUrlPost(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -558,6 +559,7 @@ export const SysAuthApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysAuthApiAxiosParamCreator(configuration).apiSysAuthCaptchaGet(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 SysAuthApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -597,6 +599,7 @@ export const SysAuthApiFp = function(configuration?: Configuration) {
          */
         async apiSysAuthLogoutPost(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
             const localVarAxiosArgs = await SysAuthApiAxiosParamCreator(configuration).apiSysAuthLogoutPost(options);
+            // 第3阶段：整理 SysAuthApiFp 已计算的数据，并按方法契约返回最终结果。
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
                 return axios.request(axiosRequestArgs);
@@ -627,6 +630,7 @@ export const SysAuthApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await SysAuthApiAxiosParamCreator(configuration).apiSysAuthUnLockScreenPost(password, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第4阶段：整理 SysAuthApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -673,6 +677,7 @@ export const SysAuthApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSwaggerCheckUrlPost(options?: AxiosRequestConfig): Promise<AxiosResponse<number>> {
+            // 第一阶段：整理 SysAuthApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysAuthApiFp(configuration).apiSwaggerCheckUrlPost(options).then((request) => request(axios, basePath));
         },
         /**
@@ -703,6 +708,7 @@ export const SysAuthApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysAuthLoginPhonePost(body: LoginPhoneInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultLoginOutput>> {
+            // 第2阶段：整理 SysAuthApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysAuthApiFp(configuration).apiSysAuthLoginPhonePost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -742,6 +748,7 @@ export const SysAuthApiFactory = function (configuration?: Configuration, basePa
          * @throws {RequiredError}
          */
         async apiSysAuthUnLockScreenPost(password: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultBoolean>> {
+            // 第3阶段：整理 SysAuthApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysAuthApiFp(configuration).apiSysAuthUnLockScreenPost(password, options).then((request) => request(axios, basePath));
         },
         /**

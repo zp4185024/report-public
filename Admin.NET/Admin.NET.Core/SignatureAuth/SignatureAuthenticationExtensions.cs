@@ -16,8 +16,8 @@ public static class SignatureAuthenticationExtensions
     /// <summary>
     /// 注册 Signature 身份验证处理模块
     /// </summary>
-    /// <param name="builder"></param>
-    /// <returns></returns>
+    /// <param name="builder">builder 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static AuthenticationBuilder AddSignatureAuthentication(this AuthenticationBuilder builder)
     {
         return builder.AddSignatureAuthentication(options => { });
@@ -26,9 +26,9 @@ public static class SignatureAuthenticationExtensions
     /// <summary>
     /// 注册 Signature 身份验证处理模块
     /// </summary>
-    /// <param name="builder"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
+    /// <param name="builder">builder 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="options">控制本次处理行为的配置选项。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static AuthenticationBuilder AddSignatureAuthentication(this AuthenticationBuilder builder, Action<SignatureAuthenticationOptions> options)
     {
         return builder.AddScheme<SignatureAuthenticationOptions, SignatureAuthenticationHandler>(SignatureAuthenticationDefaults.AuthenticationScheme, options);

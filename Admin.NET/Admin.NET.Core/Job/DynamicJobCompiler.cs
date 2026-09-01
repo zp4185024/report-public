@@ -15,7 +15,7 @@ public class DynamicJobCompiler : ISingleton
     /// 编译代码并返回其中实现 IJob 的类型
     /// </summary>
     /// <param name="script">动态编译的作业代码</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public Type BuildJob(string script)
     {
         var jobAssembly = App.CompileCSharpClassCode(script);

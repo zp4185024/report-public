@@ -57,6 +57,9 @@ public sealed class PocDataAssetService : ITransient
 
     private readonly PocDataAssetStore _store;
     private readonly PocExternalParameterSourceService? _externalParameters;
+    /// <summary>初始化 PocDataAssetService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="store">store 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="externalParameters">externalParameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocDataAssetService(
         PocDataAssetStore store,
         PocExternalParameterSourceService? externalParameters = null)
@@ -65,18 +68,25 @@ public sealed class PocDataAssetService : ITransient
         _externalParameters = externalParameters;
     }
 
+    /// <summary>调用 PocDataAssetService 的异步依赖完成 List Data Sources Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocDataSourceDocument>> ListDataSourcesAsync()
     {
         var dataSources = await _store.ListDataSourcesAsync();
         return dataSources.Select(ToDataSourceDocument).ToArray();
     }
 
+    /// <summary>调用 PocDataAssetService 的异步依赖完成 List Datasets Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocDatasetDocument>> ListDatasetsAsync()
     {
         var datasets = await _store.ListDatasetsAsync();
         return datasets.Select(ToDatasetDocument).ToArray();
     }
 
+    /// <summary>调用 PocDataAssetService 的异步依赖完成 List Dataset References Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<IReadOnlyList<PocDatasetReferenceDocument>> ListDatasetReferencesAsync(
         string code)
     {
@@ -94,6 +104,10 @@ public sealed class PocDataAssetService : ITransient
             report.IsEnabled)).ToArray();
     }
 
+    /// <summary>更新 PocDataAssetService 的 Save Data Source Async 状态，并同步相关业务数据。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocDataSourceDocument> SaveDataSourceAsync(
         string code,
         PocDataSourceInput input)
@@ -115,6 +129,10 @@ public sealed class PocDataAssetService : ITransient
         return ToDataSourceDocument((await _store.GetDataSourceAsync(input.Code.Trim()))!);
     }
 
+    /// <summary>调用 PocDataAssetService 的异步依赖完成 Test Data Source Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocDataSourceTestResult> TestDataSourceAsync(
         PocDataSourceInput input,
         CancellationToken cancellationToken = default)
@@ -151,6 +169,10 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
+    /// <summary>更新 PocDataAssetService 的 Save Dataset Async 状态，并同步相关业务数据。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocDatasetDocument> SaveDatasetAsync(
         string code,
         PocDatasetDocument input)
@@ -185,6 +207,11 @@ public sealed class PocDataAssetService : ITransient
         return ToDatasetDocument((await _store.GetDatasetAsync(input.Code.Trim()))!);
     }
 
+    /// <summary>调用 PocDataAssetService 的异步依赖完成 Preview Dataset Async 操作，并按当前返回类型传递处理结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public async Task<PocDatasetPreviewResult> PreviewDatasetAsync(
         string code,
         PocDatasetPreviewRequest input,
@@ -199,6 +226,7 @@ public sealed class PocDataAssetService : ITransient
                 "数据集预览配置无效。");
         }
 
+        // 第一阶段：调用 PreviewDatasetAsync 依赖的异步能力，等待并校验返回数据。
         var dataset = await _store.GetDatasetAsync(code.Trim())
             ?? throw new PocDatasetConfigurationException(
                 "DATASET_NOT_FOUND",
@@ -233,6 +261,7 @@ public sealed class PocDataAssetService : ITransient
             input.Parameters,
             externalValues);
 
+        // 第2阶段：构造 PreviewDatasetAsync 当前步骤需要的中间数据和执行参数。
         var parameterCodes = ExtractParameterCodes(dataset.QueryText);
         foreach (var parameterCode in parameterCodes)
         {
@@ -267,6 +296,7 @@ public sealed class PocDataAssetService : ITransient
                 dataSource.ConnectionString,
                 Math.Min(dataset.TimeoutSeconds, PreviewTimeoutLimitSeconds),
                 cancellationToken);
+            // 第3阶段：构造 PreviewDatasetAsync 当前步骤需要的中间数据和执行参数。
             var parameters = new List<SugarParameter>(parameterCodes.Count);
             foreach (var parameterCode in parameterCodes)
             {
@@ -299,6 +329,7 @@ public sealed class PocDataAssetService : ITransient
 
             var hasMore = rows.Count > PreviewRowLimit;
             if (hasMore)
+            // 第4阶段：根据 PreviewDatasetAsync 当前分支转换输入数据，并保存该阶段产生的中间结果。
             {
                 rows.RemoveAt(rows.Count - 1);
             }
@@ -327,6 +358,9 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
+    /// <summary>遍历 PocDataAssetService 当前数据并执行 Extract Parameter Codes 转换，生成调用方需要的结果集合。</summary>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IReadOnlyList<string> ExtractParameterCodes(string queryText)
     {
         var sql = queryText ?? string.Empty;
@@ -346,6 +380,9 @@ public sealed class PocDataAssetService : ITransient
             PocPreviewMode.Full);
     }
 
+    /// <summary>根据 PocDataAssetService 当前输入计算 To Dataset Document 结果，并按方法声明的类型返回。</summary>
+    /// <param name="dataset">dataset 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDatasetDocument ToDatasetDocument(PocReportDataset dataset)
     {
         var schema = ReadSchema(dataset);
@@ -362,6 +399,9 @@ public sealed class PocDataAssetService : ITransient
             dataset.Revision);
     }
 
+    /// <summary>查询或读取 PocDataAssetService 所需的 Read Schema 数据，并按调用约定返回结果。</summary>
+    /// <param name="dataset">dataset 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static PocDatasetSchemaDocument ReadSchema(PocReportDataset dataset)
     {
         ArgumentNullException.ThrowIfNull(dataset);
@@ -404,6 +444,9 @@ public sealed class PocDataAssetService : ITransient
             schema.Fields ?? []);
     }
 
+    /// <summary>根据 PocDataAssetService 当前输入计算 To Data Source Document 结果，并按方法声明的类型返回。</summary>
+    /// <param name="dataSource">本次转换或写入使用的数据对象。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static PocDataSourceDocument ToDataSourceDocument(PocDataSource dataSource)
     {
         var endpoint = PocDatabaseProvider.ParseEndpoint(
@@ -424,6 +467,10 @@ public sealed class PocDataAssetService : ITransient
             dataSource.Revision);
     }
 
+    /// <summary>构建 PocDataAssetService 所需的 Build Connection String 内容，并保证生成结果符合调用约定。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
+    /// <param name="stored">stored 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string BuildConnectionString(PocDataSourceInput input, PocDataSource? stored)
     {
         var normalizedType = PocDatabaseProvider.NormalizeType(input.DbType);
@@ -459,6 +506,8 @@ public sealed class PocDataAssetService : ITransient
             input.TimeoutSeconds);
     }
 
+    /// <summary>校验 PocDataAssetService 的 Validate Data Source 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
     private static void ValidateDataSource(PocDataSourceInput input)
     {
         ValidateCode(input.Code, "DATA_SOURCE_INVALID");
@@ -483,6 +532,8 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
+    /// <summary>校验 PocDataAssetService 的 Validate Dataset 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="input">本次操作使用的输入数据。</param>
     private static void ValidateDataset(PocDatasetDocument input)
     {
         ValidateCode(input.Code, "DATASET_DEFINITION_INVALID");
@@ -507,6 +558,10 @@ public sealed class PocDataAssetService : ITransient
         ValidateDatasetSchema(input.QueryText, input.Variables, input.Fields);
     }
 
+    /// <summary>校验 PocDataAssetService 的 Validate Dataset Schema 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="queryText">需要读取、校验或转换的业务值。</param>
+    /// <param name="variables">variables 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
     private static void ValidateDatasetSchema(
         string queryText,
         IReadOnlyList<PocDatasetVariableDefinition> variables,
@@ -517,6 +572,7 @@ public sealed class PocDataAssetService : ITransient
         foreach (var variable in variables)
         {
             ValidateCode(variable.Code, "DATASET_VARIABLE_INVALID");
+            // 第一阶段：检查 ValidateDatasetSchema 当前条件，并按匹配分支执行对应处理。
             if (!variableCodes.Add(variable.Code) ||
                 string.IsNullOrWhiteSpace(variable.DisplayName) ||
                 variable.DisplayName.Length > 128 ||
@@ -542,6 +598,7 @@ public sealed class PocDataAssetService : ITransient
                 "SQL 中的变量必须与数据集变量定义完全一致。");
         }
 
+        // 第2阶段：构造 ValidateDatasetSchema 当前步骤需要的中间数据和执行参数。
         var fieldCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var field in fields)
         {
@@ -563,6 +620,9 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
+    /// <summary>校验 PocDataAssetService 的 Validate External Variable Bindings Async 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="variables">variables 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task ValidateExternalVariableBindingsAsync(
         IReadOnlyList<PocDatasetVariableDefinition> variables)
     {
@@ -602,6 +662,9 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
+    /// <summary>查询或读取 PocDataAssetService 所需的 Read Preview Fields 数据，并按调用约定返回结果。</summary>
+    /// <param name="reader">reader 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static IReadOnlyList<PocDatasetFieldDefinition> ReadPreviewFields(DbDataReader reader)
     {
         var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -624,6 +687,10 @@ public sealed class PocDataAssetService : ITransient
         return fields;
     }
 
+    /// <summary>校验 PocDataAssetService 的 Ensure Matching Code 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="routeCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="bodyCode">需要读取、校验或转换的业务值。</param>
+    /// <param name="errorCode">需要读取、校验或转换的业务值。</param>
     private static void EnsureMatchingCode(string routeCode, string bodyCode, string errorCode)
     {
         if (!routeCode.Equals(bodyCode, StringComparison.OrdinalIgnoreCase))
@@ -632,6 +699,9 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
+    /// <summary>校验 PocDataAssetService 的 Validate Code 条件，并返回可供后续流程判断的结果。</summary>
+    /// <param name="code">需要读取、校验或转换的业务值。</param>
+    /// <param name="errorCode">需要读取、校验或转换的业务值。</param>
     private static void ValidateCode(string code, string errorCode)
     {
         if (string.IsNullOrWhiteSpace(code) || !CodeRegex.IsMatch(code))
@@ -640,9 +710,15 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
+    /// <summary>负责 PocDataAssetService 的 Null If White Space 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
+    /// <param name="value">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>将 PocDataAssetService 的 To Field Data Type 输入转换为稳定格式，保留后续计算或展示需要的信息。</summary>
+    /// <param name="type">type 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string ToFieldDataType(Type type) =>
         type == typeof(bool) ? "bool" :
         type == typeof(DateTimeOffset) ? "datetime" :
@@ -655,6 +731,9 @@ public sealed class PocDataAssetService : ITransient
             ? "number"
             : "string";
 
+    /// <summary>将 PocDataAssetService 中的 Normalize Field Data Type 输入转换为调用方需要的稳定格式。</summary>
+    /// <param name="dataType">dataType 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private static string NormalizeFieldDataType(string dataType) =>
         dataType.Trim().ToLowerInvariant() switch
         {

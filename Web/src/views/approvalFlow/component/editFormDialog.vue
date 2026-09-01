@@ -105,6 +105,11 @@ onMounted(async () => {
 	state.dbData = resDb.data.result;
 });
 
+/**
+ * 准备 editFormDialog 的 open Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openDialog = (row: ApprovalFlowOutput) => {
 	state.ruleSource = row as UpdateApprovalFlowInput;
 	state.ruleForm = row.formJson ? JSON.parse(row.formJson) : {};
@@ -113,15 +118,27 @@ const openDialog = (row: ApprovalFlowOutput) => {
 	dbChanged();
 };
 
+/**
+ * 结束 editFormDialog 的 close Dialog 交互并清理临时状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const closeDialog = () => {
 	emit('reloadTable');
 	state.isShowDialog = false;
 };
 
+/**
+ * 校验 editFormDialog 的 cancel 条件，并返回可供后续流程判断的结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const cancel = () => {
 	state.isShowDialog = false;
 };
 
+/**
+ * 校验当前输入并提交保存请求，成功后同步 editFormDialog 的界面状态。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const submit = async () => {
 	state.ruleSource.formJson = JSON.stringify(state.ruleForm);
 	await getAPI(ApprovalFlowApi).apiApprovalFlowUpdatePost(state.ruleSource);
@@ -129,6 +146,10 @@ const submit = async () => {
 };
 
 // db改变
+/**
+ * 负责 editFormDialog 的 db Changed 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const dbChanged = async () => {
 	if (state.ruleForm.configId === '') return;
 

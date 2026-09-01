@@ -185,11 +185,20 @@ onUnmounted(() => {
 });
 
 // 检测大小写按键
+/**
+ * 响应 register 的 handle Key Press 事件，并协调相关状态和后续操作。
+ * @param e - 触发当前处理流程的界面或业务事件。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleKeyPress = (e: KeyboardEvent) => {
 	state.capsLockVisible = e.getModifierState('CapsLock');
 };
 
 // 获取验证码
+/**
+ * 查询或读取 register 所需的 get Captcha 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getCaptcha = async () => {
 	state.ruleForm.code = '';
 	const res = await getAPI(SysAuthApi).apiSysAuthCaptchaGet().then(res => res.data.result);
@@ -199,6 +208,10 @@ const getCaptcha = async () => {
 };
 
 // 注册
+/**
+ * 响应 register 的 on Register 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onRegister = async () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return false;
@@ -232,6 +245,10 @@ const onRegister = async () => {
 };
 
 // 打开旋转验证
+/**
+ * 准备 register 的 open Rotate Verify 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openRotateVerify = () => {
 	state.rotateVerifyVisible = true;
 	state.isPassRotate = false;
@@ -239,6 +256,10 @@ const openRotateVerify = () => {
 };
 
 // 通过旋转验证
+/**
+ * 校验并规范化 register 的 pass Rotate Verify 输入，无效时返回安全默认值或明确错误。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const passRotateVerify = () => {
 	state.rotateVerifyVisible = false;
 	state.isPassRotate = true;
@@ -246,6 +267,10 @@ const passRotateVerify = () => {
 };
 
 // 注册处理
+/**
+ * 响应 register 的 handle Register 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleRegister = () => {
 	ruleFormRef.value.validate(async (valid: boolean) => {
 		if (!valid) return false;

@@ -34,11 +34,16 @@ public sealed record PocTemplateBinding(
 /// </summary>
 public sealed class PocTemplateValidationException : Exception
 {
+    /// <summary>初始化 PocTemplateValidationException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocTemplateValidationException(string message)
         : base(message)
     {
     }
 
+    /// <summary>初始化 PocTemplateValidationException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
+    /// <param name="message">message 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="innerException">innerException 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocTemplateValidationException(string message, Exception innerException)
         : base(message, innerException)
     {

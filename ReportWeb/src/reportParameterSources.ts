@@ -5,6 +5,11 @@ import type {
   ParameterDefinition,
 } from './types';
 
+/**
+ * 构建 reportParameterSources 所需的 create Parameter 内容，并保证生成结果符合调用约定。
+ * @param index - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function createParameter(index: number): ParameterDefinition {
   return {
     code: `parameter${index + 1}`,
@@ -26,10 +31,21 @@ function createParameter(index: number): ParameterDefinition {
   };
 }
 
+/**
+ * 校验 reportParameterSources 的 is External 条件，并返回可供后续流程判断的结果。
+ * @param sourceType - sourceType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function isExternal(sourceType: string | undefined): boolean {
   return sourceType?.toLowerCase() === 'external';
 }
 
+/**
+ * 按 align Dataset Variables 规则筛选 reportParameterSources 数据，并返回满足条件的结果。
+ * @param parameters - parameters 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param variables - variables 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function alignDatasetVariables(
   parameters: readonly ParameterDefinition[],
   variables: readonly DatasetVariableDefinition[],
@@ -71,6 +87,13 @@ export function alignDatasetVariables(
   ];
 }
 
+/**
+ * 创建并返回 reportParameterSources 的 bind External Field 配置对象，集中提供相关状态和操作入口。
+ * @param parameter - parameter 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param source - 本次转换或写入使用的数据对象。
+ * @param field - 参与映射、显示或数据写入的字段集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function bindExternalField(
   parameter: ParameterDefinition,
   source: ExternalParameterSourceDefinition,
@@ -93,6 +116,12 @@ export function bindExternalField(
   };
 }
 
+/**
+ * 接收并校验 reportParameterSources 的 import External Source Fields 输入，随后写入目标状态。
+ * @param parameters - parameters 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param source - 本次转换或写入使用的数据对象。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function importExternalSourceFields(
   parameters: readonly ParameterDefinition[],
   source: ExternalParameterSourceDefinition,

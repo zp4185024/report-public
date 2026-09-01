@@ -429,6 +429,7 @@ export const DingTalkApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiDingTalkDingTalkCreateAndDeliverTokenPost(token: string, body?: DingTalkCreateAndDeliverInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminNETResultDingTalkCreateAndDeliverOutput>>> {
+            // 第一阶段：调用 DingTalkApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await DingTalkApiAxiosParamCreator(configuration).apiDingTalkDingTalkCreateAndDeliverTokenPost(token, body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -462,6 +463,7 @@ export const DingTalkApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await DingTalkApiAxiosParamCreator(configuration).apiDingTalkDingTalkCurrentEmployeesRosterListAccessTokenPost(body, accessToken, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第2阶段：整理 DingTalkApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -502,6 +504,7 @@ export const DingTalkApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiDingTalkDingTalkWorkflowProcessInstancesTokenInputPost(token: string, input: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminNETResultDingTalkGetProcessInstancesOutput>>> {
+            // 第3阶段：调用 DingTalkApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await DingTalkApiAxiosParamCreator(configuration).apiDingTalkDingTalkWorkflowProcessInstancesTokenInputPost(token, input, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -541,6 +544,8 @@ export const DingTalkApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiDingTalkDingTalkCreateAndDeliverTokenPost(token: string, body?: DingTalkCreateAndDeliverInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminNETResultDingTalkCreateAndDeliverOutput>> {
+            // 第一阶段：整理 DingTalkApiFactory 已计算的数据，并按方法契约返回最终结果。
+            // 第一阶段：整理 DingTalkApiFactory 已计算的数据，并按方法契约返回最终结果。
             return DingTalkApiFp(configuration).apiDingTalkDingTalkCreateAndDeliverTokenPost(token, body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -563,6 +568,7 @@ export const DingTalkApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiDingTalkDingTalkCurrentEmployeesRosterListAccessTokenPost(body: GetDingTalkCurrentEmployeesRosterListInput, accessToken: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminNETResultDingTalkBaseResponseListDingTalkEmpRosterFieldVo>> {
+            // 第2阶段：整理 DingTalkApiFactory 已计算的数据，并按方法契约返回最终结果。
             return DingTalkApiFp(configuration).apiDingTalkDingTalkCurrentEmployeesRosterListAccessTokenPost(body, accessToken, options).then((request) => request(axios, basePath));
         },
         /**
@@ -583,6 +589,8 @@ export const DingTalkApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiDingTalkDingTalkTokenGet(options?: AxiosRequestConfig): Promise<AxiosResponse<AdminNETResultGetDingTalkTokenOutput>> {
+            // 第2阶段：整理 DingTalkApiFactory 已计算的数据，并按方法契约返回最终结果。
+            // 第3阶段：整理 DingTalkApiFactory 已计算的数据，并按方法契约返回最终结果。
             return DingTalkApiFp(configuration).apiDingTalkDingTalkTokenGet(options).then((request) => request(axios, basePath));
         },
         /**

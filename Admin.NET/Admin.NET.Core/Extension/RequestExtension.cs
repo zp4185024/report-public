@@ -8,11 +8,9 @@ namespace Admin.NET.Core;
 
 public static class RequestExtension
 {
-    /// <summary>
-    /// 获取请求地址源
-    /// </summary>
-    /// <param name="request"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 RequestExtension 所需的 Get Origin 数据，并按调用约定返回结果。</summary>
+    /// <param name="request">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static string GetOrigin(this HttpRequest request)
     {
         string scheme = request.Scheme;

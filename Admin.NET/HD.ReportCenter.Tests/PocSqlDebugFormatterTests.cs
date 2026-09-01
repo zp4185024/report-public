@@ -4,6 +4,7 @@ namespace HD.ReportCenter.Tests;
 
 public sealed class PocSqlDebugFormatterTests
 {
+    /// <summary>验证 Create Preserves Parameterized Sql And Builds Display Only Sql 场景下的预期行为，并防止相关逻辑回归。</summary>
     [Fact]
     public void Create_PreservesParameterizedSqlAndBuildsDisplayOnlySql()
     {

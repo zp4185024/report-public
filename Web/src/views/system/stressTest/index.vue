@@ -143,6 +143,10 @@ onMounted(async () => {
 });
 
 // 获取分组列表
+/**
+ * 查询或读取 index 所需的 get Group List 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getGroupList = async () => {
 	try {
 		const response = await request('/api/swagger/swaggerGroups', { method: 'get' });
@@ -167,6 +171,11 @@ const getGroupList = async () => {
 }
 
 // 接口树节点按钮事件
+/**
+ * 负责 index 的 tree Node Test 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const treeNodeTest = async (node: any) => {
 	if (node.id == 0) return;
 	state.ruleForm = {
@@ -185,8 +194,18 @@ const treeNodeTest = async (node: any) => {
 	showDialog(state.ruleForm)
 };
 
+/**
+ * 准备 index 的 show Dialog 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const showDialog = async (row: any) => {
 	const newRow = row ?? { ...state.ruleForm };
+	/**
+	 * 将 index 中的 convert To Key Value Pairs 输入转换为调用方需要的稳定格式。
+	 * @param params - 本次操作使用的输入数据。
+	 * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+	 */
 	const convertToKeyValuePairs = (params: any) => {
 		if (Array.isArray(params) && params.every(item => Array.isArray(item) && item.length === 2)) {
 			return params
@@ -207,10 +226,20 @@ const showDialog = async (row: any) => {
 }
 
 // 刷新数据
+/**
+ * 重置或刷新 index 的 refresh Data 状态，并重新加载所需数据。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const refreshData = (data: StressTestOutput) => {
 	state.result = data;
 }
 
+/**
+ * 查询或读取 index 所需的 get Api List 数据，并按调用约定返回结果。
+ * @param keywords - keywords 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const getApiList = (keywords?: string | undefined) => {
 	const emojiPattern = /[\u{2139}\u{2B05}-\u{2B07}\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu;
 	return request(state.swaggerUrl, { method: 'get' }).then(({ data }) => {
@@ -236,10 +265,20 @@ const getApiList = (keywords?: string | undefined) => {
 };
 
 // 查询树节点
+/**
+ * 查询或读取 index 所需的 query Tree Node 数据，并按调用约定返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const queryTreeNode = async () => {
 	state.data = await getApiList(state.keywords);
 }
 
+/**
+ * 按 filter Node 条件比较、筛选或整理 index 数据，并返回顺序稳定的结果。
+ * @param value - 需要读取、校验或转换的业务值。
+ * @param data - 本次操作使用的输入数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const filterNode = (value: string, data: any) => {
 	if (!value) return true;
 	return data.name.includes(value);

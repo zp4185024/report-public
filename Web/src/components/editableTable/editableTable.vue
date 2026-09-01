@@ -51,12 +51,23 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 const localData = ref(props.modelValue);
 
+/**
+ * 移除 editableTable 中与 remove User 对应的数据，并清理关联状态。
+ * @param id - 需要定位的业务记录标识。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const removeUser = (id: number) => {
 	localData.value = localData.value.filter((user) => user.id !== id);
 	// console.log('after remove:', localData.value);
 	emit('update:modelValue', localData.value);
 };
 
+/**
+ * 根据指针位置更新 editableTable 的 move User 坐标，并限制目标元素不超出可视区域。
+ * @param id - 需要定位的业务记录标识。
+ * @param direction - direction 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const moveUser = (id: number, direction: 'up' | 'down') => {
 	const index = localData.value.findIndex((user) => user.id === id);
 	if (direction === 'up' && index > 0) {
@@ -74,8 +85,23 @@ watch(
 	},
 	{ deep: true }
 );
+/**
+ * 校验 editableTable 的 is Editable 条件，并返回可供后续流程判断的结果。
+ * @param col - col 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const isEditable = (col: EditableColumn) => col.editable !== false;
+/**
+ * 校验 editableTable 的 is First Row 条件，并返回可供后续流程判断的结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const isFirstRow = (row: Record<string, any>) => localData.value[0].id === row.id;
+/**
+ * 校验 editableTable 的 is Last Row 条件，并返回可供后续流程判断的结果。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const isLastRow = (row: Record<string, any>) => localData.value[localData.value.length - 1].id === row.id;
 </script>
 

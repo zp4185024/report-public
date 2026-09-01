@@ -95,6 +95,10 @@ onMounted(async () => {
 });
 
 // 查询操作
+/**
+ * 响应 index 的 handle Query 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleQuery = async () => {
 	state.loading = true;
 	let params = Object.assign(state.queryParams, state.tableParams);
@@ -105,6 +109,10 @@ const handleQuery = async () => {
 };
 
 // 重置操作
+/**
+ * 重置或刷新 index 的 reset Query 状态，并重新加载所需数据。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const resetQuery = async () => {
 	state.queryParams.id = -1;
 	state.queryParams.pid = undefined;
@@ -114,6 +122,10 @@ const resetQuery = async () => {
 };
 
 // 打开新增页面
+/**
+ * 准备 index 的 open Add Region 交互状态并打开对应界面。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openAddRegion = () => {
 	state.editRegionTitle = '添加行政区域';
     const parent = regionTreeRef.value?.getCurrentNode() ?? { id: 0, name: "顶级" };
@@ -122,12 +134,22 @@ const openAddRegion = () => {
 };
 
 // 打开编辑页面
+/**
+ * 准备 index 的 open Edit Region 交互状态并打开对应界面。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const openEditRegion = (row: any) => {
 	state.editRegionTitle = '编辑行政区域';
 	editRegionRef.value?.openDialog(row);
 };
 
 // 删除
+/**
+ * 从 index 移除 del Region 对应数据，并清理相关缓存、选中项或临时状态。
+ * @param row - 需要遍历、筛选或写入的业务数据集合。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const delRegion = (row: any) => {
 	ElMessageBox.confirm(`确定删除行政区域：【${row.name}】?`, '提示', {
 		confirmButtonText: '确定',
@@ -145,6 +167,11 @@ const delRegion = (row: any) => {
 };
 
 // 树组件点击
+/**
+ * 负责 index 的 node Click 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @param node - node 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const nodeClick = async (node: any) => {
 	state.queryParams.pid = node.id;
 	state.queryParams.name = undefined;
@@ -153,6 +180,10 @@ const nodeClick = async (node: any) => {
 };
 
 // 同步国家统计局操作
+/**
+ * 负责 index 的 handl Sync 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handlSync = async () => {
 	ElMessageBox.confirm('确认同步国家统计局行政区域数据？', '提示', {
 		confirmButtonText: '确定',
@@ -172,12 +203,22 @@ const handlSync = async () => {
 };
 
 // 改变页面容量
+/**
+ * 响应 index 的 handle Size Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleSizeChange = async (val: number) => {
 	state.tableParams.pageSize = val;
 	await handleQuery();
 };
 
 // 改变页码序号
+/**
+ * 响应 index 的 handle Current Change 事件，并协调相关状态和后续操作。
+ * @param val - val 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const handleCurrentChange = async (val: number) => {
 	state.tableParams.page = val;
 	await handleQuery();

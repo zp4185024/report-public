@@ -25,6 +25,7 @@ import { CodeGenConfig } from '../models';
  * @export
  */
 export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Configuration) {
+    // 第一阶段：整理 SysCodeGenConfigApiAxiosParamCreator 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -72,6 +73,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
          * @throws {RequiredError}
          */
         apiSysCodeGenConfigDetailGet: async (id?: number, codeGenId?: number, columnName?: string, columnKey?: string, propertyName?: string, columnLength?: number, lowerPropertyName?: string, columnComment?: string, netType?: string, dataType?: string, defaultValue?: string, nullableNetType?: string, effectType?: string, fkConfigId?: string, fkEntityName?: string, fkTableName?: string, lowerFkEntityName?: string, fkLinkColumnName?: string, fkDisplayColumns?: string, fkDisplayColumnList?: Array<string>, lowerFkDisplayColumnsList?: Array<string>, fkColumnNetType?: string, pidColumn?: string, dictTypeCode?: string, queryType?: string, whetherQuery?: string, whetherRetract?: string, whetherRequired?: string, whetherSortable?: string, whetherTable?: string, whetherAddUpdate?: string, whetherImport?: string, whetherCommon?: string, orderNo?: number, isSelectorEffectType?: boolean, propertyNameTrimEndId?: string, lowerPropertyNameTrimEndId?: string, extendedPropertyName?: string, lowerExtendedPropertyName?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // 第2阶段：构造 SysCodeGenConfigApiAxiosParamCreator 当前阶段需要的中间数据和执行参数。
             const localVarPath = `/api/sysCodeGenConfig/detail`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, 'https://example.com');
@@ -81,6 +83,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
             const localVarRequestOptions :AxiosRequestConfig = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
+            // 第一阶段：构造 apiSysCodeGenConfigDetailGet 当前阶段需要的中间数据和执行参数。
             const localVarQueryParameter = {} as any;
 
             // authentication Bearer required
@@ -109,6 +112,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (propertyName !== undefined) {
+                // 第3阶段：根据 SysCodeGenConfigApiAxiosParamCreator 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['PropertyName'] = propertyName;
             }
 
@@ -120,6 +124,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
                 localVarQueryParameter['LowerPropertyName'] = lowerPropertyName;
             }
 
+            // 第2阶段：检查 apiSysCodeGenConfigDetailGet 当前条件，并按匹配分支执行对应处理。
             if (columnComment !== undefined) {
                 localVarQueryParameter['ColumnComment'] = columnComment;
             }
@@ -145,6 +150,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (fkConfigId !== undefined) {
+                // 第4阶段：根据 SysCodeGenConfigApiAxiosParamCreator 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['FkConfigId'] = fkConfigId;
             }
 
@@ -157,6 +163,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (lowerFkEntityName !== undefined) {
+                // 第3阶段：根据 apiSysCodeGenConfigDetailGet 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['LowerFkEntityName'] = lowerFkEntityName;
             }
 
@@ -184,6 +191,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
                 localVarQueryParameter['PidColumn'] = pidColumn;
             }
 
+            // 第5阶段：检查 SysCodeGenConfigApiAxiosParamCreator 当前条件，并按匹配分支执行对应处理。
             if (dictTypeCode !== undefined) {
                 localVarQueryParameter['DictTypeCode'] = dictTypeCode;
             }
@@ -196,6 +204,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
                 localVarQueryParameter['WhetherQuery'] = whetherQuery;
             }
 
+            // 第4阶段：检查 apiSysCodeGenConfigDetailGet 当前条件，并按匹配分支执行对应处理。
             if (whetherRetract !== undefined) {
                 localVarQueryParameter['WhetherRetract'] = whetherRetract;
             }
@@ -221,6 +230,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (whetherCommon !== undefined) {
+                // 第6阶段：根据 SysCodeGenConfigApiAxiosParamCreator 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['WhetherCommon'] = whetherCommon;
             }
 
@@ -233,6 +243,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (propertyNameTrimEndId !== undefined) {
+                // 第5阶段：根据 apiSysCodeGenConfigDetailGet 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['PropertyNameTrimEndId'] = propertyNameTrimEndId;
             }
 
@@ -259,6 +270,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
 
+            // 第7阶段：整理 SysCodeGenConfigApiAxiosParamCreator 已计算的数据，并按方法契约返回最终结果。
             return {
                 url: localVarUrlObj.pathname + localVarUrlObj.search + localVarUrlObj.hash,
                 options: localVarRequestOptions,
@@ -310,6 +322,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
          * @throws {RequiredError}
          */
         apiSysCodeGenConfigListGet: async (id?: number, codeGenId?: number, columnName?: string, columnKey?: string, propertyName?: string, columnLength?: number, lowerPropertyName?: string, columnComment?: string, netType?: string, dataType?: string, defaultValue?: string, nullableNetType?: string, effectType?: string, fkConfigId?: string, fkEntityName?: string, fkTableName?: string, lowerFkEntityName?: string, fkLinkColumnName?: string, fkDisplayColumns?: string, fkDisplayColumnList?: Array<string>, lowerFkDisplayColumnsList?: Array<string>, fkColumnNetType?: string, pidColumn?: string, dictTypeCode?: string, queryType?: string, whetherQuery?: string, whetherRetract?: string, whetherRequired?: string, whetherSortable?: string, whetherTable?: string, whetherAddUpdate?: string, whetherImport?: string, whetherCommon?: string, orderNo?: number, isSelectorEffectType?: boolean, propertyNameTrimEndId?: string, lowerPropertyNameTrimEndId?: string, extendedPropertyName?: string, lowerExtendedPropertyName?: string, options: AxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // 第8阶段：构造 SysCodeGenConfigApiAxiosParamCreator 当前阶段需要的中间数据和执行参数。
             const localVarPath = `/api/sysCodeGenConfig/list`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, 'https://example.com');
@@ -319,6 +332,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
             const localVarRequestOptions :AxiosRequestConfig = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
+            // 第一阶段：构造 apiSysCodeGenConfigListGet 当前阶段需要的中间数据和执行参数。
             const localVarQueryParameter = {} as any;
 
             // authentication Bearer required
@@ -335,6 +349,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (codeGenId !== undefined) {
+                // 第9阶段：根据 SysCodeGenConfigApiAxiosParamCreator 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['CodeGenId'] = codeGenId;
             }
 
@@ -358,6 +373,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
                 localVarQueryParameter['LowerPropertyName'] = lowerPropertyName;
             }
 
+            // 第2阶段：检查 apiSysCodeGenConfigListGet 当前条件，并按匹配分支执行对应处理。
             if (columnComment !== undefined) {
                 localVarQueryParameter['ColumnComment'] = columnComment;
             }
@@ -371,6 +387,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (defaultValue !== undefined) {
+                // 第10阶段：根据 SysCodeGenConfigApiAxiosParamCreator 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['DefaultValue'] = defaultValue;
             }
 
@@ -395,6 +412,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (lowerFkEntityName !== undefined) {
+                // 第3阶段：根据 apiSysCodeGenConfigListGet 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['LowerFkEntityName'] = lowerFkEntityName;
             }
 
@@ -410,6 +428,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
                 localVarQueryParameter['FkDisplayColumnList'] = fkDisplayColumnList;
             }
 
+            // 第11阶段：检查 SysCodeGenConfigApiAxiosParamCreator 当前条件，并按匹配分支执行对应处理。
             if (lowerFkDisplayColumnsList) {
                 localVarQueryParameter['LowerFkDisplayColumnsList'] = lowerFkDisplayColumnsList;
             }
@@ -434,6 +453,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
                 localVarQueryParameter['WhetherQuery'] = whetherQuery;
             }
 
+            // 第4阶段：检查 apiSysCodeGenConfigListGet 当前条件，并按匹配分支执行对应处理。
             if (whetherRetract !== undefined) {
                 localVarQueryParameter['WhetherRetract'] = whetherRetract;
             }
@@ -447,6 +467,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (whetherTable !== undefined) {
+                // 第12阶段：根据 SysCodeGenConfigApiAxiosParamCreator 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['WhetherTable'] = whetherTable;
             }
 
@@ -471,6 +492,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
             }
 
             if (propertyNameTrimEndId !== undefined) {
+                // 第5阶段：根据 apiSysCodeGenConfigListGet 当前分支转换输入数据，并保存该阶段产生的中间结果。
                 localVarQueryParameter['PropertyNameTrimEndId'] = propertyNameTrimEndId;
             }
 
@@ -486,6 +508,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
                 localVarQueryParameter['LowerExtendedPropertyName'] = lowerExtendedPropertyName;
             }
 
+            // 第13阶段：构造 SysCodeGenConfigApiAxiosParamCreator 当前阶段需要的中间数据和执行参数。
             const query = new URLSearchParams(localVarUrlObj.search);
             for (const key in localVarQueryParameter) {
                 query.set(key, localVarQueryParameter[key]);
@@ -523,6 +546,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
 
             // authentication Bearer required
             // http bearer authentication required
+            // 第14阶段：检查 SysCodeGenConfigApiAxiosParamCreator 当前条件，并按匹配分支执行对应处理。
             if (configuration && configuration.accessToken) {
                 const accessToken = typeof configuration.accessToken === 'function'
                     ? await configuration.accessToken()
@@ -558,6 +582,7 @@ export const SysCodeGenConfigApiAxiosParamCreator = function (configuration?: Co
  * @export
  */
 export const SysCodeGenConfigApiFp = function(configuration?: Configuration) {
+    // 第一阶段：整理 SysCodeGenConfigApiFp 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -605,9 +630,11 @@ export const SysCodeGenConfigApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysCodeGenConfigDetailGet(id?: number, codeGenId?: number, columnName?: string, columnKey?: string, propertyName?: string, columnLength?: number, lowerPropertyName?: string, columnComment?: string, netType?: string, dataType?: string, defaultValue?: string, nullableNetType?: string, effectType?: string, fkConfigId?: string, fkEntityName?: string, fkTableName?: string, lowerFkEntityName?: string, fkLinkColumnName?: string, fkDisplayColumns?: string, fkDisplayColumnList?: Array<string>, lowerFkDisplayColumnsList?: Array<string>, fkColumnNetType?: string, pidColumn?: string, dictTypeCode?: string, queryType?: string, whetherQuery?: string, whetherRetract?: string, whetherRequired?: string, whetherSortable?: string, whetherTable?: string, whetherAddUpdate?: string, whetherImport?: string, whetherCommon?: string, orderNo?: number, isSelectorEffectType?: boolean, propertyNameTrimEndId?: string, lowerPropertyNameTrimEndId?: string, extendedPropertyName?: string, lowerExtendedPropertyName?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultSysCodeGenConfig>>> {
+            // 第2阶段：调用 SysCodeGenConfigApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysCodeGenConfigApiAxiosParamCreator(configuration).apiSysCodeGenConfigDetailGet(id, codeGenId, columnName, columnKey, propertyName, columnLength, lowerPropertyName, columnComment, netType, dataType, defaultValue, nullableNetType, effectType, fkConfigId, fkEntityName, fkTableName, lowerFkEntityName, fkLinkColumnName, fkDisplayColumns, fkDisplayColumnList, lowerFkDisplayColumnsList, fkColumnNetType, pidColumn, dictTypeCode, queryType, whetherQuery, whetherRetract, whetherRequired, whetherSortable, whetherTable, whetherAddUpdate, whetherImport, whetherCommon, orderNo, isSelectorEffectType, propertyNameTrimEndId, lowerPropertyNameTrimEndId, extendedPropertyName, lowerExtendedPropertyName, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
+                // 第3阶段：整理 SysCodeGenConfigApiFp 已计算的数据，并按方法契约返回最终结果。
                 return axios.request(axiosRequestArgs);
             };
         },
@@ -657,6 +684,7 @@ export const SysCodeGenConfigApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysCodeGenConfigListGet(id?: number, codeGenId?: number, columnName?: string, columnKey?: string, propertyName?: string, columnLength?: number, lowerPropertyName?: string, columnComment?: string, netType?: string, dataType?: string, defaultValue?: string, nullableNetType?: string, effectType?: string, fkConfigId?: string, fkEntityName?: string, fkTableName?: string, lowerFkEntityName?: string, fkLinkColumnName?: string, fkDisplayColumns?: string, fkDisplayColumnList?: Array<string>, lowerFkDisplayColumnsList?: Array<string>, fkColumnNetType?: string, pidColumn?: string, dictTypeCode?: string, queryType?: string, whetherQuery?: string, whetherRetract?: string, whetherRequired?: string, whetherSortable?: string, whetherTable?: string, whetherAddUpdate?: string, whetherImport?: string, whetherCommon?: string, orderNo?: number, isSelectorEffectType?: boolean, propertyNameTrimEndId?: string, lowerPropertyNameTrimEndId?: string, extendedPropertyName?: string, lowerExtendedPropertyName?: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<AdminResultListCodeGenConfig>>> {
+            // 第4阶段：调用 SysCodeGenConfigApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysCodeGenConfigApiAxiosParamCreator(configuration).apiSysCodeGenConfigListGet(id, codeGenId, columnName, columnKey, propertyName, columnLength, lowerPropertyName, columnComment, netType, dataType, defaultValue, nullableNetType, effectType, fkConfigId, fkEntityName, fkTableName, lowerFkEntityName, fkLinkColumnName, fkDisplayColumns, fkDisplayColumnList, lowerFkDisplayColumnsList, fkColumnNetType, pidColumn, dictTypeCode, queryType, whetherQuery, whetherRetract, whetherRequired, whetherSortable, whetherTable, whetherAddUpdate, whetherImport, whetherCommon, orderNo, isSelectorEffectType, propertyNameTrimEndId, lowerPropertyNameTrimEndId, extendedPropertyName, lowerExtendedPropertyName, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -685,6 +713,7 @@ export const SysCodeGenConfigApiFp = function(configuration?: Configuration) {
  * @export
  */
 export const SysCodeGenConfigApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    // 第一阶段：整理 SysCodeGenConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -732,6 +761,7 @@ export const SysCodeGenConfigApiFactory = function (configuration?: Configuratio
          * @throws {RequiredError}
          */
         async apiSysCodeGenConfigDetailGet(id?: number, codeGenId?: number, columnName?: string, columnKey?: string, propertyName?: string, columnLength?: number, lowerPropertyName?: string, columnComment?: string, netType?: string, dataType?: string, defaultValue?: string, nullableNetType?: string, effectType?: string, fkConfigId?: string, fkEntityName?: string, fkTableName?: string, lowerFkEntityName?: string, fkLinkColumnName?: string, fkDisplayColumns?: string, fkDisplayColumnList?: Array<string>, lowerFkDisplayColumnsList?: Array<string>, fkColumnNetType?: string, pidColumn?: string, dictTypeCode?: string, queryType?: string, whetherQuery?: string, whetherRetract?: string, whetherRequired?: string, whetherSortable?: string, whetherTable?: string, whetherAddUpdate?: string, whetherImport?: string, whetherCommon?: string, orderNo?: number, isSelectorEffectType?: boolean, propertyNameTrimEndId?: string, lowerPropertyNameTrimEndId?: string, extendedPropertyName?: string, lowerExtendedPropertyName?: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSysCodeGenConfig>> {
+            // 第2阶段：整理 SysCodeGenConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCodeGenConfigApiFp(configuration).apiSysCodeGenConfigDetailGet(id, codeGenId, columnName, columnKey, propertyName, columnLength, lowerPropertyName, columnComment, netType, dataType, defaultValue, nullableNetType, effectType, fkConfigId, fkEntityName, fkTableName, lowerFkEntityName, fkLinkColumnName, fkDisplayColumns, fkDisplayColumnList, lowerFkDisplayColumnsList, fkColumnNetType, pidColumn, dictTypeCode, queryType, whetherQuery, whetherRetract, whetherRequired, whetherSortable, whetherTable, whetherAddUpdate, whetherImport, whetherCommon, orderNo, isSelectorEffectType, propertyNameTrimEndId, lowerPropertyNameTrimEndId, extendedPropertyName, lowerExtendedPropertyName, options).then((request) => request(axios, basePath));
         },
         /**
@@ -780,6 +810,7 @@ export const SysCodeGenConfigApiFactory = function (configuration?: Configuratio
          * @throws {RequiredError}
          */
         async apiSysCodeGenConfigListGet(id?: number, codeGenId?: number, columnName?: string, columnKey?: string, propertyName?: string, columnLength?: number, lowerPropertyName?: string, columnComment?: string, netType?: string, dataType?: string, defaultValue?: string, nullableNetType?: string, effectType?: string, fkConfigId?: string, fkEntityName?: string, fkTableName?: string, lowerFkEntityName?: string, fkLinkColumnName?: string, fkDisplayColumns?: string, fkDisplayColumnList?: Array<string>, lowerFkDisplayColumnsList?: Array<string>, fkColumnNetType?: string, pidColumn?: string, dictTypeCode?: string, queryType?: string, whetherQuery?: string, whetherRetract?: string, whetherRequired?: string, whetherSortable?: string, whetherTable?: string, whetherAddUpdate?: string, whetherImport?: string, whetherCommon?: string, orderNo?: number, isSelectorEffectType?: boolean, propertyNameTrimEndId?: string, lowerPropertyNameTrimEndId?: string, extendedPropertyName?: string, lowerExtendedPropertyName?: string, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultListCodeGenConfig>> {
+            // 第3阶段：整理 SysCodeGenConfigApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysCodeGenConfigApiFp(configuration).apiSysCodeGenConfigListGet(id, codeGenId, columnName, columnKey, propertyName, columnLength, lowerPropertyName, columnComment, netType, dataType, defaultValue, nullableNetType, effectType, fkConfigId, fkEntityName, fkTableName, lowerFkEntityName, fkLinkColumnName, fkDisplayColumns, fkDisplayColumnList, lowerFkDisplayColumnsList, fkColumnNetType, pidColumn, dictTypeCode, queryType, whetherQuery, whetherRetract, whetherRequired, whetherSortable, whetherTable, whetherAddUpdate, whetherImport, whetherCommon, orderNo, isSelectorEffectType, propertyNameTrimEndId, lowerPropertyNameTrimEndId, extendedPropertyName, lowerExtendedPropertyName, options).then((request) => request(axios, basePath));
         },
         /**

@@ -26,6 +26,10 @@ const state = reactive<LinkViewState>({
 });
 
 // 立即前往
+/**
+ * 响应 link 的 on Goto Full Page 事件，并协调相关状态和后续操作。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 const onGotoFullPage = () => {
 	const { origin, pathname } = window.location;
 	if (verifyUrl(<string>state.isLink)) window.open(state.isLink);

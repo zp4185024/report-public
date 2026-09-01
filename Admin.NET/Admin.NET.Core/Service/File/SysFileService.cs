@@ -25,6 +25,13 @@ public class SysFileService : IDynamicApiController, ITransient
     private readonly INamedServiceProvider<ICustomFileProvider> _namedServiceProvider;
     private readonly ICustomFileProvider _customFileProvider;
 
+    /// <summary>初始化 SysFileService 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="userManager">userManager 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="sysFileRep">sysFileRep 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="oSSProviderOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="uploadOptions">控制本次处理行为的配置选项。</param>
+    /// <param name="namedServiceProvider">namedServiceProvider 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="configuration">configuration 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public SysFileService(UserManager userManager,
         SqlSugarRepository<SysFile> sysFileRep,
         IOptions<OSSProviderOptions> oSSProviderOptions,
@@ -58,8 +65,8 @@ public class SysFileService : IDynamicApiController, ITransient
     /// <summary>
     /// 获取文件分页列表 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取文件分页列表")]
     public async Task<SqlSugarPagedList<SysFile>> Page(PageFileInput input)
     {
@@ -80,8 +87,8 @@ public class SysFileService : IDynamicApiController, ITransient
     /// <summary>
     /// 上传文件Base64 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("上传文件Base64")]
     public async Task<SysFile> UploadFileFromBase64(UploadFileFromBase64Input input)
     {
@@ -107,11 +114,9 @@ public class SysFileService : IDynamicApiController, ITransient
         return await UploadFile(uploadFileInput);
     }
 
-    /// <summary>
-    /// 上传多文件 🔖
-    /// </summary>
-    /// <param name="files"></param>
-    /// <returns></returns>
+    /// <summary>接收并校验 SysFileService 的 Upload Files 输入，随后写入目标状态。</summary>
+    /// <param name="files">files 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("上传多文件")]
     public async Task<List<SysFile>> UploadFiles([Required] List<IFormFile> files)
     {
@@ -127,8 +132,8 @@ public class SysFileService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据文件Id或Url下载 🔖
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据文件Id或Url下载")]
     public async Task<IActionResult> DownloadFile(SysFile input)
     {
@@ -137,11 +142,9 @@ public class SysFileService : IDynamicApiController, ITransient
         return await GetFileStreamResult(file, fileName);
     }
 
-    /// <summary>
-    /// 文件预览 🔖
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysFileService 所需的 Get Preview 数据，并按调用约定返回结果。</summary>
+    /// <param name="id">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("文件预览")]
     public async Task<IActionResult> GetPreview([FromRoute] long id)
     {
@@ -150,20 +153,16 @@ public class SysFileService : IDynamicApiController, ITransient
         return await GetFileStreamResult(file, file.Id + "");
     }
 
-    /// <summary>
-    /// 获取文件流
-    /// </summary>
-    /// <param name="file"></param>
-    /// <param name="fileName"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysFileService 所需的 Get File Stream Result 数据，并按调用约定返回结果。</summary>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="fileName">需要读取、校验或转换的业务值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     private async Task<IActionResult> GetFileStreamResult(SysFile file, string fileName)
     {
         return await _customFileProvider.GetFileStreamResultAsync(file, fileName);
     }
 
-    /// <summary>
-    /// 获取文件流
-    /// </summary>
+    /// <summary>查询或读取 SysFileService 所需的 Get File Stream 数据，并按调用约定返回结果。</summary>
     [NonAction]
     public async Task<Stream> GetFileStream(SysFile file)
     {
@@ -175,8 +174,8 @@ public class SysFileService : IDynamicApiController, ITransient
     /// <summary>
     /// 下载指定文件Base64格式 🔖
     /// </summary>
-    /// <param name="url"></param>
-    /// <returns></returns>
+    /// <param name="url">url 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("下载指定文件Base64格式")]
     public async Task<string> DownloadFileBase64([FromBody] string url)
     {
@@ -184,11 +183,9 @@ public class SysFileService : IDynamicApiController, ITransient
         return await _customFileProvider.DownloadFileBase64Async(sysFile);
     }
 
-    /// <summary>
-    /// 删除文件 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>移除 SysFileService 中与 Delete File 对应的数据，并清理关联状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Delete"), HttpPost]
     [DisplayName("删除文件")]
     public async Task DeleteFile(BaseIdInput input)
@@ -198,11 +195,9 @@ public class SysFileService : IDynamicApiController, ITransient
         await _customFileProvider.DeleteFileAsync(file);
     }
 
-    /// <summary>
-    /// 更新文件 🔖
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
+    /// <summary>更新 SysFileService 的 Update File 状态，并同步相关业务数据。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [ApiDescriptionSettings(Name = "Update"), HttpPost]
     [DisplayName("更新文件")]
     public async Task UpdateFile(SysFile input)
@@ -213,11 +208,9 @@ public class SysFileService : IDynamicApiController, ITransient
         await _sysFileRep.UpdateAsync(input);
     }
 
-    /// <summary>
-    /// 获取文件 🔖
-    /// </summary>
-    /// <param name="id"></param>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysFileService 所需的 Get File 数据，并按调用约定返回结果。</summary>
+    /// <param name="id">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取文件")]
     public async Task<SysFile> GetFile([FromQuery] long id)
     {
@@ -228,18 +221,16 @@ public class SysFileService : IDynamicApiController, ITransient
     /// <summary>
     /// 根据文件Id集合获取文件 🔖
     /// </summary>
-    /// <param name="ids"></param>
-    /// <returns></returns>
+    /// <param name="ids">ids 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("根据文件Id集合获取文件")]
     public async Task<List<SysFile>> GetFileByIds([FromQuery][FlexibleArray<long>] List<long> ids)
     {
         return await _sysFileRep.AsQueryable().Where(u => ids.Contains(u.Id)).ToListAsync();
     }
 
-    /// <summary>
-    /// 获取文件路径 🔖
-    /// </summary>
-    /// <returns></returns>
+    /// <summary>查询或读取 SysFileService 所需的 Get Folder 数据，并按调用约定返回结果。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("获取文件路径")]
     public async Task<List<TreeNode>> GetFolder()
     {
@@ -254,12 +245,10 @@ public class SysFileService : IDynamicApiController, ITransient
         return tree.Children;
     }
 
-    /// <summary>
-    /// 上传文件 🔖
-    /// </summary>
-    /// <param name="input"></param>
+    /// <summary>接收并校验 SysFileService 的 Upload File 输入，随后写入目标状态。</summary>
+    /// <param name="input">符合当前接口契约的请求输入数据。</param>
     /// <param name="targetPath">存储目标路径</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("上传文件")]
     public async Task<SysFile> UploadFile([FromForm] UploadFileInput input, [BindNever] string targetPath = "")
     {
@@ -338,11 +327,9 @@ public class SysFileService : IDynamicApiController, ITransient
         return newFile;
     }
 
-    /// <summary>
-    /// 上传头像 🔖
-    /// </summary>
-    /// <param name="file"></param>
-    /// <returns></returns>
+    /// <summary>接收并校验 SysFileService 的 Upload Avatar 输入，随后写入目标状态。</summary>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("上传头像")]
     public async Task<SysFile> UploadAvatar([Required] IFormFile file)
     {
@@ -371,11 +358,9 @@ public class SysFileService : IDynamicApiController, ITransient
         return sysFile;
     }
 
-    /// <summary>
-    /// 上传电子签名 🔖
-    /// </summary>
-    /// <param name="file"></param>
-    /// <returns></returns>
+    /// <summary>接收并校验 SysFileService 的 Upload Signature 输入，随后写入目标状态。</summary>
+    /// <param name="file">file 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [DisplayName("上传电子签名")]
     public async Task<SysFile> UploadSignature([Required] IFormFile file)
     {
@@ -408,9 +393,9 @@ public class SysFileService : IDynamicApiController, ITransient
     /// <summary>
     /// 更新文件的业务数据Id
     /// </summary>
-    /// <param name="dataId"></param>
-    /// <param name="sysFiles"></param>
-    /// <returns></returns>
+    /// <param name="dataId">需要查询、更新或删除的业务记录标识。</param>
+    /// <param name="sysFiles">sysFiles 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task UpdateFileByDataId(long dataId, List<SysFile> sysFiles)
     {
@@ -429,8 +414,8 @@ public class SysFileService : IDynamicApiController, ITransient
     /// <summary>
     /// 删除业务数据对应的文件
     /// </summary>
-    /// <param name="dataId"></param>
-    /// <returns></returns>
+    /// <param name="dataId">需要查询、更新或删除的业务记录标识。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [NonAction]
     public async Task DeleteFileByDataId(long dataId)
     {

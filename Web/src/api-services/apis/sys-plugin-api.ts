@@ -340,6 +340,7 @@ export const SysPluginApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysPluginAddPost(body?: AddPluginInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysPluginApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysPluginApiAxiosParamCreator(configuration).apiSysPluginAddPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -369,6 +370,7 @@ export const SysPluginApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysPluginDeletePost(body?: DeletePluginInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第2阶段：调用 SysPluginApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysPluginApiAxiosParamCreator(configuration).apiSysPluginDeletePost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -397,6 +399,7 @@ export const SysPluginApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysPluginRemoveAssemblyAssemblyNamePost(assemblyName: string, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第3阶段：调用 SysPluginApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysPluginApiAxiosParamCreator(configuration).apiSysPluginRemoveAssemblyAssemblyNamePost(assemblyName, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -434,6 +437,7 @@ export const SysPluginApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysPluginAddPost(body?: AddPluginInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第一阶段：整理 SysPluginApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysPluginApiFp(configuration).apiSysPluginAddPost(body, options).then((request) => request(axios, basePath));
         },
         /**
@@ -465,6 +469,7 @@ export const SysPluginApiFactory = function (configuration?: Configuration, base
          * @throws {RequiredError}
          */
         async apiSysPluginPagePost(body?: PagePluginInput, options?: AxiosRequestConfig): Promise<AxiosResponse<AdminResultSqlSugarPagedListSysPlugin>> {
+            // 第2阶段：整理 SysPluginApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysPluginApiFp(configuration).apiSysPluginPagePost(body, options).then((request) => request(axios, basePath));
         },
         /**

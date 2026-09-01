@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { createPreviewToolbarPresentation } from './previewToolbar';
 import type { ExecuteResult } from './types';
 
+/**
+ * 验证 result 场景下的预期行为，并防止相关逻辑回归。
+ * @param page - 控制数据范围或位置的数值。
+ * @param rowCount - 控制数据范围或位置的数值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 function result(page: number, rowCount: number): ExecuteResult {
   return {
     page,

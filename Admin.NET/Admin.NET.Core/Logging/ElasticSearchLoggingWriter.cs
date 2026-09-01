@@ -17,6 +17,8 @@ public class ElasticSearchLoggingWriter : IDatabaseLoggingWriter, IDisposable
     private readonly ElasticsearchClient _esClient;
     private readonly SysConfigService _sysConfigService;
 
+    /// <summary>初始化 ElasticSearchLoggingWriter 实例，保存后续处理所需的依赖并建立初始状态。</summary>
+    /// <param name="scopeFactory">当前方法执行时使用的 scopeFactory 输入值。</param>
     public ElasticSearchLoggingWriter(IServiceScopeFactory scopeFactory)
     {
         _serviceScope = scopeFactory.CreateScope();
@@ -119,9 +121,7 @@ public class ElasticSearchLoggingWriter : IDatabaseLoggingWriter, IDisposable
         };
     }
 
-    /// <summary>
-    /// 释放服务作用域
-    /// </summary>
+    /// <summary>释放 ElasticSearchLoggingWriter 持有的连接、订阅或其他运行资源，避免资源继续占用。</summary>
     public void Dispose()
     {
         _serviceScope.Dispose();

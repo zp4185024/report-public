@@ -231,6 +231,7 @@ export const SysLogExApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLogExClearPost(options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第一阶段：调用 SysLogExApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLogExApiAxiosParamCreator(configuration).apiSysLogExClearPost(options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -259,6 +260,7 @@ export const SysLogExApiFp = function(configuration?: Configuration) {
          * @throws {RequiredError}
          */
         async apiSysLogExExportPost(body?: LogInput, options?: AxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => Promise<AxiosResponse<void>>> {
+            // 第2阶段：调用 SysLogExApiFp 依赖的异步能力，等待并校验返回数据。
             const localVarAxiosArgs = await SysLogExApiAxiosParamCreator(configuration).apiSysLogExExportPost(body, options);
             return (axios: AxiosInstance = globalAxios, basePath: string = BASE_PATH) => {
                 const axiosRequestArgs :AxiosRequestConfig = {...localVarAxiosArgs.options, url: basePath + localVarAxiosArgs.url};
@@ -287,6 +289,7 @@ export const SysLogExApiFp = function(configuration?: Configuration) {
  * @export
  */
 export const SysLogExApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    // 第一阶段：整理 SysLogExApiFactory 已计算的数据，并按方法契约返回最终结果。
     return {
         /**
          * 
@@ -315,6 +318,7 @@ export const SysLogExApiFactory = function (configuration?: Configuration, baseP
          * @throws {RequiredError}
          */
         async apiSysLogExExportPost(body?: LogInput, options?: AxiosRequestConfig): Promise<AxiosResponse<void>> {
+            // 第2阶段：整理 SysLogExApiFactory 已计算的数据，并按方法契约返回最终结果。
             return SysLogExApiFp(configuration).apiSysLogExExportPost(body, options).then((request) => request(axios, basePath));
         },
         /**

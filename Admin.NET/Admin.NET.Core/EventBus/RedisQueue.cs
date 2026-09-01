@@ -22,7 +22,7 @@ public static class RedisQueue
     /// <typeparam name="T"></typeparam>
     /// <param name="topic">主题</param>
     /// <param name="group">消费组。未指定消费组时使用简单队列（如RedisQueue），指定消费组时使用完整队列（如RedisStream）</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IProducerConsumer<T> GetQueue<T>(String topic, String group = null)
     {
         // 队列需要单列
@@ -39,8 +39,8 @@ public static class RedisQueue
     /// 获取可信队列，需要确认
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// <param name="topic"></param>
-    /// <returns></returns>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static RedisReliableQueue<T> GetRedisReliableQueue<T>(string topic)
     {
         // 队列需要单列
@@ -53,12 +53,10 @@ public static class RedisQueue
         return queue;
     }
 
-    /// <summary>
-    /// 可信队列回滚
-    /// </summary>
-    /// <param name="topic"></param>
-    /// <param name="retryInterval"></param>
-    /// <returns></returns>
+    /// <summary>根据 RedisQueue 当前输入计算 Rollback All Ack 结果，并按方法声明的类型返回。</summary>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
+    /// <param name="retryInterval">当前方法执行时使用的 retryInterval 输入值。</param>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int RollbackAllAck(string topic, int retryInterval = 60)
     {
         var queue = GetRedisReliableQueue<string>(topic);
@@ -69,10 +67,10 @@ public static class RedisQueue
     /// <summary>
     /// 发送一个数据列表到可信队列
     /// </summary>
-    /// <param name="topic"></param>
-    /// <param name="value"></param>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int AddReliableQueueList<T>(string topic, List<T> value)
     {
         var queue = GetRedisReliableQueue<T>(topic);
@@ -84,10 +82,10 @@ public static class RedisQueue
     /// <summary>
     /// 发送一条数据到可信队列
     /// </summary>
-    /// <param name="topic"></param>
-    /// <param name="value"></param>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int AddReliableQueue<T>(string topic, T value)
     {
         var queue = GetRedisReliableQueue<T>(topic);
@@ -96,12 +94,10 @@ public static class RedisQueue
         return result - count;
     }
 
-    /// <summary>
-    /// 获取延迟队列
-    /// </summary>
-    /// <param name="topic"></param>
+    /// <summary>查询或读取 RedisQueue 所需的 Get Delay Queue 数据，并按调用约定返回结果。</summary>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static RedisDelayQueue<T> GetDelayQueue<T>(string topic)
     {
         // 队列需要单列
@@ -117,11 +113,11 @@ public static class RedisQueue
     /// <summary>
     /// 发送一条数据到延迟队列
     /// </summary>
-    /// <param name="topic"></param>
-    /// <param name="value"></param>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
     /// <param name="delay">延迟时间。单位秒</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int AddDelayQueue<T>(string topic, T value, int delay)
     {
         var queue = GetDelayQueue<T>(topic);
@@ -131,11 +127,11 @@ public static class RedisQueue
     /// <summary>
     /// 发送数据列表到延迟队列
     /// </summary>
-    /// <param name="topic"></param>
-    /// <param name="value"></param>
-    /// <param name="delay"></param>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
+    /// <param name="value">需要读取、校验、比较或转换的业务值。</param>
+    /// <param name="delay">当前方法执行时使用的 delay 输入值。</param>
     /// <typeparam name="T">延迟时间。单位秒</typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static int AddDelayQueue<T>(string topic, List<T> value, int delay)
     {
         var queue = GetDelayQueue<T>(topic);
@@ -146,9 +142,9 @@ public static class RedisQueue
     /// <summary>
     /// 在可信队列获取一条数据
     /// </summary>
-    /// <param name="topic"></param>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static T ReliableTakeOne<T>(string topic)
     {
         var queue = GetRedisReliableQueue<T>(topic);
@@ -158,9 +154,9 @@ public static class RedisQueue
     /// <summary>
     /// 异步在可信队列获取一条数据
     /// </summary>
-    /// <param name="topic"></param>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static async Task<T> ReliableTakeOneAsync<T>(string topic)
     {
         var queue = GetRedisReliableQueue<T>(topic);
@@ -170,24 +166,22 @@ public static class RedisQueue
     /// <summary>
     /// 在可信队列获取多条数据
     /// </summary>
-    /// <param name="topic"></param>
-    /// <param name="count"></param>
+    /// <param name="topic">当前方法执行时使用的 topic 输入值。</param>
+    /// <param name="count">控制数据范围、数量或工作簿坐标的数值。</param>
     /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static List<T> ReliableTake<T>(string topic, int count)
     {
         var queue = GetRedisReliableQueue<T>(topic);
         return queue.Take(count).ToList();
     }
 
-    /// <summary>
-    /// 申请分布式锁
-    /// </summary>
+    /// <summary>根据 RedisQueue 当前输入计算 Begin Cache Lock 结果，并按方法声明的类型返回。</summary>
     /// <param name="key">要锁定的key</param>
     /// <param name="msTimeout">申请锁等待的时间，单位毫秒</param>
     /// <param name="msExpire">锁过期时间，超过该时间没有主动是放则自动是放，必须整数秒，单位毫秒</param>
     /// <param name="throwOnFailure">失败时是否抛出异常,如不抛出异常，可通过判断返回null得知申请锁失败</param>
-    /// <returns></returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     public static IDisposable? BeginCacheLock(string key, int msTimeout = 500, int msExpire = 10000, bool throwOnFailure = true)
     {
         try

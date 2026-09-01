@@ -34,6 +34,12 @@ interface ApiEnvelope<T> {
   result: T;
 }
 
+/**
+ * 构造并发送 api 的 request Json 网络请求，随后按接口类型返回响应结果。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param init - init 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -96,14 +102,34 @@ async function requestDownload(
   URL.revokeObjectURL(url);
 }
 
+/**
+ * 构建 api 所需的 create Report Api 内容，并保证生成结果符合调用约定。
+ * @param reportCode - 需要读取、校验或转换的业务值。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 export function createReportApi(reportCode: string) {
   const basePath = `/api/report-center/poc/${encodeURIComponent(reportCode)}`;
+  // 第一阶段：整理 createReportApi 已计算的数据，并按方法契约返回最终结果。
+  // 第一阶段：整理 createReportApi 已计算的数据，并按方法契约返回最终结果。
   return {
+  /**
+   * 构造并发送 api 的 definition 网络请求，随后按接口类型返回响应结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   definition: () => requestJson<ReportDefinition>(`${basePath}/definition`),
 
+  /**
+   * 构造并发送 api 的 configuration 网络请求，随后按接口类型返回响应结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   configuration: () =>
     requestJson<ReportConfigurationDocument>(`${basePath}/configuration`),
 
+  /**
+   * 更新 api 的 save Configuration 状态，并同步相关业务数据。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   saveConfiguration: (request: SaveReportConfigurationRequest) =>
     requestJson<ReportConfigurationDocument>(`${basePath}/configuration`, {
       method: 'PUT',
@@ -111,6 +137,11 @@ export function createReportApi(reportCode: string) {
       body: JSON.stringify(request),
     }),
 
+  /**
+   * 构造并发送 api 的 unlock Share Protection 网络请求，随后按接口类型返回响应结果。
+   * @param password - password 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   unlockShareProtection: (password: string) =>
     requestJson<ShareProtectionUnlockResult>(`${basePath}/share-protection/unlock`, {
       method: 'POST',
@@ -118,8 +149,17 @@ export function createReportApi(reportCode: string) {
       body: JSON.stringify({ password }),
     }),
 
+  /**
+   * 构造并发送 api 的 template 网络请求，随后按接口类型返回响应结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   template: () => requestJson<TemplateDocument>(`${basePath}/template`),
 
+  /**
+   * 更新 api 的 save Template 状态，并同步相关业务数据。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   saveTemplate: (request: SaveTemplateRequest) =>
     requestJson<TemplateDocument>(`${basePath}/template`, {
       method: 'PUT',
@@ -127,9 +167,19 @@ export function createReportApi(reportCode: string) {
       body: JSON.stringify(request),
     }),
 
+  /**
+   * 接收并校验 api 的 import Template 输入，随后写入目标状态。
+   * @param file - file 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   importTemplate: (file: File) => {
+    // 第2阶段：构造 createReportApi 当前阶段需要的中间数据和执行参数。
     const form = new FormData();
+    // 第3阶段：根据 createReportApi 当前分支转换输入数据，并保存该阶段产生的中间结果。
+    // 第4阶段：根据 createReportApi 当前分支转换输入数据，并保存该阶段产生的中间结果。
     form.append('file', file);
+    // 第2阶段：整理 createReportApi 已计算的数据，并按方法契约返回最终结果。
+    // 第3阶段：整理 createReportApi 已计算的数据，并按方法契约返回最终结果。
     return requestJson<TemplateXlsxImportResult>(`${basePath}/template/import-xlsx`, {
       method: 'POST',
       body: form,
@@ -154,6 +204,11 @@ export function createReportApi(reportCode: string) {
       fileName,
     ),
 
+  /**
+   * 执行 api 的 execute 核心流程，并保持错误和结果语义稳定。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   execute: (request: ExecuteRequest) =>
     requestJson<ExecuteResult>(`${basePath}/execute`, {
       method: 'POST',
@@ -173,8 +228,14 @@ export function createReportApi(reportCode: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ templateRevision, query }),
-    }),
+    }, '科室工作量.xlsx', fileName),
 
+  /**
+   * 启动 api 的 start Large Data Export 流程，并建立运行期间所需状态。
+   * @param templateRevision - templateRevision 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @param query - query 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   startLargeDataExport: (templateRevision: number, query: ExecuteRequest) =>
     requestJson<ExportJob>(`${basePath}/exports/large`, {
       method: 'POST',
@@ -182,9 +243,19 @@ export function createReportApi(reportCode: string) {
       body: JSON.stringify({ templateRevision, query }),
     }),
 
+  /**
+   * 查询或读取 api 所需的 get Job 数据，并按调用约定返回结果。
+   * @param jobNo - jobNo 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   getJob: (jobNo: string) =>
     requestJson<ExportJob>(`/api/report-center/poc/export-jobs/${encodeURIComponent(jobNo)}`),
 
+  /**
+   * 校验 api 的 cancel Job 条件，并返回可供后续流程判断的结果。
+   * @param jobNo - jobNo 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   cancelJob: (jobNo: string) =>
     requestJson<ExportJob>(`/api/report-center/poc/export-jobs/${encodeURIComponent(jobNo)}/cancel`, {
       method: 'POST',
@@ -209,9 +280,22 @@ export function createReportApi(reportCode: string) {
 export const reportApi = createReportApi('dept-workload');
 
 export const reportCatalogApi = {
+  /**
+   * 构造并发送 api 的 reports 网络请求，随后按接口类型返回响应结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   reports: () => requestJson<ReportSummaryDocument[]>('/api/report-center/poc/reports'),
+  /**
+   * 构建 api 所需的 create Options 内容，并保证生成结果符合调用约定。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   createOptions: () =>
     requestJson<ReportCreateOptionsDocument>('/api/report-center/poc/reports/create-options'),
+  /**
+   * 构建 api 所需的 create 内容，并保证生成结果符合调用约定。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   create: (request: CreateReportRequest) =>
     requestJson<ReportConfigurationDocument>('/api/report-center/poc/reports', {
       method: 'POST',
@@ -222,8 +306,17 @@ export const reportCatalogApi = {
 
 /** 数据源和数据集是跨报表复用的全局资源，使用独立 API 与报表配置解耦。 */
 export const dataAssetApi = {
+  /**
+   * 构造并发送 api 的 data Sources 网络请求，随后按接口类型返回响应结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   dataSources: () => requestJson<DataSourceDocument[]>('/api/report-center/poc/data-sources'),
 
+  /**
+   * 更新 api 的 save Data Source 状态，并同步相关业务数据。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   saveDataSource: (request: DataSourceInput) =>
     requestJson<DataSourceDocument>(
       `/api/report-center/poc/data-sources/${encodeURIComponent(request.code)}`,
@@ -234,6 +327,11 @@ export const dataAssetApi = {
       },
     ),
 
+  /**
+   * 构造并发送 api 的 test Data Source 网络请求，随后按接口类型返回响应结果。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   testDataSource: (request: DataSourceInput) =>
     requestJson<DataSourceTestResult>('/api/report-center/poc/data-sources/test', {
       method: 'POST',
@@ -241,13 +339,27 @@ export const dataAssetApi = {
       body: JSON.stringify(request),
     }),
 
+  /**
+   * 构造并发送 api 的 datasets 网络请求，随后按接口类型返回响应结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   datasets: () => requestJson<DatasetDocument[]>('/api/report-center/poc/datasets'),
 
+  /**
+   * 构造并发送 api 的 dataset References 网络请求，随后按接口类型返回响应结果。
+   * @param code - 需要读取、校验或转换的业务值。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   datasetReferences: (code: string) =>
     requestJson<DatasetReferenceDocument[]>(
       `/api/report-center/poc/datasets/${encodeURIComponent(code)}/references`,
     ),
 
+  /**
+   * 更新 api 的 save Dataset 状态，并同步相关业务数据。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   saveDataset: (request: DatasetDocument) =>
     requestJson<DatasetDocument>(
       `/api/report-center/poc/datasets/${encodeURIComponent(request.code)}`,
@@ -258,6 +370,12 @@ export const dataAssetApi = {
       },
     ),
 
+  /**
+   * 构造并发送 api 的 preview Dataset 网络请求，随后按接口类型返回响应结果。
+   * @param code - 需要读取、校验或转换的业务值。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   previewDataset: (code: string, request: DatasetPreviewRequest) =>
     requestJson<DatasetPreviewResult>(
       `/api/report-center/poc/datasets/${encodeURIComponent(code)}/preview`, {
@@ -267,11 +385,20 @@ export const dataAssetApi = {
       },
     ),
 
+  /**
+   * 构造并发送 api 的 external Parameter Sources 网络请求，随后按接口类型返回响应结果。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   externalParameterSources: () =>
     requestJson<ExternalParameterSourceDocument[]>(
       '/api/report-center/poc/external-parameter-sources',
     ),
 
+  /**
+   * 更新 api 的 save External Parameter Source 状态，并同步相关业务数据。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   saveExternalParameterSource: (request: ExternalParameterSourceInput) =>
     requestJson<ExternalParameterSourceDocument>(
       `/api/report-center/poc/external-parameter-sources/${encodeURIComponent(request.code)}`,
@@ -282,6 +409,12 @@ export const dataAssetApi = {
       },
     ),
 
+  /**
+   * 构造并发送 api 的 test External Parameter Source 网络请求，随后按接口类型返回响应结果。
+   * @param code - 需要读取、校验或转换的业务值。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   testExternalParameterSource: (
     code: string,
     request: ExternalParameterSourceTestRequest,
@@ -296,6 +429,11 @@ export const dataAssetApi = {
 };
 
 export const jnpfMigrationApi = {
+  /**
+   * 构造并发送 api 的 inventory 网络请求，随后按接口类型返回响应结果。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   inventory: (request: {
     jnpfDataSourceCode: string;
     reportDataSourceCode: string;
@@ -306,6 +444,11 @@ export const jnpfMigrationApi = {
     body: JSON.stringify(request),
   }),
 
+  /**
+   * 构造并发送 api 的 migrate 网络请求，随后按接口类型返回响应结果。
+   * @param request - 本次操作使用的输入数据。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
   migrate: (request: {
     jnpfDataSourceCode: string;
     reportDataSourceCode: string;
