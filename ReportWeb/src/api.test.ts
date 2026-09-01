@@ -486,6 +486,21 @@ describe('reportApi template endpoints', () => {
     expect(anchor.download).toBe('科室工作量_数据.xlsx');
   });
 
+  /** 验证用户确认的文件名会覆盖服务端 Content-Disposition 下载名。 */
+  it('uses a custom filename when downloading report data', async () => {
+    const anchor = { href: '', download: '', click: vi.fn() };
+    vi.stubGlobal('document', { createElement: vi.fn().mockReturnValue(anchor) });
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn().mockReturnValue('blob:custom-data'),
+      revokeObjectURL: vi.fn(),
+    });
+    fetchMock.mockResolvedValue(downloadResponse('服务端默认.xlsx'));
+
+    await reportApi.downloadNormalData(3, executeRequest, '门诊汇总');
+
+    expect(anchor.download).toBe('门诊汇总.xlsx');
+  });
+
   it('sends the saved revision and query when starting a large data export', async () => {
     const job: ExportJob = {
       jobNo: 'job-1',

@@ -26,6 +26,7 @@ import type {
   TemplateDocument,
   TemplateXlsxImportResult,
 } from './types';
+import { normalizeExportFileName } from './exportFileName';
 
 interface ApiEnvelope<T> {
   code: number;
@@ -55,10 +56,19 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   return body.result;
 }
 
+/**
+ * 构造并发送 api 的 request Download 网络请求，随后按接口类型返回响应结果。
+ * @param path - path 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param init - init 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param fallbackFilename - 需要读取、校验或转换的业务值。
+ * @param preferredFilename - 用户确认的下载文件名；提供时优先于服务端响应头。
+ * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ */
 async function requestDownload(
   path: string,
   init?: RequestInit,
   fallbackFilename = '科室工作量.xlsx',
+  preferredFilename?: string,
 ): Promise<void> {
   const response = await fetch(path, init);
   if (!response.ok) {
@@ -75,7 +85,9 @@ async function requestDownload(
   const blob = await response.blob();
   const disposition = response.headers.get('content-disposition') || '';
   const encodedName = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
-  const filename = encodedName ? decodeURIComponent(encodedName) : fallbackFilename;
+  const filename = preferredFilename?.trim()
+    ? normalizeExportFileName(preferredFilename, fallbackFilename)
+    : (encodedName ? decodeURIComponent(encodedName) : fallbackFilename);
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -124,7 +136,13 @@ export function createReportApi(reportCode: string) {
     });
   },
 
-  exportTemplate: (snapshot: IWorkbookData) =>
+  /**
+   * 整理 api 的 export Template 数据，并生成可供调用方使用的输出。
+   * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+   * @param fileName - 用户确认的下载文件名，可为空以使用服务端默认值。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
+  exportTemplate: (snapshot: IWorkbookData, fileName?: string) =>
     requestDownload(
       `${basePath}/template/export-xlsx`,
       {
@@ -133,6 +151,7 @@ export function createReportApi(reportCode: string) {
         body: JSON.stringify({ snapshot }),
       },
       '报表模板.xlsx',
+      fileName,
     ),
 
   execute: (request: ExecuteRequest) =>
@@ -142,7 +161,14 @@ export function createReportApi(reportCode: string) {
       body: JSON.stringify(request),
     }),
 
-  downloadNormalData: (templateRevision: number, query: ExecuteRequest) =>
+  /**
+   * 整理 api 的 download Normal Data 数据，并生成可供调用方使用的输出。
+   * @param templateRevision - templateRevision 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @param query - query 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @param fileName - 用户确认的下载文件名，可为空以使用服务端默认值。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
+  downloadNormalData: (templateRevision: number, query: ExecuteRequest, fileName?: string) =>
     requestDownload(`${basePath}/exports/normal`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -164,8 +190,19 @@ export function createReportApi(reportCode: string) {
       method: 'POST',
     }),
 
-  downloadJob: (jobNo: string) =>
-    requestDownload(`/api/report-center/poc/export-jobs/${encodeURIComponent(jobNo)}/download`),
+  /**
+   * 整理 api 的 download Job 数据，并生成可供调用方使用的输出。
+   * @param jobNo - jobNo 对应的业务输入；具体类型和空值范围以方法签名为准。
+   * @param fileName - 用户确认的下载文件名，可为空以使用服务端默认值。
+   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   */
+  downloadJob: (jobNo: string, fileName?: string) =>
+    requestDownload(
+      `/api/report-center/poc/export-jobs/${encodeURIComponent(jobNo)}/download`,
+      undefined,
+      '科室工作量.xlsx',
+      fileName,
+    ),
   };
 }
 

@@ -45,6 +45,11 @@ import { createPreviewToolbarPresentation } from './previewToolbar';
 import { createPageLoadingPresentation } from './pageLoading';
 import { parameterInputAttributes, parameterInputValue } from './parameterInput';
 import { TemplateFieldPanel } from './TemplateFieldPanel';
+import { ExportNameDialog } from './ExportNameDialog';
+import {
+  defaultExportFileName,
+  type ExportFileKind,
+} from './exportFileName';
 import { ReportConfigurationDialog } from './ReportConfigurationDialog';
 import { ShareReportDialog, type SharedParameterSummary } from './ShareReportDialog';
 import { StatusToasts } from './StatusToasts';
@@ -212,6 +217,8 @@ export default function App({ reportCode, shared = false }: AppProps) {
   const [importing, setImporting] = useState(false);
   const [exportingTemplate, setExportingTemplate] = useState(false);
   const [exportingData, setExportingData] = useState(false);
+  const [exportNameKind, setExportNameKind] = useState<ExportFileKind | null>(null);
+  const [exportNameDefault, setExportNameDefault] = useState('');
   const [printing, setPrinting] = useState(false);
   const [cancellingExport, setCancellingExport] = useState(false);
   const [exportJob, setExportJob] = useState<ExportJob | null>(null);
@@ -573,7 +580,15 @@ export default function App({ reportCode, shared = false }: AppProps) {
     }
   }, [mode]);
 
-  const exportTemplate = useCallback(async () => {
+  /** 打开导出命名弹窗，默认使用当前报表名称并区分模板/数据内容。 */
+  const openExportName = useCallback((kind: ExportFileKind) => {
+    if (operationRef.current || !initialized || definition === null) return;
+    setExportNameKind(kind);
+    setExportNameDefault(defaultExportFileName(definition.name, kind));
+  }, [definition, initialized]);
+
+  /** 使用用户确认的文件名导出当前模板草稿，导出前仍执行原有绑定校验。 */
+  const exportTemplate = useCallback(async (fileName: string) => {
     if (
       operationRef.current ||
       mode !== 'design' ||
@@ -597,7 +612,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
       scanTemplateBindings(snapshot, definition);
       draftSnapshotRef.current = snapshot;
       setDraftSnapshot(snapshot);
-      await reportApi.exportTemplate(snapshot);
+      await reportApi.exportTemplate(snapshot, fileName);
       setExchangeStatus('当前模板草稿已导出为 XLSX');
     } catch (exception) {
       setError(errorMessage(exception, '模板导出失败'));
@@ -607,7 +622,8 @@ export default function App({ reportCode, shared = false }: AppProps) {
     }
   }, [definition, initialized, mode]);
 
-  const exportData = useCallback(async () => {
+  /** 使用用户确认的文件名导出查询数据，并保留普通/大文件两种后台流程。 */
+  const exportData = useCallback(async (fileName: string) => {
     if (
       operationRef.current ||
       definition === null ||
@@ -653,10 +669,10 @@ export default function App({ reportCode, shared = false }: AppProps) {
             setExchangeStatus(`大文件导出：${job.writtenRows}${total} 行`);
           },
         );
-        await reportApi.downloadJob(completed.jobNo);
+        await reportApi.downloadJob(completed.jobNo, fileName);
         setExchangeStatus(`完整数据已导出，共 ${completed.writtenRows} 行`);
       } else {
-        await reportApi.downloadNormalData(savedRevision, exportQuery);
+        await reportApi.downloadNormalData(savedRevision, exportQuery, fileName);
         setExchangeStatus('完整数据已按保存模板导出');
       }
     } catch (exception) {
@@ -840,6 +856,25 @@ export default function App({ reportCode, shared = false }: AppProps) {
     }
   }, [shareUrl]);
 
+  /** 关闭导出命名弹窗并清理本次尚未提交的名称。 */
+  const closeExportName = useCallback(() => {
+    if (exportingTemplate || exportingData) return;
+    setExportNameKind(null);
+    setExportNameDefault('');
+  }, [exportingData, exportingTemplate]);
+
+  /** 接收弹窗确认的文件名，按导出类型启动原有模板或数据导出流程。 */
+  const confirmExportName = useCallback((fileName: string) => {
+    const kind = exportNameKind;
+    setExportNameKind(null);
+    setExportNameDefault('');
+    if (kind === 'template') {
+      void exportTemplate(fileName);
+    } else if (kind === 'data') {
+      void exportData(fileName);
+    }
+  }, [exportData, exportNameKind, exportTemplate]);
+
   // 所有会切换或序列化工作簿的命令共用 busy，UI 禁用状态与 operationRef 的程序防重保持一致。
   const busy = loading
     || saving
@@ -988,7 +1023,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
                 type="button"
                 title="把当前模板草稿导出为 XLSX"
                 disabled={busy || !initialized}
-                onClick={() => void exportTemplate()}
+                onClick={() => openExportName('template')}
               >
                 <FileDown size={16} />
                 <span className="button-label">导出模板</span>
@@ -1014,7 +1049,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
               ? '使用已保存模板导出全部查询数据'
               : '请先修复并保存模板字段绑定'}
             disabled={busy || !initialized || templateWarning !== null}
-            onClick={() => void exportData()}
+            onClick={() => openExportName('data')}
           >
             <FileSpreadsheet size={16} />
             导出数据
@@ -1190,7 +1225,7 @@ export default function App({ reportCode, shared = false }: AppProps) {
                   ? '使用已保存模板导出全部查询数据'
                   : '请联系报表维护人员修复模板字段绑定'}
                 disabled={busy || !initialized || templateWarning !== null}
-                onClick={() => void exportData()}
+                onClick={() => openExportName('data')}
               >
                 <FileSpreadsheet size={16} />
                 导出数据
@@ -1341,6 +1376,15 @@ export default function App({ reportCode, shared = false }: AppProps) {
           />
         </>
       )}
+
+      <ExportNameDialog
+        open={exportNameKind !== null}
+        kind={exportNameKind}
+        defaultName={exportNameDefault}
+        busy={busy}
+        onCancel={closeExportName}
+        onConfirm={confirmExportName}
+      />
     </main>
   );
 }
