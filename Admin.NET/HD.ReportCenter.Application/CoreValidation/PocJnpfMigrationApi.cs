@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Furion.FriendlyException;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 
 namespace HD.ReportCenter.Application.CoreValidation;
 
@@ -469,20 +468,16 @@ public sealed class PocJnpfMigrationRunner : ITransient
 public sealed class PocJnpfMigrationApi : IDynamicApiController
 {
     private readonly PocJnpfMigrationRunner _runner;
-    private readonly IHostEnvironment _environment;
     private readonly IConfiguration _configuration;
 
     /// <summary>初始化 PocJnpfMigrationApi 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     /// <param name="runner">runner 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
-    /// <param name="environment">environment 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <param name="configuration">configuration 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     public PocJnpfMigrationApi(
         PocJnpfMigrationRunner runner,
-        IHostEnvironment environment,
         IConfiguration configuration)
     {
         _runner = runner;
-        _environment = environment;
         _configuration = configuration;
     }
 
@@ -517,8 +512,9 @@ public sealed class PocJnpfMigrationApi : IDynamicApiController
     /// <summary>校验 PocJnpfMigrationApi 的 Ensure Enabled 条件，并返回可供后续流程判断的结果。</summary>
     private void EnsureEnabled()
     {
-        var enabled = _environment.IsDevelopment() ||
-            bool.TryParse(_configuration["JNPF_MIGRATION_ENABLED"], out var configured) && configured;
-        if (!enabled) throw Oops.Oh("JNPF 报表迁移菜单未在当前环境启用。").StatusCode(403);
+        if (!ReportCenterFeatureOptions.IsJnpfMigrationMenuEnabled(_configuration))
+        {
+            throw Oops.Oh("JNPF 报表迁移菜单未在当前环境启用。").StatusCode(403);
+        }
     }
 }

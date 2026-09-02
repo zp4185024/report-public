@@ -6,6 +6,7 @@ export type ManagementSection = 'reports' | 'data-sources' | 'datasets' | 'exter
 interface AppFrameProps {
   active: ManagementSection;
   children: ReactNode;
+  jnpfMigrationMenuEnabled?: boolean;
 }
 
 const menuItems = [
@@ -31,7 +32,11 @@ function preservePageContext(href: string): string {
  * 遍历 AppFrame 数据并执行 App Frame 转换，生成后续流程需要的结果。
  * @returns 返回值与当前方法声明的类型及空值约束保持一致。
  */
-export default function AppFrame({ active, children }: AppFrameProps) {
+export default function AppFrame({ active, children, jnpfMigrationMenuEnabled = false }: AppFrameProps) {
+  const visibleMenuItems = menuItems.filter((item) => (
+    item.key !== 'jnpf-migration' || jnpfMigrationMenuEnabled
+  ));
+
   return (
     <div className="management-shell">
       <aside className="management-sidebar">
@@ -40,7 +45,7 @@ export default function AppFrame({ active, children }: AppFrameProps) {
           <strong>报表中心</strong>
         </a>
         <nav className="management-nav" aria-label="报表中心菜单">
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             return (
               <a

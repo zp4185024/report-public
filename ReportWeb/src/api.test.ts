@@ -1,6 +1,13 @@
 import { LocaleType, type IWorkbookData } from '@univerjs/presets';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createReportApi, dataAssetApi, jnpfMigrationApi, reportApi, reportCatalogApi } from './api';
+import {
+  createReportApi,
+  dataAssetApi,
+  jnpfMigrationApi,
+  reportApi,
+  reportCatalogApi,
+  reportCenterFeaturesApi,
+} from './api';
 import type {
   DataSourceInput,
   CreateReportRequest,
@@ -251,6 +258,14 @@ describe('reportApi template endpoints', () => {
     await expect(reportCatalogApi.reports()).resolves.toEqual(reports);
 
     expect(fetchMock).toHaveBeenCalledWith('/api/report-center/poc/reports', undefined);
+  });
+
+  it('loads optional report center feature switches', async () => {
+    const features = { jnpfMigrationMenuEnabled: false };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: features }));
+
+    await expect(reportCenterFeaturesApi.get()).resolves.toEqual(features);
+    expect(fetchMock).toHaveBeenCalledWith('/api/report-center/features', undefined);
   });
 
   it('loads enabled datasets for the template creation form', async () => {

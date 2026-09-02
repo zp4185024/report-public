@@ -7,7 +7,10 @@
   "AllowedHosts": "*",
 
   "AppSettings": {
-    "InjectSpecificationDocument": true // 生产环境是否开启Swagger
+    "InjectSpecificationDocument": true, // 生产环境是否开启Swagger
+    "ReportCenter": {
+      "JnpfMigrationMenuEnabled": false // 是否显示并启用 JNPF 迁移菜单；默认关闭
+    }
   },
   "DynamicApiControllerSettings": {
     //"DefaultRoutePrefix": "api", // 默认路由前缀

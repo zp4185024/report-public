@@ -383,6 +383,11 @@ export interface DataSourceTestResult {
   databaseVersion: string;
 }
 
+/** 报表中心前端启动所需的可选功能开关。 */
+export interface ReportCenterFeatures {
+  jnpfMigrationMenuEnabled: boolean;
+}
+
 /** JNPF 报表迁移程序返回的只读盘点项；标记和阻断原因由服务端拼接为文本。 */
 export interface JnpfMigrationInventoryItem {
   sourceReportId: string | null;

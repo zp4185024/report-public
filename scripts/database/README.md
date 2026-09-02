@@ -158,9 +158,10 @@ JNPF SQL 参数标记会转换为报表中心的 `@参数名` 协议。当前转
 `scripts/database` 下的迁移程序复制到应用输出目录；若部署目录另有安排，可用
 `JNPF_MIGRATION_SCRIPT_PATH` 指定入口脚本，用 `JNPF_MIGRATION_PWSH_PATH` 指定 `pwsh` 路径。
 
-当前接口与报表中心验证接口保持开发环境的匿名设置；上线前必须接入现有登录权限，并限制
-“JNPF迁移”菜单和写入接口只允许迁移负责人使用。非 Development 环境还必须显式设置
-`JNPF_MIGRATION_ENABLED=true`，否则菜单接口会返回 403。
+当前接口与报表中心验证接口保持匿名设置；上线前必须接入现有登录权限，并限制
+“JNPF迁移”菜单和写入接口只允许迁移负责人使用。JNPF 迁移默认关闭，只有在
+`AppSettings:ReportCenter:JnpfMigrationMenuEnabled=true` 或设置
+`JNPF_MIGRATION_ENABLED=true` 时才显示菜单并放行接口；关闭时菜单接口和迁移接口均返回 403。
 
 ## 报表配置表升级
 

@@ -17,6 +17,7 @@ import type {
   ExternalParameterSourceTestResult,
   JnpfMigrationRunResult,
   ReportConfigurationDocument,
+  ReportCenterFeatures,
   ReportCreateOptionsDocument,
   ReportDefinition,
   ReportSummaryDocument,
@@ -278,6 +279,15 @@ export function createReportApi(reportCode: string) {
 }
 
 export const reportApi = createReportApi('dept-workload');
+
+/** 报表中心启动配置使用独立接口，避免菜单显示依赖具体报表或数据集请求。 */
+export const reportCenterFeaturesApi = {
+  /**
+   * 读取报表中心可选功能开关，供入口决定管理菜单和受限路由。
+   * @returns 返回报表中心前端功能配置。
+   */
+  get: () => requestJson<ReportCenterFeatures>('/api/report-center/features'),
+};
 
 export const reportCatalogApi = {
   /**
