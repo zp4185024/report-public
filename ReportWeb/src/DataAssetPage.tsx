@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Braces,
   Eye,
@@ -6,11 +6,13 @@ import {
   Link2,
   LoaderCircle,
   Plus,
+  Search,
   Save,
   Server,
   Zap,
 } from 'lucide-react';
 import { dataAssetApi } from './api';
+import { PaginationBar } from './PaginationBar';
 import { StatusToasts } from './StatusToasts';
 import type {
   DataSourceDocument,
@@ -193,6 +195,12 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
   const [kind, setKind] = useState<AssetKind>(initialKind);
   const [dataSources, setDataSources] = useState<DataSourceDocument[]>([]);
   const [datasets, setDatasets] = useState<DatasetDocument[]>([]);
+  const [assetQuery, setAssetQuery] = useState('');
+  const [assetPage, setAssetPage] = useState(1);
+  const [assetPageSize, setAssetPageSize] = useState(15);
+  const [datasetTotal, setDatasetTotal] = useState(0);
+  const [datasetListLoading, setDatasetListLoading] = useState(true);
+  const skipInitialDatasetPage = useRef(true);
   const [externalSources, setExternalSources] = useState<ExternalParameterSourceDocument[]>([]);
   const [dataSourceDraft, setDataSourceDraft] = useState<DataSourceInput | null>(null);
   const [datasetDraft, setDatasetDraft] = useState<DatasetDocument | null>(null);
@@ -217,27 +225,66 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
      */
     const load = async () => {
       try {
-        const [nextSources, nextDatasets, nextExternalSources] = await Promise.all([
+        const [nextSources, nextDatasetsPage, nextExternalSources] = await Promise.all([
           dataAssetApi.dataSources(),
-          dataAssetApi.datasets(),
+          dataAssetApi.datasetsPage({ page: 1, pageSize: 15, query: '' }),
           dataAssetApi.externalParameterSources(),
         ]);
         if (!active) return;
         setDataSources(nextSources);
-        setDatasets(nextDatasets);
+        setDatasets(nextDatasetsPage.items);
+        setDatasetTotal(nextDatasetsPage.total);
+        setDatasetListLoading(false);
         setExternalSources(nextExternalSources);
         setDataSourceDraft(nextSources[0] ? sourceDraft(nextSources[0]) : newDataSource([]));
-        setDatasetDraft(nextDatasets[0] ?? newDataset([], nextSources));
+        setDatasetDraft(nextDatasetsPage.items[0] ?? newDataset([], nextSources));
       } catch (exception) {
         if (active) setError(exception instanceof Error ? exception.message : '数据资源加载失败。');
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+          setDatasetListLoading(false);
+        }
       }
     };
     void load();
     // 第2阶段：整理 DataAssetPage 已计算的数据，并按方法契约返回最终结果。
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (!initialKind || initialKind !== 'datasets') return;
+    if (skipInitialDatasetPage.current) {
+      skipInitialDatasetPage.current = false;
+      return;
+    }
+    let active = true;
+    setDatasetListLoading(true);
+    /**
+     * 查询数据集管理列表当前页，并在搜索或翻页后保留编辑器状态。
+     * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+     */
+    const loadDatasetPage = async () => {
+      try {
+        const result = await dataAssetApi.datasetsPage({
+          page: assetPage,
+          pageSize: assetPageSize,
+          query: assetQuery,
+        });
+        if (!active) return;
+        setDatasets(result.items);
+        setDatasetTotal(result.total);
+        setAssetPage(result.page);
+        setAssetPageSize(result.pageSize);
+      } catch (exception) {
+        if (active) setError(exception instanceof Error ? exception.message : '数据集列表加载失败。');
+      } finally {
+        if (active) setDatasetListLoading(false);
+      }
+    };
+    void loadDatasetPage();
+    return () => { active = false; };
+  }, [assetPage, assetPageSize, assetQuery, initialKind]);
 
   // 第2阶段：构造 DataAssetPage 当前阶段需要的中间数据和执行参数。
   const datasetVariables = useMemo(
@@ -253,6 +300,36 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     code: variable.code,
     category: variable.sourceType === 'External' ? 'external' : 'form',
   })), [datasetVariables]);
+
+  const normalizedAssetQuery = assetQuery.trim().toLocaleLowerCase('zh-CN');
+  const filteredDataSources = useMemo(() => {
+    if (!normalizedAssetQuery) return dataSources;
+    return dataSources.filter((source) => [
+      source.name,
+      source.code,
+      source.server,
+      source.database,
+    ].some((value) => value.toLocaleLowerCase('zh-CN').includes(normalizedAssetQuery)));
+  }, [dataSources, normalizedAssetQuery]);
+  const filteredAssetsTotal = kind === 'data-sources' ? filteredDataSources.length : datasetTotal;
+  const assetPageCount = Math.max(1, Math.ceil(filteredAssetsTotal / assetPageSize));
+  const currentAssetPage = Math.min(assetPage, assetPageCount);
+  const visibleDataSources = useMemo(
+    () => filteredDataSources.slice((currentAssetPage - 1) * assetPageSize, currentAssetPage * assetPageSize),
+    [assetPageSize, currentAssetPage, filteredDataSources],
+  );
+  const visibleDatasets = useMemo(
+    () => datasets,
+    [datasets],
+  );
+
+  useEffect(() => {
+    setAssetPage(1);
+  }, [assetQuery, assetPageSize, kind]);
+
+  useEffect(() => {
+    if (assetPage > assetPageCount) setAssetPage(assetPageCount);
+  }, [assetPage, assetPageCount]);
 
   /**
    * 负责 DataAssetPage 的 select Source 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
@@ -425,6 +502,7 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
       const next = [...datasets.filter((item) => item.code !== saved.code), saved]
         .sort((left, right) => left.name.localeCompare(right.name, 'zh-CN'));
       setDatasets(next);
+      if (stored === undefined) setDatasetTotal((current) => current + 1);
       setDatasetDraft(saved);
       setStatus(queryChanged
         ? `数据集已保存，当前修订号 ${saved.revision}；SQL 已变化，请重新预览并保存返回字段。`
@@ -466,17 +544,35 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
               else setDatasetDraft(newDataset(datasets, dataSources));
             }}><Plus size={17} /></button>
           </div>
+          <label className="asset-list-search">
+            <Search size={15} />
+            <input
+              type="search"
+              value={assetQuery}
+              onChange={(event) => setAssetQuery(event.target.value)}
+              placeholder={kind === 'data-sources' ? '搜索名称、编码或服务器' : '搜索名称、编码或数据源'}
+              aria-label={kind === 'data-sources' ? '搜索数据源' : '搜索数据集'}
+            />
+          </label>
           <div className="asset-list-scroll">
-            {loading ? <div className="asset-empty"><LoaderCircle className="spin" size={20} />正在读取</div> : kind === 'data-sources' ? dataSources.map((source) => (
+            {loading || (kind === 'datasets' && datasetListLoading) ? <div className="asset-empty"><LoaderCircle className="spin" size={20} />正在读取</div> : kind === 'data-sources' ? visibleDataSources.map((source) => (
               <button key={source.code} type="button" className={`asset-list-item ${dataSourceDraft?.code === source.code && dataSourceDraft.revision > 0 ? 'active' : ''}`} onClick={() => selectSource(source)}>
                 <Server size={17} /><span><strong>{source.name}</strong><small>{databaseType(source.dbType).label} · {source.server}/{source.database}</small></span><i className={source.enabled ? 'enabled' : ''}>{source.enabled ? '启用' : '停用'}</i>
               </button>
-            )) : datasets.map((dataset) => (
+            )) : visibleDatasets.map((dataset) => (
               <button key={dataset.code} type="button" className={`asset-list-item ${datasetDraft?.code === dataset.code && datasetDraft.revision > 0 ? 'active' : ''}`} onClick={() => selectDataset(dataset)}>
                 <Braces size={17} /><span><strong>{dataset.name}</strong><small>{dataset.code} · {dataset.variables.length} 个变量</small></span><i className={dataset.enabled ? 'enabled' : ''}>{dataset.enabled ? '启用' : '停用'}</i>
               </button>
             ))}
           </div>
+          <PaginationBar
+            total={filteredAssetsTotal}
+            page={currentAssetPage}
+            pageSize={assetPageSize}
+            onPageChange={setAssetPage}
+            onPageSizeChange={setAssetPageSize}
+            itemLabel={kind === 'data-sources' ? '数据源' : '数据集'}
+          />
         </aside>
 
         <div className="asset-editor">

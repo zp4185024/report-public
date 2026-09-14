@@ -329,6 +329,15 @@ export interface ReportSummaryDocument {
   updatedAt: string | null;
 }
 
+/** 管理列表的分页响应，items 只包含当前页记录。 */
+export interface PagedDocument<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface CreateReportRequest {
   reportCode: string;
   name: string;

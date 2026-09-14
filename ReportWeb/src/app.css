@@ -534,6 +534,45 @@ body {
   vertical-align: middle;
 }
 
+.pagination-bar {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 7px 14px;
+  border-top: 1px solid #dce2e8;
+  color: #5f6d7c;
+  background: #ffffff;
+  font-size: 11px;
+}
+
+.pagination-summary {
+  margin-right: auto;
+}
+
+.pagination-size,
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-size select {
+  height: 30px;
+  padding: 0 24px 0 8px;
+  border: 1px solid #cbd3dc;
+  border-radius: 4px;
+  color: #334155;
+  background: #ffffff;
+  font-size: 11px;
+}
+
+.pagination-actions .icon-button {
+  width: 30px;
+  height: 30px;
+}
+
 .create-report-dialog {
   display: grid;
   width: min(620px, 100%);
@@ -2364,7 +2403,7 @@ h1 {
 .asset-list {
   display: grid;
   min-height: 0;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   border-right: 1px solid #d8dee6;
   background: #f8fafb;
 }
@@ -2382,6 +2421,52 @@ h1 {
   min-height: 0;
   overflow: auto;
   padding: 7px 0;
+}
+
+.asset-list-search {
+  display: flex;
+  height: 40px;
+  align-items: center;
+  gap: 7px;
+  margin: 9px 11px 2px;
+  padding: 0 9px;
+  border: 1px solid #cbd3dc;
+  border-radius: 4px;
+  color: #6a7684;
+  background: #ffffff;
+}
+
+.asset-list-search:focus-within {
+  border-color: #2463a6;
+  box-shadow: 0 0 0 2px #dce9f5;
+}
+
+.asset-list-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 11px;
+}
+
+.asset-list > .pagination-bar {
+  min-height: 78px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px 8px;
+  padding: 7px 10px;
+  border-top: 1px solid #d8dee6;
+  background: #f8fafb;
+}
+
+.asset-list > .pagination-bar .pagination-summary {
+  width: 100%;
+  margin: 0;
+}
+
+.asset-list > .pagination-bar .pagination-size {
+  margin-right: auto;
 }
 
 .asset-list-item {
@@ -3772,7 +3857,7 @@ h1 {
 
   .asset-workspace {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 190px minmax(0, 1fr);
+    grid-template-rows: minmax(250px, 34vh) minmax(0, 1fr);
   }
 
   .asset-list {

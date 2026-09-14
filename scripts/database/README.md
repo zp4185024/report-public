@@ -103,7 +103,8 @@ pwsh -File scripts/database/Invoke-JnpfHisReportMigration.ps1 `
 ```
 
 盘点结果会写入 `output/jnpf-migration/<时间>/inventory.csv` 和 `inventory.json`。
-只迁移指定报表时使用源端 `report_id` 或完整名称；默认每批最多 3 张：
+只迁移指定报表时使用源端 `report_id` 或完整名称；默认迁移全部可自动迁移的报表。
+使用 `-MaxReports` 可主动限制本批数量，`0` 表示全部：
 
 ```powershell
 pwsh -File scripts/database/Invoke-JnpfHisReportMigration.ps1 `

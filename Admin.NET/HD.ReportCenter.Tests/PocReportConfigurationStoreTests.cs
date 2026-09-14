@@ -245,6 +245,55 @@ public sealed class PocReportConfigurationStoreTests : IDisposable
         Assert.NotNull(outpatient.UpdatedAt);
     }
 
+    /// <summary>验证 Report page filters and returns stable page metadata 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
+    [Fact]
+    public async Task Report_page_filters_and_returns_stable_page_metadata()
+    {
+        await _store.SaveAsync(CreateMutation(0) with
+        {
+            ReportCode = "outpatient-log",
+            ReportName = "门诊日志",
+            SheetName = "门诊日志"
+        });
+        await _store.SaveAsync(CreateMutation(0) with
+        {
+            ReportCode = "inpatient-log",
+            ReportName = "住院日志",
+            SheetName = "住院日志"
+        });
+
+        var page = await _configurationService.ListReportsPageAsync(1, 1, "住院");
+
+        Assert.Equal(1, page.Total);
+        Assert.Equal(1, page.TotalPages);
+        Assert.Equal("inpatient-log", Assert.Single(page.Items).ReportCode);
+    }
+
+    /// <summary>验证 Dataset page filters by reusable resource identifiers 场景下的预期行为，并防止相关逻辑回归。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
+    [Fact]
+    public async Task Dataset_page_filters_by_reusable_resource_identifiers()
+    {
+        _database.Insertable(new PocReportDataset
+        {
+            Code = "archive-detail",
+            Name = "历史明细",
+            DataSourceCode = "report-center",
+            QueryText = "SELECT 1 AS value",
+            FieldSchemaJson = "[]",
+            TimeoutSeconds = 30,
+            MaxRows = 20_000,
+            Revision = 1,
+            IsEnabled = true
+        }).ExecuteCommand();
+
+        var page = await _dataAssetService.ListDatasetsPageAsync(1, 15, "archive");
+
+        Assert.Equal(1, page.Total);
+        Assert.Equal("archive-detail", Assert.Single(page.Items).Code);
+    }
+
     /// <summary>验证 Configuration service reads the report selected from the list 场景下的预期行为，并防止相关逻辑回归。</summary>
     /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]

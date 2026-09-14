@@ -71,6 +71,37 @@ public sealed class PocDataAssetStore : ITransient
             .OrderBy(item => item.Code)
             .ToListAsync();
 
+    /// <summary>按名称、编码或数据源筛选数据集，并仅读取资源列表当前页。</summary>
+    /// <param name="page">从一开始的页码。</param>
+    /// <param name="pageSize">当前页最多返回的记录数。</param>
+    /// <param name="keyword">可选的模糊搜索关键字。</param>
+    /// <returns>返回当前页数据集实体和筛选后的总记录数。</returns>
+    public async Task<PocStoredPage<PocReportDataset>> ListDatasetsPageAsync(
+        int page,
+        int pageSize,
+        string? keyword)
+    {
+        var query = _database.Queryable<PocReportDataset>();
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var normalizedKeyword = keyword.Trim();
+            query = query.Where(item =>
+                item.Name.Contains(normalizedKeyword) ||
+                item.Code.Contains(normalizedKeyword) ||
+                item.DataSourceCode.Contains(normalizedKeyword));
+        }
+
+        var total = await query.CountAsync();
+        var items = await query
+            .OrderByDescending(item => item.IsEnabled)
+            .OrderBy(item => item.Name)
+            .OrderBy(item => item.Code)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        return new PocStoredPage<PocReportDataset>(items, total);
+    }
+
     /// <summary>查询或读取 PocDataAssetStore 所需的 Get Dataset Async 数据，并按调用约定返回结果。</summary>
     /// <param name="code">需要读取、校验或转换的业务值。</param>
     /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>

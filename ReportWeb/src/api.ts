@@ -17,6 +17,7 @@ import type {
   ExternalParameterSourceTestResult,
   JnpfMigrationRunResult,
   ReportConfigurationDocument,
+  PagedDocument,
   ReportCenterFeatures,
   ReportCreateOptionsDocument,
   ReportDefinition,
@@ -296,6 +297,21 @@ export const reportCatalogApi = {
    */
   reports: () => requestJson<ReportSummaryDocument[]>('/api/report-center/poc/reports'),
   /**
+   * 按关键字读取报表管理列表的单页数据，服务端负责筛选和总数统计。
+   * @param request - 当前页码、页容量和可选搜索词。
+   * @returns 返回当前页报表及分页元数据。
+   */
+  reportsPage: (request: { page: number; pageSize: number; query: string }) => {
+    const params = new URLSearchParams({
+      page: String(request.page),
+      pageSize: String(request.pageSize),
+    });
+    if (request.query.trim()) params.set('query', request.query.trim());
+    return requestJson<PagedDocument<ReportSummaryDocument>>(
+      `/api/report-center/poc/reports/page?${params.toString()}`,
+    );
+  },
+  /**
    * 构建 api 所需的 create Options 内容，并保证生成结果符合调用约定。
    * @returns 返回值与当前方法声明的类型及空值约束保持一致。
    */
@@ -354,6 +370,21 @@ export const dataAssetApi = {
    * @returns 返回值与当前方法声明的类型及空值约束保持一致。
    */
   datasets: () => requestJson<DatasetDocument[]>('/api/report-center/poc/datasets'),
+  /**
+   * 按关键字读取数据集管理列表的单页数据，服务端负责筛选和总数统计。
+   * @param request - 当前页码、页容量和可选搜索词。
+   * @returns 返回当前页数据集及分页元数据。
+   */
+  datasetsPage: (request: { page: number; pageSize: number; query: string }) => {
+    const params = new URLSearchParams({
+      page: String(request.page),
+      pageSize: String(request.pageSize),
+    });
+    if (request.query.trim()) params.set('query', request.query.trim());
+    return requestJson<PagedDocument<DatasetDocument>>(
+      `/api/report-center/poc/datasets/page?${params.toString()}`,
+    );
+  },
 
   /**
    * 构造并发送 api 的 dataset References 网络请求，随后按接口类型返回响应结果。

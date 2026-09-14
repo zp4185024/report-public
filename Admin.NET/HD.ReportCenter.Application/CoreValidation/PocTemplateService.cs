@@ -150,12 +150,15 @@ public sealed class PocTemplateService : ITransient
         catch (Exception exception) when (
             exception is PocTemplateValidationException or PocTemplateBindingMismatchException)
         {
+            var warning = exception is PocTemplateValidationException validationException
+                ? $"当前模板结构无法按报表引擎展开：{validationException.Message} 请调整明细字段到同一行后保存模板。"
+                : "数据集字段或报表参数已经变化，当前模板绑定需要重新编辑并保存。";
             return new PocTemplateDocument(
                 stored.ReportCode,
                 JObject.Parse(stored.SnapshotJson),
                 new PocTemplateBinding(1, [], null),
                 stored.Revision,
-                "数据集字段或报表参数已经变化，当前模板绑定需要重新编辑并保存。");
+                warning);
         }
         catch (JsonException exception)
         {

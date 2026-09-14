@@ -1574,6 +1574,29 @@ export const UniverTemplateHost = forwardRef<
               );
             }
           }
+
+          // 引擎约定：端点落在明细模板行的显式区间（如 =SUM(B3:B3)）应随展开扩展到整个明细区；
+          // Univer 原生插行不会扩展这种“贴着插入点”的区间，这里按预览计划回写扩展后的公式，
+          // 使浏览器合计与后端导出的公式平移语义一致。
+          for (const rewrite of detail.formulaRewrites) {
+            const range = requireRange(
+              worksheet,
+              detail.sheetId,
+              rewrite.row,
+              rewrite.column,
+              1,
+              1,
+              '明细公式回写目标',
+            );
+            try {
+              range.setFormula(rewrite.formula);
+            } catch (error) {
+              throw operationError(
+                `Univer 回写明细公式失败（工作表 '${detail.sheetId}'，行 ${rewrite.row + 1}，列 ${rewrite.column + 1}）`,
+                error,
+              );
+            }
+          }
         }
 
         // 设计态公式携带 XLSX 缓存值以避免 token 被提前求值；参数和明细全部替换为真实数据后，

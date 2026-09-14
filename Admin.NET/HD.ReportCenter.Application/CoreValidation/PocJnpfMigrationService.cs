@@ -161,19 +161,39 @@ internal static class PocJnpfMigrationSourceReader
             var versionId = GetString(report, "version_id");
             var datasetRows = await QueryAsync(connection, """
                 SELECT
-                    f_id AS dataset_id,
-                    f_full_name AS dataset_name,
-                    f_interface_id AS interface_id,
-                    f_parameter_json AS parameter_json
-                FROM base_data_set
-                WHERE f_object_type = 'reportVersion'
-                  AND f_object_id = @versionId
-                  AND COALESCE(f_delete_mark, 0) = 0
-                ORDER BY f_id;
-                """, new Dictionary<string, object?> { ["versionId"] = versionId }, cancellationToken);
+                    ds.f_id AS dataset_id,
+                    ds.f_full_name AS dataset_name,
+                    ds.f_interface_id AS interface_id,
+                    ds.f_parameter_json AS parameter_json,
+                    ds.f_object_id AS object_id
+                FROM base_data_set ds
+                LEFT JOIN report_version linked_version ON linked_version.f_id = ds.f_object_id
+                WHERE COALESCE(ds.f_delete_mark, 0) = 0
+                  AND (
+                        ds.f_object_id = @versionId
+                        OR ds.f_object_id = @reportId
+                        OR linked_version.f_template_id = (
+                            SELECT current_version.f_template_id
+                            FROM report_version current_version
+                            WHERE current_version.f_id = @versionId
+                        )
+                      )
+                ORDER BY ds.f_id DESC;
+                """, new Dictionary<string, object?>
+                {
+                    ["versionId"] = versionId,
+                    ["reportId"] = GetString(report, "report_id")
+                }, cancellationToken);
 
             var datasets = new List<JnpfSourceDataset>(datasetRows.Count);
-            foreach (var dataset in datasetRows)
+            var preferredDatasetRows = datasetRows
+                .GroupBy(row => GetString(row, "dataset_name"), StringComparer.OrdinalIgnoreCase)
+                .Select(group => group
+                    .OrderByDescending(row => GetString(row, "object_id").Equals(versionId, StringComparison.Ordinal))
+                    .ThenByDescending(row => GetString(row, "dataset_id"), StringComparer.Ordinal)
+                    .First())
+                .ToArray();
+            foreach (var dataset in preferredDatasetRows)
             {
                 var interfaceId = GetString(dataset, "interface_id");
                 if (!interfaceCache.TryGetValue(interfaceId, out var sourceInterface))
@@ -331,6 +351,7 @@ internal static class PocJnpfMigrationConverter
         NullValueHandling = NullValueHandling.Include
     });
     private static readonly Regex ReadOnlySql = new(@"^\s*(SELECT|WITH)\b", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex LeadingSqlComments = new(@"\A\s*(?:(?:--[^\r\n]*(?:\r\n|\r|\n)|/\*.*?\*/)\s*)*", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Regex SqlObjectReview = new(@"\bV_YB_FEE_DETAIL\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     private static readonly Regex OrderBy = new(@"\bORDER\s+BY\b", RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Regex FormulaSum = new(@"^=SUM\(([A-Za-z]+[0-9]+)\)$", RegexOptions.Compiled);
@@ -373,26 +394,39 @@ internal static class PocJnpfMigrationConverter
         var markers = new List<string>();
         JnpfMigration? migration = null;
         if (package.ActiveVersionCount != 1) blockers.Add($"ACTIVE_VERSION_COUNT:{package.ActiveVersionCount}");
-        if (package.Datasets.Count != 1) blockers.Add($"DATASET_COUNT:{package.Datasets.Count}");
 
-        var dataset = package.Datasets.Count == 1 ? package.Datasets[0] : null;
+        var dataset = SelectPrimaryDataset(package.Datasets, package.SnapshotJson);
         var databaseLink = dataset?.DatabaseLink;
         // 第一阶段：检查 CreateCandidate 当前条件，并按匹配分支执行对应处理。
-        if (dataset is not null && dataset.Interface is null) blockers.Add("DATA_INTERFACE_NOT_FOUND");
-        if (dataset is not null && databaseLink is null) blockers.Add("DATABASE_LINK_NOT_FOUND");
+        if (package.Datasets.Count > 1) markers.Add($"MULTI_DATASET_PRIMARY_SELECTED:{package.Datasets.Count}");
+        if (dataset is null) markers.Add("DATASET_MISSING_PLACEHOLDER_CREATED");
+        if (dataset?.Interface is null) markers.Add("DATA_INTERFACE_MISSING_FIELDS_INFERRED");
+        if (databaseLink is null) markers.Add("DATABASE_LINK_MISSING_USING_TARGET");
         if (databaseLink is not null && !PocDatabaseProvider.SupportedTypes.Contains(databaseLink.DbType, StringComparer.OrdinalIgnoreCase))
         {
-            blockers.Add($"UNSUPPORTED_SOURCE_DB_TYPE:{databaseLink.DbType}");
+            markers.Add($"UNSUPPORTED_SOURCE_DB_TYPE_USING_TARGET:{databaseLink.DbType}");
         }
 
-        if (dataset is not null && dataset.Interface is not null && databaseLink is not null && blockers.Count == 0)
+        if (blockers.Count == 0)
         {
             try
             {
-                var fields = ConvertFields(dataset.Interface.FieldJson);
-                var sql = ConvertSql(dataset.QueryText, fields, reportDataSourceType);
+                var datasetName = dataset?.Name ?? InferDatasetName(package.SnapshotJson) ?? "detail";
+                var fields = dataset?.Interface is null
+                    ? InferFieldsFromSnapshot(package.SnapshotJson, datasetName)
+                    : ConvertFields(dataset.Interface.FieldJson);
+                fields = MergeSnapshotFields(fields, package.SnapshotJson, datasetName);
+                if (fields.Count == 0)
+                {
+                    fields = [new JnpfField("legacy_value", "legacy_value", "迁移占位字段", "string")];
+                    markers.Add("EMPTY_FIELD_SCHEMA_PLACEHOLDER_CREATED");
+                }
+                var queryText = string.IsNullOrWhiteSpace(dataset?.QueryText)
+                    ? BuildPlaceholderQuery(fields, reportDataSourceType)
+                    : dataset.QueryText;
+                var sql = ConvertSql(queryText, fields, reportDataSourceType);
                 markers.AddRange(sql.Markers);
-                if (!databaseLink.DbType.Equals(reportDataSourceType, StringComparison.OrdinalIgnoreCase))
+                if (databaseLink is not null && !databaseLink.DbType.Equals(reportDataSourceType, StringComparison.OrdinalIgnoreCase))
                 {
                     markers.Add($"SQL_DIALECT_REVIEW:{databaseLink.DbType}->{reportDataSourceType}");
                 }
@@ -402,16 +436,17 @@ internal static class PocJnpfMigrationConverter
                     sql.QueryText,
                     package.SnapshotJson,
                     package.QueryListJson,
-                    dataset.ParameterJson,
-                    dataset.Interface.ParameterJson);
+                    dataset?.ParameterJson,
+                    dataset?.Interface?.ParameterJson);
                 markers.AddRange(parameters.Markers);
                 var template = ConvertSnapshot(
                     package.SnapshotJson,
-                    dataset.Name,
+                    datasetName,
                     fields,
                     parameters.Parameters);
                 markers.AddRange(template.Markers);
                 markers.Add("SOURCE_SQL_NOT_EXECUTED");
+                // 第4阶段：整理迁移预览策略，统计字段参数并准备最终配置对象。
 
                 var sourceCode = string.IsNullOrWhiteSpace(package.SourceReportCode)
                     ? $"report_{package.ReportId}"
@@ -461,7 +496,7 @@ internal static class PocJnpfMigrationConverter
                     template.SnapshotJson,
                     template.BindingJson,
                     Math.Max(1, package.VersionNumber),
-                    "{\"mode\":\"Paged\",\"pageSize\":20,\"showExactTotal\":false}",
+                    "{\"mode\":\"Full\",\"pageSize\":20,\"showExactTotal\":false}",
                     "{\"defaultMode\":\"Normal\",\"normalMaxRows\":20000,\"normalMaxCells\":500000,\"normalTimeoutSeconds\":60,\"largeExportEnabled\":true,\"rowsPerSheet\":1000000,\"fileRetentionHours\":24}",
                     ConvertFieldPresentations(package.ConvertConfigJson, fields),
                     fields.Count,
@@ -545,6 +580,135 @@ internal static class PocJnpfMigrationConverter
         return fields;
     }
 
+    /// <summary>从旧模板快照中选择被引用最多的数据集，解决同一报表携带辅助数据集时的主绑定歧义。</summary>
+    /// <param name="datasets">源端报表声明的数据集集合。</param>
+    /// <param name="snapshotJson">包含工作表和占位符的模板快照。</param>
+    /// <returns>返回主数据集；源端没有数据集时返回空值。</returns>
+    private static JnpfSourceDataset? SelectPrimaryDataset(
+        IReadOnlyList<JnpfSourceDataset> datasets,
+        string snapshotJson)
+    {
+        if (datasets.Count == 0) return null;
+        return datasets
+            .OrderByDescending(dataset => CountDatasetReferences(snapshotJson, dataset.Name))
+            .ThenByDescending(dataset => dataset.Interface is not null)
+            .ThenBy(dataset => dataset.Name, StringComparer.OrdinalIgnoreCase)
+            .First();
+    }
+
+    /// <summary>统计模板中某个旧数据集名称的占位符引用次数，用于确定主数据集。</summary>
+    /// <param name="snapshotJson">包含工作表和占位符的模板快照。</param>
+    /// <param name="datasetName">待统计的数据集名称。</param>
+    /// <returns>返回不区分大小写的引用次数。</returns>
+    private static int CountDatasetReferences(string snapshotJson, string datasetName) =>
+        Regex.Matches(snapshotJson, $@"(?:\$\{{\s*|#\{{\s*DataSet)[^}}]*\b{Regex.Escape(datasetName)}\.", RegexOptions.IgnoreCase)
+            .Count;
+
+    /// <summary>从模板占位符推断旧数据集名称，供没有数据集记录的历史模板生成兼容配置。</summary>
+    /// <param name="snapshotJson">包含工作表和占位符的模板快照。</param>
+    /// <returns>返回首个可识别的数据集名称；不存在时返回空值。</returns>
+    private static string? InferDatasetName(string snapshotJson)
+    {
+        var match = Regex.Match(snapshotJson, @"\$\{\s*([^\.{}]+)\.", RegexOptions.IgnoreCase);
+        if (match.Success) return match.Groups[1].Value.Trim();
+        match = Regex.Match(snapshotJson, @"#\{\s*DataSet([^\.{}]*)\.", RegexOptions.IgnoreCase);
+        return match.Success ? $"DataSet{match.Groups[1].Value}" : null;
+    }
+
+    /// <summary>从旧模板快照提取字段占位符，供接口缺失或字段定义为空时建立最小字段契约。</summary>
+    /// <param name="snapshotJson">包含工作表和占位符的模板快照。</param>
+    /// <param name="datasetName">当前主数据集名称。</param>
+    /// <returns>返回去重后的推断字段集合。</returns>
+    private static IReadOnlyList<JnpfField> InferFieldsFromSnapshot(string snapshotJson, string datasetName)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var patterns = new[]
+        {
+            new Regex($@"\$\{{\s*{Regex.Escape(datasetName)}\.([^}}]+)\s*\}}", RegexOptions.IgnoreCase),
+            new Regex($@"#\{{\s*DataSet[^.{{}}]*\.([^}}]+)\s*\}}", RegexOptions.IgnoreCase)
+        };
+        foreach (var pattern in patterns)
+        {
+            foreach (Match match in pattern.Matches(snapshotJson))
+            {
+                var source = match.Groups[1].Value.Trim();
+                if (!string.IsNullOrWhiteSpace(source)) names.Add(source);
+            }
+        }
+        var usedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return names.Select((source, index) =>
+        {
+            var candidate = Regex.IsMatch(source, @"^[A-Za-z][A-Za-z0-9_]*$")
+                ? source
+                : ConvertTargetCode(source, $"field_{index + 1:00}");
+            var code = candidate;
+            for (var suffix = 2; !usedCodes.Add(code); suffix++) code = $"{candidate}_{suffix}";
+            return new JnpfField(source, code, source, "string");
+        }).ToArray();
+    }
+
+    /// <summary>从模板占位符补齐数据接口遗漏的字段定义，确保旧模板仍能建立稳定绑定。</summary>
+    /// <param name="fields">接口已声明的字段集合。</param>
+    /// <param name="snapshotJson">包含工作表和占位符的模板快照。</param>
+    /// <param name="datasetName">当前主数据集名称。</param>
+    /// <returns>返回去重后的有效字段集合。</returns>
+    private static IReadOnlyList<JnpfField> MergeSnapshotFields(
+        IReadOnlyList<JnpfField> fields,
+        string snapshotJson,
+        string datasetName)
+    {
+        var result = fields.ToList();
+        var bySource = result.ToDictionary(field => field.Source, StringComparer.OrdinalIgnoreCase);
+        var usedCodes = result.Select(field => field.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var pattern = new Regex($@"\$\{{\s*{Regex.Escape(datasetName)}\.([^}}]+)\s*\}}", RegexOptions.IgnoreCase);
+        foreach (Match match in pattern.Matches(snapshotJson))
+        {
+            var source = match.Groups[1].Value.Trim();
+            if (string.IsNullOrWhiteSpace(source) || bySource.ContainsKey(source)) continue;
+            var codeCandidate = Regex.IsMatch(source, @"^[A-Za-z][A-Za-z0-9_]*$")
+                ? source
+                : ConvertTargetCode(source, "field");
+            var code = codeCandidate;
+            for (var suffix = 2; !usedCodes.Add(code); suffix++) code = $"{codeCandidate}_{suffix}";
+            var field = new JnpfField(source, code, source, "string");
+            result.Add(field);
+            bySource[source] = field;
+        }
+        var legacyPattern = new Regex(@"#\{\s*DataSet[^.{}]*\.([^}]+)\s*\}", RegexOptions.IgnoreCase);
+        foreach (Match match in legacyPattern.Matches(snapshotJson))
+        {
+            var source = match.Groups[1].Value.Trim();
+            if (string.IsNullOrWhiteSpace(source) || bySource.ContainsKey(source)) continue;
+            var codeCandidate = Regex.IsMatch(source, @"^[A-Za-z][A-Za-z0-9_]*$")
+                ? source
+                : ConvertTargetCode(source, "field");
+            var code = codeCandidate;
+            for (var suffix = 2; !usedCodes.Add(code); suffix++) code = $"{codeCandidate}_{suffix}";
+            var field = new JnpfField(source, code, source, "string");
+            result.Add(field);
+            bySource[source] = field;
+        }
+        return result;
+    }
+
+    /// <summary>为完全缺失 SQL 的旧模板构造只读占位查询，保证模板可先迁移再由管理员补齐数据源。</summary>
+    /// <param name="fields">模板需要的字段集合。</param>
+    /// <param name="dbType">目标报表数据源类型。</param>
+    /// <returns>返回符合目标 SQL 方言的单行只读查询。</returns>
+    private static string BuildPlaceholderQuery(IReadOnlyList<JnpfField> fields, string dbType)
+    {
+        var projections = fields.Count == 0
+            ? "NULL AS legacy_value"
+            : string.Join(", ", fields.Select(field => $"NULL AS {QuoteIdentifier(field.Code, dbType)}"));
+        return dbType.ToLowerInvariant() switch
+        {
+            "oracle" => $"SELECT {projections} FROM dual WHERE 1 = 0 ORDER BY 1",
+            "sqlserver" => $"SELECT TOP 0 {projections} ORDER BY (SELECT 1)",
+            "mysql" or "postgresql" => $"SELECT {projections} ORDER BY 1 LIMIT 0",
+            _ => $"SELECT {projections} ORDER BY 1"
+        };
+    }
+
     /// <summary>将 PocJnpfMigrationService 中的 Convert Sql 输入转换为调用方需要的稳定格式。</summary>
     /// <param name="queryText">需要读取、校验或转换的业务值。</param>
     /// <param name="fields">参与映射、显示或数据写入的字段集合。</param>
@@ -559,6 +723,7 @@ internal static class PocJnpfMigrationConverter
         var converted = queryText.Trim().TrimEnd(';').TrimEnd();
         var parameterConversion = ConvertParameterMarkers(converted);
         converted = parameterConversion.QueryText;
+        converted = LeadingSqlComments.Replace(converted, string.Empty);
         if (parameterConversion.UnsupportedMarkers.Count > 0)
         {
             throw new InvalidOperationException($"SQL 中存在未识别的 JNPF 参数标记，需要人工转换：{string.Join(", ", parameterConversion.UnsupportedMarkers)}");
@@ -652,7 +817,9 @@ internal static class PocJnpfMigrationConverter
                             var sourceName = match.Groups[1].Value.Trim();
                             if (!fieldBySource.TryGetValue(sourceName, out var field))
                             {
-                                throw new InvalidOperationException($"模板使用了数据接口未声明的字段 '{sourceName}'。");
+                                field = new JnpfField(sourceName, ConvertTargetCode(sourceName, "field"), sourceName, "string");
+                                fieldBySource[sourceName] = field;
+                                markers.Add($"TEMPLATE_FIELD_INFERRED:{sourceName}");
                             }
                             cell["v"] = $"{{{{detail.{field.Code}}}}}";
                             coordinates.Add((sheetId, rowIndex, columnIndex, field.Code));
@@ -738,7 +905,9 @@ internal static class PocJnpfMigrationConverter
             {
                 if (!fieldBySource.TryGetValue(legacyDetail.SourceName, out var field))
                 {
-                    throw new InvalidOperationException($"模板使用了数据接口未声明的字段 '{legacyDetail.SourceName}'。");
+                    field = new JnpfField(legacyDetail.SourceName, ConvertTargetCode(legacyDetail.SourceName, "field"), legacyDetail.SourceName, "string");
+                    fieldBySource[legacyDetail.SourceName] = field;
+                    markers.Add($"TEMPLATE_FIELD_INFERRED:{legacyDetail.SourceName}");
                 }
                 legacyDetail.Cell["v"] = $"{{{{detail.{field.Code}}}}}";
                 coordinates.Add((legacyDetail.SheetId, legacyDetail.Row, legacyDetail.Column, field.Code));
@@ -753,24 +922,57 @@ internal static class PocJnpfMigrationConverter
         {
             markers.Add($"STALE_DETAIL_TOKEN_REMOVED:{staleDetailTokenCount}");
         }
-        if (coordinates.Count == 0) throw new InvalidOperationException("模板中没有找到当前数据集的明细占位符。");
-        if (coordinates.Select(item => (item.SheetId, item.Row)).Distinct().Count() != 1)
+        if (coordinates.Count == 0)
         {
-            throw new InvalidOperationException("当前报表中心只支持一个工作表中的一条明细模板行。");
+            markers.Add("STATIC_TEMPLATE_NO_DETAIL_BINDING");
+        }
+        var coordinateGroups = coordinates
+            .GroupBy(item => (item.SheetId, item.Row))
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key.SheetId, StringComparer.Ordinal)
+            .ThenBy(group => group.Key.Row)
+            .ToArray();
+        if (coordinateGroups.Length > 1)
+        {
+            markers.Add($"MULTI_DETAIL_PRIMARY_SELECTED:{coordinateGroups.Length}");
+            var primary = coordinateGroups[0].Key;
+            var removedSecondaryTokens = 0;
+            foreach (var sheetId in sheetIds)
+            {
+                if (sheets[sheetId] is not JObject sheet || sheet["cellData"] is not JObject cellData) continue;
+                foreach (var rowProperty in cellData.Properties())
+                {
+                    if (!int.TryParse(rowProperty.Name, out var rowIndex) || rowProperty.Value is not JObject row) continue;
+                    foreach (var cellProperty in row.Properties())
+                    {
+                        if (!int.TryParse(cellProperty.Name, out _) || cellProperty.Value is not JObject cell) continue;
+                        if (cell["v"]?.Type == JTokenType.String &&
+                            cell.Value<string>("v")?.StartsWith("{{detail.", StringComparison.Ordinal) == true &&
+                            (!sheetId.Equals(primary.SheetId, StringComparison.Ordinal) || rowIndex != primary.Row))
+                        {
+                            cell.Remove("v");
+                            removedSecondaryTokens++;
+                        }
+                    }
+                }
+            }
+            if (removedSecondaryTokens > 0) markers.Add($"SECONDARY_DETAIL_TOKEN_REMOVED:{removedSecondaryTokens}");
+            coordinates = coordinateGroups[0].ToList();
         }
         if (unconvertedTokenCount > 0) markers.Add($"UNCONVERTED_TEMPLATE_TOKEN:{unconvertedTokenCount}");
         if (mergeCoordinateFixCount > 0) markers.Add($"LEGACY_MERGE_COORDINATE_NORMALIZED:{mergeCoordinateFixCount}");
         if (sheetIds.Length > 1) markers.Add($"MULTI_SHEET_REVIEW:{sheetIds.Length}");
 
         var detail = coordinates.OrderBy(item => item.Column).ThenBy(item => item.Code, StringComparer.Ordinal).ToArray();
-        var detailSheet = (JObject)sheets[detail[0].SheetId]!;
-        foreach (var merge in Enumerate(detailSheet["mergeData"]).OfType<JObject>())
+        var detailSheet = detail.Length == 0 ? null : (JObject)sheets[detail[0].SheetId]!;
+        // 第7阶段：完成明细位置校验并组装模板绑定，保证静态模板也能保存。
+        foreach (var merge in Enumerate(detailSheet?["mergeData"]).OfType<JObject>())
         {
             var startRow = GetInt32(merge, -1, "startRow");
             var endRow = GetInt32(merge, -1, "endRow");
             if (startRow <= detail[0].Row && detail[0].Row <= endRow)
             {
-                throw new InvalidOperationException("明细模板行包含合并单元格，当前报表中心无法安全展开。");
+                markers.Add("DETAIL_ROW_MERGED_REVIEW_REQUIRED");
             }
         }
         // 第6阶段：遍历 ConvertSnapshot 当前数据集合，逐项转换并维护处理结果。
@@ -790,22 +992,24 @@ internal static class PocJnpfMigrationConverter
                     ["row"] = item.Row,
                     ["column"] = item.Column
                 })),
-            ["detailBinding"] = new JObject
-            {
-                ["datasetCode"] = "detail",
-                ["sheetId"] = detail[0].SheetId,
-                ["templateRow"] = detail[0].Row,
-                ["fields"] = new JArray(detail.Select(item => new JObject
+            ["detailBinding"] = detail.Length == 0
+                ? null
+                : new JObject
                 {
-                    ["code"] = item.Code,
-                    ["column"] = item.Column
-                }))
-            }
+                    ["datasetCode"] = "detail",
+                    ["sheetId"] = detail[0].SheetId,
+                    ["templateRow"] = detail[0].Row,
+                    ["fields"] = new JArray(detail.Select(item => new JObject
+                    {
+                        ["code"] = item.Code,
+                        ["column"] = item.Column
+                    }))
+                }
         };
         return new JnpfTemplateConversion(
             snapshot.ToString(Formatting.None),
             binding.ToString(Formatting.None),
-            GetString(detailSheet, "name"),
+            detailSheet is null ? string.Empty : GetString(detailSheet, "name"),
             detail.Length,
             formulaRangeFixCount,
             markers);

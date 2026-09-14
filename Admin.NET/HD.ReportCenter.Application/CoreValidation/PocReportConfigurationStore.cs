@@ -17,6 +17,10 @@ public sealed record PocReportConfigurationMutation(
     int ExpectedRevision,
     string? FieldPresentationsJson = null);
 
+public sealed record PocStoredPage<T>(
+    IReadOnlyList<T> Items,
+    int Total);
+
 public sealed class PocReportConfigurationRevisionConflictException : Exception
 {
     /// <summary>初始化 PocReportConfigurationRevisionConflictException 异常实例，保存错误上下文并把消息传递给基础异常类型。</summary>
@@ -47,6 +51,37 @@ public sealed class PocReportConfigurationStore : ITransient
             .OrderBy(item => item.Name)
             .OrderBy(item => item.Code)
             .ToListAsync();
+
+    /// <summary>按名称、编码、工作表或数据集筛选报表，并仅读取管理列表当前页。</summary>
+    /// <param name="page">从一开始的页码。</param>
+    /// <param name="pageSize">当前页最多返回的记录数。</param>
+    /// <param name="keyword">可选的模糊搜索关键字。</param>
+    /// <returns>返回当前页报表实体和筛选后的总记录数。</returns>
+    public async Task<PocStoredPage<PocReport>> ListReportsPageAsync(
+        int page,
+        int pageSize,
+        string? keyword)
+    {
+        var query = _database.Queryable<PocReport>();
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var normalizedKeyword = keyword.Trim();
+            query = query.Where(item =>
+                item.Name.Contains(normalizedKeyword) ||
+                item.Code.Contains(normalizedKeyword) ||
+                item.SheetName.Contains(normalizedKeyword) ||
+                item.DatasetCode.Contains(normalizedKeyword));
+        }
+
+        var total = await query.CountAsync();
+        var items = await query
+            .OrderBy(item => item.Name)
+            .OrderBy(item => item.Code)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+        return new PocStoredPage<PocReport>(items, total);
+    }
 
     /// <summary>负责 PocReportConfigurationStore 的 Report Exists Async 处理：读取该步骤所需数据，完成对应状态变更并返回结果。</summary>
     /// <param name="reportCode">需要读取、校验或转换的业务值。</param>

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ExternalLink, FilePenLine, LoaderCircle, Plus, RefreshCw, Search, X } from 'lucide-react';
 import { reportCatalogApi } from './api';
+import { PaginationBar } from './PaginationBar';
 import { StatusToasts } from './StatusToasts';
 import type { CreateReportRequest, DatasetOption, ReportSummaryDocument } from './types';
 
@@ -37,6 +38,10 @@ function formatUpdatedAt(value: string | null): string {
 export default function ReportListPage() {
   const [reports, setReports] = useState<ReportSummaryDocument[]>([]);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [totalReports, setTotalReports] = useState(0);
+  const loadRequest = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -48,35 +53,53 @@ export default function ReportListPage() {
   const [createRequest, setCreateRequest] = useState<CreateReportRequest>(emptyCreateRequest);
 
   /**
-   * 查询或读取 ReportListPage 所需的 load 数据，并按调用约定返回结果。
-   * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+   * 请求模板列表当前页，并同步服务端返回的总数和规范化分页参数。
+   * @param requestedPage - 请求的页码。
+   * @param requestedPageSize - 请求的每页条数。
+   * @param requestedQuery - 请求的搜索关键字。
    */
-  const load = async () => {
+  const load = async (
+    requestedPage = page,
+    requestedPageSize = pageSize,
+    requestedQuery = query,
+  ) => {
+    const requestId = loadRequest.current + 1;
+    loadRequest.current = requestId;
     setLoading(true);
     setError(null);
     try {
-      setReports(await reportCatalogApi.reports());
+      const result = await reportCatalogApi.reportsPage({
+        page: requestedPage,
+        pageSize: requestedPageSize,
+        query: requestedQuery,
+      });
+      if (requestId !== loadRequest.current) return;
+      setReports(result.items);
+      setTotalReports(result.total);
+      setPage(result.page);
+      setPageSize(result.pageSize);
     } catch (exception) {
+      if (requestId !== loadRequest.current) return;
       setError(exception instanceof Error ? exception.message : '模板列表加载失败。');
     } finally {
-      setLoading(false);
+      if (requestId === loadRequest.current) setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load();
-  }, []);
+    void load(page, pageSize, query);
+  }, [page, pageSize, query]);
 
-  const filteredReports = useMemo(() => {
-    const keyword = query.trim().toLocaleLowerCase('zh-CN');
-    if (!keyword) return reports;
-    return reports.filter((report) => [
-      report.name,
-      report.reportCode,
-      report.sheetName,
-      report.datasetCode,
-    ].some((value) => value.toLocaleLowerCase('zh-CN').includes(keyword)));
-  }, [query, reports]);
+  useEffect(() => {
+    setPage(1);
+  }, [query, pageSize]);
+
+  const reportPageCount = Math.max(1, Math.ceil(totalReports / pageSize));
+  const currentReportPage = Math.min(page, reportPageCount);
+
+  useEffect(() => {
+    if (page > reportPageCount) setPage(reportPageCount);
+  }, [page, reportPageCount]);
 
   /**
    * 准备 ReportListPage 的 open Create 交互状态并打开对应界面。
@@ -177,7 +200,7 @@ export default function ReportListPage() {
             title="刷新模板列表"
             aria-label="刷新模板列表"
             disabled={loading}
-            onClick={() => void load()}
+            onClick={() => void load(page, pageSize, query)}
           >
             <RefreshCw className={loading ? 'spin' : undefined} size={18} />
           </button>
@@ -202,8 +225,8 @@ export default function ReportListPage() {
 
       <section className="report-table-section" aria-label="模板列表">
         <div className="report-table-meta">
-          <span>共 {reports.length} 个模板</span>
-          {query.trim() && <span>当前显示 {filteredReports.length} 个</span>}
+          <span>{query.trim() ? '匹配' : '共'} {totalReports} 个模板</span>
+          <span>当前页 {reports.length} 个</span>
         </div>
         <div className="report-table-scroll">
           <table className="report-table">
@@ -222,9 +245,9 @@ export default function ReportListPage() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={8} className="report-table-empty"><LoaderCircle className="spin" size={20} />正在读取模板</td></tr>
-              ) : filteredReports.length === 0 ? (
+              ) : reports.length === 0 ? (
                 <tr><td colSpan={8} className="report-table-empty">没有匹配的模板</td></tr>
-              ) : filteredReports.map((report) => (
+              ) : reports.map((report) => (
                 <tr key={report.reportCode}>
                   <td><strong>{report.name}</strong><small>{report.sheetName}</small></td>
                   <td><code>{report.reportCode}</code></td>
@@ -243,11 +266,22 @@ export default function ReportListPage() {
             </tbody>
           </table>
         </div>
+        <PaginationBar
+          total={totalReports}
+          page={currentReportPage}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="模板"
+        />
       </section>
 
       {createOpen && (
         <div className="configuration-backdrop" role="presentation">
-          <form className="create-report-dialog" aria-labelledby="create-report-title" onSubmit={(event) => void createReport(event)}>
+          <form className="create-report-dialog" aria-labelledby="create-report-title" onSubmit={(event) => {
+            // 第8阶段：在弹窗表单提交时转发 createReport，由它校验输入并执行创建。
+            void createReport(event);
+          }}>
             <header className="configuration-header">
               <div>
                 <h2 id="create-report-title">新增模板</h2>

@@ -23,6 +23,7 @@ describe('createPreviewFilterTarget', () => {
       sheetId: 'report-sheet',
       templateRow: 4,
       insertCount: 2,
+      formulaRewrites: [],
       rows: [
         { row: 4, values: [{ column: 2, value: 'a' }, { column: 6, value: 'b' }] },
         { row: 5, values: [{ column: 2, value: 'c' }, { column: 6, value: 'd' }] },
@@ -47,6 +48,7 @@ describe('createPreviewFilterTarget', () => {
       sheetId: 'report-sheet',
       templateRow: 0,
       insertCount: 0,
+      formulaRewrites: [],
       rows: [{ row: 0, values: [{ column: 0, value: 'value' }] }],
     }))).toBeNull();
   });

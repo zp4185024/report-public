@@ -2,9 +2,13 @@
 
 `hd-report-center` 是一个独立部署的报表中心，面向 HIS、LIS、PACS、外卖等业务系统提供统一的报表配置、查询、预览、模板设计、打印和 Excel 导出能力。
 
+## 项目范围
+
+本项目只负责报表服务：报表数据源和数据集、报表模板、查询预览、打印导出，以及供业务系统嵌入的报表页面和接口。Admin.NET 管理后台、用户管理、组织机构、角色权限、菜单和系统运维等管理能力不属于本项目交付范围，也不作为报表服务的业务前提；仓库中的 Admin.NET 代码仅作为现有宿主底座和兼容代码保留。
+
 项目将“数据怎么查”和“结果怎么展示”分开管理：数据源与 SQL 数据集是可复用资源，报表配置查询参数和取值方式，工作簿模板负责表头、布局、公式和样式。外部系统可以通过 URL 或 iframe 嵌入报表页面，并传入院区、科室、人员、日期等业务上下文。
 
-> 当前仓库同时包含 Admin.NET 管理底座、报表中心后端、React/Univer 验证工作台和若干部署工具。报表中心核心接口目前仍标记为验证用途，正式上线前必须补齐登录鉴权、菜单权限、审计和生产部署配置。
+> 当前仓库同时包含 Admin.NET 宿主底座、报表中心后端、React/Univer 独立报表工作台和若干部署工具。管理后台不在本项目实施范围内；报表服务正式上线前只需按实际部署方式配置接口访问控制、数据源只读账号和生产部署参数。
 
 ## 功能介绍
 
@@ -52,7 +56,7 @@
 | 层次 | 组件 | 用途 |
 | --- | --- | --- |
 | 运行时 | .NET 8、ASP.NET Core | 后端 API 和宿主进程 |
-| 后端底座 | Admin.NET、Furion、SqlSugar | 权限、动态 API、配置、ORM、系统管理能力 |
+| 后端宿主底座 | Admin.NET、Furion、SqlSugar | 提供报表服务运行所需的宿主、配置和 ORM；管理后台能力不在本项目范围内 |
 | 报表后端 | `HD.ReportCenter.Application`、`HD.ReportCenter.ReportEngine` | 报表 API、模板校验、参数解析、SQL 执行和导出 |
 | 数据库驱动 | `Microsoft.Data.SqlClient`、`Oracle.ManagedDataAccess.Core`、`MySqlConnector`、`Npgsql` | 多数据库只读数据源接入 |
 | Excel 处理 | ClosedXML、DocumentFormat.OpenXml、Newtonsoft.Json | XLSX 交换、快照处理和流式导出 |
@@ -60,7 +64,7 @@
 | 工作簿引擎 | Univer OSS 0.25.1、Univer Web Worker | 电子表格编辑、公式计算和预览渲染 |
 | SQL 编辑 | CodeMirror SQL | 数据集 SQL 编辑和高亮 |
 | 界面组件 | `lucide-react` | 操作图标和状态图标 |
-| 管理前端 | Vue 3、Element Plus、Pinia、Vue Router、ECharts | Admin.NET 原有后台管理、权限菜单和 iframe 容器 |
+| 管理前端 | Vue 3、Element Plus、Pinia、Vue Router、ECharts | Admin.NET 原有后台兼容代码，不属于报表服务交付入口 |
 | 测试 | xUnit、Vitest | 后端领域逻辑和前端交互/转换测试 |
 | 部署配套 | Docker Compose、Nginx、Redis、MinIO | 通用 Admin.NET 部署和基础设施配套；报表中心运行库仍固定为 SQL Server |
 | 参考实现 | `references/luck-report` | 仅用于研究报表设计、参数、公式、预览和导出思路 |
@@ -220,7 +224,7 @@ http://localhost:5175/reports/dept-workload?hospitalId=H01&deptId=D02&personId=P
 - URL 只传上下文和筛选值，不传 SQL 或模板快照。
 - 只有报表参数明确设置 `allowUrlPrefill=true` 时，才允许 URL 覆盖初始值。
 - `Fixed`、`System` 或只读参数拒绝客户端覆盖。
-- Admin.NET 原有 iframe 菜单会自动附加登录令牌；嵌入生产环境前应核对目标地址、跨域策略和令牌有效期。
+- 业务系统嵌入生产环境前，应由调用方或部署网关负责登录态传递、目标地址、跨域策略和令牌有效期校验。
 - 对外分享建议使用受保护共享页，并通过网关或签名机制限制任意改参。
 
 ## 数据库初始化与迁移
@@ -240,7 +244,7 @@ pwsh -File .\scripts\database\Apply-ReusableDataAssetSchema.ps1
 
 ## 当前边界与上线前事项
 
-- 当前报表验证 API 使用匿名属性，不能直接作为生产权限方案；上线前必须接入 Admin.NET 登录、菜单、角色和操作审计。
+- 管理后台不属于本项目交付范围；报表接口的访问控制由实际部署网关、宿主系统或调用方按项目要求负责，报表服务本身只保留必要的接口校验。
 - 报表中心主库固定为 SQL Server；Oracle、MySQL、PostgreSQL 是报表查询数据源类型，不是主库替代方案。
 - SQL 静态校验只允许只读 `SELECT/WITH`，仍必须使用数据库层只读账号和网络隔离。
 - 当前单张报表只支持一个主数据集，暂不支持多主数据集、参数级联选项、配置发布审批和历史版本回滚。

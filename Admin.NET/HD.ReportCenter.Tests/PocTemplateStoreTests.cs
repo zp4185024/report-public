@@ -281,6 +281,47 @@ public sealed class PocTemplateStoreTests : IDisposable
         Assert.Null(editable.Binding.DetailBinding);
     }
 
+    /// <summary>验证编辑器会返回多行明细冲突的具体修复位置，而不是误报字段定义变化。</summary>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
+    [Fact]
+    public async Task Editable_service_surfaces_multi_row_detail_conflict()
+    {
+        var service = new PocTemplateService(_store);
+        var snapshot = new JObject
+        {
+            ["sheets"] = new JObject
+            {
+                ["report-sheet"] = new JObject
+                {
+                    ["name"] = "科室工作量",
+                    ["cellData"] = new JObject
+                    {
+                        ["2"] = new JObject
+                        {
+                            ["2"] = new JObject { ["v"] = "{{detail.sequence}}" }
+                        },
+                        ["3"] = new JObject
+                        {
+                            ["0"] = new JObject { ["v"] = "{{detail.departmentName}}" }
+                        }
+                    },
+                    ["mergeData"] = new JArray()
+                }
+            },
+            ["sheetOrder"] = new JArray("report-sheet")
+        };
+        await InsertStoredTemplateAsync(snapshot.ToString(Formatting.None), "{}");
+
+        var editable = await service.GetEditableAsync(PocReportCatalog.ReportCode);
+
+        Assert.Contains("已有明细区域", editable.ValidationWarning);
+        Assert.Contains("第 3 行", editable.ValidationWarning);
+        Assert.Contains("单元格 A4", editable.ValidationWarning);
+        Assert.Equal("{{detail.sequence}}", editable.Snapshot["sheets"]?["report-sheet"]?["cellData"]?["2"]?["2"]?["v"]?.Value<string>());
+        Assert.Empty(editable.Binding.ParameterBindings);
+        Assert.Null(editable.Binding.DetailBinding);
+    }
+
     /// <summary>验证 Api get template returns the seed document 场景下的预期行为，并防止相关逻辑回归。</summary>
     /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]

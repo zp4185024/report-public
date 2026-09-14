@@ -190,6 +190,18 @@ public sealed class PocReportApi : IDynamicApiController
     public async Task<IReadOnlyList<PocReportSummaryDocument>> Reports() =>
         await RequireConfigurationService().ListReportsAsync();
 
+    /// <summary>按关键字分页读取报表管理列表，避免客户端一次加载全部模板。</summary>
+    /// <param name="page">从一开始的页码。</param>
+    /// <param name="pageSize">每页记录数。</param>
+    /// <param name="query">可选的模板名称、编码、工作表或数据集搜索词。</param>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/reports/page")]
+    public async Task<PocPagedDocument<PocReportSummaryDocument>> ReportsPage(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 15,
+        [FromQuery] string? query = null) =>
+        await RequireConfigurationService().ListReportsPageAsync(page, pageSize, query);
+
     /// <summary>读取创建报表时可选择的已启用数据集。</summary>
     [SuppressMonitor]
     [HttpGet("/api/report-center/poc/reports/create-options")]
@@ -261,6 +273,18 @@ public sealed class PocReportApi : IDynamicApiController
     [HttpGet("/api/report-center/poc/datasets")]
     public async Task<IReadOnlyList<PocDatasetDocument>> Datasets() =>
         await RequireDataAssetService().ListDatasetsAsync();
+
+    /// <summary>按关键字分页读取数据集管理列表，避免客户端一次加载全部数据集。</summary>
+    /// <param name="page">从一开始的页码。</param>
+    /// <param name="pageSize">每页记录数。</param>
+    /// <param name="query">可选的数据集名称、编码或数据源搜索词。</param>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/datasets/page")]
+    public async Task<PocPagedDocument<PocDatasetDocument>> DatasetsPage(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 15,
+        [FromQuery] string? query = null) =>
+        await RequireDataAssetService().ListDatasetsPageAsync(page, pageSize, query);
 
     /// <summary>新增或更新一个全局数据集。</summary>
     [SuppressMonitor]

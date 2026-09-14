@@ -48,8 +48,10 @@ public sealed class PocDataAssetService : ITransient
     private static readonly HashSet<string> VariableDataTypes = new(
         ["string", "int", "long", "decimal", "date", "datetime", "bool"],
         StringComparer.OrdinalIgnoreCase);
+    // Fixed 是 JNPF 迁移链路的合法产出（legacy sourceType=2 的固定值参数），PocParameterResolver
+    // 已支持其取值语义；数据集变量允许 Form/External/Fixed 三种来源。
     private static readonly HashSet<string> VariableSourceTypes = new(
-        ["Form", "External"],
+        ["Form", "External", "Fixed"],
         StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> FieldDataTypes = new(
         ["string", "number", "date", "datetime", "bool"],
@@ -82,6 +84,31 @@ public sealed class PocDataAssetService : ITransient
     {
         var datasets = await _store.ListDatasetsAsync();
         return datasets.Select(ToDatasetDocument).ToArray();
+    }
+
+    /// <summary>按关键字分页读取数据集摘要和字段契约，避免管理页加载全部资源。</summary>
+    /// <param name="page">从一开始的页码。</param>
+    /// <param name="pageSize">每页返回的最大记录数，服务端限制为 100。</param>
+    /// <param name="keyword">可选的数据集名称、编码或数据源搜索关键字。</param>
+    /// <returns>返回当前页、总数和总页数，供数据集管理列表翻页。</returns>
+    public async Task<PocPagedDocument<PocDatasetDocument>> ListDatasetsPageAsync(
+        int page,
+        int pageSize,
+        string? keyword)
+    {
+        var normalizedPage = Math.Max(page, 1);
+        var normalizedPageSize = Math.Clamp(pageSize, 1, 100);
+        var storedPage = await _store.ListDatasetsPageAsync(
+            normalizedPage,
+            normalizedPageSize,
+            keyword);
+        var items = storedPage.Items.Select(ToDatasetDocument).ToArray();
+        return new PocPagedDocument<PocDatasetDocument>(
+            items,
+            normalizedPage,
+            normalizedPageSize,
+            storedPage.Total,
+            (int)Math.Ceiling(storedPage.Total / (double)normalizedPageSize));
     }
 
     /// <summary>调用 PocDataAssetService 的异步依赖完成 List Dataset References Async 操作，并按当前返回类型传递处理结果。</summary>
@@ -322,7 +349,9 @@ public sealed class PocDataAssetService : ITransient
                 var row = new object?[reader.FieldCount];
                 for (var index = 0; index < reader.FieldCount; index++)
                 {
-                    row[index] = PocDatasetValueNormalizer.Normalize(reader.GetValue(index), fields[index]);
+                    row[index] = PocDatasetValueNormalizer.Normalize(
+                        PocDatasetValueNormalizer.ReadColumnValue(reader, index),
+                        fields[index]);
                 }
                 rows.Add(row);
             }

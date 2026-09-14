@@ -88,6 +88,17 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Equal("orclpdb", reportSource.Database);
     }
 
+    /// <summary>验证迁移请求保留超过 50 个源报表标识，避免批量全选时静默丢失后续报表。</summary>
+    [Fact]
+    public void MigrationRequest_PreservesLargeSourceReportSelection()
+    {
+        var sourceReportIds = Enumerable.Range(1, 120).Select(index => $"report-{index}").ToArray();
+        var request = new PocJnpfMigrationExecuteRequest(SourceReportIds: sourceReportIds);
+
+        Assert.Equal(120, request.SourceReportIds!.Length);
+        Assert.Equal(0, request.MaxReports);
+    }
+
     /// <summary>验证 Resolve Target Connection String Async Uses Current Report Center Connection 场景下的预期行为，并防止相关逻辑回归。</summary>
     /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
@@ -181,6 +192,56 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Contains("UNSUPPORTED_TEMPLATE_ASSET_REMOVED:floatImages", template.Markers);
         Assert.Equal(1, template.FormulaRangeFixCount);
         Assert.Equal(2, template.DetailFieldCount);
+    }
+
+    /// <summary>验证多行旧明细模板会选择字段最多的一行并移除其它行占位符，避免迁移后无法预览。</summary>
+    [Fact]
+    public void Converter_NormalizesDetailTokensAcrossMultipleRows()
+    {
+        // 构造跨多行的旧模板，模拟 JNPF 迁移时明细占位符分散在不同明细行的边界输入。
+        var fields = new[]
+        {
+            new JnpfField("education", "education", "学历", "string"),
+            new JnpfField("orgname", "orgname", "组织", "string"),
+            new JnpfField("depName", "depName", "部门", "string"),
+            new JnpfField("salary", "salary", "薪资", "string")
+        };
+
+        var template = PocJnpfMigrationConverter.ConvertSnapshot(
+            """
+            {
+              "sheets": {
+                "sheet1": {
+                  "name": "Sheet1",
+                  "cellData": {
+                    "2": {"2": {"v":"${用户数据集.education}"}},
+                    "3": {
+                      "0": {"v":"${用户数据集.orgname}"},
+                      "1": {"v":"${用户数据集.depName}"},
+                      "2": {"v":"${用户数据集.salary}"}
+                    }
+                  },
+                  "mergeData": []
+                }
+              },
+              "sheetOrder": ["sheet1"]
+            }
+            """,
+            "用户数据集",
+            fields);
+
+        // 校验转换器选定主明细行、移除冲突占位符并同步生成可展开的字段绑定。
+        var snapshot = JObject.Parse(template.SnapshotJson);
+        var binding = JObject.Parse(template.BindingJson);
+
+        Assert.Null(snapshot["sheets"]?["sheet1"]?["cellData"]?["2"]?["2"]?["v"]);
+        Assert.Equal("{{detail.orgname}}", snapshot["sheets"]?["sheet1"]?["cellData"]?["3"]?["0"]?["v"]);
+        Assert.Equal("{{detail.depName}}", snapshot["sheets"]?["sheet1"]?["cellData"]?["3"]?["1"]?["v"]);
+        Assert.Equal("{{detail.salary}}", snapshot["sheets"]?["sheet1"]?["cellData"]?["3"]?["2"]?["v"]);
+        Assert.Equal(3, binding["detailBinding"]?["fields"]?.Count());
+        Assert.Equal(3, binding["detailBinding"]?["templateRow"]?.Value<int>());
+        Assert.Contains("MULTI_DETAIL_PRIMARY_SELECTED:2", template.Markers);
+        Assert.Contains("SECONDARY_DETAIL_TOKEN_REMOVED:1", template.Markers);
     }
 
     /// <summary>验证 Create Candidate Preserves Rich Text Heading From Jnpf Template 场景下的预期行为，并防止相关逻辑回归。</summary>
@@ -428,6 +489,59 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
         Assert.Contains("LEGACY_MERGE_COORDINATE_NORMALIZED:5", candidate.Markers);
     }
 
+    /// <summary>验证缺失数据集的旧静态模板迁移后默认整表预览，并生成不返回业务数据的只读占位查询。</summary>
+    [Fact]
+    public void CreateCandidate_MigratesStaticTemplateWithoutDataset()
+    {
+        var package = new JnpfSourcePackage(
+            "report-static",
+            "药品销售汇总表",
+            "BB20250922000001",
+            "version-static",
+            1,
+            1,
+            """
+            {
+              "sheets": {
+                "sheet1": {
+                  "name": "汇总表",
+                  "cellData": {"0":{"0":{"v":"药品销售汇总表"}}},
+                  "mergeData": []
+                }
+              },
+              "sheetOrder": ["sheet1"]
+            }
+            """,
+            "[]",
+            "[]",
+            []);
+
+        var candidate = PocJnpfMigrationConverter.CreateCandidate(package, "report_oracle", "Oracle");
+
+        Assert.True(candidate.Migratable, string.Join("; ", candidate.Blockers));
+        var migration = Assert.IsType<JnpfMigration>(candidate.Migration);
+        Assert.Equal("SELECT NULL AS \"legacy_value\" FROM dual WHERE 1 = 0 ORDER BY 1", migration.QueryText);
+        Assert.Equal("{\"mode\":\"Full\",\"pageSize\":20,\"showExactTotal\":false}", migration.PreviewSettingsJson);
+        Assert.Contains("DATASET_MISSING_PLACEHOLDER_CREATED", candidate.Markers);
+        Assert.Contains("STATIC_TEMPLATE_NO_DETAIL_BINDING", candidate.Markers);
+        Assert.Equal(JTokenType.Null, JObject.Parse(migration.BindingJson)["detailBinding"]?.Type);
+    }
+
+    /// <summary>验证以说明性注释开头的只读 SQL 可迁移，避免合法旧接口被误判为非查询语句。</summary>
+    [Fact]
+    public void ConvertSql_AllowsLeadingCommentsBeforeSelect()
+    {
+        var fields = PocJnpfMigrationConverter.ConvertFields(
+            "[{\"field\":\"PID\",\"fieldName\":\"病历号\",\"dataType\":\"string\"}]");
+
+        var result = PocJnpfMigrationConverter.ConvertSql(
+            "-- 报表字段命名为大写\r\n/* 只读接口 */\r\nSELECT PID FROM PATIENT_FEE_O",
+            fields,
+            "Oracle");
+
+        Assert.StartsWith("SELECT PID", result.QueryText, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>验证 Write Migration Async Inserts Configuration Graph And Skips Existing Report 场景下的预期行为，并防止相关逻辑回归。</summary>
     /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
     [Fact]
@@ -458,7 +572,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "{\"sheets\":{},\"sheetOrder\":[]}",
             "{\"version\":1}",
             1,
-            "{\"mode\":\"Paged\",\"pageSize\":20,\"showExactTotal\":false}",
+            "{\"mode\":\"Full\",\"pageSize\":20,\"showExactTotal\":false}",
             "{\"defaultMode\":\"Normal\"}",
             "[]",
             1,

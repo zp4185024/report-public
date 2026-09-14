@@ -4,7 +4,7 @@ import { dataAssetApi, jnpfMigrationApi } from './api';
 import { StatusToasts } from './StatusToasts';
 import type { DataSourceDocument, JnpfMigrationInventoryItem, JnpfMigrationResultItem } from './types';
 
-const defaultMaxReports = 3;
+const defaultMaxReports = 0;
 
 /**
  * 负责 JnpfMigrationPage 的 status Label 处理：读取该步骤所需数据，完成对应状态变更并返回结果。
@@ -149,10 +149,10 @@ export default function JnpfMigrationPage() {
       setWriteTarget({ database: response.writeTargetDatabase, dbType: response.writeTargetDbType });
       setInventory(response.inventory);
       // 第3阶段：遍历 JnpfMigrationPage 当前数据集合，逐项转换并维护处理结果。
-      setSelectedIds(response.inventory
+      const readyIds = response.inventory
         .filter((item) => item.migratable && item.status === 'Ready' && item.sourceReportId)
-        .slice(0, maxReports)
-        .map((item) => item.sourceReportId!));
+        .map((item) => item.sourceReportId!);
+      setSelectedIds(maxReports === 0 ? readyIds : readyIds.slice(0, maxReports));
       setNotice(`盘点完成，共发现 ${response.inventory.length} 个启用报表。`);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : '读取迁移清单失败。');
@@ -170,7 +170,7 @@ export default function JnpfMigrationPage() {
   const toggleSelection = (id: string) => {
     setSelectedIds((current) => current.includes(id)
       ? current.filter((item) => item !== id)
-      : current.length >= maxReports ? current : [...current, id]);
+      : maxReports > 0 && current.length >= maxReports ? current : [...current, id]);
   };
 
   /**
@@ -252,18 +252,18 @@ export default function JnpfMigrationPage() {
           <output>{writeTarget ? `${writeTarget.database}（${writeTarget.dbType} · 当前连接）` : '当前报表中心连接（服务端确定）'}</output>
         </div>
         <div className="jnpf-migration-setting compact">
-          <label htmlFor="his-max-reports">本批上限</label>
-          <input id="his-max-reports" type="number" min={1} max={50} value={maxReports} onChange={(event) => {
-            const next = Math.min(50, Math.max(1, Number(event.target.value) || 1));
+          <label htmlFor="his-max-reports">本批上限（0=全部）</label>
+          <input id="his-max-reports" type="number" min={0} value={maxReports} onChange={(event) => {
+            const next = Math.max(0, Number(event.target.value) || 0);
             setMaxReports(next);
-            setSelectedIds((current) => current.slice(0, next));
+            setSelectedIds((current) => next === 0 ? readyItems.map((item) => item.sourceReportId!) : current.slice(0, next));
           }} />
         </div>
         <div className="jnpf-migration-credential"><ServerCog size={18} /><span>写入目标为当前报表中心连接；报表运行数据源从数据源管理中选择。仅迁移报表定义、数据集 SQL、参数和模板，不读取业务数据，也不执行报表 SQL。<a href="/data-sources">数据源管理</a></span></div>
       </section>
 
       <section className="jnpf-migration-table-section" aria-label="迁移清单">
-        <div className="jnpf-migration-table-meta"><span>清单 {inventory.length} 项</span><span>已选 {selectedReadyCount} / {maxReports}</span></div>
+        <div className="jnpf-migration-table-meta"><span>清单 {inventory.length} 项</span><span>已选 {selectedReadyCount} / {maxReports === 0 ? '全部可迁移项' : maxReports}</span></div>
         <div className="jnpf-migration-table-scroll">
           <table className="jnpf-migration-table">
             <thead><tr><th aria-label="选择" /><th>报表</th><th>数据源</th><th>字段 / 参数</th><th>状态</th><th>标记</th></tr></thead>
@@ -278,7 +278,7 @@ export default function JnpfMigrationPage() {
                     const selected = selectedIds.includes(id);
                     const notes = [...splitNotes(item.blockers), ...splitNotes(item.markers)];
                     return <tr key={`${id}-${item.sourceVersionId}`}>
-                      <td><input type="checkbox" checked={selected} disabled={!canSelect || (selectedIds.length >= maxReports && !selected)} onChange={() => toggleSelection(id)} aria-label={`选择${item.reportName || id}`} /></td>
+                      <td><input type="checkbox" checked={selected} disabled={!canSelect || (maxReports > 0 && selectedIds.length >= maxReports && !selected)} onChange={() => toggleSelection(id)} aria-label={`选择${item.reportName || id}`} /></td>
                       <td><strong>{item.reportName || '未命名报表'}</strong><small>{item.targetReportCode || item.sourceReportCode || id}</small></td>
                       <td>{item.dataSourceNames || '未配置'}</td>
                       <td>{item.fieldCount} / {item.parameterCount}<small>明细 {item.detailFieldCount}</small></td>

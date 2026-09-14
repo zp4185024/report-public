@@ -9,13 +9,13 @@ namespace HD.ReportCenter.Application.CoreValidation;
 public sealed record PocJnpfMigrationInventoryRequest(
     string? JnpfDataSourceCode = null,
     string? ReportDataSourceCode = null,
-    int MaxReports = 3);
+    int MaxReports = 0);
 
 public sealed record PocJnpfMigrationExecuteRequest(
     string? JnpfDataSourceCode = null,
     string? ReportDataSourceCode = null,
     string[]? SourceReportIds = null,
-    int MaxReports = 3);
+    int MaxReports = 0);
 
 public sealed record PocJnpfMigrationInventoryItem(
     string? SourceReportId,
@@ -76,7 +76,7 @@ public sealed class PocJnpfMigrationRunner : ITransient
             request?.JnpfDataSourceCode,
             request?.ReportDataSourceCode,
             [],
-            request?.MaxReports ?? 3,
+            request?.MaxReports ?? 0,
             inventoryOnly: true,
             cancellationToken);
 
@@ -90,7 +90,7 @@ public sealed class PocJnpfMigrationRunner : ITransient
             request?.JnpfDataSourceCode,
             request?.ReportDataSourceCode,
             request?.SourceReportIds,
-            request?.MaxReports ?? 3,
+            request?.MaxReports ?? 0,
             inventoryOnly: false,
             cancellationToken);
 
@@ -113,7 +113,7 @@ public sealed class PocJnpfMigrationRunner : ITransient
         var normalizedReportIds = ValidateValues(reportIds);
         var normalizedJnpfDataSourceCode = ValidateDataSourceCode(jnpfDataSourceCode, "请选择 JNPF 来源数据源。");
         var normalizedReportDataSourceCode = ValidateDataSourceCode(reportDataSourceCode, "请选择报表运行数据源。");
-        if (maxReports is < 1 or > 50) throw Oops.Oh("批量数量必须在 1 到 50 之间。").StatusCode(400);
+        if (maxReports < 0) throw Oops.Oh("批量数量不能小于 0，0 表示全部迁移。").StatusCode(400);
 
         var sourceEndpoint = await ResolveDataSourceAsync(
             normalizedJnpfDataSourceCode,
@@ -151,14 +151,15 @@ public sealed class PocJnpfMigrationRunner : ITransient
         {
             EnsureTargetSchema();
             var selectedIds = normalizedReportIds.ToHashSet(StringComparer.Ordinal);
-            var selected = candidates
+            var selectedCandidates = candidates
                 .Where(candidate => candidate.Migratable && candidate.Migration is not null)
                 .Where(candidate => selectedIds.Count == 0 || selectedIds.Contains(candidate.Package.ReportId))
                 .OrderBy(candidate => candidate.Migration!.FieldCount)
                 .ThenBy(candidate => candidate.Migration!.ParameterCount)
-                .ThenBy(candidate => candidate.Package.ReportName, StringComparer.Ordinal)
-                .Take(maxReports)
-                .ToArray();
+                .ThenBy(candidate => candidate.Package.ReportName, StringComparer.Ordinal);
+            var selected = maxReports == 0
+                ? selectedCandidates.ToArray()
+                : selectedCandidates.Take(maxReports).ToArray();
             // 第2阶段：遍历 RunAsync 当前数据集合，逐项转换并维护处理结果。
             foreach (var candidate in selected)
             {
@@ -421,7 +422,6 @@ public sealed class PocJnpfMigrationRunner : ITransient
             .Select(value => value.Trim())
             .Where(value => value.Length <= 128)
             .Distinct(StringComparer.Ordinal)
-            .Take(50)
             .ToArray();
 
     /// <summary>校验 PocJnpfMigrationApi 的 Validate Data Source Code 条件，并返回可供后续流程判断的结果。</summary>

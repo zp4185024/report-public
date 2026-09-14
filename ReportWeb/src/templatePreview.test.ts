@@ -459,6 +459,93 @@ describe('createTemplatePreviewPlan', () => {
       .toBe(false);
   });
 
+  it('extends a sum range ending at the template row to cover every expanded detail row', () => {
+    // 明细模板行第 7 行（一基第 8 行），合计公式 =SUM(B8:B8) 端点落在模板行上，
+    // 展开 3 行数据（插入 2 行）后应扩展为 =SUM(B8:B10) 并下移到原第 9 行。
+    const snapshot = workbook({
+      7: { 0: { v: '{{detail.sequence}}' }, 1: { v: '{{detail.departmentName}}' } },
+      8: { 1: { f: '=SUM(B8:B8)' } },
+    });
+
+    const plan = createTemplatePreviewPlan(
+      snapshot,
+      detailBinding({
+        fields: [
+          { code: 'sequence', column: 0 },
+          { code: 'departmentName', column: 1 },
+        ],
+      }),
+      executeResult({ rows: workloadRows(3) }),
+    );
+
+    expect(plan.detail?.formulaRewrites).toEqual([{
+      sheetId: 'sheet-1',
+      row: 10,
+      column: 1,
+      formula: '=SUM(B8:B10)',
+    }]);
+  });
+
+  it('extends absolute and spanning ranges while leaving text constants untouched', () => {
+    const snapshot = workbook({
+      4: { 0: { v: '{{detail.sequence}}' } },
+      5: {
+        0: { f: '=SUM($B$5:$B$5)+SUM(A5:B5)&"B5:B5"' },
+        3: { f: '=SUM(D1:D5)' },
+      },
+    });
+
+    const plan = createTemplatePreviewPlan(
+      snapshot,
+      detailBinding({ templateRow: 4, fields: [{ code: 'sequence', column: 0 }] }),
+      executeResult({ rows: workloadRows(5) }),
+    );
+
+    expect(plan.detail?.formulaRewrites).toEqual([
+      {
+        sheetId: 'sheet-1',
+        row: 9,
+        column: 0,
+        // 绝对区间与跨行区间都按引擎约定扩展端点；引号里的 B5:B5 是文本常量必须原样保留。
+        formula: '=SUM($B$5:$B$9)+SUM(A5:B9)&"B5:B5"',
+      },
+      {
+        sheetId: 'sheet-1',
+        row: 9,
+        column: 3,
+        formula: '=SUM(D1:D9)',
+      },
+    ]);
+  });
+
+  it('keeps formulas on or above the template row and zero-insert expansions unchanged', () => {
+    const snapshot = workbook({
+      6: { 0: { f: '=SUM(B7:B7)' } },
+      7: { 0: { v: '{{detail.sequence}}' }, 1: { f: '=SUM(B8:B8)' } },
+      8: { 0: { f: '=SUM(B8:B8)' } },
+    });
+
+    const singleRow = createTemplatePreviewPlan(
+      snapshot,
+      detailBinding({ fields: [{ code: 'sequence', column: 0 }] }),
+      executeResult({ rows: workloadRows(1) }),
+    );
+    expect(singleRow.detail?.formulaRewrites).toEqual([]);
+
+    const threeRows = createTemplatePreviewPlan(
+      snapshot,
+      detailBinding({ fields: [{ code: 'sequence', column: 0 }] }),
+      executeResult({ rows: workloadRows(3) }),
+    );
+    // 模板行自身（第 7 行）与模板行上方（第 6 行）的公式都不回写，只有下方的合计行参与扩展。
+    expect(threeRows.detail?.formulaRewrites).toEqual([{
+      sheetId: 'sheet-1',
+      row: 10,
+      column: 0,
+      formula: '=SUM(B8:B10)',
+    }]);
+  });
+
   it('uses the template row directly for a single detail result', () => {
     const plan = createTemplatePreviewPlan(
       workbook({ 7: { 0: { v: '{{detail.sequence}}' } } }),
@@ -471,6 +558,7 @@ describe('createTemplatePreviewPlan', () => {
       templateRow: 7,
       insertCount: 0,
       rows: [{ row: 7, values: [{ column: 0, value: 1 }] }],
+      formulaRewrites: [],
     });
   });
 
@@ -492,6 +580,7 @@ describe('createTemplatePreviewPlan', () => {
       templateRow: 5,
       insertCount: 0,
       rows: [{ row: 5, values: [{ column: 0, value: 'visit-001' }] }],
+      formulaRewrites: [],
     });
   });
 
@@ -539,6 +628,7 @@ describe('createTemplatePreviewPlan', () => {
           { column: 1, value: null },
         ],
       }],
+      formulaRewrites: [],
     });
   });
 

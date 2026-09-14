@@ -51,3 +51,8 @@ node_modules/
 Admin.NET/Admin.NET.Application/Configuration/DeepSeek.json
 *.user
 /Admin.NET/.github
+.gstack/
+
+# local verification artifacts and deployment packages
+.zcode/
+deploy/

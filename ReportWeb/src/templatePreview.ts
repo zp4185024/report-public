@@ -90,7 +90,7 @@ export interface DetailValueBatch {
 
 /**
  * Univer 副作用层消费的完整计划。
- * insertCount 只包含需要新增的行数，第一条数据复用原始模板行。
+ * insertCount 只包括需要新增的行数，第一条数据复用原始模板行。
  */
 export interface TemplatePreviewPlan {
   parameterWrites: CellWrite[];
@@ -99,7 +99,21 @@ export interface TemplatePreviewPlan {
     templateRow: number;
     insertCount: number;
     rows: DetailRowPlan[];
+    formulaRewrites: FormulaRewrite[];
   };
+}
+
+/**
+ * 明细展开后需要回写的公式。
+ * 报表引擎约定：端点落在明细模板行上的显式区间（如 =SUM(B3:B3)）应随行展开扩展到整个明细区，
+ * 与后端导出 PocFormulaTranslator.InsertRows 的端点扩展语义保持一致；Univer 原生插行不会扩展
+ * 这种“贴着插入点”的区间，因此由预览计划显式给出回写后的公式与最终坐标。
+ */
+export interface FormulaRewrite {
+  sheetId: string;
+  row: number;
+  column: number;
+  formula: string;
 }
 
 /** 带工作表和 A1 地址上下文的预览错误，页面可直接展示给模板设计人员。 */
@@ -396,13 +410,171 @@ function createDetailPlan(
     ? undefined
     : new Map(definition.fields.map((field) => [field.code, field.dataType]));
   const rows = createDetailRows(sheetId, templateRow, fields, result.rows, columnTypes);
+  const insertCount = Math.max(0, result.rows.length - 1);
 
   return {
     sheetId,
     templateRow,
-    insertCount: Math.max(0, result.rows.length - 1),
+    insertCount,
     rows,
+    formulaRewrites: collectDetailFormulaRewrites(snapshot, sheetId, templateRow, insertCount),
   };
+}
+
+// 匹配公式文本中的显式 A1 区间（允许 $ 绝对列/行）。后行断言排除工作表前缀（Sheet2!B3:B3）
+// 与更长的词法 token，只处理无前缀的同一工作表引用，避免误改跨表或命名区域文本。
+const explicitRangeRegex = /(?<![!\w$])(\$?[A-Za-z]{1,3}\$?[1-9][0-9]{0,6}):(\$?[A-Za-z]{1,3}\$?[1-9][0-9]{0,6})/g;
+// 从单个 A1 引用里提取一基行号；列字母或行号不合法时返回 null 表示不改写。
+const singleReferenceRegex = /^\$?[A-Za-z]{1,3}\$?([1-9][0-9]{0,6})$/;
+
+/**
+ * 扫描明细工作表中位于模板行下方的公式单元格，生成“区间端点扩展”回写计划。
+ * Univer 插行只平移插入点下方的引用、不扩展贴着插入点的区间；这里按引擎约定把
+ * 最大行端点等于明细模板行（一基）的显式区间扩展 insertCount 行，使 =SUM(B3:B3)
+ * 这类“合计明细行”公式在浏览器预览中与后端导出结果一致。
+ * @param snapshot - 包含工作簿结构、单元格和样式信息的快照数据。
+ * @param sheetId - 需要定位的业务记录标识。
+ * @param templateRow - 明细模板行的零基行坐标。
+ * @param insertCount - 本次展开需要插入的行数。
+ * @returns 按行、列稳定排序的公式回写列表；insertCount 为 0 时恒为空。
+ */
+function collectDetailFormulaRewrites(
+  snapshot: ValidatedSnapshot,
+  sheetId: string,
+  templateRow: number,
+  insertCount: number,
+): FormulaRewrite[] {
+  if (insertCount <= 0) {
+    return [];
+  }
+
+  const sheet = snapshot.sheets[sheetId];
+  if (!isJsonObject(sheet)) {
+    return [];
+  }
+  const cellData = sheet.cellData;
+  if (cellData === undefined || cellData === null || !isJsonObject(cellData)) {
+    return [];
+  }
+
+  const rewrites: FormulaRewrite[] = [];
+  // 第二阶段：遍历模板行下方的公式单元格，命中“端点=模板行”区间时生成下移后的回写计划。
+  for (const [rowKey, rowData] of Object.entries(cellData)) {
+    const row = Number(rowKey);
+    if (!Number.isInteger(row) || row <= templateRow || !isJsonObject(rowData)) {
+      continue;
+    }
+
+    for (const [columnKey, cell] of Object.entries(rowData)) {
+      if (!isJsonObject(cell) || typeof cell.f !== 'string' || cell.f.length === 0) {
+        continue;
+      }
+
+      const rewritten = extendRangesEndingAtTemplateRow(cell.f, templateRow + 1, insertCount);
+      if (rewritten !== cell.f) {
+        rewrites.push({
+          sheetId,
+          // 公式单元格位于模板行下方，插行后整体下移 insertCount 行。
+          row: row + insertCount,
+          column: Number(columnKey),
+          formula: rewritten,
+        });
+      }
+    }
+  }
+
+  return rewrites.sort((left, right) =>
+    left.row - right.row || left.column - right.column || compareOrdinal(left.formula, right.formula));
+}
+
+/**
+ * 把公式中“最大行端点等于明细模板行”的显式区间扩展 insertCount 行，其余文本原样保留。
+ * 双引号内是文本常量，不参与改写；两端相同的区间（如 B3:B3）扩展右端点以保持显式区间形态。
+ * @param formula - 模板单元格中的原始公式文本（含起始等号）。
+ * @param templateRowA1 - 明细模板行的一基行号。
+ * @param insertCount - 本次展开需要插入的行数。
+ * @returns 扩展后的公式文本；没有命中区间时返回原字符串。
+ */
+function extendRangesEndingAtTemplateRow(
+  formula: string,
+  templateRowA1: number,
+  insertCount: number,
+): string {
+  return splitQuotedSegments(formula)
+    .map((segment) => (segment.quoted
+      ? segment.text
+      : segment.text.replace(explicitRangeRegex, (match, left: string, right: string) => {
+        const leftRow = readReferenceRow(left);
+        const rightRow = readReferenceRow(right);
+        if (leftRow === null || rightRow === null) {
+          return match;
+        }
+
+        const maxRow = Math.max(leftRow, rightRow);
+        if (maxRow !== templateRowA1 || Math.min(leftRow, rightRow) > templateRowA1) {
+          return match;
+        }
+
+        if (rightRow >= leftRow) {
+          return `${left}:${replaceReferenceRow(right, rightRow + insertCount)}`;
+        }
+        return `${replaceReferenceRow(left, leftRow + insertCount)}:${right}`;
+      })))
+    .join('');
+}
+
+/**
+ * 读取单个 A1 引用的一基行号；格式不合法时返回 null，调用方保持原文不改写。
+ * @param reference - 形如 B3、$B$3 的单元格引用文本。
+ * @returns 一基行号；无法解析时为 null。
+ */
+function readReferenceRow(reference: string): number | null {
+  const match = singleReferenceRegex.exec(reference);
+  return match === null ? null : Number(match[1]);
+}
+
+/**
+ * 替换 A1 引用末尾的行号并保留 $ 绝对标记与列字母。
+ * @param reference - 形如 B3、$B$3 的单元格引用文本。
+ * @param row - 替换后的一基行号。
+ * @returns 替换行号后的引用文本。
+ */
+function replaceReferenceRow(reference: string, row: number): string {
+  return reference.replace(/[1-9][0-9]{0,6}$/, String(row));
+}
+
+/**
+ * 把公式文本切成“代码段/引号文本段”交替的列表，避免把字符串常量里的伪区间误改写。
+ * Excel 的转义是双写引号；简单按引号切换状态即可保证常量内容始终落在 quoted 段。
+ * @param formula - 模板单元格中的完整公式文本。
+ * @returns 顺序拼接后还原原文的段列表。
+ */
+function splitQuotedSegments(formula: string): Array<{ text: string; quoted: boolean }> {
+  const segments: Array<{ text: string; quoted: boolean }> = [];
+  let buffer = '';
+  let quoted = false;
+  for (const character of formula) {
+    if (character !== '"') {
+      buffer += character;
+      continue;
+    }
+
+    if (quoted) {
+      // 闭引号并入文本段并回到代码段。
+      segments.push({ text: buffer + '"', quoted: true });
+      buffer = '';
+      quoted = false;
+    } else {
+      // 开引号结束当前代码段并开启文本段。
+      if (buffer.length > 0) {
+        segments.push({ text: buffer, quoted: false });
+      }
+      buffer = '"';
+      quoted = true;
+    }
+  }
+  segments.push({ text: buffer, quoted });
+  return segments;
 }
 
 /**

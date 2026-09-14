@@ -260,6 +260,28 @@ describe('reportApi template endpoints', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/report-center/poc/reports', undefined);
   });
 
+  it('loads one filtered report catalog page with server-side pagination', async () => {
+    const result = {
+      items: [],
+      page: 2,
+      pageSize: 15,
+      total: 16,
+      totalPages: 2,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    await expect(reportCatalogApi.reportsPage({
+      page: 2,
+      pageSize: 15,
+      query: 'jnpf_user',
+    })).resolves.toEqual(result);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/reports/page?page=2&pageSize=15&query=jnpf_user',
+      undefined,
+    );
+  });
+
   it('loads optional report center feature switches', async () => {
     const features = { jnpfMigrationMenuEnabled: false };
     fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: features }));
@@ -355,6 +377,28 @@ describe('reportApi template endpoints', () => {
 
     await expect(dataAssetApi.dataSources()).resolves.toEqual([dataSourceDocument]);
     expect(fetchMock).toHaveBeenCalledWith('/api/report-center/poc/data-sources', undefined);
+  });
+
+  it('loads one filtered dataset page with server-side pagination', async () => {
+    const result = {
+      items: [],
+      page: 1,
+      pageSize: 30,
+      total: 3,
+      totalPages: 1,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    await expect(dataAssetApi.datasetsPage({
+      page: 1,
+      pageSize: 30,
+      query: 'detail',
+    })).resolves.toEqual(result);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/datasets/page?page=1&pageSize=30&query=detail',
+      undefined,
+    );
   });
 
   it('loads every report that references a reusable dataset', async () => {

@@ -71,6 +71,28 @@ public sealed class PocTemplateStore : ITransient
             item.UpdateTime ?? item.CreateTime)).ToArray();
     }
 
+    /// <summary>只读取指定报表编码对应的模板摘要，供分页列表补充模板版本信息。</summary>
+    /// <param name="reportCodes">当前页包含的报表编码集合。</param>
+    /// <returns>返回匹配编码的模板修订号和更新时间。</returns>
+    public async Task<IReadOnlyList<PocStoredTemplateSummary>> ListByReportCodesAsync(
+        IReadOnlyList<string> reportCodes)
+    {
+        if (reportCodes.Count == 0)
+        {
+            return [];
+        }
+
+        var codes = reportCodes.ToArray();
+        var templates = await _database.Queryable<PocReportTemplate>()
+            .Where(item => SqlFunc.ContainsArray(codes, item.ReportCode))
+            .OrderBy(item => item.ReportCode)
+            .ToListAsync();
+        return templates.Select(item => new PocStoredTemplateSummary(
+            item.ReportCode,
+            item.Revision,
+            item.UpdateTime ?? item.CreateTime)).ToArray();
+    }
+
     /// <summary>按报表编码读取唯一模板；尚未保存过时返回 null，由服务层提供种子模板。</summary>
     public async Task<PocStoredTemplate?> GetAsync(string reportCode)
     {

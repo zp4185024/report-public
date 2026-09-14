@@ -104,6 +104,13 @@ public sealed record PocReportSummaryDocument(
     int TemplateRevision,
     DateTime? UpdatedAt);
 
+public sealed record PocPagedDocument<T>(
+    IReadOnlyList<T> Items,
+    int Page,
+    int PageSize,
+    int Total,
+    int TotalPages);
+
 public sealed record PocCreateReportRequest(
     string ReportCode,
     string Name,
@@ -244,6 +251,74 @@ public sealed class PocReportConfigurationService : ITransient
                 template?.Revision ?? 0,
                 updatedAt);
         }).ToArray();
+    }
+
+    /// <summary>按关键字分页读取报表摘要，模板版本只查询当前页对应的记录。</summary>
+    /// <param name="page">从一开始的页码。</param>
+    /// <param name="pageSize">每页返回的最大记录数，服务端限制为 100。</param>
+    /// <param name="keyword">可选的名称、编码、工作表或数据集搜索关键字。</param>
+    /// <returns>返回当前页、总数和总页数，供管理列表稳定翻页。</returns>
+    public async Task<PocPagedDocument<PocReportSummaryDocument>> ListReportsPageAsync(
+        int page,
+        int pageSize,
+        string? keyword)
+    {
+        var normalizedPage = Math.Max(page, 1);
+        var normalizedPageSize = Math.Clamp(pageSize, 1, 100);
+        var storedPage = await _store.ListReportsPageAsync(
+            normalizedPage,
+            normalizedPageSize,
+            keyword);
+        IReadOnlyList<PocStoredTemplateSummary> templates = _templates is null
+            ? []
+            : await _templates.ListByReportCodesAsync(
+                storedPage.Items.Select(item => item.Code).ToArray());
+        var templateByReport = templates.ToDictionary(
+            item => item.ReportCode,
+            StringComparer.OrdinalIgnoreCase);
+        var items = storedPage.Items.Select(report =>
+        {
+            templateByReport.TryGetValue(report.Code, out var template);
+            var reportUpdatedAt = report.UpdateTime ?? report.CreateTime;
+            var updatedAt = template?.UpdatedAt is DateTime templateUpdatedAt &&
+                templateUpdatedAt > reportUpdatedAt
+                    ? templateUpdatedAt
+                    : reportUpdatedAt;
+            return new PocReportSummaryDocument(
+                report.Code,
+                report.Name,
+                report.SheetName,
+                report.DatasetCode,
+                report.IsEnabled,
+                report.Revision,
+                template?.Revision ?? 0,
+                updatedAt);
+        }).ToArray();
+        var total = storedPage.Total;
+        if (total == 0 && string.IsNullOrWhiteSpace(keyword))
+        {
+            var fallback = PocReportCatalog.GetDefinition();
+            total = 1;
+            if (normalizedPage == 1)
+            {
+                items = [new PocReportSummaryDocument(
+                    fallback.Code,
+                    fallback.Name,
+                    fallback.SheetName,
+                    DefaultDatasetCode,
+                    true,
+                    0,
+                    0,
+                    null)];
+            }
+        }
+
+        return new PocPagedDocument<PocReportSummaryDocument>(
+            items,
+            normalizedPage,
+            normalizedPageSize,
+            total,
+            (int)Math.Ceiling(total / (double)normalizedPageSize));
     }
 
     /// <summary>查询或读取 PocReportConfigurationService 所需的 Get Create Options Async 数据，并按调用约定返回结果。</summary>

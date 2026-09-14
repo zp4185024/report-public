@@ -217,7 +217,7 @@ public sealed class PocSqlDatasetExecutor : ITransient
                 foreach (var field in fields)
                 {
                     row[field.Code] = PocDatasetValueNormalizer.Normalize(
-                        reader.GetValue(ordinals[field.Code]),
+                        PocDatasetValueNormalizer.ReadColumnValue(reader, ordinals[field.Code]),
                         field);
                 }
                 rows.Add(row);
@@ -384,7 +384,7 @@ public sealed class PocSqlDatasetExecutor : ITransient
                 foreach (var field in fields)
                 {
                     row[field.Code] = PocDatasetValueNormalizer.Normalize(
-                        reader.GetValue(ordinals[field.Code]),
+                        PocDatasetValueNormalizer.ReadColumnValue(reader, ordinals[field.Code]),
                         field);
                 }
                 rows.Add(row);

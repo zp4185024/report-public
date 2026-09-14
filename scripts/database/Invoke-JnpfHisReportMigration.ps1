@@ -20,8 +20,8 @@ param(
     [string]$ReportDataSourceType,
     [string[]]$SourceReportId = @(),
     [string[]]$SourceReportName = @(),
-    [ValidateRange(1, 50)]
-    [int]$MaxReports = 3,
+    [ValidateRange(0, 5000)]
+    [int]$MaxReports = 0,
     [string]$TargetServer,
     [ValidateRange(1, 65535)]
     [int]$TargetPort,
@@ -82,12 +82,13 @@ if ($inventory.Count -gt 0) {
         Format-Table -Wrap -AutoSize
 }
 
-$selected = @($candidates | Where-Object {
+$readyCandidates = @($candidates | Where-Object {
     $_.Migratable -and $_.Status -eq 'Ready' -and
     ($SourceReportId.Count -eq 0 -or $SourceReportId -contains $_.Package.ReportId) -and
     ($SourceReportName.Count -eq 0 -or $SourceReportName -contains $_.Package.ReportName)
 } | Sort-Object { $_.Migration.FieldCount }, { $_.Migration.ParameterCount }, { $_.Package.ReportName } |
-    Select-Object -First $MaxReports)
+    ForEach-Object { $_ })
+$selected = if ($MaxReports -eq 0) { $readyCandidates } else { @($readyCandidates | Select-Object -First $MaxReports) }
 
 $selection = @($selected | ForEach-Object {
     [pscustomobject]@{
