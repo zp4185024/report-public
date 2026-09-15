@@ -12,7 +12,6 @@
  * Do not edit the class manually.
  */
 export * from './apis/apijsonapi';
-export * from './apis/sys-alipay-api';
 export * from './apis/sys-auth-api';
 export * from './apis/sys-cache-api';
 export * from './apis/sys-code-gen-api';
@@ -61,7 +60,6 @@ export * from './apis/sys-user-config-api';
 export * from './apis/sys-user-menu-api';
 export * from './apis/sys-user-reg-way-api';
 export * from './apis/sys-wechat-api';
-export * from './apis/sys-wechat-pay-api';
 export * from './apis/sys-wechat-user-api';
 export * from './apis/sys-wx-open-api';
 

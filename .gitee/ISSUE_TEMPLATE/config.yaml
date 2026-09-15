@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: 🗨️ 在线文档
-    url: http://101.43.53.74:5050/
-    about: Admin.NET 在线文档
-  - name: 🚀 功能演示
-    url: http://101.43.53.74:5005/dist/index.html
-    about: 在线演示Admin.NET功能

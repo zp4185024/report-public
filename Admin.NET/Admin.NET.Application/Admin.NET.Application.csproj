@@ -26,9 +26,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Admin.NET.Core\Admin.NET.Core.csproj" />
-    <ProjectReference Include="..\Plugins\Admin.NET.Plugin.ApprovalFlow\Admin.NET.Plugin.ApprovalFlow.csproj" />
-    <ProjectReference Include="..\Plugins\Admin.NET.Plugin.DingTalk\Admin.NET.Plugin.DingTalk.csproj" />
-    <ProjectReference Include="..\Plugins\Admin.NET.Plugin.GoView\Admin.NET.Plugin.GoView.csproj" />
   </ItemGroup>
 
 </Project>

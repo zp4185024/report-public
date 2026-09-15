@@ -37,12 +37,6 @@ public enum TemplateTypeEnum
     Wechat = 4,
 
     /// <summary>
-    /// 钉钉
-    /// </summary>
-    [Description("钉钉")]
-    DingTalk = 5,
-
-    /// <summary>
     /// 企业微信
     /// </summary>
     [Description("企业微信")]

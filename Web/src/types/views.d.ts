@@ -219,45 +219,6 @@ declare type RowTreeType = {
 	children?: RowTreeType[];
 };
 
-// workflow index
-declare type NodeListState = {
-	id: string | number;
-	nodeId: string | undefined;
-	class: HTMLElement | string;
-	left: number | string;
-	top: number | string;
-	icon: string;
-	name: string;
-};
-
-declare type LineListState = {
-	sourceId: string;
-	targetId: string;
-	label: string;
-};
-
-declare type XyState = {
-	x: string | number;
-	y: string | number;
-};
-
-declare type WorkflowState<T = any> = {
-	leftNavList: T[];
-	dropdownNode: XyState;
-	dropdownLine: XyState;
-	isShow: boolean;
-	jsPlumb: T;
-	jsPlumbNodeIndex: null | number;
-	jsplumbDefaults: T;
-	jsplumbMakeSource: T;
-	jsplumbMakeTarget: T;
-	jsplumbConnect: T;
-	jsplumbData: {
-		nodeList: NodeListState[];
-		lineList: LineListState[];
-	};
-};
-
 // workflow drawer
 declare type WorkflowDrawerNodeState<T = any> = {
 	node: { [key: string]: T };
@@ -279,7 +240,6 @@ declare type WorkflowDrawerState<T = any> = {
 	nodeData: {
 		type: string;
 	};
-	jsplumbConn: T;
 };
 
 /**

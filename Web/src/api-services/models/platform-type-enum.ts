@@ -13,7 +13,7 @@
  */
 
 /**
- * 平台类型枚举<br />&nbsp;微信公众号 微信公众号 = 1<br />&nbsp;微信小程序 微信小程序 = 2<br />&nbsp;QQ QQ = 3<br />&nbsp;支付宝 Alipay = 4<br />&nbsp;Gitee Gitee = 5<br />
+ * 平台类型枚举<br />&nbsp;微信公众号 微信公众号 = 1<br />&nbsp;微信小程序 微信小程序 = 2<br />&nbsp;QQ QQ = 3<br />&nbsp;Gitee Gitee = 5<br />
  * @export
  * @enum {string}
  */
@@ -21,7 +21,6 @@ export enum PlatformTypeEnum {
     NUMBER_1 = 1,
     NUMBER_2 = 2,
     NUMBER_3 = 3,
-    NUMBER_4 = 4,
     NUMBER_5 = 5
 }
 

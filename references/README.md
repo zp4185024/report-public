@@ -10,6 +10,14 @@ Admin.NET 已作为当前项目底座复制到根目录，原始 README 保存�
 
 路径：`references/luck-report`
 
+定位：报表中心主要功能组件（设计器、数据集、预览、导出）的参考实现，仅用于研究，不进入交付代码。
+
+组成部分：
+
+- `luck-report-server/`：Java 后端（Spring Boot + Maven 多模块，含 core 表达式与渲染内核、font、pub、web 模块）。
+- `luck-report-ui/`：Vue 网页报表设计器前端。
+- 根目录含 `README.md`、`CHANGELOG.md`、`LICENSE`（Apache-2.0）与 `LICENSE-UREPORT`（上游 UReport2，同为 Apache-2.0）。
+
 用途：
 
 - 参考报表设计器交互。

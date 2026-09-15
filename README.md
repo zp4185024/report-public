@@ -66,8 +66,16 @@
 | 界面组件 | `lucide-react` | 操作图标和状态图标 |
 | 管理前端 | Vue 3、Element Plus、Pinia、Vue Router、ECharts | Admin.NET 原有后台兼容代码，不属于报表服务交付入口 |
 | 测试 | xUnit、Vitest | 后端领域逻辑和前端交互/转换测试 |
-| 部署配套 | Docker Compose、Nginx、Redis、MinIO | 通用 Admin.NET 部署和基础设施配套；报表中心运行库仍固定为 SQL Server |
-| 参考实现 | `references/luck-report` | 仅用于研究报表设计、参数、公式、预览和导出思路 |
+| 主要功能参考组件 | `references/luck-report` | 报表中心主要功能（设计器、数据集、预览、导出）的参考实现，仅用于研究，不进入交付代码 |
+
+### 参考实现：luck-report
+
+`references/luck-report` 是本项目报表中心主要功能组件的参考实现，定位是“研究思路的来源”，不是运行依赖，任何一行代码都不会进入交付产物：
+
+- **是什么**：一款基于开源项目 UReport2 重构的 Java 高性能报表引擎，后端为 Spring Boot，前端为 Vue，通过迭代单元格实现任意复杂的中国式报表。
+- **包含哪些部分**：`luck-report-server/`（Maven 多模块：core 表达式与渲染内核、font 字体、pub 公共、web 服务端）和 `luck-report-ui/`（网页报表设计器前端）；根目录带 `README.md`、`CHANGELOG.md` 和许可证文件。
+- **在本项目中的角色**：为报表中心的模板设计器交互、SQL 数据集与查询参数流程、单元格公式与统计、分页预览、Excel 导出等功能提供实现路径参考；本项目以 .NET 8 + Univer 技术栈独立实现对应能力，不直接复用其代码。
+- **许可合规**：luck-report 采用 Apache-2.0 许可证，其上游 UReport2 同为 Apache-2.0（见目录内 `LICENSE`、`LICENSE-UREPORT`，前端另有 `LICENSE-OverSnailUI`）。仓库内保留完整源码与许可证文件用于研究；引用其思路时避免逐字复制，对外分发相关衍生代码前须按 Apache-2.0 要求保留版权与许可声明。其 PDF 导出链路涉及 iText 5 商业授权风险，本项目不采用该实现。
 
 ### 核心数据关系
 
@@ -100,8 +108,7 @@ hd-report-center/
 │  ├─ HD.ReportCenter.Application/         # 报表 API、应用服务和数据访问
 │  │  └─ CoreValidation/                   # 当前报表中心核心验证实现
 │  ├─ HD.ReportCenter.ReportEngine/        # 报表领域契约、模板校验、公式和导出引擎
-│  ├─ HD.ReportCenter.Tests/               # 报表中心 xUnit 测试
-│  └─ Plugins/                             # Admin.NET 插件（审批、钉钉、企业微信、GoView 等）
+│  └─ HD.ReportCenter.Tests/               # 报表中心 xUnit 测试
 ├─ ReportWeb/                              # React + Univer 独立报表工作台
 │  ├─ src/App.tsx                          # 报表设计、预览、导出和共享主页面
 │  ├─ src/ReportListPage.tsx               # 报表模板列表
@@ -109,16 +116,14 @@ hd-report-center/
 │  ├─ src/DatasetPreviewPage.tsx           # 数据集预览
 │  ├─ src/ExternalParameterSourcePage.tsx  # 外部参数接口管理
 │  ├─ src/UniverTemplateHost.tsx           # Univer 工作簿宿主和编辑器副作用封装
-│  ├─ src/api.ts                            # 前端 API 契约
-│  └─ src/*.test.ts                         # Vitest 测试
+│  ├─ src/api.ts                           # 前端 API 契约
+│  └─ src/*.test.ts                        # Vitest 测试
 ├─ Web/                                    # Admin.NET 原有 Vue 3 管理前端
 ├─ scripts/database/                       # SQL Server 初始化和升级脚本
-├─ docker/                                 # Docker Compose、Nginx、Redis 和应用配置
 ├─ docs/architecture/                      # 架构说明
 ├─ docs/validation/                        # 功能和性能验证记录
 ├─ docs/superpowers/                       # 设计规格和实施计划
-├─ references/luck-report/                 # 报表参考源码和许可证
-├─ test-engine/engine/                     # 独立的下一代报表引擎实验目录
+├─ references/luck-report/                 # 报表中心主要功能参考实现（Java + Vue 报表引擎源码和许可证）
 ├─ README.AdminNET.md                      # Admin.NET 原始说明
 ├─ DISCLAIMER.md                           # 项目免责声明
 ├─ LICENSE-MIT / LICENSE-APACHE            # 许可证

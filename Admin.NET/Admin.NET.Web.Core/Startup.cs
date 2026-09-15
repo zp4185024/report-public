@@ -118,9 +118,6 @@ public class Startup : AppStartup
         // 三方授权登录OAuth
         services.AddOAuth();
 
-        // ElasticSearch
-        services.AddElasticSearch();
-
         // 配置Nginx转发获取客户端真实IP
         // 注1：如果负载均衡不是在本机通过 Loopback 地址转发请求的，一定要加上options.KnownNetworks.Clear()和options.KnownProxies.Clear()
         // 注2：如果设置环境变量 ASPNETCORE_FORWARDEDHEADERS_ENABLED 为 True，则不需要下面的配置代码
@@ -246,11 +243,8 @@ public class Startup : AppStartup
         //    c.OperationFilter<TenantHeaderOperationFilter>();
         //});
 
-        // 将IP地址数据库文件完全加载到内存，提升查询速度（以空间换时间，内存将会增加60-70M）
-        IpToolSettings.LoadInternationalDbToMemory = true;
-        // 设置默认查询器China和International
-        //IpToolSettings.DefalutSearcherType = IpSearcherType.China;
-        IpToolSettings.DefalutSearcherType = IpSearcherType.International;
+        // 设置默认查询器为国内库（ip2region.db）
+        IpToolSettings.DefalutSearcherType = IpSearcherType.China;
 
         // 配置gzip与br的压缩等级为最优
         //services.Configure<BrotliCompressionProviderOptions>(options =>
@@ -383,10 +377,6 @@ public class Startup : AppStartup
                 m.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_0;
             });
         });
-
-#if NET10_0_OR_GREATER
-        app.UseAutoVersionUpdate();
-#endif
 
         app.UseEndpoints(endpoints =>
         {

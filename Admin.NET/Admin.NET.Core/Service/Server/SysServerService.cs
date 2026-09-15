@@ -139,10 +139,8 @@ public class SysServerService : IDynamicApiController, ITransient
         var wordAssembly = typeof(Magicodes.ExporterAndImporter.Word.IWordExporter).Assembly.GetName();
         var captchaAssembly = typeof(Lazy.Captcha.Core.ICaptcha).Assembly.GetName();
         var wechatApiAssembly = typeof(WechatApiClient).Assembly.GetName();
-        var wechatTenpayAssembly = typeof(WechatTenpayClient).Assembly.GetName();
         var ossAssembly = typeof(OnceMi.AspNetCore.OSS.IOSSServiceFactory).Assembly.GetName();
         var parserAssembly = typeof(Parser).Assembly.GetName();
-        var elasticsearchClientAssembly = typeof(Elastic.Clients.Elasticsearch.ElasticsearchClient).Assembly.GetName();
         var limitAssembly = typeof(AspNetCoreRateLimit.IpRateLimitMiddleware).Assembly.GetName();
         var htmlParserAssembly = typeof(AngleSharp.Html.Parser.HtmlParser).Assembly.GetName();
         var fluentEmailAssembly = typeof(MailKit.Net.Smtp.SmtpClient).Assembly.GetName();
@@ -171,10 +169,8 @@ public class SysServerService : IDynamicApiController, ITransient
             new { wordAssembly.Name, wordAssembly.Version },
             new { captchaAssembly.Name, captchaAssembly.Version },
             new { wechatApiAssembly.Name, wechatApiAssembly.Version },
-            new { wechatTenpayAssembly.Name, wechatTenpayAssembly.Version },
             new { ossAssembly.Name, ossAssembly.Version },
             new { parserAssembly.Name, parserAssembly.Version },
-            new { elasticsearchClientAssembly.Name, elasticsearchClientAssembly.Version },
             new { limitAssembly.Name, limitAssembly.Version },
             new { htmlParserAssembly.Name, htmlParserAssembly.Version },
             new { fluentEmailAssembly.Name, fluentEmailAssembly.Version },

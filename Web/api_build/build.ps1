@@ -9,22 +9,6 @@ $moduleName = "apiServices"
 $apiServicesPath = Join-Path (Join-Path $scriptDir "..") "src\api-services\"
 $apiUrl = "http://localhost:5005/swagger/Default/swagger.json"
 
-# 根据传入的参数修改配置
-if ($args[0] -eq "approvalFlow") {
-    $moduleName = "approvalFlow"
-    $apiServicesPath = Join-Path (Join-Path $scriptDir "..") "src\api-plugins\approvalFlow\"
-    $apiUrl = "http://localhost:5005/swagger/ApprovalFlow/swagger.json"
-} elseif ($args[0] -eq "dingTalk") {
-    $moduleName = "dingTalk"
-    $apiServicesPath = Join-Path (Join-Path $scriptDir "..") "src\api-plugins\dingTalk\"
-    $apiUrl = "http://localhost:5005/swagger/DingTalk/swagger.json"
-} elseif ($args[0] -eq "goView") {
-    $moduleName = "goView"
-    $apiServicesPath = Join-Path (Join-Path $scriptDir "..") "src\api-plugins\goView\"
-    # 注意：PowerShell会自动处理URL编码，所以不需要手动添加%20等
-    $apiUrl = "http://localhost:5005/swagger/GoView/swagger.json"
-}
-
 # 输出信息和删除现有目录
 Write-Output "================================ 删除目录 $moduleName ================================"
 if (Test-Path $apiServicesPath) {

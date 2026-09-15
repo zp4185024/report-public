@@ -31,12 +31,6 @@ public enum PlatformTypeEnum
     QQ = 3,
 
     /// <summary>
-    /// 支付宝
-    /// </summary>
-    [Description("支付宝")]
-    Alipay = 4,
-
-    /// <summary>
     /// Gitee
     /// </summary>
     [Description("Gitee")]

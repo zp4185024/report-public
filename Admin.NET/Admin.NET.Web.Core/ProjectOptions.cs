@@ -27,8 +27,6 @@ public static class ProjectOptions
         services.AddConfigurableOptions<OSSProviderOptions>();
         services.AddConfigurableOptions<UploadOptions>();
         services.AddConfigurableOptions<WechatOptions>();
-        services.AddConfigurableOptions<WechatPayOptions>();
-        services.AddConfigurableOptions<PayCallBackOptions>();
         services.AddConfigurableOptions<CodeGenOptions>();
         services.AddConfigurableOptions<EnumOptions>();
         services.AddConfigurableOptions<APIJSONOptions>();
@@ -37,7 +35,6 @@ public static class ProjectOptions
         services.AddConfigurableOptions<CryptogramOptions>();
         services.AddConfigurableOptions<SMSOptions>();
         services.AddConfigurableOptions<EventBusOptions>();
-        services.AddConfigurableOptions<AlipayOptions>();
         services.AddConfigurableOptions<CDConfigOptions>();
         services.AddConfigurableOptions<DeepSeekOptions>();
         services.AddConfigurableOptions<LocalizationSettingsOptions>();

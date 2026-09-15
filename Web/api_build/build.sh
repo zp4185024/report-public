@@ -6,24 +6,6 @@ moduleName="apiServices"
 apiServicesPath="$dir/../src/api-services/"
 apiUrl="http://localhost:5005/swagger/Default/swagger.json"
 
-case "$1" in
-    approvalFlow)
-        moduleName="approvalFlow"
-        apiServicesPath="$dir/../src/api-plugins/approvalFlow/"
-        apiUrl="http://localhost:5005/swagger/ApprovalFlow/swagger.json"
-        ;;
-    dingTalk)
-        moduleName="dingTalk"
-        apiServicesPath="$dir/../src/api-plugins/dingTalk/"
-        apiUrl="http://localhost:5005/swagger/DingTalk/swagger.json"
-        ;;
-    goView)
-        moduleName="goView"
-        apiServicesPath="$dir/../src/api-plugins/goView/"
-        apiUrl="http://localhost:5005/swagger/GoView/swagger.json"
-        ;;
-esac
-
 if [ -d "$apiServicesPath" ]; then
     echo "================================ 删除目录 $apiServicesPath ================================"
     rm -rf "$apiServicesPath"

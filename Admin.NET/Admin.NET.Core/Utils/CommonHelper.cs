@@ -501,16 +501,16 @@ public static class CommonHelper
 
     /// <summary>查询或读取 CommonHelper 所需的 Get Ip Address 数据，并按调用约定返回结果。</summary>
     /// <param name="ip">ip 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
-    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
+    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。国内库不含经纬度，经纬度恒为 null。</returns>
     public static (string ipLocation, double? longitude, double? latitude) GetIpAddress(string ip)
     {
         try
         {
-            var ipInfo = IpTool.SearchWithI18N(ip); // 国际化查询，默认中文 中文zh-CN、英文en
+            var ipInfo = IpTool.Search(ip); // 国内 ip2region 库查询
             var addressList = new List<string>() { ipInfo.Country, ipInfo.Province, ipInfo.City, ipInfo.NetworkOperator };
             var location = string.Join(" ", addressList.Where(u => u != "0" && !string.IsNullOrWhiteSpace(u)).ToList()); // 去掉0及空并用空格连接
             if (string.IsNullOrWhiteSpace(location)) location = "未知";
-            return (location, ipInfo.Longitude, ipInfo.Latitude);
+            return (location, null, null);
         }
         catch
         {

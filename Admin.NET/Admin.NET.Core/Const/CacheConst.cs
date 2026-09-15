@@ -115,14 +115,4 @@ public class CacheConst
     /// Excel临时文件缓存
     /// </summary>
     public const string KeyExcelTemp = "sys_excel_temp:";
-
-    /// <summary>
-    /// 系统更新命令日志缓存
-    /// </summary>
-    public const string KeySysUpdateLog = "sys_update_log";
-
-    /// <summary>
-    /// 系统更新间隔标记缓存
-    /// </summary>
-    public const string KeySysUpdateInterval = "sys_update_interval";
 }
