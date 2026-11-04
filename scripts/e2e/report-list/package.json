@@ -1,0 +1,14 @@
+{
+  "name": "hd-report-list-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "hd-report-center 模板列表页 E2E 测试脚本（独立依赖目录，不进入 ReportWeb 构建）",
+  "scripts": {
+    "e2e": "node report_list_e2e.js",
+    "report": "node gen_report.js"
+  },
+  "devDependencies": {
+    "docx": "^9.5.1",
+    "playwright-core": "^1.49.1"
+  }
+}
