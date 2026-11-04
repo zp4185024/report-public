@@ -434,6 +434,8 @@ async function cleanupTestTemplate() {
  * @returns {Promise<number>} 进程退出码：全绿 0，否则 1。
  */
 async function main() {
+  // 阶段：清空并重建截图目录，避免上一轮（尤其失败轮）的旧截图混入本次报告。
+  fs.rmSync(SHOT_DIR, { recursive: true, force: true });
   fs.mkdirSync(SHOT_DIR, { recursive: true });
   let exitCode = 0;
   let created = false;
