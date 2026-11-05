@@ -1,4 +1,4 @@
-# 产品内 AI 报表助手设计（含 AI 查数据能力）
+# 产品内 AI 能力框架设计（模板 AI + 数据同步 AI）
 
 - 日期：2026-11-04
 - 状态：已与需求方确认，待实现
@@ -10,11 +10,14 @@
 手工配置模板/绑定/参数门槛高（GoView 类编辑器过于复杂，已明确不引入）。
 AI agent 能力成熟，希望：
 
-1. **产品内 AI 助手**（部署环境可连 LLM API 时）：用户用自然语言描述需求，
+1. **模板 AI（报表设计助手）**（部署环境可连 LLM API 时）：用户用自然语言描述需求，
    AI 自动查库摸数据 → 生成报表草稿 → 校验 → 试跑 → 导入，全程在报表中心 UI 内完成。
-2. **AI 查数据能力**：AI 助手可通过受控工具主动查询已配置数据源的表结构、采样数据、
+2. **同步 AI（数据同步映射助手）**：在同步任务设计器"字段映射"步骤一键智能匹配
+   源→目标字段（名称规范化/注释语义/类型兼容），并按内置转换器白名单建议转换链，
+   结果回填映射表格供人工确认后保存——消灭逐行下拉选映射的重复劳动。
+3. **AI 查数据能力**：模板 AI 可通过受控工具主动查询已配置数据源的表结构、采样数据、
    验证性只读 SQL，而不是靠人工贴表结构。
-3. **图表报表**（本期不实现，仅定方向）：模板报表可叠加图表视图，数据沿用现有
+4. **图表报表**（本期不实现，仅定方向）：模板报表可叠加图表视图，数据沿用现有
    execute 通道，图表配置独立成块，便于分期开发。
 
 ### 非目标（本期不做）
@@ -31,29 +34,29 @@ AI agent 能力成熟，希望：
 | --- | --- | --- |
 | AI 生成产物 | **AI 只输出 spec JSON（意图层），后端 C# SpecCompiler 编译成报表包** | spec 小（几百 token）不易错；模板快照与绑定由代码机器构造，与既有"AI 只出意图，代码出模板"原则一致；校验复用 `ValidatePackageCore` 全链兜底。AI 直接手写 Univer 快照是现有 skill 明令禁止项 |
 | LLM 接入 | **OpenAI 兼容自定义端点**（baseUrl + apiKey + model 三项可配置） | DeepSeek / 通义 / GLM / OneAPI 网关 / 自部署 vLLM 通用；换模型不发版 |
-| 交互形态 | **聊天侧栏 + 工具调用（agent 循环）** | AI 可多轮查数后再生草稿，用户可追问修改；一次性向导无法按查到的数据调整 |
+| 交互形态 | **两个专用助手共用一套 AI 框架**：模板 AI = 聊天侧栏 + 工具调用；同步 AI = 一键智能匹配（非聊天） | 模板设计需要多轮查数与追问，聊天合适；字段映射是高频重复劳动，一键按钮比对话高效。两者共用 LLM 客户端/配置/审计/开关，各自独立提示词与工具集 |
 | 数据安全 | 采样/SQL 结果会外发 LLM：面板明示 + 行数上限 + 审计 + 管理员可禁用 run_sql 工具 | 医疗数据外发必须显式可控 |
-| 图表 | 后置；方向 = 模板可选图表视图、数据沿用 execute、配置独立成节 | 需求方明确"先做 AI 通道"，schema 预留方向写入 §10 防返工 |
+| 图表 | 后置；方向 = 模板可选图表视图、数据沿用 execute、配置独立成节 | 需求方明确"先做 AI 通道"，schema 预留方向写入 §11 防返工 |
 
 ## 3. 总体架构
 
 ```
-ReportWeb 聊天侧栏（ReportListPage 浮钮）
-   │  POST /api/report-center/ai/chat  （sessionId + 消息）
-   ▼
-PocAiChatService（内存会话存储 / 工具调用循环 / 轮数上限）
-   │  OpenAI 兼容 POST {baseUrl}/chat/completions  (tools + tool_choice)
-   ▼
-PocAiToolExecutor（只读查数工具 + 草稿提交工具）
+ReportWeb
+   ├─ 模板列表页「模板 AI」聊天侧栏 ──POST /ai/chat──▶ PocAiChatService（内存会话 / 工具循环 / 轮数上限）
+   │                                                    │  OpenAI 兼容 POST {baseUrl}/chat/completions (tools)
+   │                                                    ▼
+   │                                            PocAiToolExecutor（只读查数工具 + 草稿提交工具）
+   │                                               ├── list_data_sources / list_tables / describe_table / sample_rows
+   │                                               │        └─ 复用 RcDataSource 配置 + PocDatabaseProvider（不暴露连接串）
+   │                                               ├── run_readonly_sql ─── 复用 PocReadOnlySqlValidator + 限额（管理员可禁用）
+   │                                               └── submit_report_spec / dry_run_report_spec
+   │                                                        └─ PocAiSpecCompiler（spec→包）→ ValidatePackageCore / DryRunAsync
+   │                                                                 │
+   │                                                    前端草稿卡片 → 复用现有 reportPackageApi（validate / dryRun / import）
    │
-   ├── list_data_sources / list_tables / describe_table / sample_rows
-   │        └─ 复用 RcDataSource 配置 + PocDatabaseProvider（不暴露连接串）
-   ├── run_readonly_sql
-   │        └─ 复用 PocReadOnlySqlValidator + 行数/超时硬上限（管理员可禁用）
-   └── submit_report_spec / dry_run_report_spec
-            └─ PocAiSpecCompiler（spec→包）→ ValidatePackageCore / DryRunAsync
-                        │
-          前端草稿卡片 → 复用现有 reportPackageApi（validate / dryRun / import）
+   └─ 同步设计器「同步 AI」按钮 ──POST /ai/sync-match──▶ PocSyncMatchService
+            源 FieldSchema + 目标列元数据 → 确定性预匹配 + LLM 语义匹配 + 转换器建议
+            → 建议回填映射表格（不直接保存，人工确认后走现有保存/校验链）
 ```
 
 新增数据库对象（沿用现有 schema 脚本模式，新增 `scripts/database/Apply-AiAssistantSchema.ps1`）：
@@ -78,7 +81,8 @@ PocAiToolExecutor（只读查数工具 + 草稿提交工具）
 | `/settings` | GET | 读取配置（ApiKey 打码）；未配置返回默认值 |
 | `/settings` | POST | 保存配置；ApiKey 传空表示保留原值；保存时可选 `testConnection` 同步连通性测试 |
 | `/settings/test` | POST | 连通性测试（对 baseUrl 发一次 models 或最小 chat 请求） |
-| `/chat` | POST | 发送消息。请求体：`sessionId`（新会话可空）、`dataSourceCode`（发起会话时前端数据源选择器的选择，决定上下文注入与工具默认数据源）、`message`。返回 `{sessionId, messages[], draft?, expired?}`；非流式，一次回复内完成工具循环（≤ MaxToolRounds 轮） |
+| `/chat` | POST | 模板 AI 对话。请求体：`sessionId`（新会话可空）、`dataSourceCode`（发起会话时前端数据源选择器的选择，决定上下文注入与工具默认数据源）、`message`。返回 `{sessionId, messages[], draft?, expired?}`；非流式，一次回复内完成工具循环（≤ MaxToolRounds 轮） |
+| `/sync-match` | POST | 同步 AI 智能匹配。请求体：`taskCode`（或直接携带源 FieldSchema + 目标列元数据）。返回建议映射列表（含置信度与依据），**不落库**；详见 §8 |
 | `/sessions/{id}` | DELETE | 显式结束会话（清内存） |
 
 `draft` 结构：`{spec, package(编译产物), validateResult, status(submitted/validated/dryRunOk/failed)}`。
@@ -143,12 +147,35 @@ LLM 侧工具 schema（OpenAI tools 格式，后端 `PocAiToolRegistry` 静态�
 - **一致性钉测**：仓库样例 `report-asset-inventory.spec.json` 分别经 ps1 与 C# 编译，
   断言关键结构一致（bindings 坐标、快照 cellData、四节字段）。允许 `ExportedAt` 等时间戳差异。
   注意：钉测只针对样例 spec 的**结构一致**；未知字段处理上两条编译器**有意分歧**——
-  ps1 宽松忽略，C# 对 specVersion=1 严格拒绝（AI 通道加强项，见 §10）。ps1 编译器保留不动
+  ps1 宽松忽略，C# 对 specVersion=1 严格拒绝（AI 通道加强项，见 §11）。ps1 编译器保留不动
   （离线 ZCode 流水线继续用）。
 
 编译成功后立即走 `ValidatePackageCore`（内存态，不落库），校验错误同样回传 LLM 自修。
 
-## 8. 前端设计（纯 React，无新增重量依赖）
+## 8. 同步 AI：字段映射智能匹配
+
+定位：同步任务设计器"字段映射"步骤的**一键式**助手（非聊天——映射是高频重复劳动，
+按钮比对话高效），与模板 AI 共用 LLM 客户端、`RcAiSettings`、`RcAiAuditLog` 与
+`IsEnabled` 总开关；AI 关闭时按钮隐藏、接口 fail-fast。
+
+- **入口**：设计器映射步骤工具栏「AI 智能匹配」→ `POST /ai/sync-match`。
+- **输入**：源数据集 FieldSchema（字段+注释，模块已有）+ 目标表列元数据
+  （同步模块已有的目标列读取）+ 内置转换器目录白名单（`CONVERTER_CATALOG`）。
+- **匹配策略（混合三级，确定性优先）**：
+  1. **确定性预匹配**（不依赖 LLM，基线与降级路径）：名称规范化（去下划线/大小写归一）
+     后精确、前缀、常用缩写匹配；
+  2. **LLM 语义匹配**：把两侧字段清单（名称+类型+注释）交模型推理业务同义
+     （如 `FEE_TYPE`↔费用类别、`REFUND_FLAG`↔`IS_REFUND`），模型只返回映射建议 JSON；
+  3. **类型兼容与转换器建议**：类型不一致时从内置转换器白名单建议转换链
+     （转小数/转日期/转文本/字典映射/表达式等），**禁止建议白名单外转换器**。
+- **输出**：`[{targetField, sourceField|null, targetType, converters[], confidence(high/mid/low), reason}]`。
+  **不直接保存**——仅回填设计器映射表格（每行附置信标注与依据），人工确认/调整后
+  仍走现有保存+校验链与试跑；未匹配项显式标记"需人工处理"。
+- **边界约束**：不覆盖已有人工映射（仅填空，人工值优先）；LLM 不可用/返回非法 JSON
+  时降级为纯确定性预匹配结果并提示；匹配请求记审计（TaskCode、字段数、命中数、耗时）。
+- **明确不做**：不自动执行保存；不做跨任务批量匹配（如有需要另行设计）。
+
+## 9. 前端设计（纯 React，无新增重量依赖）
 
 - `ReportListPage` 右下角浮钮"AI 助手"（`/settings`.IsEnabled 才渲染）→
   `AiAssistantPanel.tsx` 侧栏：消息流（用户/AI/工具折叠条——工具名+SQL 摘要+行数）、
@@ -158,23 +185,25 @@ LLM 侧工具 schema（OpenAI tools 格式，后端 `PocAiToolRegistry` 静态�
 - `AiSettingsPage.tsx`（AppFrame 新增菜单"AI 设置"）：启用开关、baseUrl、apiKey
   （保存后打码回显）、model、各项限额、SqlProbeEnabled 开关、连通性测试按钮。
 - 草稿卡片的校验/试跑/导入复用现有 `reportPackageApi`，导入成功后提示刷新模板列表。
+- 同步设计器映射步骤工具栏加「AI 智能匹配」按钮：建议回填映射表格并逐行标注
+  置信度与依据（高/中/低/需人工），可继续手工调整；AI 关闭时按钮隐藏。
 - 会话过期（内存 30 分钟）时前端提示"会话已过期，AI 上下文已清空"，历史仅本地展示。
 
-## 9. 安全与错误处理
+## 10. 安全与错误处理
 
 - **只读铁律**：所有查数工具强制只读；`run_readonly_sql` 复用现有校验器（禁多语句/DML/
   DDL/`@@`/可执行注释等），并叠加行数上限与超时。
 - **外发控制**：管理页可整库禁用（IsEnabled=false 时接口 fail-fast + 前端入口隐藏，
   见 §4"AI 可关闭"）、可禁用 run_sql、可把采样上限调到 0（等效禁采样）；面板常驻外发提示。
 - **ApiKey**：仅存库；日志与审计一律不含 key；回显打码；保存接口空值=保留原值。
-- **审计**：每次工具调用落 `RcAiAuditLog`，含 SQL 与影响行数，供事后追溯。
+- **审计**：每次工具调用与同步匹配请求落 `RcAiAuditLog`，含 SQL/任务编码与影响行数，供事后追溯。
 - **错误策略**：LLM 请求失败 → 会话保留，前端提示重试；工具执行失败 → 结构化错误回传
   LLM 自修；编译/校验失败 → 错误列表回传 LLM（最多 3 轮），仍失败则草稿标记 failed
   并建议人工走离线流水线；会话轮数超限 → 强制要求 AI 给出结论性回复。
 - **权限**：首期与现有 Poc API 一致不接权限体系（内网部署），依赖审计与配置开关约束；
   后续接入 Admin.NET 权限时不改接口形状。
 
-## 10. 图表预留方向（本期不实现）
+## 11. 图表预留方向（本期不实现）
 
 - 报表包 schema：将来升 `PackageVersion=2`，包/spec 增加可选 `charts[]`
   （`{code, title, type(bar/line/pie/area), xField, yFields[], agg(sum/count/avg), sort?}`），
@@ -185,20 +214,22 @@ LLM 侧工具 schema（OpenAI tools 格式，后端 `PocAiToolRegistry` 静态�
 - 本期代码不动 schema；SpecCompiler 与提示词中不出现 charts 字段（specVersion=1
   严格校验未知字段，防止 AI 提前输出图表配置被静默丢弃）。
 
-## 11. 测试策略
+## 12. 测试策略
 
 | 层 | 内容 |
 | --- | --- |
 | SpecCompiler 单测 | 样例 spec 与 ps1 编译产物结构比对（钉契约）；非法 spec 错误路径（命名/SQL/字段对齐） |
 | 工具执行器单测 | 只读校验拦截（DML/多语句）、表名注入拒绝、行数上限、数据源不存在、SqlProbeEnabled=false 拒绝 |
+| 同步匹配单测 | 确定性预匹配基线（同名/改名/缩写样例）；LLM 返回非法映射 JSON 时降级；白名单外转换器拒绝；已有人工映射不被覆盖 |
 | LLM 客户端单测 | mock HTTP：tool_calls 解析、多轮循环收敛、MaxToolRounds 超限、超时/5xx 重试边界 |
 | 会话服务单测 | 30 分钟过期、50 条历史裁剪、3 次 failed 提交熔断 |
-| 前端组件测试 | 聊天侧栏消息渲染、工具折叠条、草稿卡片状态流转、设置页打码回显 |
-| 真库 E2E（后置） | 连真实 LLM 端点：需求→查数→草稿→校验→试跑→导入全链路（沿用真库验收习惯，另行排期） |
+| 前端组件测试 | 聊天侧栏消息渲染、工具折叠条、草稿卡片状态流转、映射表格回填与置信标注、设置页打码回显 |
+| 真库 E2E（后置） | 连真实 LLM 端点：模板 AI 全链路（需求→查数→草稿→校验→试跑→导入）与同步 AI 真库匹配（沿用真库验收习惯，另行排期） |
 
-## 12. 实施分期建议
+## 13. 实施分期建议
 
 1. **阶段一（本期主体）**：schema 脚本 + 配置管理页 + LLM 客户端 + 会话/工具循环 +
    只读查数工具 + 审计。
 2. **阶段二**：SpecCompiler + submit/dry_run 工具 + 草稿卡片与导入闭环 + 一致性钉测。
-3. **阶段三（另立设计）**：图表视图（schema v2 + ECharts Tab + AI charts 字段）。
+3. **阶段三**：同步 AI 智能匹配（确定性预匹配 + LLM 语义匹配 + 转换器建议 + 映射表格回填）。
+4. **阶段四（另立设计）**：图表视图（schema v2 + ECharts Tab + AI charts 字段）。
