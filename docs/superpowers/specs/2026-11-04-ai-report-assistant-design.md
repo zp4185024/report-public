@@ -55,8 +55,8 @@ ReportWeb
    │                                                    前端草稿卡片 → 复用现有 reportPackageApi（validate / dryRun / import）
    │
    └─ 同步设计器「同步 AI」按钮 ──POST /ai/sync-match──▶ PocSyncMatchService
-            源 FieldSchema + 目标列元数据 → 确定性预匹配 + LLM 语义匹配 + 转换器建议
-            → 建议回填映射表格（不直接保存，人工确认后走现有保存/校验链）
+            当前任务 mappings + 源 FieldSchema + 目标列元数据 → 同名规则 + LLM 语义匹配
+            + 转换器白名单建议 → 建议写回草稿 JSON（不保存，人工确认走现有校验链）
 ```
 
 新增数据库对象（沿用现有 schema 脚本模式，新增 `scripts/database/Apply-AiAssistantSchema.ps1`）：
@@ -152,27 +152,40 @@ LLM 侧工具 schema（OpenAI tools 格式，后端 `PocAiToolRegistry` 静态�
 
 编译成功后立即走 `ValidatePackageCore`（内存态，不落库），校验错误同样回传 LLM 自修。
 
-## 8. 同步 AI：字段映射智能匹配
+## 8. 同步 AI：基于当前任务 JSON 的字段映射智能匹配
 
-定位：同步任务设计器"字段映射"步骤的**一键式**助手（非聊天——映射是高频重复劳动，
-按钮比对话高效），与模板 AI 共用 LLM 客户端、`RcAiSettings`、`RcAiAuditLog` 与
-`IsEnabled` 总开关；AI 关闭时按钮隐藏、接口 fail-fast。
+定位：把同步设计器**已有的「按同名自动匹配」**（`buildInitialMappings`：源/目标列名
+忽略大小写、仅填空、已有映射原样保留）升级为 **AI 智能匹配**。作用对象就是**当前任务
+配置 JSON**（草稿 `SyncTaskDefinition`，即 `DefinitionJson.mappings`）：AI 在现有
+mappings 的空缺处补齐建议，产出与 `SyncColumnMapping` 同构，直接写回草稿 JSON，
+人工确认后仍走现有保存+校验链与试跑。与模板 AI 共用 LLM 客户端、`RcAiSettings`、
+`RcAiAuditLog` 与 `IsEnabled` 总开关；AI 关闭时按钮隐藏、接口 fail-fast，
+**规则版同名匹配保留可用**（无 AI 环境的基线能力）。
 
-- **入口**：设计器映射步骤工具栏「AI 智能匹配」→ `POST /ai/sync-match`。
-- **输入**：源数据集 FieldSchema（字段+注释，模块已有）+ 目标表列元数据
-  （同步模块已有的目标列读取）+ 内置转换器目录白名单（`CONVERTER_CATALOG`）。
-- **匹配策略（混合三级，确定性优先）**：
-  1. **确定性预匹配**（不依赖 LLM，基线与降级路径）：名称规范化（去下划线/大小写归一）
-     后精确、前缀、常用缩写匹配；
-  2. **LLM 语义匹配**：把两侧字段清单（名称+类型+注释）交模型推理业务同义
-     （如 `FEE_TYPE`↔费用类别、`REFUND_FLAG`↔`IS_REFUND`），模型只返回映射建议 JSON；
-  3. **类型兼容与转换器建议**：类型不一致时从内置转换器白名单建议转换链
-     （转小数/转日期/转文本/字典映射/表达式等），**禁止建议白名单外转换器**。
-- **输出**：`[{targetField, sourceField|null, targetType, converters[], confidence(high/mid/low), reason}]`。
-  **不直接保存**——仅回填设计器映射表格（每行附置信标注与依据），人工确认/调整后
-  仍走现有保存+校验链与试跑；未匹配项显式标记"需人工处理"。
-- **边界约束**：不覆盖已有人工映射（仅填空，人工值优先）；LLM 不可用/返回非法 JSON
-  时降级为纯确定性预匹配结果并提示；匹配请求记审计（TaskCode、字段数、命中数、耗时）。
+- **入口**：映射步骤工具栏「AI 智能匹配」→ `POST /ai/sync-match`；「按同名自动匹配」
+  按钮并存，两者都只填空、不覆盖人工映射。
+- **输入（全部来自当前配置与已有元数据，不新增取数）**：
+  当前 `mappings[]`（标注"人工已填，不得覆盖"）+ 源数据集 FieldSchema
+  （名称/类型/注释）+ 目标表列元数据（名称/数据库类型/长度/可空/注释，
+  目标类型已按 `targetDbTypeToType` 推断）+ 内置转换器目录
+  `CONVERTER_CATALOG`（与后端 `PocDataSyncConverter.SupportedConverters` 白名单一致）。
+- **匹配策略（在同名规则之上叠加，确定性优先）**：
+  1. **同名规则**（现有 `buildInitialMappings`，不依赖 LLM）：忽略大小写精确匹配，
+     结果即基线；规则版按钮单独可用。
+  2. **LLM 语义匹配**：把两侧字段清单（名称+类型+注释）与当前已填映射交给模型，
+     推理业务同义（如 `FEE_TYPE`↔`FEE_CATEGORY` 费用类别、`REFUND_FLAG`↔`IS_REFUND`
+     退费标志），模型只返回映射建议 JSON；
+  3. **类型兼容与转换链建议**：目标类型由数据库类型推断（Oracle `NUMBER(12,2)`→
+     `decimal`、`DATE`→`datetime` 等）；类型不一致或需清洗时，从转换器目录白名单
+     建议转换链（toDate/toDecimal/trim/toString/dictionary/expression 等），
+     **白名单外转换器直接拒绝**；类型映射与转换建议允许确定性层先行，LLM 只处理歧义项。
+- **输出**：与 `SyncColumnMapping` 完全同构的建议列表
+  （`sourceField/targetField/targetType/length/nullable/converters[]`），另附
+  `confidence(high/mid/low)` 与 `reason` 仅供 UI 标注展示、写回 JSON 时丢弃。
+  **不直接保存**——回填映射表格（每行附置信标注与依据）并更新草稿 JSON；
+  未匹配项（如目标字段在源表无对应）显式标记"需人工处理"，不写入 mappings。
+- **边界约束**：只填空、不覆盖人工映射；LLM 不可用/返回非法 JSON 时降级为同名规则
+  结果并提示；匹配请求记审计（TaskCode、字段数、命中数、耗时）。
 - **明确不做**：不自动执行保存；不做跨任务批量匹配（如有需要另行设计）。
 
 ## 9. 前端设计（纯 React，无新增重量依赖）
