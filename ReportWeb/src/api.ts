@@ -49,9 +49,11 @@ import type {
   TemplateXlsxImportResult,
 } from './types';
 import type {
+  AiChatProgressDocument,
   AiChatRequest,
   AiChatResult,
   AiConnectionTestResult,
+  AiDataSourceTable,
   AiSessionClosedDocument,
   AiSettings,
   AiSettingsInput,
@@ -931,4 +933,27 @@ export const aiApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     }),
+
+  /**
+   * 数据源表清单（方案 A 透明化）：查看“AI 眼中的数据源”——与 list_tables 工具共用同一取数。
+   * 元数据只读；AI 关闭时后端按 AI_DISABLED fail-fast，仅在面板可用时调用。
+   * @param code - 目标数据源编码。
+   * @returns 表/视图条目列表（name/kind/comment）。
+   */
+  dataSourceTables: (code: string) =>
+    requestJson<AiDataSourceTable[]>(
+      `/api/report-center/ai/data-sources/${encodeURIComponent(code)}/tables`,
+    ),
+
+  /**
+   * 工具循环进度轮询（方案 B 实时化）：POST /chat 期间并行调用，按 Seq 增量渲染消息。
+   * AI 关闭时后端按 AI_DISABLED fail-fast；会话不存在返回 idle 空列表。
+   * @param sessionId - 会话编号。
+   * @param afterSeq - 已渲染的最大 Seq，传 0 表示取全部。
+   * @returns 循环状态与增量消息。
+   */
+  chatProgress: (sessionId: string, afterSeq: number) =>
+    requestJson<AiChatProgressDocument>(
+      `/api/report-center/ai/chat/progress/${encodeURIComponent(sessionId)}?afterSeq=${afterSeq}`,
+    ),
 };

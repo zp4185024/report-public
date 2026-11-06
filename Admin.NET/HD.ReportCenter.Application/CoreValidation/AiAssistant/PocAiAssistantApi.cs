@@ -18,19 +18,23 @@ public sealed class PocAiAssistantApi : IDynamicApiController
     private readonly PocAiSettingsService _settingsService;
     private readonly PocAiChatService? _chatService;
     private readonly PocAiSyncMatchService? _syncMatchService;
+    private readonly PocAiToolExecutor? _toolExecutor;
 
     /// <summary>初始化 PocAiAssistantApi 实例，保存后续处理所需的依赖并建立初始状态。</summary>
     /// <param name="settingsService">AI 设置服务。</param>
     /// <param name="chatService">对话服务；依赖缺失时对话接口返回 503。</param>
     /// <param name="syncMatchService">同步智能匹配服务；依赖缺失时 sync-match 接口返回 503。</param>
+    /// <param name="toolExecutor">只读查数工具执行器；依赖缺失时数据源表清单接口返回 503。</param>
     public PocAiAssistantApi(
         PocAiSettingsService settingsService,
         PocAiChatService? chatService = null,
-        PocAiSyncMatchService? syncMatchService = null)
+        PocAiSyncMatchService? syncMatchService = null,
+        PocAiToolExecutor? toolExecutor = null)
     {
         _settingsService = settingsService;
         _chatService = chatService;
         _syncMatchService = syncMatchService;
+        _toolExecutor = toolExecutor;
     }
 
     /// <summary>
@@ -60,13 +64,12 @@ public sealed class PocAiAssistantApi : IDynamicApiController
     [HttpGet("/api/report-center/ai/settings")]
     public Task<PocAiSettingsDocument> GetSettings() => _settingsService.GetDocumentAsync();
 
-    /// <summary>保存 AI 设置；ApiKey 传空表示保留原值。保存本身不受 AI 开关限制，这是开启 AI 的唯一入口。</summary>
+    /// <summary>保存 AI 设置；ApiKey 传空表示保留原值。保存本身不受 AI 开关限制——这是开启 AI 的唯一入口，不走 AI_DISABLED 守卫，否则关闭态下将永远无法启用。</summary>
     /// <param name="request">设置输入。</param>
     /// <returns>保存后的打码设置文档。</returns>
     [SuppressMonitor]
     [HttpPost("/api/report-center/ai/settings")]
-    public Task<PocAiSettingsDocument> SaveSettings([FromBody] PocAiSettingsInput request) =>
-        HandleAiOperation(() => _settingsService.SaveAsync(request));
+    public Task<PocAiSettingsDocument> SaveSettings([FromBody] PocAiSettingsInput request) => _settingsService.SaveAsync(request);
 
     /// <summary>对已保存配置做连通性测试；AI 未启用或配置不完整时按 AI_DISABLED fail-fast。</summary>
     /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
@@ -100,6 +103,49 @@ public sealed class PocAiAssistantApi : IDynamicApiController
         HandleAiOperation(() => Task.FromResult(
             new PocAiSessionClosedDocument(id, _chatService?.CloseSession(id) ?? false)));
 
+    /// <summary>
+    /// 数据源表清单（方案 A 透明化）：把静默注入给模型的“AI 眼中的数据源”直接展示给用户。
+    /// 复用 PocAiToolExecutor 的 list_tables 公共取数（含 AI 启用门控），返回名称/类型/注释；
+    /// 元数据只读、不落审计，会话不存在也能查（数据源维度而非会话维度）。
+    /// </summary>
+    /// <param name="code">目标数据源编码。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>表/视图条目列表。</returns>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/ai/data-sources/{code}/tables")]
+    public Task<IReadOnlyList<PocAiDataSourceTable>> ListDataSourceTables(
+        [FromRoute] string code,
+        CancellationToken cancellationToken)
+    {
+        if (_toolExecutor is null)
+        {
+            throw Oops.Oh("AI_TOOL_SERVICE_NOT_AVAILABLE").StatusCode(503);
+        }
+        return HandleAiOperation(() => _toolExecutor.LoadDataSourceTablesAsync(code, includeViews: true, cancellationToken));
+    }
+
+    /// <summary>
+    /// 工具循环进度轮询（方案 B 实时化）：POST /chat 语义不变，前端并行轮询本接口按 Seq 渲染增量消息。
+    /// AI 关闭 fail-fast；会话不存在/已过期返回 idle 空列表，由 POST /chat 的最终响应校正。
+    /// </summary>
+    /// <param name="sessionId">会话编号。</param>
+    /// <param name="afterSeq">前端已渲染的最大 Seq，传 0 表示取全部。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>循环状态与增量消息。</returns>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/ai/chat/progress/{sessionId}")]
+    public Task<PocAiChatProgressDocument> ChatProgress(
+        [FromRoute] string sessionId,
+        [FromQuery] long afterSeq = 0,
+        CancellationToken cancellationToken = default)
+    {
+        if (_chatService is null)
+        {
+            throw Oops.Oh("AI_CHAT_SERVICE_NOT_AVAILABLE").StatusCode(503);
+        }
+        return HandleAiOperation(() => _chatService.GetProgressAsync(sessionId, afterSeq, cancellationToken));
+    }
+
     /// <summary>AI 接口统一异常翻译：AI 关闭降级映射 403，配置与参数错误映射 400，LLM 失败映射 502 且保留会话语义。</summary>
     /// <param name="operation">待执行的 AI 操作。</param>
     /// <returns>操作结果，异常时抛出 FriendlyException。</returns>
@@ -121,6 +167,11 @@ public sealed class PocAiAssistantApi : IDynamicApiController
         }
         catch (PocDatasetConfigurationException exception)
         {
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
+        }
+        catch (PocAiToolRejectException exception)
+        {
+            // 工具拒绝类失败（数据源不存在/停用等）是请求侧错误：映射 400 并保留稳定错误码，避免裸 500。
             throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
         }
     }

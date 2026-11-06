@@ -127,7 +127,7 @@ internal sealed class PocAiTestHost : IDisposable
         LlmHandler = new ScriptedLlmHandler();
         LlmClient = new PocLlmClient(new HttpClient(LlmHandler));
         SettingsService = new PocAiSettingsService(SettingsStore, LlmClient);
-        ToolExecutor = new PocAiToolExecutor(DataAssets, SqliteClientFactory);
+        ToolExecutor = new PocAiToolExecutor(DataAssets, SqliteClientFactory, SettingsService);
         // 报表包链路按 PocReportPackageTests 的装配方式串起配置/模板/包服务，审计目录指向临时目录。
         PackageAuditDirectory = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(),

@@ -61,7 +61,30 @@ public sealed record PocAiChatMessage(
     string? DataSourceCode = null,
     string? SqlText = null,
     int? RowCount = null,
-    bool Success = true);
+    bool Success = true)
+{
+    /// <summary>
+    /// 会话内单调递增序号（从 1 开始，由会话在追加时分配）：前端轮询进度按它做“取其后消息”与去重。
+    /// 历史裁剪只移除列表元素，不回退计数器，保证跨轮次不出现重复 Seq。
+    /// </summary>
+    public long Seq { get; internal set; }
+}
+
+/// <summary>会话工具循环的实时状态：前端据此在 POST /chat 返回前轮询渲染增量消息。</summary>
+public enum PocAiLoopState
+{
+    /// <summary>当前没有进行中的工具循环（空闲或循环尚未开始）。</summary>
+    Idle,
+
+    /// <summary>工具循环进行中：模型调用与工具结果正逐条写入会话。</summary>
+    Running,
+
+    /// <summary>本轮工具循环正常结束（模型给出结论性回复）。</summary>
+    Completed,
+
+    /// <summary>本轮工具循环异常结束（LLM 失败或取消）；会话保留，可原样重试。</summary>
+    Failed
+}
 
 /// <summary>内存 AI 会话：绑定发起时的数据源，保存裁剪后的消息历史与活跃时间。</summary>
 public sealed class PocAiChatSession
@@ -79,6 +102,24 @@ public sealed class PocAiChatSession
 
     /// <summary>会话消息历史（已裁剪）；system 提示词不入历史。</summary>
     public List<PocAiChatMessage> Messages { get; } = [];
+
+    /// <summary>下一个待分配的消息序号；只增不减，裁剪历史不影响它。</summary>
+    private long _nextSeq = 1;
+
+    /// <summary>当前工具循环状态；与消息共用同一把锁，保证轮询读到状态与消息的一致快照。</summary>
+    private PocAiLoopState _loopState = PocAiLoopState.Idle;
+
+    /// <summary>当前工具循环状态（只读快照）；线程安全，供进度轮询接口读取。</summary>
+    public PocAiLoopState LoopState
+    {
+        get
+        {
+            lock (_messageLock)
+            {
+                return _loopState;
+            }
+        }
+    }
 
     /// <summary>
     /// 会话累积的参考材料（附件解析产物）：只存结构化描述，附件原始内容永不落库，
@@ -133,13 +174,60 @@ public sealed class PocAiChatSession
     {
         lock (_messageLock)
         {
-            Messages.AddRange(messages);
+            // 逐条分配会话内单调递增 Seq：轮询接口与前端去重都以它为准；裁剪只移除元素，计数器不回退。
+            foreach (var message in messages)
+            {
+                message.Seq = _nextSeq++;
+                Messages.Add(message);
+            }
             while (Messages.Count > PocAiChatSessionStore.MaxMessages)
             {
                 // 裁剪最早的非系统消息；全部为系统消息时退化为裁剪第一条，保证历史不会无限增长。
                 var index = Messages.FindIndex(item => item.Role != PocAiChatRole.System);
                 Messages.RemoveAt(index < 0 ? 0 : index);
             }
+        }
+    }
+
+    /// <summary>标记本轮工具循环开始：此后工具循环内产生的消息可被进度轮询接口实时读到。</summary>
+    internal void BeginLoop()
+    {
+        lock (_messageLock)
+        {
+            _loopState = PocAiLoopState.Running;
+        }
+    }
+
+    /// <summary>标记本轮工具循环正常结束；状态保持到下一轮开始，重复轮询可安全读到 completed。</summary>
+    internal void CompleteLoop()
+    {
+        lock (_messageLock)
+        {
+            _loopState = PocAiLoopState.Completed;
+        }
+    }
+
+    /// <summary>标记本轮工具循环异常结束（LLM 失败/取消）；会话与已产生的消息保留，前端展示 failed 态。</summary>
+    internal void FailLoop()
+    {
+        lock (_messageLock)
+        {
+            _loopState = PocAiLoopState.Failed;
+        }
+    }
+
+    /// <summary>
+    /// 按 Seq 截取其后消息的只读快照：进度轮询的核心读法，返回 (Seq &gt; afterSeq) 的消息。
+    /// 与 LoopState 在同一把锁下读取，轮询拿到的是“状态 + 消息”的一致快照。
+    /// </summary>
+    /// <param name="afterSeq">已读取到的最大 Seq；传 0 表示从头取。</param>
+    /// <returns>循环状态与 Seq 之后的消息列表快照。</returns>
+    public (PocAiLoopState State, IReadOnlyList<PocAiChatMessage> Messages) GetProgressSnapshot(long afterSeq)
+    {
+        lock (_messageLock)
+        {
+            var messages = Messages.Where(item => item.Seq > afterSeq).ToList();
+            return (_loopState, messages);
         }
     }
 

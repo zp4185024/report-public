@@ -1009,3 +1009,31 @@ export interface AiSyncMatchResult {
   degraded: boolean;
   message: string | null;
 }
+
+// ===== AI 透明化改造（方案 A/B）追加类型：表清单展示 + 工具循环进度轮询 =====
+
+/** 数据源表清单条目：kind 区分基表与视图；comment 可为空。镜像 PocAiDataSourceTable。 */
+export interface AiDataSourceTable {
+  name: string;
+  kind: 'table' | 'view';
+  comment: string | null;
+}
+
+/**
+ * AI 消息的 Seq 增量形态：服务端消息都带单调递增 seq（会话内从 1 开始），
+ * 前端本地乐观插入的用户消息 seq 为 null，最终以 POST /chat 响应校正。镜像 PocAiChatMessageView.Seq。
+ */
+export interface AiChatSeqMessageView extends AiChatMessageView {
+  seq: number | null;
+}
+
+/** 对话响应的 Seq 形态：messages 携带 seq，其余字段与 AiChatResult 一致。镜像 PocAiChatResult。 */
+export interface AiChatSeqResult extends Omit<AiChatResult, 'messages'> {
+  messages: AiChatSeqMessageView[];
+}
+
+/** 工具循环进度轮询文档：循环状态 + afterSeq 之后的消息。镜像 PocAiChatProgressDocument。 */
+export interface AiChatProgressDocument {
+  loopState: 'idle' | 'running' | 'completed' | 'failed';
+  messages: AiChatSeqMessageView[];
+}

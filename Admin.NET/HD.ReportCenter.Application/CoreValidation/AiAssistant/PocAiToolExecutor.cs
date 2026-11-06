@@ -20,6 +20,15 @@ public sealed record PocAiToolExecutionResult(
     string? ErrorSummary,
     string ContentJson);
 
+/// <summary>
+/// 数据源表清单条目：名称、类型（table/view）与可选注释。
+/// 由工具 list_tables 与前端“数据源表清单”接口共用同一条取数通道，绝不携带连接串信息。
+/// </summary>
+/// <param name="Name">对象名称（数据库内的真实标识符）。</param>
+/// <param name="Kind">对象类型：table=基表，view=视图。</param>
+/// <param name="Comment">对象注释；数据库未提供注释时为 null。</param>
+public sealed record PocAiDataSourceTable(string Name, string Kind, string? Comment);
+
 /// <summary>工具被安全规则或配置拒绝时抛出；由执行器统一转换为结构化错误回传 LLM。</summary>
 internal sealed class PocAiToolRejectException(string code, string message) : Exception(message)
 {
@@ -42,17 +51,86 @@ public sealed class PocAiToolExecutor : ITransient
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private readonly PocDataAssetStore _dataAssetStore;
+    private readonly PocAiSettingsService? _settingsService;
     private readonly CreateDatasetClient _clientFactory;
 
     /// <summary>初始化 PocAiToolExecutor 实例；连接工厂可注入，测试用 SQLite 内存库替代真实业务库。</summary>
     /// <param name="dataAssetStore">全局数据源存储，用于按编码解析数据源配置。</param>
     /// <param name="clientFactory">目标数据源连接工厂；缺省使用统一的 PocDatabaseProvider.CreateClient。</param>
+    /// <param name="settingsService">AI 设置服务；为表清单公共取数方法提供 IsEnabled 门控，测试宿主可不注入。</param>
     public PocAiToolExecutor(
         PocDataAssetStore dataAssetStore,
-        CreateDatasetClient? clientFactory = null)
+        CreateDatasetClient? clientFactory = null,
+        PocAiSettingsService? settingsService = null)
     {
         _dataAssetStore = dataAssetStore;
         _clientFactory = clientFactory ?? PocDatabaseProvider.CreateClient;
+        _settingsService = settingsService;
+    }
+
+    /// <summary>
+    /// 数据源表清单公共取数入口：工具 list_tables 与前端“数据源表清单”接口共用，绝不写第二套取数逻辑。
+    /// 按“调用型接口”口径先过 AI 启用门控（AI 关闭或配置不完整时 fail-fast），再校验数据源可用性。
+    /// </summary>
+    /// <param name="dataSourceCode">目标数据源编码。</param>
+    /// <param name="includeViews">是否附带视图（前端清单需要 table/view 区分；工具路径保持只列基表的既有行为）。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>表/视图条目列表。</returns>
+    public async Task<IReadOnlyList<PocAiDataSourceTable>> LoadDataSourceTablesAsync(
+        string dataSourceCode,
+        bool includeViews,
+        CancellationToken cancellationToken = default)
+    {
+        // AI 关闭门控放在一切取数之前：该公共方法同时是前端元数据接口的实现，必须与 chat 一样 fail-fast。
+        if (_settingsService is not null)
+        {
+            await _settingsService.RequireEnabledAsync();
+        }
+        var dataSource = await RequireUsableDataSourceAsync(dataSourceCode);
+        return await LoadDataSourceTablesCoreAsync(dataSource, includeViews, cancellationToken);
+    }
+
+    /// <summary>
+    /// 表清单核心取数：对已解析的数据源建立只读连接并枚举表/视图元数据；视图枚举失败按空清单降级，
+    /// 不让个别数据库方言不支持视图清单拖垮基表展示。
+    /// </summary>
+    /// <param name="dataSource">已确认可用的数据源配置。</param>
+    /// <param name="includeViews">是否附带视图。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>表/视图条目列表（基表在前、视图在后，组内按数据库返回顺序）。</returns>
+    private async Task<IReadOnlyList<PocAiDataSourceTable>> LoadDataSourceTablesCoreAsync(
+        PocDataSource dataSource,
+        bool includeViews,
+        CancellationToken cancellationToken)
+    {
+        using var database = CreateToolClient(dataSource, cancellationToken);
+        var tables = database.DbMaintenance.GetTableInfoList(false);
+        var entries = tables
+            .Select(item => new PocAiDataSourceTable(
+                item.Name,
+                "table",
+                string.IsNullOrWhiteSpace(item.Description) ? null : item.Description))
+            .ToList();
+        if (!includeViews)
+        {
+            return entries;
+        }
+
+        // 视图清单是展示性补充：个别方言/驱动不支持时降级为只列基表，错误绝不携带连接串。
+        try
+        {
+            var views = database.DbMaintenance.GetViewInfoList(false);
+            entries.AddRange(views.Select(item => new PocAiDataSourceTable(
+                item.Name,
+                "view",
+                string.IsNullOrWhiteSpace(item.Description) ? null : item.Description)));
+        }
+        catch (Exception exception) when (PocDatabaseProvider.IsDatabaseException(exception)
+            || PocDatabaseProvider.IsTimeout(exception))
+        {
+            return entries;
+        }
+        return entries;
     }
 
     /// <summary>执行一次 AI 工具调用：解析参数、执行对应只读查询并组织回传内容；一切失败都转为结构化错误结果而非异常外抛。</summary>
@@ -194,7 +272,7 @@ public sealed class PocAiToolExecutor : ITransient
             }, Formatting.None));
     }
 
-    /// <summary>列出目标数据源下的表清单（表名+注释）；结构信息按需用 describe_table 获取，避免上下文爆炸。</summary>
+    /// <summary>列出目标数据源下的表清单（表名+注释）；复用 LoadDataSourceTablesCoreAsync 公共取数，结构信息按需用 describe_table 获取，避免上下文爆炸。</summary>
     /// <param name="settings">当前 AI 配置（保留参数以统一各工具签名）。</param>
     /// <param name="arguments">工具参数。</param>
     /// <param name="dataSourceCode">目标数据源编码。</param>
@@ -210,14 +288,14 @@ public sealed class PocAiToolExecutor : ITransient
     {
         _ = settings;
         var dataSource = await RequireUsableDataSourceAsync(dataSourceCode);
-        using var database = CreateToolClient(dataSource, cancellationToken);
-        var tables = database.DbMaintenance.GetTableInfoList(false);
+        // 工具路径只列基表（includeViews=false），与前端清单接口共用同一核心取数，不另建平行通道。
+        var entries = await LoadDataSourceTablesCoreAsync(dataSource, includeViews: false, cancellationToken);
         stopwatch.Stop();
-        var payload = tables
+        var payload = entries
             .Select(item => new Dictionary<string, object?>
             {
                 ["name"] = item.Name,
-                ["comment"] = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description
+                ["comment"] = item.Comment
             })
             .ToArray();
         return new PocAiToolExecutionResult(

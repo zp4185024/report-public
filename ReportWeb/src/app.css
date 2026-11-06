@@ -5837,6 +5837,128 @@ fieldset.package-decision-field {
   color: var(--text-secondary, #64748b);
 }
 
+.ai-bubble.failed {
+  align-self: stretch;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+/* 方案 A：数据源表清单（可折叠 + 过滤 + 限高滚动区） */
+
+.ai-table-list {
+  margin: 0;
+  padding: 8px 14px 10px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  font-size: 12px;
+}
+
+.ai-table-list-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-table-list-toggle span {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.ai-table-list-filterbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--border, #cbd5e1);
+  border-radius: 8px;
+  color: var(--text-secondary, #64748b);
+  background: var(--surface-muted, #f8fafc);
+}
+
+.ai-table-list-filterbar input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-primary, #0f172a);
+}
+
+.ai-table-list-scroll {
+  margin-top: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px dashed var(--border, #cbd5e1);
+  border-radius: 8px;
+  background: var(--surface-muted, #f8fafc);
+}
+
+.ai-table-list-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  line-height: 1.5;
+}
+
+.ai-table-list-row:last-child {
+  border-bottom: none;
+}
+
+.ai-table-kind {
+  flex-shrink: 0;
+  font-style: normal;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 10px;
+}
+
+.ai-table-kind.view {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.ai-table-name {
+  flex-shrink: 0;
+  max-width: 45%;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  overflow-wrap: anywhere;
+  color: var(--text-primary, #0f172a);
+}
+
+.ai-table-comment {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-table-list-hint {
+  margin-top: 6px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.5;
+}
+
 .ai-tool-entry {
   align-self: stretch;
   border: 1px dashed var(--border, #cbd5e1);

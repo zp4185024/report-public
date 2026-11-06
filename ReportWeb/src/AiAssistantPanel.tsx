@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
-import { Bot, ChevronDown, LoaderCircle, Paperclip, RefreshCw, Send, Upload, X, Zap } from 'lucide-react';
+import { Bot, ChevronDown, LoaderCircle, Paperclip, RefreshCw, Search, Send, Upload, X, Zap } from 'lucide-react';
 import { aiApi, dataAssetApi, reportPackageApi } from './api';
 import {
   aiToolDetail,
   formatAiToolLabel,
   isAiDisabledError,
+  isAiLoopFailed,
   isAiRetryableError,
-  nextAiChatMessages,
+  latestAiSeq,
+  mergeAiProgressMessages,
+  reconcileAiTurnMessages,
   resolveAiDataSourceOptions,
 } from './aiAssistantChat';
 import {
@@ -27,12 +30,19 @@ import {
   formatDraftImportSuccess,
   formatDraftValidateResult,
 } from './aiDraftCard';
+import { aiDataSourceTableSubtitle, filterAiDataSourceTables, sliceAiTableRenderList } from './aiDataSourceTables';
 import type {
   AiChatDraft,
   AiChatMessageView,
+  AiChatSeqMessageView,
+  AiChatSeqResult,
   AiDataSourceOption,
+  AiDataSourceTable,
   ReportPackageDryRunResult,
 } from './types';
+
+/** progress 轮询周期（毫秒）：POST /chat 进行中每 2 秒拉一次循环状态与增量消息。 */
+const AiProgressPollIntervalMs = 2000;
 
 interface AiAssistantPanelProps {
   onClose: () => void;
@@ -66,15 +76,17 @@ function AiMessageItem({ message, index }: { message: AiChatMessageView; index: 
   );
 }
 
-/** 模板列表页右下角的 AI 助手聊天侧栏：数据源选择器、消息流、工具折叠条与会话管理。 */
+/** 模板列表页右下角的 AI 助手聊天侧栏：数据源选择器、表清单、消息流、工具折叠条与会话管理。 */
 export default function AiAssistantPanel({ onClose }: AiAssistantPanelProps) {
   const [sources, setSources] = useState<AiDataSourceOption[]>([]);
   const [selectedSource, setSelectedSource] = useState('');
-  const [messages, setMessages] = useState<AiChatMessageView[]>([]);
+  const [messages, setMessages] = useState<AiChatSeqMessageView[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // 方案 B：本轮工具循环失败态——POST /chat 抛错或轮询到 failed 时置位，渲染失败气泡。
+  const [turnFailed, setTurnFailed] = useState(false);
   // 草稿卡片状态：随每轮 /chat 响应刷新；校验/试跑/导入动作在卡片上由用户触发。
   const [draft, setDraft] = useState<AiChatDraft | null>(null);
   const [draftBusy, setDraftBusy] = useState(false);
@@ -82,10 +94,57 @@ export default function AiAssistantPanel({ onClose }: AiAssistantPanelProps) {
   const [dryRunResult, setDryRunResult] = useState<ReportPackageDryRunResult | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  // 方案 B：进度轮询定时器与消息快照（interval 回调里读最新消息算 afterSeq，避免闭包过期）。
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const messagesRef = useRef<AiChatSeqMessageView[]>([]);
   // 附件参考（阶段四）：待发送附件条（≤3 个）与隐藏的文件选择器引用；内容不落库，随会话过期。
   const [attachments, setAttachments] = useState<AiAttachmentDraft[]>([]);
   const [attachmentsBusy, setAttachmentsBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // 方案 A：当前数据源的表/视图清单（“AI 眼中的数据源”透明化）。
+  const [tables, setTables] = useState<AiDataSourceTable[]>([]);
+  const [tablesLoading, setTablesLoading] = useState(false);
+  const [tablesError, setTablesError] = useState<string | null>(null);
+  const [tablesOpen, setTablesOpen] = useState(true);
+  const [tableFilter, setTableFilter] = useState('');
+
+  // 轮询与滚动都依赖最新消息列表；每次渲染同步快照供定时器回调读取。
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  /**
+   * 停止进度轮询：POST 返回、发送失败、结束会话或组件卸载时调用，保证不留悬挂定时器。
+   */
+  const stopProgressPolling = () => {
+    if (pollTimerRef.current !== null) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  /**
+   * 启动进度轮询（方案 B）：每 2 秒拉一次 progress，按 Seq 合并增量消息并感知 failed 状态；
+   * 轮询请求失败静默忽略，以 POST /chat 的最终响应校正消息流。
+   */
+  const startProgressPolling = () => {
+    stopProgressPolling();
+    pollTimerRef.current = setInterval(() => {
+      const sessionId = sessionIdRef.current;
+      if (!sessionId) return;
+      void aiApi.chatProgress(sessionId, latestAiSeq(messagesRef.current))
+        .then((progress) => {
+          if (isAiLoopFailed(progress.loopState)) {
+            setTurnFailed(true);
+          }
+          setMessages((current) => mergeAiProgressMessages(current, progress));
+        })
+        .catch(() => undefined);
+    }, AiProgressPollIntervalMs);
+  };
+
+  // 组件卸载（面板关闭）时清理轮询定时器，避免对已消失面板的悬挂请求。
+  useEffect(() => () => stopProgressPolling(), []);
 
   // 阶段一：加载数据源选项，为侧栏选择器提供“已启用数据源”候选并默认选中第一项。
   useEffect(() => {
@@ -108,33 +167,79 @@ export default function AiAssistantPanel({ onClose }: AiAssistantPanelProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sending]);
 
+  // 方案 A：数据源选中后拉取表/视图清单，让用户看到“AI 眼中的数据源”（此前只静默注入给模型）。
+  // 切换数据源时清空旧清单与过滤词；请求失败只在清单区块内提示，不打断对话主流程。
+  useEffect(() => {
+    if (!selectedSource) {
+      setTables([]);
+      setTablesError(null);
+      setTableFilter('');
+      return;
+    }
+    let active = true;
+    setTablesLoading(true);
+    setTablesError(null);
+    setTableFilter('');
+    void aiApi.dataSourceTables(selectedSource)
+      .then((items) => {
+        if (active) setTables(items);
+      })
+      .catch((exception) => {
+        if (active) setTables([]);
+        if (active) setTablesError(exception instanceof Error ? exception.message : '表清单加载失败。');
+      })
+      .finally(() => {
+        if (active) setTablesLoading(false);
+      });
+    return () => { active = false; };
+  }, [selectedSource]);
+
   /**
-   * 发送一条用户消息：服务端在同一请求内完成工具循环，前端只负责按结果刷新消息流。
-   * LLM 失败保留会话，输入不清空以便原样重试；会话过期时按新上下文重建消息流。
+   * 发送一条用户消息（方案 B 实时化）：本地先插乐观用户消息 → 立即 POST /chat（不等待渲染）
+   * → 已有会话号时并行每 2 秒轮询 progress 增量渲染工具消息 → POST 返回后停轮询并以最终响应
+   * 校正消息流、渲染草稿卡。LLM 失败保留会话，输入不清空以便原样重试；会话过期时按新上下文重建。
    * @param event - 触发发送的表单提交事件。
    */
   const send = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // 阶段三：发送前校验数据源选择；LLM 失败保留会话，输入不清空便于原样重试。
+    // 第一段：校验输入与数据源选择；乐观插入用户消息（seq=null），由最终响应替换为服务端版本。
     const message = input.trim();
     if (!message || sending) return;
     if (!selectedSource) {
       setError('请先选择数据源，再开始对话。');
       return;
     }
-    setSending(true);
     setError(null);
     setNotice(null);
+    setTurnFailed(false);
+    setMessages((current) => [...current, {
+      role: 'user' as const,
+      content: message,
+      toolName: null,
+      toolCallId: null,
+      sqlSummary: null,
+      rowCount: null,
+      success: true,
+      truncated: false,
+      seq: null,
+    }]);
+    setSending(true);
+    // 第二段：立即发起 POST；首轮对话尚无会话号（会话号随 POST 响应返回），无法轮询进度，
+    // 该轮与旧版体验一致；已有会话则启动并行轮询，让工具折叠条随循环实时出现。
+    if (sessionIdRef.current) {
+      startProgressPolling();
+    }
     try {
       const result = await aiApi.chat({
         sessionId: sessionIdRef.current,
         dataSourceCode: selectedSource,
         message,
         attachments: attachments.length > 0 ? toAiChatAttachments(attachments) : undefined,
-      });
+      }) as AiChatSeqResult;
+      // 第三段：POST 返回后停轮询，按 Seq 校正消息流（去乐观消息与轮询重复），刷新草稿与输入。
+      stopProgressPolling();
       sessionIdRef.current = result.sessionId;
-      setMessages((current) => nextAiChatMessages(current, result));
-      // 草稿随本轮响应整体刷新（可能为 null 表示尚无草稿），动作结果行同步清零。
+      setMessages((current) => reconcileAiTurnMessages(current, result));
       setDraft(result.draft);
       setDraftResult(null);
       setDryRunResult(null);
@@ -144,6 +249,9 @@ export default function AiAssistantPanel({ onClose }: AiAssistantPanelProps) {
         setNotice('会话已过期，AI 上下文已清空，本轮已按新会话继续。');
       }
     } catch (exception) {
+      // 第四段：失败处理——停轮询、置失败态；LLM 错误会话已保留可重试，配置态引导管理员处理。
+      stopProgressPolling();
+      setTurnFailed(true);
       if (isAiDisabledError(exception)) {
         setError('AI 能力未启用或配置不完整，请管理员在“AI 设置”页开启后再试。');
       } else if (isAiRetryableError(exception)) {
@@ -164,9 +272,11 @@ export default function AiAssistantPanel({ onClose }: AiAssistantPanelProps) {
     if (sending) return;
     const sessionId = sessionIdRef.current;
     sessionIdRef.current = null;
+    stopProgressPolling();
     setMessages([]);
     setNotice(null);
     setError(null);
+    setTurnFailed(false);
     setDraft(null);
     setDraftResult(null);
     setDryRunResult(null);
@@ -328,8 +438,10 @@ export default function AiAssistantPanel({ onClose }: AiAssistantPanelProps) {
             // 切换数据源视为重新发起对话：清空本地消息与服务端会话，让上下文按新数据源重建。
             const previousSession = sessionIdRef.current;
             sessionIdRef.current = null;
+            stopProgressPolling();
             setMessages([]);
             setNotice(null);
+            setTurnFailed(false);
             setDraft(null);
             setDraftResult(null);
             setDryRunResult(null);
@@ -346,6 +458,66 @@ export default function AiAssistantPanel({ onClose }: AiAssistantPanelProps) {
         </select>
       </label>
 
+      {/* 方案 A：数据源表清单（可折叠 + 本地过滤 + 限高滚动区）——展示“AI 眼中的数据源”。 */}
+      <section className="ai-table-list" aria-label="数据源表清单">
+        <button
+          type="button"
+          className="ai-table-list-toggle"
+          aria-expanded={tablesOpen}
+          onClick={() => setTablesOpen((open) => !open)}
+        >
+          <ChevronDown size={14} />
+          <span>数据源表清单（{tables.length}）</span>
+          {tablesLoading && <LoaderCircle className="spin" size={12} />}
+        </button>
+        {tablesOpen && (
+          tablesError ? (
+            <div className="ai-table-list-hint">{tablesError}</div>
+          ) : tables.length === 0 && !tablesLoading ? (
+            <div className="ai-table-list-hint">该数据源暂无表/视图，或清单尚未加载。</div>
+          ) : (
+            <>
+              <div className="ai-table-list-filterbar">
+                <Search size={13} />
+                <input
+                  value={tableFilter}
+                  placeholder="过滤表名或注释…"
+                  aria-label="过滤数据源表清单"
+                  onChange={(event) => setTableFilter(event.target.value)}
+                />
+              </div>
+              <div className="ai-table-list-scroll">
+                {(() => {
+                  const filtered = filterAiDataSourceTables(tables, tableFilter);
+                  const rendered = sliceAiTableRenderList(filtered);
+                  if (filtered.length === 0) {
+                    return <div className="ai-table-list-hint">没有匹配的表/视图。</div>;
+                  }
+                  return (
+                    <>
+                      {rendered.items.map((table) => (
+                        <div className="ai-table-list-row" key={table.name}>
+                          <i className={table.kind === 'view' ? 'ai-table-kind view' : 'ai-table-kind'}>
+                            {table.kind === 'view' ? '视图' : '表'}
+                          </i>
+                          <span className="ai-table-name" title={aiDataSourceTableSubtitle(table)}>{table.name}</span>
+                          {table.comment && <small className="ai-table-comment">{table.comment}</small>}
+                        </div>
+                      ))}
+                      {rendered.hiddenCount > 0 && (
+                        <div className="ai-table-list-hint">
+                          共 {filtered.length} 项，已显示前 {rendered.items.length} 项，输入过滤缩小范围。
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </>
+          )
+        )}
+      </section>
+
       {notice && <div className="ai-panel-notice">{notice}</div>}
       {error && <div className="ai-panel-error">{error}</div>}
 
@@ -357,12 +529,21 @@ export default function AiAssistantPanel({ onClose }: AiAssistantPanelProps) {
           </div>
         )}
         {messages.map((message, index) => (
-          <AiMessageItem key={`${index}-${message.toolCallId ?? message.role}`} message={message} index={index} />
+          <AiMessageItem
+            key={message.seq !== null ? `seq-${message.seq}` : `local-${index}`}
+            message={message}
+            index={index}
+          />
         ))}
         {sending && (
           <div className="ai-bubble assistant pending">
             <LoaderCircle className="spin" size={16} />
             正在思考（可能包含多轮查数）……
+          </div>
+        )}
+        {turnFailed && !sending && (
+          <div className="ai-bubble assistant failed">
+            本轮处理失败，会话已保留；可直接重试，或换一种问法。
           </div>
         )}
         <div ref={messagesEndRef} />

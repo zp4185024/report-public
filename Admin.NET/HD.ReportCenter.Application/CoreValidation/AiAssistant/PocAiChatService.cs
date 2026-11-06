@@ -14,7 +14,7 @@ public sealed record PocAiChatRequest(
     string Message,
     IReadOnlyList<PocAiChatAttachment>? Attachments = null);
 
-/// <summary>回传前端展示的单条消息；工具消息携带工具名/SQL 摘要/行数，供折叠条渲染。</summary>
+/// <summary>回传前端展示的单条消息；工具消息携带工具名/SQL 摘要/行数，供折叠条渲染；Seq 供进度轮询去重。</summary>
 public sealed record PocAiChatMessageView(
     string Role,
     string? Content,
@@ -23,7 +23,8 @@ public sealed record PocAiChatMessageView(
     string? SqlSummary,
     int? RowCount,
     bool Success,
-    bool Truncated);
+    bool Truncated,
+    long Seq = 0);
 
 /// <summary>一次对话的响应：会话号、本轮新增消息、会话是否刚被判定过期重建，以及当前草稿卡片（可为空）。</summary>
 public sealed record PocAiChatResult(
@@ -31,6 +32,16 @@ public sealed record PocAiChatResult(
     IReadOnlyList<PocAiChatMessageView> Messages,
     bool Expired,
     PocAiChatDraftView? Draft);
+
+/// <summary>
+/// 工具循环进度轮询文档：循环状态 + afterSeq 之后的新增消息。
+/// 会话不存在/已过期时返回 idle 空列表（不报错），前端以 POST /chat 的最终响应为准。
+/// </summary>
+/// <param name="LoopState">idle / running / completed / failed（小写字符串，与前端契约一致）。</param>
+/// <param name="Messages">Seq 大于 afterSeq 的展示消息（按 Seq 升序）。</param>
+public sealed record PocAiChatProgressDocument(
+    string LoopState,
+    IReadOnlyList<PocAiChatMessageView> Messages);
 
 /// <summary>
 /// 下发给前端草稿卡片的草稿视图：spec 原文、编译产物包、最近一次全链校验结果与状态。
@@ -142,24 +153,67 @@ public sealed class PocAiChatService : ITransient
             await WriteAttachmentAuditAsync(session.Id, request.Attachments, materials);
         }
 
-        session.AppendMessages([new PocAiChatMessage(PocAiChatRole.User, message)]);
+        // 同一条消息实例既入会话又进 appended：Seq 由会话在追加时统一分配，保证响应视图与轮询视图同源。
+        var userMessage = new PocAiChatMessage(PocAiChatRole.User, message);
+        session.AppendMessages([userMessage]);
+        var appended = new List<PocAiChatMessage> { userMessage };
 
-        var appended = new List<PocAiChatMessage> { new(PocAiChatRole.User, message) };
         try
         {
+            // 循环状态实时化（方案 B）：开始即置 running，工具循环内每条消息立即追加到会话，
+            // 前端经 progress 接口轮询读取；正常结束 completed，异常结束 failed（会话保留可重试）。
+            session.BeginLoop();
             await RunToolLoopAsync(settings, session, appended, cancellationToken);
+            session.CompleteLoop();
             return new PocAiChatResult(
                 session.Id,
                 appended.Select(ToView).ToArray(),
                 expired,
                 BuildDraftView(session.Draft));
         }
-        catch (PocAiLlmException)
+        catch (Exception)
         {
-            // LLM 失败保留会话：用户消息与已产生的中间结果都在，前端提示重试即可续聊。
+            // LLM 失败保留会话：用户消息与已产生的中间结果都在，前端提示重试即可续聊；循环状态记 failed。
+            session.FailLoop();
             throw;
         }
     }
+
+    /// <summary>
+    /// 工具循环进度轮询：返回循环状态与 afterSeq 之后的新增消息，供前端在 POST /chat 返回前实时渲染。
+    /// AI 关闭时与 chat 同闸 fail-fast；会话不存在/已过期按 idle 空列表返回（不报错），以最终响应为准。
+    /// </summary>
+    /// <param name="sessionId">会话编号。</param>
+    /// <param name="afterSeq">前端已渲染的最大 Seq；传 0 表示取全部。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>循环状态与增量消息。</returns>
+    public async Task<PocAiChatProgressDocument> GetProgressAsync(
+        string sessionId,
+        long afterSeq,
+        CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+        // 与 chat 同一道闸：AI 关闭/配置不完整时 fail-fast，绝不泄露会话存在性。
+        await _settingsService.RequireEnabledAsync();
+        var session = _sessionStore.Get(sessionId);
+        if (session is null)
+        {
+            return new PocAiChatProgressDocument(FormatLoopState(PocAiLoopState.Idle), Array.Empty<PocAiChatMessageView>());
+        }
+        var (state, messages) = session.GetProgressSnapshot(afterSeq);
+        return new PocAiChatProgressDocument(FormatLoopState(state), messages.Select(ToView).ToArray());
+    }
+
+    /// <summary>把循环状态枚举转换为前端契约的小写字符串；集中映射避免各处硬编码。</summary>
+    /// <param name="state">循环状态枚举。</param>
+    /// <returns>idle / running / completed / failed 文本。</returns>
+    private static string FormatLoopState(PocAiLoopState state) => state switch
+    {
+        PocAiLoopState.Running => "running",
+        PocAiLoopState.Completed => "completed",
+        PocAiLoopState.Failed => "failed",
+        _ => "idle"
+    };
 
     /// <summary>
     /// 附件解析分发（阶段四）：xlsx 走 ClosedXML 解析、pdf 走 PdfPig 解析、图片走视觉模型单次调用；
@@ -918,7 +972,7 @@ public sealed class PocAiChatService : ITransient
         return messages;
     }
 
-    /// <summary>把会话消息转换为前端展示视图：tool 消息折叠为“工具名 + SQL 摘要 + 行数”。</summary>
+    /// <summary>把会话消息转换为前端展示视图：tool 消息折叠为“工具名 + SQL 摘要 + 行数”，并携带 Seq 供轮询去重。</summary>
     /// <param name="message">会话消息。</param>
     /// <returns>展示视图。</returns>
     private static PocAiChatMessageView ToView(PocAiChatMessage message) => new(
@@ -935,7 +989,8 @@ public sealed class PocAiChatService : ITransient
         message.Role == PocAiChatRole.Tool ? SummarizeSql(message.SqlText) : null,
         message.RowCount,
         message.Success,
-        TruncatedFlag(message.Content));
+        TruncatedFlag(message.Content),
+        message.Seq);
 
     /// <summary>生成 SQL 折叠摘要：压缩空白并截断，前端工具条只显示一行摘要。</summary>
     /// <param name="sqlText">完整 SQL 文本。</param>

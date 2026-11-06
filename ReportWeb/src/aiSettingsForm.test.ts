@@ -19,6 +19,7 @@ function settingsDocument(overrides: Partial<AiSettings>): AiSettings {
     apiKeyMasked: 'sk-***9876',
     apiKeyConfigured: true,
     model: 'deepseek-chat',
+    visionModel: '',
     sampleRowLimit: 20,
     sqlProbeEnabled: true,
     sqlProbeRowLimit: 100,
