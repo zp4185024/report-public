@@ -2,7 +2,7 @@
  * hd-report-center 模板列表页全自动 E2E 测试主脚本。
  *
  * 职责：驱动系统 Chrome 以真实用户视角完整走通模板列表页（加载 → 搜索 → 分页 →
- * 新增模板 → 导出报表包 → 删除 → 现场恢复），每个检查点实时判定并截图留证；
+ * 新增模板 → 导出报表包 → 删除 → 现场恢复 → 导入弹窗信封解包），每个检查点实时判定并截图留证；
  * 产物 output/e2e_result.json 与 output/shots/*.png 供 gen_report.js 生成图文报告。
  *
  * 等待策略：界面文案存在渲染时序，任何断言都以"本次操作触发的分页接口响应"为锚点，
@@ -334,9 +334,11 @@ async function phaseCreate(page) {
 }
 
 /**
- * P5 阶段：从模板列表导出一个已保存模板的报表包并断言下载触发。
+ * P5 阶段：从模板列表导出一个已保存模板的报表包，断言下载触发且文件是纯包 JSON。
+ * 曾经的缺陷：导出端点被统一结果包装，落盘文件是 {code,result} 信封，导入向导无法识别；
+ * 因此这里必须读取下载内容断言顶层 packageKind，而不是只看文件名。
  * @param {import('playwright-core').Page} page - 浏览器页面。
- * @returns {Promise<void>} 检查点失败时抛出异常。
+ * @returns {Promise<{packagePath: string, pkg: object}>} 落盘路径与解析出的报表包对象，供 P8 信封夹具复用。
  */
 async function phaseExportPackage(page) {
   // 阶段：返回列表，等待首屏数据渲染完成。
@@ -374,7 +376,72 @@ async function phaseExportPackage(page) {
   const download = await downloadPromise;
   const filename = download.suggestedFilename();
   record('P5-2', '导出报表包触发下载', filename.endsWith('.json'), `下载文件="${filename}"`);
+
+  // 阶段：落盘并解析下载内容，断言是顶层带 packageKind 的纯包 JSON，杜绝信封包装回归。
+  const packagePath = path.join(OUT_DIR, 'exported_package.json');
+  await download.saveAs(packagePath);
+  let pkg = null;
+  let parsedOk = false;
+  let envelopeWrapped = true;
+  try {
+    pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+    parsedOk = typeof pkg === 'object' && pkg !== null
+      && pkg.packageKind === 'hd-report-center.report-package'
+      && typeof pkg.packageVersion === 'number'
+      && typeof pkg.report?.code === 'string';
+    envelopeWrapped = typeof pkg.code === 'number' && pkg.result != null;
+  } catch (exception) {
+    record('P5-3', '下载文件为纯报表包 JSON（无信封包装）', false, `解析失败：${exception.message}`);
+    await shot(page, 'P5_export');
+    return { packagePath, pkg: null };
+  }
+  record('P5-3', '下载文件为纯报表包 JSON（无信封包装）', parsedOk && !envelopeWrapped,
+    parsedOk
+      ? `packageKind=${pkg.packageKind} report=${pkg.report.code} version=${pkg.packageVersion}`
+      : '顶层缺少合法 packageKind/packageVersion/report.code');
   await shot(page, 'P5_export');
+  return { packagePath, pkg: parsedOk ? pkg : null };
+}
+
+/**
+ * P8 阶段：把 P5 导出的纯包重新包一层接口信封做成夹具，在模板列表页通过
+ * 工具栏「导入报表包」按钮打开弹窗上传，验证自动解包（原独立导入页路由已下线）。
+ * 复现历史缺陷产物：旧导出端把统一结果信封落盘，向导应在本地识别并解包进入第 2 步校验。
+ * 只走到"校验与目标库"步骤即止，绝不点击确认导入，保证全程只读不写库。
+ * @param {import('playwright-core').Page} page - 浏览器页面。
+ * @param {{packagePath: string, pkg: object}} exportInfo - P5 导出的报表包信息。
+ * @returns {Promise<void>} 检查点失败时抛出异常。
+ */
+async function phaseImportWizard(page, exportInfo) {
+  if (!exportInfo.pkg) {
+    record('P8-1', '构造信封包装夹具', false, 'P5 未取得合法报表包，跳过导入向导验证');
+    return;
+  }
+  // 阶段：用旧导出端的信封结构包装纯包，写入 output 供上传。
+  const fixturePath = path.join(OUT_DIR, 'envelope_fixture.json');
+  const envelope = { code: 200, type: 'success', message: '', result: exportInfo.pkg };
+  fs.writeFileSync(fixturePath, JSON.stringify(envelope, null, 2), 'utf8');
+  record('P8-1', '构造信封包装夹具', fs.existsSync(fixturePath), `夹具="${path.basename(fixturePath)}"`);
+
+  // 阶段：在模板列表页点击「导入报表包」打开弹窗，等上传区就绪（P7 已清空搜索，页面就在列表）。
+  await page.locator('button[aria-label="导入报表包"]').click();
+  await expectVisible(page, '.package-import-dialog section[aria-label="上传报表包"]', '导入弹窗上传区', 10000);
+  record('P8-0', '列表页按钮打开导入弹窗', true, '弹窗上传区已显示，独立菜单入口已下线');
+
+  // 阶段：上传信封夹具；本地解析应自动解包并提交服务端校验，进入第 2 步。
+  await page.locator('.package-upload-button input[type="file"]').setInputFiles(fixturePath);
+  await expectVisible(page, 'section[aria-label="校验结果与目标库选择"]', '第2步校验面板', 20000);
+  record('P8-2', '信封文件自动解包并进入第2步校验', true,
+    `报表="${(await textOf(page.locator('section[aria-label="校验结果与目标库选择"] .package-summary-grid strong').first()))}"`);
+
+  // 阶段：断言解包提示 toast，确认用户能看到"建议重新导出"的引导。
+  const toastText = await textOf(page.locator('.status-toast.success').first());
+  record('P8-3', '展示自动解包提示（建议重新导出）', toastText.includes('已自动解包'), `提示="${toastText.slice(0, 60)}"`);
+  await shot(page, 'P8_import_validate');
+
+  // 阶段：验证完毕关闭弹窗，恢复列表现场（此时不在上传/导入进行中，关闭按钮可用）。
+  await page.locator('button[aria-label="关闭导入报表包"]').click();
+  await page.locator('.package-import-dialog').waitFor({ state: 'detached', timeout: 5000 });
 }
 
 /**
@@ -452,9 +519,11 @@ async function main() {
     await phasePagination(page);
     await phaseCreate(page);
     created = true;
-    await phaseExportPackage(page);
+    const exportInfo = await phaseExportPackage(page);
     await phaseDelete(page, listSummary.reportsTotal);
     await phaseCleanupCheck(page);
+    // 阶段：导入向导验证放最后，避免影响 P6 的"总数回落"断言口径。
+    await phaseImportWizard(page, exportInfo);
   } catch (exception) {
     exitCode = 1;
     record('F-0', '流程中断', false, exception instanceof Error ? exception.message : String(exception));
