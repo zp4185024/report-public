@@ -1,12 +1,12 @@
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [string]$SourceServer = '192.168.2.5',
+    [string]$SourceServer = '188.188.2.5',
     [ValidateRange(1, 65535)]
     [int]$SourcePort = 13306,
     [string]$SourceDatabase = 'jnpf_test_520',
     [string]$SourceUser = 'root',
     [string]$SourceReportName = '患者费用明细',
-    [string]$TargetServer = '192.168.2.5',
+    [string]$TargetServer = '188.188.2.5',
     [ValidateRange(1, 65535)]
     [int]$TargetPort = 1433,
     [string]$TargetDatabase = 'hd_report_center',

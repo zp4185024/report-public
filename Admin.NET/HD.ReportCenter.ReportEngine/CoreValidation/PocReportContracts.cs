@@ -108,11 +108,16 @@ public sealed record PocDatasetVariableDefinition(
     string? SourceCode = null,
     string? SourceFieldCode = null);
 
-/// <summary>数据集查询返回字段，只描述数据契约，不包含 Excel 表现属性。</summary>
+/// <summary>
+/// 数据集查询返回字段，只描述数据契约，不包含 Excel 表现属性。
+/// Description 是可选的列注释（中文业务含义）：预览与同步映射场景由服务端按数据库注释
+/// 或数据集声明填充，取不到为 null；存储序列化容忍缺失与 null，历史数据无需迁移。
+/// </summary>
 public sealed record PocDatasetFieldDefinition(
     string Code,
     string DisplayName,
-    string DataType);
+    string DataType,
+    string? Description = null);
 
 /// <summary>
 /// 一个可执行报表的完整元数据，包括已具体化的查询参数、分页方式和数据集返回字段。

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Server = '192.168.2.5',
+    [string]$Server = '188.188.2.5',
     [ValidateRange(1, 65535)]
     [int]$Port = 1433,
     [string]$Database = 'hd_report_center',

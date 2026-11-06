@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, ClipboardList, LoaderCircle, PlugZap, Plus, Save, Trash2, X, Zap } from 'lucide-react';
 import { dataAssetApi } from './api';
+import { confirmDeleteMessage, deleteErrorMessage, pickResourceAfterDeletion } from './assetDeletion';
 import { StatusToasts } from './StatusToasts';
 import type {
   ExternalParameterFieldDefinition,
@@ -86,6 +87,8 @@ export default function ExternalParameterSourcePage() {
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  // 删除请求进行中标志；与保存、测试互斥，防止删除后仍提交旧草稿。
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -183,6 +186,38 @@ export default function ExternalParameterSourcePage() {
   };
 
   /**
+   * 确认后删除当前选中的接口参数源；报表参数或数据集变量仍绑定时后端回传 409 清单并直接展示。
+   */
+  const deleteSource = async () => {
+    if (draft === null || deleting) return;
+    if (draft.revision === 0) {
+      setError('尚未保存的接口参数源无需删除，直接切换资源即可。');
+      return;
+    }
+    if (!window.confirm(confirmDeleteMessage('接口参数源', draft))) return;
+    setDeleting(true);
+    setError(null);
+    setStatus(null);
+    try {
+      const deletedCode = draft.code;
+      const deletedName = draft.name;
+      await dataAssetApi.deleteExternalParameterSource(deletedCode);
+      // 从本地列表移除并选中相邻资源，删空时进入新增草稿。
+      const next = sources.filter((item) => item.code !== deletedCode);
+      setSources(next);
+      const replacement = pickResourceAfterDeletion(sources, deletedCode);
+      setDraft(replacement ? cloneSource(replacement) : createSource(next));
+      setTestValues(null);
+      setTestResultOpen(false);
+      setStatus(`接口参数源「${deletedName}」已删除`);
+    } catch (exception) {
+      setError(deleteErrorMessage(exception, '接口参数源'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  /**
    * 遍历 ExternalParameterSourcePage 数据并执行 test 转换，生成后续流程需要的结果。
    * @returns 返回值与当前方法声明的类型及空值约束保持一致。
    */
@@ -257,7 +292,7 @@ export default function ExternalParameterSourcePage() {
         </aside>
         <div className="asset-editor">
           {draft === null ? <div className="asset-empty">请选择接口参数源</div> : <>
-            <div className="asset-editor-header"><div><h2>{draft.revision === 0 ? '新增接口参数源' : draft.name}</h2><p>修订号 {draft.revision}</p></div><div><button type="button" className="button" disabled={testing || saving || draft.revision === 0} onClick={startTest}>{testing ? <LoaderCircle className="spin" size={16} /> : <Zap size={16} />}测试接口</button><button type="button" className="button button-primary" disabled={saving || testing} onClick={() => void save()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button></div></div>
+            <div className="asset-editor-header"><div><h2>{draft.revision === 0 ? '新增接口参数源' : draft.name}</h2><p>修订号 {draft.revision}</p></div><div><button type="button" className="button" disabled={testing || saving || deleting || draft.revision === 0} onClick={startTest}>{testing ? <LoaderCircle className="spin" size={16} /> : <Zap size={16} />}测试接口</button><button type="button" className="button button-primary" disabled={saving || testing || deleting} onClick={() => void save()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button><button type="button" className="button danger" disabled={saving || testing || deleting || draft.revision === 0} onClick={() => void deleteSource()}>{deleting ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}删除</button></div></div>
             <div className="asset-form-grid external-source-form">
               <label><span>接口源编码</span><input disabled={draft.revision > 0} value={draft.code} onChange={(event) => setDraft({ ...draft, code: event.target.value })} /></label>
               <label><span>接口源名称</span><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>

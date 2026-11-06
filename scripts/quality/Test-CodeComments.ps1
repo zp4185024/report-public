@@ -404,11 +404,20 @@ function Test-ScriptFiles {
         }
         $payload | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $temporaryList.FullName -Encoding utf8
 
-        $nodeOutput = & node $nodeChecker `
-            --file-list $temporaryList.FullName `
-            --long-method-lines $LongMethodLines `
-            --min-description-length $MinDescriptionLength `
-            --min-stage-comments $MinStageComments
+        # 阶段：node 检查器固定输出 UTF-8；GBK 控制台按控制台编码解码会把中文诊断
+        # 破坏成非法 JSON，调用期间临时切换控制台输出编码并在结束后恢复原值。
+        $previousOutputEncoding = [Console]::OutputEncoding
+        [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+        try {
+            $nodeOutput = & node $nodeChecker `
+                --file-list $temporaryList.FullName `
+                --long-method-lines $LongMethodLines `
+                --min-description-length $MinDescriptionLength `
+                --min-stage-comments $MinStageComments
+        }
+        finally {
+            [Console]::OutputEncoding = $previousOutputEncoding
+        }
 
         if ($LASTEXITCODE -ne 0) {
             throw "TypeScript/Vue 注释检查器执行失败：$nodeOutput"

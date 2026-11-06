@@ -135,7 +135,7 @@ foreach ($parameterName in @(
         "连接参数 $parameterName 不得带固定默认值"
 }
 
-$applicationConnection = 'Data Source=192.168.2.5,1433;Initial Catalog=hd_report_center;User ID=hdhis;Password=secret;Encrypt=False;Trust Server Certificate=True;Application Name=hd-report-center-runtime'
+$applicationConnection = 'Data Source=188.188.2.5,1433;Initial Catalog=hd_report_center;User ID=hdhis;Password=secret;Encrypt=False;Trust Server Certificate=True;Application Name=hd-report-center-runtime'
 $normalizedConnection = ConvertTo-JnpfLegacySqlConnectionString $applicationConnection
 $connectionBuilder = [System.Data.SqlClient.SqlConnectionStringBuilder]::new($normalizedConnection)
 Assert-Equal $connectionBuilder.InitialCatalog 'hd_report_center' '兼容应用连接串中的 Trust Server Certificate 键'

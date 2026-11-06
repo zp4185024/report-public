@@ -131,6 +131,62 @@ public sealed class PocDataAssetService : ITransient
             report.IsEnabled)).ToArray();
     }
 
+    /// <summary>
+    /// 删除未被任何报表引用的全局数据集。存在引用时抛出 PocResourceInUseException（DATASET_IN_USE）
+    /// 并附引用报表清单，由调用方提示管理员先处理报表，绝不静默级联删除。
+    /// </summary>
+    /// <param name="code">待删除数据集的编码。</param>
+    /// <returns>回传被删除编码的确认文档。</returns>
+    public async Task<PocDeletedDocument> DeleteDatasetAsync(string code)
+    {
+        ValidateCode(code, "DATASET_DEFINITION_INVALID");
+        var normalizedCode = code.Trim();
+        var dataset = await _store.GetDatasetAsync(normalizedCode)
+            ?? throw new PocDatasetConfigurationException(
+                "DATASET_NOT_FOUND",
+                $"不存在数据集 '{normalizedCode}'。");
+        var references = await _store.ListDatasetReferencesAsync(normalizedCode);
+        if (references.Count > 0)
+        {
+            throw new PocResourceInUseException(
+                "DATASET_IN_USE",
+                $"数据集 '{dataset.Name}'（{normalizedCode}）正被 {references.Count} 个报表引用：" +
+                $"{PocDeleteGuard.FormatReferenceSummary(references.Select(item => item.Name).ToArray())}。" +
+                "请先删除这些报表，或把报表改绑到其他数据集。");
+        }
+
+        await _store.DeleteDatasetAsync(normalizedCode);
+        return new PocDeletedDocument(normalizedCode);
+    }
+
+    /// <summary>
+    /// 删除未被任何数据集引用的全局数据源。存在引用时抛出 PocResourceInUseException（DATA_SOURCE_IN_USE）
+    /// 并附引用数据集清单，防止删除后留下连接信息缺失的数据集。
+    /// </summary>
+    /// <param name="code">待删除数据源的编码。</param>
+    /// <returns>回传被删除编码的确认文档。</returns>
+    public async Task<PocDeletedDocument> DeleteDataSourceAsync(string code)
+    {
+        ValidateCode(code, "DATA_SOURCE_INVALID");
+        var normalizedCode = code.Trim();
+        var dataSource = await _store.GetDataSourceAsync(normalizedCode)
+            ?? throw new PocDatasetConfigurationException(
+                "DATA_SOURCE_NOT_FOUND",
+                $"不存在数据源 '{normalizedCode}'。");
+        var referencingDatasets = await _store.ListDatasetsByDataSourceAsync(normalizedCode);
+        if (referencingDatasets.Count > 0)
+        {
+            throw new PocResourceInUseException(
+                "DATA_SOURCE_IN_USE",
+                $"数据源 '{dataSource.Name}'（{normalizedCode}）正被 {referencingDatasets.Count} 个数据集引用：" +
+                $"{PocDeleteGuard.FormatReferenceSummary(referencingDatasets.Select(item => item.Name).ToArray())}。" +
+                "请先删除这些数据集，或把它们改绑到其他数据源。");
+        }
+
+        await _store.DeleteDataSourceAsync(normalizedCode);
+        return new PocDeletedDocument(normalizedCode);
+    }
+
     /// <summary>更新 PocDataAssetService 的 Save Data Source Async 状态，并同步相关业务数据。</summary>
     /// <param name="code">需要读取、校验或转换的业务值。</param>
     /// <param name="input">本次操作使用的输入数据。</param>
@@ -561,9 +617,13 @@ public sealed class PocDataAssetService : ITransient
         }
     }
 
-    /// <summary>校验 PocDataAssetService 的 Validate Dataset 条件，并返回可供后续流程判断的结果。</summary>
-    /// <param name="input">本次操作使用的输入数据。</param>
-    private static void ValidateDataset(PocDatasetDocument input)
+    /// <summary>
+    /// 校验数据集编码、名称、SQL 长度、变量/字段数量、超时与行数上限，并联动校验
+    /// SQL 变量与字段契约。报表包校验（PocReportPackageService）复用同一方法，
+    /// 确保包内数据集与线上保存链路使用同一份规则。
+    /// </summary>
+    /// <param name="input">待校验的数据集文档。</param>
+    internal static void ValidateDataset(PocDatasetDocument input)
     {
         ValidateCode(input.Code, "DATASET_DEFINITION_INVALID");
         ValidateCode(input.DataSourceCode, "DATASET_DEFINITION_INVALID");

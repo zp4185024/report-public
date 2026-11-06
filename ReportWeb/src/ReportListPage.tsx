@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { ExternalLink, FilePenLine, LoaderCircle, Plus, RefreshCw, Search, X } from 'lucide-react';
-import { reportCatalogApi } from './api';
+import { Bot, ExternalLink, FilePenLine, LoaderCircle, Package, PackageOpen, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
+import { reportCatalogApi, reportPackageApi } from './api';
+import { confirmDeleteMessage, deleteErrorMessage } from './assetDeletion';
+import AiAssistantPanel from './AiAssistantPanel';
 import { PaginationBar } from './PaginationBar';
+import ReportPackageImportDialog from './ReportPackageImportDialog';
 import { StatusToasts } from './StatusToasts';
 import type { CreateReportRequest, DatasetOption, ReportSummaryDocument } from './types';
 
@@ -11,6 +14,11 @@ const emptyCreateRequest: CreateReportRequest = {
   sheetName: '',
   datasetCode: '',
 };
+
+interface ReportListPageProps {
+  /** AI 助手开关（来自 GET /ai/settings）；关闭时右下角浮钮与侧栏都不渲染，前端零感知。 */
+  aiAssistantEnabled?: boolean;
+}
 
 /**
  * 将 ReportListPage 中的 format Updated At 输入转换为调用方需要的稳定格式。
@@ -33,9 +41,10 @@ function formatUpdatedAt(value: string | null): string {
 
 /**
  * 按 Report List Page 规则筛选 ReportListPage 数据，并返回满足条件的结果。
+ * @param props - 页面属性，包含由入口下发的 AI 助手开关。
  * @returns 返回值与当前方法声明的类型及空值约束保持一致。
  */
-export default function ReportListPage() {
+export default function ReportListPage({ aiAssistantEnabled = false }: ReportListPageProps) {
   const [reports, setReports] = useState<ReportSummaryDocument[]>([]);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -51,6 +60,12 @@ export default function ReportListPage() {
   // 第一阶段：构造 ReportListPage 当前阶段需要的中间数据和执行参数。
   const [datasets, setDatasets] = useState<DatasetOption[]>([]);
   const [createRequest, setCreateRequest] = useState<CreateReportRequest>(emptyCreateRequest);
+  const [deletingCode, setDeletingCode] = useState<string | null>(null);
+  const [exportingPackageCode, setExportingPackageCode] = useState<string | null>(null);
+  const [packageImportOpen, setPackageImportOpen] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  // AI 助手侧栏开关：由服务端设置下发的 aiAssistantEnabled 控制浮钮渲染，关闭时零新增渲染。
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
   /**
    * 请求模板列表当前页，并同步服务端返回的总数和规范化分页参数。
@@ -174,6 +189,49 @@ export default function ReportListPage() {
     }
   };
 
+  /**
+   * 确认后删除模板并刷新当前页；后端返回的引用冲突原因直接透出到错误提示。
+   * @param report - 当前行对应的模板摘要。
+   */
+  const deleteReport = async (report: ReportSummaryDocument) => {
+    if (deletingCode !== null) return;
+    if (!window.confirm(confirmDeleteMessage('模板', { code: report.reportCode, name: report.name }))) return;
+    setDeletingCode(report.reportCode);
+    setError(null);
+    setStatus(null);
+    try {
+      await reportCatalogApi.deleteReport(report.reportCode);
+      setStatus(`模板「${report.name}」已删除`);
+      await load(page, pageSize, query);
+    } catch (exception) {
+      setError(deleteErrorMessage(exception, '模板'));
+    } finally {
+      setDeletingCode(null);
+    }
+  };
+
+  /**
+   * 确认后下载该报表的完整报表包 JSON（含模板快照与数据集定义，不含连接串），
+   * 供线上环境通过模板列表「导入报表包」弹窗迁入；失败原因直接透出到错误提示。
+   * @param report - 当前行对应的模板摘要。
+   */
+  const exportPackage = async (report: ReportSummaryDocument) => {
+    if (exportingPackageCode !== null) return;
+    if (!window.confirm(`确认导出报表「${report.name}」的报表包？\n包内包含模板、数据集 SQL 和参数定义，不包含数据源连接串与密码。`)) return;
+    setExportingPackageCode(report.reportCode);
+    setError(null);
+    setStatus(null);
+    // 阶段：触发下载并经统一状态条回报结果；finally 恢复按钮，避免列表上残留进行中标记。
+    try {
+      await reportPackageApi.exportReportPackage(report.reportCode);
+      setStatus(`报表「${report.name}」的报表包已开始下载`);
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : '报表包导出失败。');
+    } finally {
+      setExportingPackageCode(null);
+    }
+  };
+
   // 第4阶段：遍历 ReportListPage 当前数据集合，逐项转换并维护处理结果。
   return (
     <main className="report-list-page">
@@ -206,6 +264,15 @@ export default function ReportListPage() {
           </button>
           <button
             type="button"
+            className="button report-import-open-button"
+            title="导入报表包（从其他环境迁入模板与数据集）"
+            aria-label="导入报表包"
+            onClick={() => setPackageImportOpen(true)}
+          >
+            <PackageOpen size={16} />导入报表包
+          </button>
+          <button
+            type="button"
             className="button button-primary report-create-button"
             onClick={() => void openCreate()}
           >
@@ -216,11 +283,13 @@ export default function ReportListPage() {
 
       <StatusToasts
         error={createError ?? error}
+        success={status}
         onErrorClose={() => {
           // 第5阶段：检查 ReportListPage 当前条件，并按匹配分支执行对应处理。
           if (createError !== null) setCreateError(null);
           else setError(null);
         }}
+        onSuccessClose={() => setStatus(null)}
       />
 
       <section className="report-table-section" aria-label="模板列表">
@@ -248,6 +317,7 @@ export default function ReportListPage() {
               ) : reports.length === 0 ? (
                 <tr><td colSpan={8} className="report-table-empty">没有匹配的模板</td></tr>
               ) : reports.map((report) => (
+                // 第9阶段：渲染当前页每一行，并把行级删除的确认与请求交给 deleteReport 处理。
                 <tr key={report.reportCode}>
                   <td><strong>{report.name}</strong><small>{report.sheetName}</small></td>
                   <td><code>{report.reportCode}</code></td>
@@ -257,9 +327,35 @@ export default function ReportListPage() {
                   <td>{report.templateRevision > 0 ? `v${report.templateRevision}` : '未保存'}</td>
                   <td>{formatUpdatedAt(report.updatedAt)}</td>
                   <td>
-                    <a className="button report-edit-link" href={`/reports/${encodeURIComponent(report.reportCode)}`}>
-                      <FilePenLine size={16} />编辑
-                    </a>
+                    <div className="report-row-actions">
+                      <a className="button report-edit-link" href={`/reports/${encodeURIComponent(report.reportCode)}`}>
+                        <FilePenLine size={16} />编辑
+                      </a>
+                      <button
+                        type="button"
+                        className="table-icon"
+                        title={report.templateRevision > 0 ? '导出报表包（迁移到其他环境）' : '尚未保存模板，不能导出报表包'}
+                        aria-label={`导出报表包 ${report.name}`}
+                        disabled={exportingPackageCode !== null || report.templateRevision === 0}
+                        onClick={() => void exportPackage(report)}
+                      >
+                        {exportingPackageCode === report.reportCode
+                          ? <LoaderCircle className="spin" size={16} />
+                          : <Package size={16} />}
+                      </button>
+                      <button
+                        type="button"
+                        className="table-icon danger"
+                        title="删除模板"
+                        aria-label={`删除模板 ${report.name}`}
+                        disabled={deletingCode !== null || report.configurationRevision === 0}
+                        onClick={() => void deleteReport(report)}
+                      >
+                        {deletingCode === report.reportCode
+                          ? <LoaderCircle className="spin" size={16} />
+                          : <Trash2 size={16} />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -333,6 +429,28 @@ export default function ReportListPage() {
             </footer>
           </form>
         </div>
+      )}
+
+      {/* 报表包导入弹窗：条件挂载即完整卸载，向导内部状态随关闭自动清零。 */}
+      {packageImportOpen && (
+        <ReportPackageImportDialog onClose={() => setPackageImportOpen(false)} />
+      )}
+
+      {/* AI 助手浮钮与侧栏：入口由服务端 AI 开关下发，关闭时两者都不渲染（零感知）。 */}
+      {aiAssistantEnabled && !aiPanelOpen && (
+        <button
+          type="button"
+          className="ai-fab-button"
+          title="AI 助手（对话内容与采样数据将发送至所配置的 LLM 服务）"
+          aria-label="打开 AI 助手"
+          onClick={() => setAiPanelOpen(true)}
+        >
+          <Bot size={20} />
+          <span>AI 助手</span>
+        </button>
+      )}
+      {aiAssistantEnabled && aiPanelOpen && (
+        <AiAssistantPanel onClose={() => setAiPanelOpen(false)} />
       )}
     </main>
   );

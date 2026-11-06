@@ -1,0 +1,77 @@
+{
+  "specVersion": 1,
+  "report": {
+    "code": "report_asset_inventory",
+    "name": "报表资产清单",
+    "sheetName": "报表资产清单",
+    "preview": { "mode": "Full", "pageSize": 20, "showExactTotal": false },
+    "export": {
+      "defaultMode": "Normal",
+      "normalMaxRows": 20000,
+      "normalMaxCells": 500000,
+      "normalTimeoutSeconds": 60,
+      "largeExportEnabled": true,
+      "rowsPerSheet": 1000000,
+      "fileRetentionHours": 24
+    },
+    "fieldPresentations": [
+      {
+        "code": "isEnabled",
+        "valueMappings": [
+          { "value": "1", "label": "启用" },
+          { "value": "0", "label": "停用" }
+        ]
+      }
+    ]
+  },
+  "dataset": {
+    "code": "report_asset_inventory",
+    "name": "报表资产清单数据集",
+    "dataSourceCode": "data_source_2",
+    "dataSourceType": "SqlServer",
+    "timeoutSeconds": 60,
+    "maxRows": 20000,
+    "queryText": "SELECT r.Code AS reportCode, r.Name AS reportName, r.SheetName AS sheetName, d.Code AS datasetCode, d.Name AS datasetName, CAST(r.IsEnabled AS int) AS isEnabled FROM dbo.RcReport r INNER JOIN dbo.RcDataset d ON d.Code = r.DatasetCode WHERE r.CreateTime >= @startDate OR @startDate IS NULL ORDER BY r.Code",
+    "variables": [
+      { "code": "startDate", "displayName": "开始日期", "dataType": "date", "required": false }
+    ],
+    "fields": [
+      { "code": "reportCode", "displayName": "报表编码", "dataType": "string" },
+      { "code": "reportName", "displayName": "报表名称", "dataType": "string" },
+      { "code": "sheetName", "displayName": "工作表名", "dataType": "string" },
+      { "code": "datasetCode", "displayName": "数据集编码", "dataType": "string" },
+      { "code": "datasetName", "displayName": "数据集名称", "dataType": "string" },
+      { "code": "isEnabled", "displayName": "状态", "dataType": "number" }
+    ]
+  },
+  "parameters": [
+    {
+      "code": "startDate",
+      "displayName": "开始日期",
+      "dataType": "date",
+      "controlType": "date",
+      "sourceType": "Form",
+      "isRequired": false,
+      "isReadOnly": false,
+      "isVisible": true,
+      "allowUrlPrefill": true,
+      "urlKey": null,
+      "defaultExpression": "startofmonth(today())",
+      "fixedValue": null,
+      "options": null,
+      "displayOrder": 1
+    }
+  ],
+  "template": {
+    "title": "报表资产清单",
+    "parameterLine": "开始日期：{{params.startDate}}",
+    "columns": [
+      { "field": "reportCode", "header": "报表编码" },
+      { "field": "reportName", "header": "报表名称" },
+      { "field": "sheetName", "header": "工作表名" },
+      { "field": "datasetCode", "header": "数据集编码" },
+      { "field": "datasetName", "header": "数据集名称" },
+      { "field": "isEnabled", "header": "状态" }
+    ]
+  }
+}

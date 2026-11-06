@@ -39,7 +39,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "jnpf_metadata",
             "MySql",
             PocDatabaseProvider.BuildConnectionString(
-                "MySql", "192.168.2.5", 13306, "jnpf_test_520", "root", "jnpf-secret", 30));
+                "MySql", "188.188.2.5", 13306, "jnpf_test_520", "root", "jnpf-secret", 30));
         var jnpf = await _runner.ResolveDataSourceAsync(
             "jnpf_metadata",
             PocDatabaseProvider.MySql,
@@ -59,7 +59,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "his_oracle",
             "Oracle",
             PocDatabaseProvider.BuildConnectionString(
-                "Oracle", "192.168.2.5", 2521, "orclpdb", "HIS0806", "his-secret", 30));
+                "Oracle", "188.188.2.5", 2521, "orclpdb", "HIS0806", "his-secret", 30));
 
         await Assert.ThrowsAnyAsync<Exception>(() =>
             _runner.ResolveDataSourceAsync(
@@ -78,7 +78,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "report_oracle",
             "Oracle",
             PocDatabaseProvider.BuildConnectionString(
-                "Oracle", "192.168.2.5", 2521, "orclpdb", "report-reader", "report-secret", 30));
+                "Oracle", "188.188.2.5", 2521, "orclpdb", "report-reader", "report-secret", 30));
 
         var reportSource = await _runner.ResolveDataSourceAsync(
             "report_oracle",
@@ -105,7 +105,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
     public async Task ResolveTargetConnectionStringAsync_UsesCurrentReportCenterConnection()
     {
         var connectionString = PocDatabaseProvider.BuildConnectionString(
-            "SqlServer", "192.168.2.5", 1433, "hd_report_center", "hdhis", "target-secret", 30);
+            "SqlServer", "188.188.2.5", 1433, "hd_report_center", "hdhis", "target-secret", 30);
         _database.CurrentConnectionConfig.ConnectionString = connectionString;
         _database.CurrentConnectionConfig.DbType = DbType.SqlServer;
 
@@ -131,7 +131,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
     {
         _database.CurrentConnectionConfig.DbType = DbType.SqlServer;
         _database.CurrentConnectionConfig.ConnectionString = PocDatabaseProvider.BuildConnectionString(
-            "SqlServer", "192.168.2.5", 1433, "master", "hdhis", "target-secret", 30);
+            "SqlServer", "188.188.2.5", 1433, "master", "hdhis", "target-secret", 30);
 
         await Assert.ThrowsAnyAsync<Exception>(() => _runner.ResolveTargetConnectionStringAsync());
     }
@@ -552,7 +552,7 @@ public sealed class PocJnpfMigrationRunnerTests : IDisposable
             "report_center",
             "Oracle",
             PocDatabaseProvider.BuildConnectionString(
-                "Oracle", "192.168.2.5", 2521, "orclpdb", "report-reader", "report-secret", 30));
+                "Oracle", "188.188.2.5", 2521, "orclpdb", "report-reader", "report-secret", 30));
         // 第一阶段：构造 WriteMigrationAsync_InsertsConfigurationGraphAndSkipsExistingReport 当前步骤需要的中间数据和执行参数。
         var migration = new JnpfMigration(
             "source-report-1",

@@ -16,6 +16,19 @@ public sealed class ReportCenterStartup : AppStartup
         services.AddHttpClient(
             CoreValidation.PocExternalParameterSourceService.HttpClientName,
             client => client.DefaultRequestHeaders.Accept.ParseAdd("application/json"));
+        // AI LLM 客户端：不引入 SDK，超时按调用方（对话 120s / 连通性测试 30s）逐次控制，
+        // 这里把 HttpClient 自身的固定超时放开，避免被 100s 默认值提前截断长对话。
+        services.AddHttpClient(
+            CoreValidation.AiAssistant.PocLlmClient.HttpClientName,
+            client => {
+                client.Timeout = Timeout.InfiniteTimeSpan;
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            });
+        // PocLlmClient 无自动注册标记（单测手工构造），生产容器必须显式登记；两个单参构造歧义，用工厂固定走命名 HttpClient。
+        services.AddTransient<CoreValidation.AiAssistant.PocLlmClient>(provider =>
+            new CoreValidation.AiAssistant.PocLlmClient(
+                provider.GetRequiredService<IHttpClientFactory>().CreateClient(
+                    CoreValidation.AiAssistant.PocLlmClient.HttpClientName)));
     }
 
     /// <summary>配置 ReportCenterStartup 的运行管道与启动行为，使后续请求按既定顺序执行。</summary>
@@ -35,5 +48,12 @@ public sealed class ReportCenterStartup : AppStartup
             CoreValidation.PocReportParameter,
             CoreValidation.PocExternalParameterSource>();
         database.CodeFirst.InitTables<CoreValidation.PocReportTemplate>();
+        database.CodeFirst.InitTables<
+            CoreValidation.PocSyncTask,
+            CoreValidation.PocSyncRunLog>();
+        // AI 助手表：单行配置默认关闭 + 工具审计；结构也可由 scripts/database/Apply-AiAssistantSchema.ps1 预先建立。
+        database.CodeFirst.InitTables<
+            CoreValidation.AiAssistant.PocAiSettings,
+            CoreValidation.AiAssistant.PocAiAuditLog>();
     }
 }

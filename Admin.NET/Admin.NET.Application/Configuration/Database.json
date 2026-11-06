@@ -11,7 +11,7 @@
         //"ConfigId": "1300000000001", // 默认库标识-禁止修改
         "DbType": "SqlServer", // 报表中心运行库固定使用 SQL Server
         "DbNickName": "报表中心库",
-        "ConnectionString": "Server=192.168.2.5;Database=hd_report_center;User Id=hdhis;Password=CHANGE_ME;Encrypt=False;TrustServerCertificate=True;", // SqlServer，实际密码用环境变量覆盖
+        "ConnectionString": "Server=188.188.2.5;Database=hd_report_center;User Id=hdhis;Password=CHANGE_ME;Encrypt=False;TrustServerCertificate=True;", // SqlServer，实际密码用环境变量覆盖
         "DbSettings": {
           "EnableInitDb": false, // 启用库初始化（若实体没有变化建议关闭）
           "EnableInitView": false, // 启用视图初始化（若实体和视图没有变化建议关闭）

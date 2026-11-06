@@ -112,6 +112,51 @@ public sealed class PocExternalParameterSourceService : ITransient
         return ToDocument((await _store.GetAsync(input.Code.Trim()))!);
     }
 
+    /// <summary>
+    /// 删除未被引用的外部参数源。报表参数或数据集外部变量仍绑定时抛出
+    /// PocResourceInUseException（EXTERNAL_PARAMETER_SOURCE_IN_USE）并附引用清单，
+    /// 由调用方提示管理员先调整绑定，绝不静默级联删除。
+    /// </summary>
+    /// <param name="code">待删除接口参数源的编码。</param>
+    /// <returns>回传被删除编码的确认文档。</returns>
+    public async Task<PocDeletedDocument> DeleteAsync(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code) || !CodeRegex.IsMatch(code.Trim()))
+        {
+            throw Invalid("路径编码与请求内容不一致。");
+        }
+        var normalizedCode = code.Trim();
+        var existing = await _store.GetAsync(normalizedCode)
+            ?? throw new PocDatasetConfigurationException(
+                "EXTERNAL_PARAMETER_SOURCE_NOT_FOUND",
+                $"不存在外部参数源 '{normalizedCode}'。");
+
+        // 第一阶段：校验报表参数引用，这是配置弹窗里直接绑定接口源的参数。
+        var parameterReferences = await _store.ListReportParameterReferencesAsync(normalizedCode);
+        if (parameterReferences.Count > 0)
+        {
+            throw new PocResourceInUseException(
+                "EXTERNAL_PARAMETER_SOURCE_IN_USE",
+                $"接口参数源 '{existing.Name}'（{normalizedCode}）正被 {parameterReferences.Count} 个报表参数引用：" +
+                $"{PocDeleteGuard.FormatReferenceSummary(parameterReferences.Select(item => $"{item.ReportName}/{item.ParameterCode}").ToArray())}。" +
+                "请先在报表配置中删除或改绑这些参数。");
+        }
+
+        // 第二阶段：校验数据集外部变量引用，变量契约存在数据集 JSON 中。
+        var datasetReferences = await _store.ListDatasetsReferencingSourceAsync(normalizedCode);
+        if (datasetReferences.Count > 0)
+        {
+            throw new PocResourceInUseException(
+                "EXTERNAL_PARAMETER_SOURCE_IN_USE",
+                $"接口参数源 '{existing.Name}'（{normalizedCode}）正被 {datasetReferences.Count} 个数据集的外部变量引用：" +
+                $"{PocDeleteGuard.FormatReferenceSummary(datasetReferences.Select(item => item.Name).ToArray())}。" +
+                "请先在数据集变量中删除或改绑这些外部变量。");
+        }
+
+        await _store.DeleteAsync(normalizedCode);
+        return new PocDeletedDocument(normalizedCode);
+    }
+
     /// <summary>调用 PocExternalParameterSourceService 的异步依赖完成 Test Async 操作，并按当前返回类型传递处理结果。</summary>
     /// <param name="code">需要读取、校验或转换的业务值。</param>
     /// <param name="input">本次操作使用的输入数据。</param>

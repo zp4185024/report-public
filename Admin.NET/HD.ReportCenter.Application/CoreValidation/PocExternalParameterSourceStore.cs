@@ -17,6 +17,12 @@ public sealed record PocExternalParameterSourceMutation(
     bool IsEnabled,
     int ExpectedRevision);
 
+/// <summary>报表参数对外部参数源的引用项，用于删除接口源前的阻断提示。</summary>
+public sealed record PocExternalParameterReference(
+    string ReportCode,
+    string ReportName,
+    string ParameterCode);
+
 /// <summary>外部参数接口的独立存储边界，并负责首次使用时写入 HIS 默认配置。</summary>
 public sealed class PocExternalParameterSourceStore : ITransient
 {
@@ -120,6 +126,71 @@ public sealed class PocExternalParameterSourceStore : ITransient
                 mutation.ExpectedRevision);
         }
         return revision;
+    }
+
+    /// <summary>按编码物理删除外部参数源；调用方必须先完成引用校验，本方法不做级联清理。</summary>
+    /// <param name="code">待删除接口参数源的编码。</param>
+    /// <returns>是否恰好删除了一行；false 表示编码在删除瞬间已不存在。</returns>
+    public async Task<bool> DeleteAsync(string code) =>
+        await _database.Deleteable<PocExternalParameterSource>()
+            .Where(item => item.Code == code)
+            .ExecuteCommandAsync() == 1;
+
+    /// <summary>
+    /// 查询绑定了指定外部参数源的报表参数，用于删除接口源前的引用校验；
+    /// 报表名称从 RcReport 反查，报表已缺失时回退显示编码。
+    /// </summary>
+    /// <param name="sourceCode">待删除接口参数源的编码。</param>
+    /// <returns>引用该接口源的报表参数清单，空列表表示没有报表级引用。</returns>
+    public async Task<IReadOnlyList<PocExternalParameterReference>> ListReportParameterReferencesAsync(
+        string sourceCode)
+    {
+        var parameters = await _database.Queryable<PocReportParameter>()
+            .Where(item => item.SourceCode == sourceCode)
+            .OrderBy(item => item.ReportCode)
+            .ToListAsync();
+        if (parameters.Count == 0)
+        {
+            return [];
+        }
+
+        var reportCodes = parameters
+            .Select(item => item.ReportCode)
+            .Distinct()
+            .ToArray();
+        var reports = await _database.Queryable<PocReport>()
+            .Where(item => SqlFunc.ContainsArray(reportCodes, item.Code))
+            .ToListAsync();
+        var nameByCode = reports.ToDictionary(
+            item => item.Code,
+            item => item.Name,
+            StringComparer.OrdinalIgnoreCase);
+        return parameters
+            .Select(item => new PocExternalParameterReference(
+                item.ReportCode,
+                nameByCode.TryGetValue(item.ReportCode, out var name) ? name : item.ReportCode,
+                item.Code))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 查询外部变量绑定了指定接口源的数据集。变量契约保存在 RcDataset 的 JSON 里，
+    /// 只能在内存解析后匹配，供删除接口源前的第二道引用校验使用。
+    /// </summary>
+    /// <param name="sourceCode">待删除接口参数源的编码。</param>
+    /// <returns>绑定了该接口源的数据集实体列表，空列表表示没有数据集级引用。</returns>
+    public async Task<IReadOnlyList<PocReportDataset>> ListDatasetsReferencingSourceAsync(
+        string sourceCode)
+    {
+        var datasets = await _database.Queryable<PocReportDataset>()
+            .OrderBy(item => item.Name)
+            .OrderBy(item => item.Code)
+            .ToListAsync();
+        return datasets
+            .Where(dataset => PocDataAssetService.ReadSchema(dataset).Variables.Any(variable =>
+                variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase) &&
+                variable.SourceCode?.Equals(sourceCode, StringComparison.OrdinalIgnoreCase) == true))
+            .ToList();
     }
 
     /// <summary>校验 PocExternalParameterSourceStore 的 Ensure His Seed Async 条件，并返回可供后续流程判断的结果。</summary>

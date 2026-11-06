@@ -30,9 +30,35 @@ public sealed record PocRuntimeExecutionPlan(
     PocResolvedParameterSet Parameters,
     bool IncludeSqlDebug = false);
 
+/// <summary>
+/// 临时数据集受限试跑的结果：列编码按驱动返回顺序排列，行值已经过统一归一化；
+/// RowCountCapped 表示真实结果超过行数上限被截断，调用方应提示“仅预览前 N 行”。
+/// </summary>
+public sealed record PocPreviewExecutionResult(
+    IReadOnlyList<string> Columns,
+    IReadOnlyList<IReadOnlyDictionary<string, object?>> Rows,
+    bool RowCountCapped);
+
+/// <summary>
+/// 数据集执行器的连接创建委托：默认走 PocDatabaseProvider.CreateClient；
+/// 数据同步等旁路能力可注入自己的工厂以绑定非标准方言（如测试用 SQLite 内存库）。
+/// </summary>
+/// <param name="dbType">数据源声明的数据库类型。</param>
+/// <param name="connectionString">数据源连接串。</param>
+/// <param name="timeoutSeconds">命令超时秒数。</param>
+/// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+/// <returns>可执行 SQL 的 SqlSugar 客户端。</returns>
+public delegate SqlSugarClient CreateDatasetClient(
+    string dbType,
+    string connectionString,
+    int timeoutSeconds,
+    CancellationToken cancellationToken);
+
 /// <summary>多数据库只读数据集执行器。配置读取与 SQL 执行分离，便于导出任务冻结运行输入。</summary>
 public sealed class PocSqlDatasetExecutor : ITransient
 {
+    /// <summary>默认连接创建策略：全部走统一的 PocDatabaseProvider，保证方言与超时规则一致。</summary>
+    private static readonly CreateDatasetClient DefaultClientFactory = PocDatabaseProvider.CreateClient;
     // 预览页大小通常只有几十行；导出沿用它会让十万行数据产生数千次数据库往返。
     // 导出仍按批流式写入文件，因此增大批次不会把完整结果装入内存。
     private const int ExportPageSize = 4_096;
@@ -262,16 +288,147 @@ public sealed class PocSqlDatasetExecutor : ITransient
     }
 
     /// <summary>
+    /// 按功能阶段组织：<see cref="ExecutePreviewAsync"/> 是为报表包试跑提供的最小重载：
+    /// 针对"尚未入库的临时数据集 + 调用方指定的数据源"执行原样只读查询，不做分页改写，
+    /// 参数绑定、连接创建与结果归一化全部复用正式执行机制，避免复制执行逻辑产生第二套语义。
+    /// </summary>
+    /// <param name="plan">调用方用包内容与目标数据源拼装出的临时执行计划。</param>
+    /// <param name="rowLimit">硬性行数上限（试跑固定 50），结果超限被截断而不是报错。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <param name="clientFactory">可选连接工厂；缺省使用 PocDatabaseProvider。</param>
+    /// <returns>列编码、行数据（以列编码为键）和是否发生截断。</returns>
+    public static async Task<PocPreviewExecutionResult> ExecutePreviewAsync(
+        PocRuntimeExecutionPlan plan,
+        int rowLimit,
+        CancellationToken cancellationToken = default,
+        CreateDatasetClient? clientFactory = null)
+    {
+        if (rowLimit < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rowLimit));
+        }
+        if (plan.Configuration.UsesFallbackData)
+        {
+            // 试跑必须打到真实目标库；回退演示数据会给出错误的可用性结论。
+            throw new PocDatasetExecutionException(
+                "PACKAGE_DRY_RUN_TARGET_REQUIRED",
+                "试跑必须指定真实的目标数据源。");
+        }
+
+        var definition = plan.Configuration.Definition;
+        var parameters = new List<SugarParameter>();
+        // 第一阶段：复用只读校验器解析 SQL 引用的参数并逐一绑定，确保试跑与正式执行同一条防线。
+        var referenced = PocReadOnlySqlValidator.Validate(
+            plan.Configuration.QueryText,
+            definition.Parameters.Select(item => item.Code),
+            PocPreviewMode.Full);
+        foreach (var code in referenced)
+        {
+            var parameterDefinition = definition.Parameters.Single(
+                item => item.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
+            parameters.Add(PocDatabaseProvider.CreateParameter(
+                code,
+                parameterDefinition.DataType,
+                plan.Parameters.DatabaseValues[code]));
+        }
+
+        try
+        {
+            using var database = (clientFactory ?? DefaultClientFactory)(
+                plan.Configuration.DbType,
+                plan.Configuration.ConnectionString,
+                plan.Configuration.TimeoutSeconds,
+                cancellationToken);
+            var dataReader = await database.Ado.GetDataReaderAsync(
+                plan.Configuration.QueryText.Trim(),
+                parameters);
+            await using var reader = dataReader as DbDataReader
+                ?? throw new PocDatasetExecutionException(
+                    "DATASET_QUERY_FAILED",
+                    "数据库驱动未返回可读取的数据集结果。");
+
+            // 第二阶段：按驱动返回的列构造字段契约并逐行归一化，多读一行用于判断是否截断。
+            var columns = new List<string>(reader.FieldCount);
+            var fields = new List<PocDatasetFieldDefinition>(reader.FieldCount);
+            for (var index = 0; index < reader.FieldCount; index++)
+            {
+                var code = reader.GetName(index);
+                columns.Add(code);
+                fields.Add(new PocDatasetFieldDefinition(
+                    code,
+                    code,
+                    InferPreviewFieldDataType(reader.GetFieldType(index))));
+            }
+
+            var rows = new List<IReadOnlyDictionary<string, object?>>(rowLimit + 1);
+            while (rows.Count <= rowLimit && await reader.ReadAsync(cancellationToken))
+            {
+                var row = new Dictionary<string, object?>(reader.FieldCount, StringComparer.OrdinalIgnoreCase);
+                for (var index = 0; index < reader.FieldCount; index++)
+                {
+                    row[columns[index]] = PocDatasetValueNormalizer.Normalize(
+                        PocDatasetValueNormalizer.ReadColumnValue(reader, index),
+                        fields[index]);
+                }
+                rows.Add(row);
+            }
+
+            var capped = rows.Count > rowLimit;
+            if (capped)
+            {
+                rows.RemoveAt(rows.Count - 1);
+            }
+            return new PocPreviewExecutionResult(columns, rows, capped);
+        }
+        catch (PocDatasetExecutionException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception) when (PocDatabaseProvider.IsDatabaseException(exception))
+        {
+            throw new PocDatasetExecutionException(
+                PocDatabaseProvider.IsTimeout(exception) ? "DATASET_TIMEOUT" : "DATASET_QUERY_FAILED",
+                "数据集试跑查询失败。",
+                exception);
+        }
+    }
+
+    /// <summary>
+    /// 把驱动返回的 CLR 列类型映射到数据集字段契约的数据类型，让试跑行内的数值、
+    /// 布尔和日期在 JSON 里保持原生标量形态而不是全部字符串化。
+    /// </summary>
+    /// <param name="type">数据读取器报告的列 CLR 类型。</param>
+    /// <returns>字段契约使用的 string/number/bool/datetime 类型名。</returns>
+    private static string InferPreviewFieldDataType(Type type) =>
+        type == typeof(bool) ? "bool" :
+        type == typeof(DateTime) || type == typeof(DateTimeOffset) ? "datetime" :
+        type == typeof(byte) || type == typeof(sbyte) ||
+        type == typeof(short) || type == typeof(ushort) ||
+        type == typeof(int) || type == typeof(uint) ||
+        type == typeof(long) || type == typeof(ulong) ||
+        type == typeof(float) || type == typeof(double) || type == typeof(decimal)
+            ? "number"
+            : "string";
+
+    /// <summary>
     /// 按导出批次读取完整结果。导出批次独立于预览页大小，避免几十行一页造成大量数据库往返。
     /// </summary>
+    /// <param name="plan">报表执行计划。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <param name="clientFactory">可选连接工厂；缺省使用 PocDatabaseProvider。</param>
     public static async IAsyncEnumerable<IReadOnlyList<PocDataRow>> ReadExportPagesAsync(
         PocRuntimeExecutionPlan plan,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default,
+        CreateDatasetClient? clientFactory = null)
     {
         if (!plan.Configuration.UsesFallbackData &&
             plan.Configuration.Definition.Preview.Mode == PocPreviewMode.Full)
         {
-            await foreach (var page in ReadFullExportPagesAsync(plan, cancellationToken))
+            await foreach (var page in ReadFullExportPagesAsync(plan, cancellationToken, clientFactory))
             {
                 yield return page;
             }
@@ -296,12 +453,16 @@ public sealed class PocSqlDatasetExecutor : ITransient
     }
 
     /// <summary>Full 报表使用一次数据库查询和前向只读游标，避免 OFFSET 分页和重复执行 SQL。</summary>
+    /// <param name="plan">报表执行计划。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <param name="clientFactory">可选连接工厂；缺省使用 PocDatabaseProvider。</param>
     private static async IAsyncEnumerable<IReadOnlyList<PocDataRow>> ReadFullExportPagesAsync(
         PocRuntimeExecutionPlan plan,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken,
+        CreateDatasetClient? clientFactory = null)
     {
         var definition = plan.Configuration.Definition;
-        using var database = PocDatabaseProvider.CreateClient(
+        using var database = (clientFactory ?? DefaultClientFactory)(
             plan.Configuration.DbType,
             plan.Configuration.ConnectionString,
             plan.Configuration.TimeoutSeconds,

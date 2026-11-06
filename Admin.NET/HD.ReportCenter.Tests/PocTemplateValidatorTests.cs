@@ -402,6 +402,99 @@ public sealed class PocTemplateValidatorTests
         Assert.Contains(expectedContext, exception.Message);
     }
 
+    /// <summary>
+    /// 验证 Scan 接受合并区域的数字字符串坐标：JNPF 迁移写入的存量快照与旧版 Univer 输出使用
+    /// {"startRow":"0"} 这类 JSON 字符串坐标（浏览器归一化只覆盖编辑器保存路径），
+    /// 只要字符串可解析为整数且区域不触碰明细行，扫描必须放行。
+    /// </summary>
+    [Fact]
+    public void Scan_AcceptsNumericStringMergeCoordinatesIncludingRangeType()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot["sheets"]!["report-sheet"]!["mergeData"] = new JArray
+        {
+            new JObject
+            {
+                ["startRow"] = "0",
+                ["endRow"] = "3",
+                ["startColumn"] = "0",
+                ["endColumn"] = "5",
+                ["rangeType"] = "0"
+            },
+            // 整数与字符串坐标允许在同一份快照里混用，这也是真实存量数据的常见形态。
+            new JObject
+            {
+                ["startRow"] = 4,
+                ["endRow"] = 4,
+                ["startColumn"] = "1",
+                ["endColumn"] = "3"
+            }
+        };
+
+        var binding = PocTemplateValidator.Scan(snapshot.ToString());
+
+        Assert.NotNull(binding.DetailBinding);
+        Assert.Equal(5, binding.DetailBinding!.TemplateRow);
+    }
+
+    /// <summary>
+    /// 验证 Scan 用解析后的字符串坐标做明细行相交判断：字符串 "4"/"5" 覆盖明细模板行时
+    /// 必须按真实坐标抛"合并区域触碰明细行"，证明字符串坐标被真正读取而不是被跳过。
+    /// </summary>
+    [Fact]
+    public void Scan_UsesParsedStringCoordinatesWhenRejectingDetailRowMerge()
+    {
+        var snapshot = CreateSnapshot();
+        snapshot["sheets"]!["report-sheet"]!["mergeData"] = new JArray
+        {
+            new JObject
+            {
+                ["startRow"] = "4",
+                ["endRow"] = "5",
+                ["startColumn"] = "0",
+                ["endColumn"] = "1",
+                ["rangeType"] = "0"
+            }
+        };
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains("Merged cells cannot touch the detail template row", exception.Message);
+        Assert.Contains("A6", exception.Message);
+    }
+
+    /// <summary>
+    /// 验证 Scan 拒绝不可解析的合并区域行坐标：非数字文本、浮点字符串与 JSON 浮点值
+    /// 都保持原有 TEMPLATE 校验失败行为，不因兼容数字字符串而掩盖损坏数据。
+    /// </summary>
+    /// <param name="startRow">注入 mergeData 条目的 startRow 节点值。</param>
+    /// <param name="endRow">注入 mergeData 条目的 endRow 节点值。</param>
+    [Theory]
+    [InlineData("not-a-row", "5")]
+    [InlineData("0", "3.5")]
+    [InlineData("0", 3.5)]
+    public void Scan_RejectsNonNumericOrFloatMergeCoordinates(string startRow, object endRow)
+    {
+        var snapshot = CreateSnapshot();
+        snapshot["sheets"]!["report-sheet"]!["mergeData"] = new JArray
+        {
+            new JObject
+            {
+                ["startRow"] = startRow,
+                ["endRow"] = JToken.FromObject(endRow),
+                ["startColumn"] = "0",
+                ["endColumn"] = "1"
+            }
+        };
+
+        var exception = Assert.Throws<PocTemplateValidationException>(
+            () => PocTemplateValidator.Scan(snapshot.ToString()));
+
+        Assert.Contains("must contain valid row coordinates", exception.Message);
+        Assert.Contains("A6", exception.Message);
+    }
+
     /// <summary>验证 Scan Rejects Malformed Merge Data Nodes 场景下的预期行为，并防止相关逻辑回归。</summary>
     /// <param name="target">本次转换或写入使用的数据对象。</param>
     [Theory]

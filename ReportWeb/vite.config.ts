@@ -29,7 +29,8 @@ export default defineConfig(({ mode }) => {
            */
           manualChunks(moduleId) {
             // Univer 体积较大且变化频率低，拆为独立 chunk 便于生产环境长期缓存和单独观察包体积。
-            return moduleId.includes('@univerjs') ? 'univer' : undefined;
+            if (moduleId.includes('@univerjs')) return 'univer';
+            return undefined;
           },
         },
       },

@@ -3,12 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createReportApi,
   dataAssetApi,
+  dataSyncApi,
   jnpfMigrationApi,
   reportApi,
   reportCatalogApi,
   reportCenterFeaturesApi,
+  reportPackageApi,
 } from './api';
 import type {
+  DataSyncImportRequest,
+  DataSyncImportResult,
+  DataSyncPackage,
+  DataSyncTryRunRequest,
+  DataSyncTryRunResult,
+  DataSyncValidateResult,
   DataSourceInput,
   CreateReportRequest,
   DataSourceDocument,
@@ -17,9 +25,18 @@ import type {
   ExecuteRequest,
   ExportJob,
   ReportConfigurationDocument,
+  ReportPackage,
+  ReportPackageDryRunRequest,
+  ReportPackageDryRunResult,
+  ReportPackageImportRequest,
+  ReportPackageImportResult,
+  ReportPackageValidateResult,
   ReportSummaryDocument,
   SaveTemplateRequest,
   SaveReportConfigurationRequest,
+  SyncRunLogDocument,
+  SyncTaskDocument,
+  SyncTaskInput,
   TemplateBinding,
   TemplateDocument,
   TemplateXlsxImportResult,
@@ -327,6 +344,46 @@ describe('reportApi template endpoints', () => {
     expect(JSON.parse(init.body as string)).toEqual(request);
   });
 
+  /** 验证删除模板走 DELETE 且回传删除确认编码。 */
+  it('deletes a report with its configuration and template via DELETE', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: { code: 'outpatient-log' } }));
+
+    await expect(reportCatalogApi.deleteReport('outpatient-log'))
+      .resolves.toEqual({ code: 'outpatient-log' });
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/reports/outpatient-log');
+    expect(init.method).toBe('DELETE');
+  });
+
+  /** 验证数据源、数据集和接口参数源分别按各自编码发起 DELETE 请求。 */
+  it('deletes data sources, datasets and external parameter sources by code', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: { code: 'ignored' } }));
+
+    await dataAssetApi.deleteDataSource('his_db');
+    await dataAssetApi.deleteDataset('detail');
+    await dataAssetApi.deleteExternalParameterSource('his');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/report-center/poc/data-sources/his_db');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/report-center/poc/datasets/detail');
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/report-center/poc/external-parameter-sources/his');
+    for (const call of fetchMock.mock.calls as unknown as [string, RequestInit][]) {
+      expect(call[1].method).toBe('DELETE');
+    }
+  });
+
+  /** 验证删除被引用资源时后端 409 信封里的引用清单会原样抛给页面提示。 */
+  it('surfaces the backend reference conflict message when deletion is blocked', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({
+      code: 409,
+      message: 'DATASET_IN_USE: 数据集被门诊日志引用',
+      result: null,
+    }, 409));
+
+    await expect(dataAssetApi.deleteDataset('detail'))
+      .rejects.toThrow('DATASET_IN_USE: 数据集被门诊日志引用');
+  });
+
   it('uses the selected report code for every editor endpoint', async () => {
     const outpatientApi = createReportApi('outpatient-log');
     fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: document }));
@@ -632,5 +689,669 @@ describe('reportApi template endpoints', () => {
       maxReports: 1,
     })).resolves.toEqual(result);
     expect(fetchMock.mock.calls[1][0]).toBe('/api/report-center/poc/jnpf-report-migration/migrate');
+  });
+});
+
+describe('reportPackageApi endpoints', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** 报表包固定为 JSON 下载；构造一份最小包供校验/试跑/导入请求体复用。 */
+  const requestPackage = {
+    packageKind: 'hd-report-center.report-package',
+    packageVersion: 1,
+    exportedAt: '2026-11-02T10:00:00+08:00',
+    sourceDataSourceCode: 'report_center',
+    sourceDataSourceType: 'SqlServer',
+    report: {
+      code: 'dept-workload',
+      name: '科室工作量统计',
+      sheetName: '科室工作量',
+      datasetCode: 'detail',
+      previewSettings: { mode: 'Full', pageSize: 20, showExactTotal: false },
+      exportSettings: {
+        defaultMode: 'Normal',
+        normalMaxRows: 20_000,
+        normalMaxCells: 500_000,
+        normalTimeoutSeconds: 60,
+        largeExportEnabled: true,
+        rowsPerSheet: 1_000_000,
+        fileRetentionHours: 24,
+      },
+      fieldPresentations: [],
+      isEnabled: true,
+    },
+    parameters: [],
+    template: { snapshot, binding, revision: 4 },
+    dataset: {
+      code: 'detail',
+      name: '科室工作量明细',
+      queryText: 'SELECT 1 AS value',
+      fieldSchema: { variables: [], fields: [] },
+      timeoutSeconds: 30,
+      maxRows: 20_000,
+      isEnabled: true,
+    },
+  } satisfies ReportPackage;
+
+  /** 验证导出包按报表编码请求信封接口，解出 result 后以 2 空格缩进 JSON 落盘且不再携带信封字段。 */
+  it('unwraps the envelope and downloads the pure package json by report code', async () => {
+    const anchor = { href: '', download: '', click: vi.fn() };
+    const createObjectURL = vi.fn().mockReturnValue('blob:package');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('document', { createElement: vi.fn().mockReturnValue(anchor) });
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: requestPackage }));
+
+    await reportPackageApi.exportReportPackage('dept-workload');
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/reports/dept-workload/package');
+    expect(init).toBeUndefined();
+    expect(anchor.download).toBe('dept-workload.report-package.json');
+    expect(anchor.href).toBe('blob:package');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:package');
+    // 落盘内容必须是解包后的纯报表包对象（与 JSON.stringify(…, null, 2) 完全一致），不得残留信封。
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    const text = await blob.text();
+    expect(text).toBe(JSON.stringify(requestPackage, null, 2));
+    const saved = JSON.parse(text) as Partial<ReportPackage>;
+    expect(saved.packageKind).toBe('hd-report-center.report-package');
+    expect('code' in (JSON.parse(text) as object)).toBe(false);
+  });
+
+  /** 验证信封 code 非 200 时把后端 message 抛给页面提示，不产生错误内容文件。 */
+  it('surfaces the backend error when the package envelope reports failure', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({
+      code: 404,
+      message: '报表不存在',
+      result: null,
+    }, 404));
+
+    await expect(reportPackageApi.exportReportPackage('missing'))
+      .rejects.toThrow('报表不存在');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/reports/missing/package',
+      undefined,
+    );
+  });
+
+  /** 验证响应不是有效 JSON 时抛出可读错误，而不是把原始响应当作文件落盘。 */
+  it('reports a readable error when the package endpoint returns a non-json body', async () => {
+    fetchMock.mockResolvedValue(invalidJsonResponse(200));
+
+    await expect(reportPackageApi.exportReportPackage('dept-workload'))
+      .rejects.toThrow('服务器返回内容不是有效的 JSON');
+  });
+
+  /** 验证校验请求把整份包作为 package 字段提交并回传冲突探测结果。 */
+  it('posts the whole package to the validate endpoint', async () => {
+    const result: ReportPackageValidateResult = {
+      ok: true,
+      errors: [],
+      warnings: [{ code: 'PARAM_URL_PREFILL_SUGGESTED', message: '参数 deptId 建议启用 URL 预填' }],
+      packageSummary: {
+        reportCode: 'dept-workload',
+        reportName: '科室工作量统计',
+        datasetCode: 'detail',
+        parameterCount: 2,
+        fieldCount: 8,
+        sourceDataSourceType: 'SqlServer',
+      },
+      collisions: {
+        reportCodeExists: false,
+        datasetCodeExists: true,
+        datasetIdentical: false,
+        datasetReferencedByOther: null,
+      },
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    await expect(reportPackageApi.validateReportPackage(requestPackage)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/report-packages/validate');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ package: requestPackage });
+  });
+
+  /** 验证试跑请求携带目标数据源与参数样例值，并返回列、行与耗时。 */
+  it('posts package, target data source and parameter values to dry-run', async () => {
+    const result: ReportPackageDryRunResult = {
+      columns: ['departmentName', 'workload'],
+      rows: [
+        { departmentName: '内科', workload: 12 },
+        { departmentName: '外科', workload: null },
+      ],
+      elapsedMilliseconds: 86,
+      rowCountCapped: false,
+      fieldSchemaMatch: true,
+      fieldSchemaMismatches: [],
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    const request: ReportPackageDryRunRequest = {
+      package: requestPackage,
+      targetDataSourceCode: 'his_pro',
+      parameterValues: { startDate: '2026-11' },
+    };
+    await expect(reportPackageApi.dryRunReportPackage(request)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/report-packages/dry-run');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(request);
+  });
+
+  /** 验证导入请求包含模式、替换数据集与是否试跑标记，并返回动作摘要。 */
+  it('posts mode and dataset decision to the import endpoint', async () => {
+    const result: ReportPackageImportResult = {
+      reportCode: 'dept-workload',
+      datasetAction: 'Reused',
+      reportAction: 'Created',
+      warnings: ['分享保护口令未随包迁移，请在线上重新设置'],
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    const request: ReportPackageImportRequest = {
+      package: requestPackage,
+      targetDataSourceCode: 'his_pro',
+      mode: 'Create',
+      replaceDataset: false,
+      dryRunPerformed: true,
+    };
+    await expect(reportPackageApi.importReportPackage(request)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/report-packages/import');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(request);
+  });
+});
+
+describe('dataSyncApi endpoints', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** 构造一份最小同步任务文档，供列表、读取与保存用例复用。 */
+  const taskDocument: SyncTaskDocument = {
+    code: 'his_outpatient_sync',
+    name: '门诊挂号同步',
+    sourceDatasetCode: 'detail',
+    targetDataSourceCode: 'ods_db',
+    targetTable: 'ods_registration',
+    conflictPolicy: 'TruncateFirst',
+    scheduleType: 'Daily',
+    scheduleTime: '02:30',
+    intervalMinutes: 0,
+    enabled: true,
+    revision: 4,
+    lastRunAt: '2026-11-03T02:30:05+08:00',
+    mappings: [{
+      sourceField: 'cardNo',
+      targetField: 'CARD_NO',
+      targetType: 'string',
+      length: 16,
+      nullable: true,
+      converters: [{ type: 'trim', args: null }],
+    }],
+  };
+
+  /** 验证任务列表按固定路径发起 GET 并返回全量文档。 */
+  it('lists sync tasks from the collection path', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: [taskDocument] }));
+
+    await expect(dataSyncApi.tasks()).resolves.toEqual([taskDocument]);
+    expect(fetchMock).toHaveBeenCalledWith('/api/report-center/poc/data-sync-tasks', undefined);
+  });
+
+  /** 验证按编码读取任务走编码段路径。 */
+  it('reads one sync task by its encoded code', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: taskDocument }));
+
+    await expect(dataSyncApi.getTask('his_outpatient_sync')).resolves.toEqual(taskDocument);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/data-sync-tasks/his_outpatient_sync',
+      undefined,
+    );
+  });
+
+  /** 验证保存任务以 PUT 提交完整输入（含映射与乐观并发修订号），body 不含密码字段。 */
+  it('saves a sync task via PUT with mappings and revision', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: taskDocument }));
+
+    const request: SyncTaskInput = {
+      code: 'his_outpatient_sync',
+      name: '门诊挂号同步',
+      sourceDatasetCode: 'detail',
+      targetDataSourceCode: 'ods_db',
+      targetTable: 'ods_registration',
+      conflictPolicy: 'TruncateFirst',
+      scheduleType: 'Daily',
+      scheduleTime: '02:30',
+      intervalMinutes: 0,
+      mappings: taskDocument.mappings,
+      enabled: true,
+      revision: 3,
+    };
+    await expect(dataSyncApi.saveTask(request.code, request)).resolves.toEqual(taskDocument);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-tasks/his_outpatient_sync');
+    expect(init.method).toBe('PUT');
+    expect(init.headers).toEqual({ 'Content-Type': 'application/json' });
+    expect(JSON.parse(init.body as string)).toEqual(request);
+    expect(String(init.body)).not.toContain('password');
+  });
+
+  /** 验证删除任务走 DELETE 并回传删除确认编码。 */
+  it('deletes a sync task via DELETE', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: { code: 'his_outpatient_sync' } }));
+
+    await expect(dataSyncApi.deleteTask('his_outpatient_sync'))
+      .resolves.toEqual({ code: 'his_outpatient_sync' });
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-tasks/his_outpatient_sync');
+    expect(init.method).toBe('DELETE');
+  });
+
+  /** 验证映射预览按任务编码 POST 参数字典并返回字段与样例行。 */
+  it('posts dataset parameters to the preview-mapping endpoint', async () => {
+    const request: DatasetPreviewRequest = { parameters: { deptId: 'D02' } };
+    const result = {
+      fields: [{ code: 'cardNo', displayName: 'cardNo', dataType: 'string' }],
+      rows: [['C001']],
+      hasMore: false,
+      limit: 50,
+      durationMilliseconds: 9,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    await expect(dataSyncApi.previewMapping('his_outpatient_sync', request)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-tasks/his_outpatient_sync/preview-mapping');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(request);
+  });
+
+  /** 验证试跑请求携带行数上限并返回前后对照样例。 */
+  it('posts the row limit to try-run and returns converted samples', async () => {
+    const result: DataSyncTryRunResult = {
+      ok: true,
+      targetColumns: ['CARD_NO'],
+      samples: [{ source: { cardNo: ' C001 ' }, target: { CARD_NO: 'C001' } }],
+      elapsedMilliseconds: 21,
+      rowCountCapped: false,
+      failedRows: 0,
+      errors: [],
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    const request: DataSyncTryRunRequest = { rowLimit: 10 };
+    await expect(dataSyncApi.tryRun('his_outpatient_sync', request)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-tasks/his_outpatient_sync/try-run');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(request);
+  });
+
+  /** 验证立即执行以 POST 启动并返回初始运行日志。 */
+  it('starts a background run via POST and returns the initial run log', async () => {
+    const runLog: SyncRunLogDocument = {
+      runNo: 'run-1',
+      taskCode: 'his_outpatient_sync',
+      status: 'Running',
+      startedAt: '2026-11-03T10:00:00+08:00',
+      finishedAt: null,
+      rowsRead: 0,
+      rowsWritten: 0,
+      rowsFailed: 0,
+      message: null,
+      failures: [],
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: runLog }));
+
+    await expect(dataSyncApi.runTask('his_outpatient_sync')).resolves.toEqual(runLog);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-tasks/his_outpatient_sync/run');
+    expect(init.method).toBe('POST');
+  });
+
+  /** 验证运行记录按任务编码从 runs 路径读取。 */
+  it('loads run logs from the runs path', async () => {
+    const runLog: SyncRunLogDocument = {
+      runNo: 'run-1',
+      taskCode: 'his_outpatient_sync',
+      status: 'Completed',
+      startedAt: '2026-11-03T10:00:00+08:00',
+      finishedAt: '2026-11-03T10:00:12+08:00',
+      rowsRead: 320,
+      rowsWritten: 318,
+      rowsFailed: 2,
+      message: null,
+      failures: [{ rowIndex: 12, field: 'CARD_NO', reason: '必填字段取值为空。', originalValue: null }],
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: [runLog] }));
+
+    await expect(dataSyncApi.taskRuns('his_outpatient_sync')).resolves.toEqual([runLog]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/data-sync-tasks/his_outpatient_sync/runs',
+      undefined,
+    );
+  });
+
+  /** 验证同步包读取按任务编码从 package 路径返回完整包对象。 */
+  it('reads the sync package json by task code', async () => {
+    const syncPackage: DataSyncPackage = {
+      packageKind: 'hd-report-center.sync-package',
+      packageVersion: 1,
+      exportedAt: '2026-11-03T10:00:00+08:00',
+      taskCode: 'his_outpatient_sync',
+      sourceDataset: {
+        code: 'detail',
+        name: '门诊明细',
+        dataSourceCode: 'his_db',
+        dataSourceType: 'SqlServer',
+        queryText: 'SELECT cardNo FROM registration',
+        fieldSchema: {},
+        timeoutSeconds: 30,
+        maxRows: 20000,
+        isEnabled: true,
+      },
+      targetDataSourceCode: 'ods_db',
+      targetDataSourceType: 'SqlServer',
+      targetTable: 'ods_registration',
+      conflictPolicy: 'TruncateFirst',
+      scheduleType: 'Daily',
+      scheduleTime: '02:30',
+      intervalMinutes: 0,
+      mappings: taskDocument.mappings,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: syncPackage }));
+
+    await expect(dataSyncApi.getTaskPackage('his_outpatient_sync')).resolves.toEqual(syncPackage);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/data-sync-tasks/his_outpatient_sync/package',
+      undefined,
+    );
+  });
+
+  /** 验证校验请求把整份包作为 package 字段提交并回传冲突探测结果。 */
+  it('posts the whole package to the sync validate endpoint', async () => {
+    const result: DataSyncValidateResult = {
+      ok: true,
+      errors: [],
+      warnings: [{ code: 'SYNC_TARGET_TYPE_MISMATCH', message: '目标数据源类型与导出方不一致' }],
+      collisions: {
+        taskCodeExists: false,
+        datasetCodeExists: true,
+        datasetIdentical: true,
+        datasetReferencedByReports: null,
+        targetDataSourceExists: true,
+        targetDataSourceTypeMatch: true,
+      },
+      packageSummary: {
+        taskCode: 'his_outpatient_sync',
+        sourceDatasetCode: 'detail',
+        targetTable: 'ods_registration',
+        mappingCount: 1,
+        targetDataSourceType: 'SqlServer',
+      },
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    const requestPackage: DataSyncPackage = {
+      packageKind: 'hd-report-center.sync-package',
+      packageVersion: 1,
+      exportedAt: '2026-11-03T10:00:00+08:00',
+      taskCode: 'his_outpatient_sync',
+      sourceDataset: {
+        code: 'detail',
+        name: '门诊明细',
+        dataSourceCode: 'his_db',
+        dataSourceType: 'SqlServer',
+        queryText: 'SELECT cardNo FROM registration',
+        fieldSchema: {},
+        timeoutSeconds: 30,
+        maxRows: 20000,
+        isEnabled: true,
+      },
+      targetDataSourceCode: 'ods_db',
+      targetDataSourceType: 'SqlServer',
+      targetTable: 'ods_registration',
+      conflictPolicy: 'TruncateFirst',
+      scheduleType: 'Daily',
+      scheduleTime: '02:30',
+      intervalMinutes: 0,
+      mappings: taskDocument.mappings,
+    };
+    await expect(dataSyncApi.validatePackage(requestPackage)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-packages/validate');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ package: requestPackage });
+  });
+
+  /** 验证包试跑请求携带包与目标数据源并返回样例结论。 */
+  it('posts package and target data source to dry-run', async () => {
+    const result: DataSyncTryRunResult = {
+      ok: true,
+      targetColumns: ['CARD_NO'],
+      samples: [{ source: { cardNo: 'C001' }, target: { CARD_NO: 'C001' } }],
+      elapsedMilliseconds: 33,
+      rowCountCapped: false,
+      failedRows: 0,
+      errors: [],
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    const request = {
+      package: {
+        packageKind: 'hd-report-center.sync-package',
+        packageVersion: 1,
+        exportedAt: '2026-11-03T10:00:00+08:00',
+        taskCode: 'his_outpatient_sync',
+        sourceDataset: {
+          code: 'detail',
+          name: '门诊明细',
+          dataSourceCode: 'his_db',
+          dataSourceType: 'SqlServer',
+          queryText: 'SELECT cardNo FROM registration',
+          fieldSchema: {},
+          timeoutSeconds: 30,
+          maxRows: 20000,
+          isEnabled: true,
+        },
+        targetDataSourceCode: 'ods_db',
+        targetDataSourceType: 'SqlServer',
+        targetTable: 'ods_registration',
+        conflictPolicy: 'TruncateFirst',
+        scheduleType: 'Daily',
+        scheduleTime: '02:30',
+        intervalMinutes: 0,
+        mappings: taskDocument.mappings,
+      } satisfies DataSyncPackage,
+      targetDataSourceCode: 'ods_db',
+    };
+    await expect(dataSyncApi.dryRunPackage(request)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-packages/dry-run');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(request);
+  });
+
+  /** 验证导入请求包含模式与是否试跑标记，并返回任务级动作摘要。 */
+  it('posts mode and dry-run flag to the sync import endpoint', async () => {
+    const result: DataSyncImportResult = {
+      taskCode: 'his_outpatient_sync',
+      datasetAction: 'Created',
+      taskAction: 'Created',
+      warnings: [],
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    const request: DataSyncImportRequest = {
+      package: {
+        packageKind: 'hd-report-center.sync-package',
+        packageVersion: 1,
+        exportedAt: '2026-11-03T10:00:00+08:00',
+        taskCode: 'his_outpatient_sync',
+        sourceDataset: {
+          code: 'detail',
+          name: '门诊明细',
+          dataSourceCode: 'his_db',
+          dataSourceType: 'SqlServer',
+          queryText: 'SELECT cardNo FROM registration',
+          fieldSchema: {},
+          timeoutSeconds: 30,
+          maxRows: 20000,
+          isEnabled: true,
+        },
+        targetDataSourceCode: 'ods_db',
+        targetDataSourceType: 'SqlServer',
+        targetTable: 'ods_registration',
+        conflictPolicy: 'TruncateFirst',
+        scheduleType: 'Daily',
+        scheduleTime: '02:30',
+        intervalMinutes: 0,
+        mappings: taskDocument.mappings,
+      },
+      targetDataSourceCode: 'ods_db',
+      mode: 'Replace',
+      dryRunPerformed: true,
+    };
+    await expect(dataSyncApi.importPackage(request)).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-packages/import');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(request);
+    expect(String(init.body)).not.toContain('password');
+  });
+
+  /** 验证表清单端点按数据源编码拼接查询参数并发起 GET。 */
+  it('lists tables of a data source via the metadata endpoint', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({
+      code: 200,
+      result: { dataSourceCode: 'his_db', tables: ['RC_VISIT', 'RC_ORDER'] },
+    }));
+
+    await expect(dataSyncApi.listTables('his_db')).resolves.toEqual({
+      dataSourceCode: 'his_db',
+      tables: ['RC_VISIT', 'RC_ORDER'],
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/data-sync-tasks/metadata/tables?dataSourceCode=his_db',
+      undefined,
+    );
+  });
+
+  /** 验证列清单端点同时携带数据源编码与表名（表名做 URL 编码），列对象含可空注释 description。 */
+  it('lists columns of a table via the metadata endpoint', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({
+      code: 200,
+      result: {
+        dataSourceCode: 'ods_db',
+        table: 'ods_registration',
+        columns: [{ name: 'CARD_NO', dataType: 'nvarchar', nullable: true, length: 16, description: '卡号' }],
+      },
+    }));
+
+    await expect(dataSyncApi.listTableColumns('ods_db', 'ods_registration')).resolves.toEqual({
+      dataSourceCode: 'ods_db',
+      table: 'ods_registration',
+      columns: [{ name: 'CARD_NO', dataType: 'nvarchar', nullable: true, length: 16, description: '卡号' }],
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/report-center/poc/data-sync-tasks/metadata/columns?dataSourceCode=ods_db&table=ods_registration',
+      undefined,
+    );
+  });
+
+  /** 验证源取数预览以 POST 提交“数据源 + SQL + 可选源表名”，字段携带可空注释 description。 */
+  it('previews source columns via the preview-source endpoint', async () => {
+    const result = {
+      fields: [{ code: 'cardNo', displayName: 'cardNo', dataType: 'string', description: '卡号' }],
+      rows: [['A-001']] as Array<Array<string | number | boolean | null>>,
+      hasMore: false,
+      limit: 50,
+      durationMilliseconds: 12,
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result }));
+
+    await expect(dataSyncApi.previewSource({
+      dataSourceCode: 'his_db',
+      queryText: 'SELECT * FROM [RC_VISIT]',
+      sourceTable: 'RC_VISIT',
+    })).resolves.toEqual(result);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-tasks/preview-source');
+    expect(init.method).toBe('POST');
+    expect(init.headers).toEqual({ 'Content-Type': 'application/json' });
+    expect(JSON.parse(init.body as string)).toEqual({
+      dataSourceCode: 'his_db',
+      queryText: 'SELECT * FROM [RC_VISIT]',
+      sourceTable: 'RC_VISIT',
+    });
+  });
+
+  /** 验证保存任务可携带新契约的 source 节（服务端据此自动维护源数据集）。 */
+  it('saves a sync task with the source node for auto dataset upsert', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: 200, result: taskDocument }));
+
+    const request: SyncTaskInput = {
+      code: 'his_outpatient_sync',
+      name: '门诊挂号同步',
+      targetDataSourceCode: 'ods_db',
+      targetTable: 'ods_registration',
+      conflictPolicy: 'TruncateFirst',
+      scheduleType: 'Manual',
+      scheduleTime: null,
+      intervalMinutes: 0,
+      mappings: taskDocument.mappings,
+      enabled: true,
+      revision: 0,
+      source: {
+        dataSourceCode: 'his_db',
+        queryText: 'SELECT * FROM [RC_VISIT]',
+      },
+    };
+    await expect(dataSyncApi.saveTask(request.code, request)).resolves.toEqual(taskDocument);
+
+    const [path, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(path).toBe('/api/report-center/poc/data-sync-tasks/his_outpatient_sync');
+    expect(init.method).toBe('PUT');
+    const body = JSON.parse(init.body as string) as SyncTaskInput;
+    expect(body.source).toEqual({ dataSourceCode: 'his_db', queryText: 'SELECT * FROM [RC_VISIT]' });
+  });
+
+  /** 验证后端 404 任务不存在的业务错误把信封 message 抛给页面提示。 */
+  it('surfaces the backend not-found message for missing tasks', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({
+      code: 404,
+      message: 'SYNC_TASK_NOT_FOUND: 同步任务不存在',
+      result: null,
+    }, 404));
+
+    await expect(dataSyncApi.getTask('missing')).rejects.toThrow('SYNC_TASK_NOT_FOUND');
   });
 });

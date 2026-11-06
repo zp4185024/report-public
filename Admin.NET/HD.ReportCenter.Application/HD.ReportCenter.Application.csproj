@@ -6,10 +6,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="DynamicExpresso.Core" Version="2.3.3" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="MySqlConnector" Version="2.2.5" />
     <PackageReference Include="Npgsql" Version="5.0.18" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.8.0" />
+    <!-- 阶段四明示例外：PDF 参考材料需要文本层解析（Apache-2.0 纯托管轻量包），无此库则 PDF 能力不可达（spec §5）。 -->
+    <PackageReference Include="PdfPig" Version="0.1.16" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,6 +22,8 @@
   <ItemGroup>
     <EmbeddedResource Include="CoreValidation\Seeds\dept-workload.json"
                       LogicalName="HD.ReportCenter.Application.CoreValidation.Seeds.dept-workload.json" />
+    <EmbeddedResource Include="CoreValidation\AiAssistant\PocAiSystemPrompt.md"
+                      LogicalName="HD.ReportCenter.Application.CoreValidation.AiAssistant.PocAiSystemPrompt.md" />
   </ItemGroup>
 
   <PropertyGroup>

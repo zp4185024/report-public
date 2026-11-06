@@ -9,9 +9,11 @@ import {
   Search,
   Save,
   Server,
+  Trash2,
   Zap,
 } from 'lucide-react';
 import { dataAssetApi } from './api';
+import { confirmDeleteMessage, deleteErrorMessage, pickResourceAfterDeletion } from './assetDeletion';
 import { PaginationBar } from './PaginationBar';
 import { StatusToasts } from './StatusToasts';
 import type {
@@ -214,6 +216,8 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
   const [datasetReferences, setDatasetReferences] = useState<DatasetReferenceDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  // 删除请求进行中标志；与保存互斥，防止删除后仍提交旧草稿。
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => setKind(initialKind), [initialKind]);
 
@@ -516,6 +520,81 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
     }
   };
 
+  /**
+   * 确认后删除当前选中的数据源；被数据集引用时后端回传 409 和引用清单并直接展示。
+   */
+  const deleteSource = async () => {
+    if (dataSourceDraft === null || deleting) return;
+    if (dataSourceDraft.revision === 0) {
+      setError('尚未保存的数据源无需删除，直接切换资源即可。');
+      return;
+    }
+    if (!window.confirm(confirmDeleteMessage('数据源', dataSourceDraft))) return;
+    setDeleting(true);
+    setError(null);
+    setStatus(null);
+    try {
+      const deletedCode = dataSourceDraft.code;
+      await dataAssetApi.deleteDataSource(deletedCode);
+      // 第一阶段：从本地列表移除并选中相邻资源，删空时进入新增草稿。
+      const next = dataSources.filter((item) => item.code !== deletedCode);
+      setDataSources(next);
+      const replacement = pickResourceAfterDeletion(dataSources, deletedCode);
+      setDataSourceDraft(replacement ? sourceDraft(replacement) : newDataSource(next));
+      setStatus(`数据源「${dataSourceDraft.name}」已删除`);
+    } catch (exception) {
+      setError(deleteErrorMessage(exception, '数据源'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  /**
+   * 确认后删除当前选中的数据集；被报表引用时后端回传 409 和引用清单并直接展示。
+   */
+  const deleteDatasetAction = async () => {
+    if (datasetDraft === null || deleting) return;
+    if (datasetDraft.revision === 0) {
+      setError('尚未保存的数据集无需删除，直接切换资源即可。');
+      return;
+    }
+    if (!window.confirm(confirmDeleteMessage('数据集', datasetDraft))) return;
+    setDeleting(true);
+    setError(null);
+    setStatus(null);
+    try {
+      const deletedCode = datasetDraft.code;
+      const deletedName = datasetDraft.name;
+      await dataAssetApi.deleteDataset(deletedCode);
+      // 第一阶段：数据集列表是服务端分页，删除后重读当前页让 total 与页码保持真实。
+      const result = await dataAssetApi.datasetsPage({
+        page: assetPage,
+        pageSize: assetPageSize,
+        query: assetQuery,
+      });
+      setDatasets(result.items);
+      setDatasetTotal(result.total);
+      // 第二阶段：优先回到删除前列表的相邻数据集，当前页为空时退回首个或新增草稿。
+      const replacement = pickResourceAfterDeletion(datasets, deletedCode)
+        ?? result.items[0]
+        ?? null;
+      setDatasetDraft(replacement
+        ? {
+            ...replacement,
+            variables: replacement.variables.map((variable) => ({ ...variable })),
+            fields: replacement.fields.map((field) => ({ ...field })),
+          }
+        : newDataset(result.items, dataSources));
+      setReferencesOpen(false);
+      setDatasetReferences([]);
+      setStatus(`数据集「${deletedName}」已删除`);
+    } catch (exception) {
+      setError(deleteErrorMessage(exception, '数据集'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <main className="asset-page">
       <header className="asset-header">
@@ -578,7 +657,7 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
         <div className="asset-editor">
           {kind === 'data-sources' && dataSourceDraft !== null ? (
             <>
-              <div className="asset-editor-header"><div><h2>{dataSourceDraft.revision === 0 ? '新增数据源' : dataSourceDraft.name}</h2><p>修订号 {dataSourceDraft.revision}</p></div><div><button type="button" className="button" disabled={testing || saving} onClick={() => void testSource()}>{testing ? <LoaderCircle className="spin" size={16} /> : <Zap size={16} />}测试连接</button><button type="button" className="button button-primary" disabled={saving || testing} onClick={() => void saveSource()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button></div></div>
+              <div className="asset-editor-header"><div><h2>{dataSourceDraft.revision === 0 ? '新增数据源' : dataSourceDraft.name}</h2><p>修订号 {dataSourceDraft.revision}</p></div><div><button type="button" className="button" disabled={testing || saving || deleting} onClick={() => void testSource()}>{testing ? <LoaderCircle className="spin" size={16} /> : <Zap size={16} />}测试连接</button><button type="button" className="button button-primary" disabled={saving || testing || deleting} onClick={() => void saveSource()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button><button type="button" className="button danger" disabled={saving || testing || deleting || dataSourceDraft.revision === 0} onClick={() => void deleteSource()}>{deleting ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}删除</button></div></div>
               <div className="asset-form-grid">
                 <label><span>数据源编码</span><input disabled={dataSourceDraft.revision > 0} value={dataSourceDraft.code} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, code: event.target.value })} /></label>
                 <label><span>数据源名称</span><input value={dataSourceDraft.name} onChange={(event) => setDataSourceDraft({ ...dataSourceDraft, name: event.target.value })} /></label>
@@ -595,7 +674,7 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
             </>
           ) : kind === 'datasets' && datasetDraft !== null ? (
             <>
-              <div className="asset-editor-header"><div><h2>{datasetDraft.revision === 0 ? '新增数据集' : datasetDraft.name}</h2><p>修订号 {datasetDraft.revision}</p></div><div><button type="button" className="button" disabled={datasetDraft.revision === 0 || saving || referencesLoading} onClick={() => void showReferences()}>{referencesLoading ? <LoaderCircle className="spin" size={16} /> : <Link2 size={16} />}查看引用</button><button type="button" className="button" disabled={datasetDraft.revision === 0 || saving} onClick={() => window.location.assign(previewUrl(datasetDraft.code))}><Eye size={16} />数据预览</button><button type="button" className="button button-primary" disabled={saving} onClick={() => void saveDataset()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button></div></div>
+              <div className="asset-editor-header"><div><h2>{datasetDraft.revision === 0 ? '新增数据集' : datasetDraft.name}</h2><p>修订号 {datasetDraft.revision}</p></div><div><button type="button" className="button" disabled={datasetDraft.revision === 0 || saving || referencesLoading || deleting} onClick={() => void showReferences()}>{referencesLoading ? <LoaderCircle className="spin" size={16} /> : <Link2 size={16} />}查看引用</button><button type="button" className="button" disabled={datasetDraft.revision === 0 || saving || deleting} onClick={() => window.location.assign(previewUrl(datasetDraft.code))}><Eye size={16} />数据预览</button><button type="button" className="button button-primary" disabled={saving || deleting} onClick={() => void saveDataset()}>{saving ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存</button><button type="button" className="button danger" disabled={saving || deleting || datasetDraft.revision === 0} onClick={() => void deleteDatasetAction()}>{deleting ? <LoaderCircle className="spin" size={16} /> : <Trash2 size={16} />}删除</button></div></div>
               {referencesOpen && !referencesLoading && (
                 <div className="dataset-reference-panel" role="region" aria-label="数据集引用">
                   <strong>引用报表</strong>

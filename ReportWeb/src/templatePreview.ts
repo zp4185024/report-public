@@ -155,7 +155,7 @@ export function createTemplatePreviewPlan(
   snapshot: IWorkbookData,
   binding: TemplateBinding,
   result: ExecuteResult,
-  definition?: Pick<ReportDefinition, 'fields'>,
+  definition?: Pick<ReportDefinition, 'fields' | 'fieldPresentations'>,
 ): TemplatePreviewPlan {
   const validatedSnapshot = validateSnapshot(snapshot as unknown);
   const validatedBinding = validateTemplateBinding(binding as unknown);
@@ -364,7 +364,7 @@ function createDetailPlan(
   snapshot: ValidatedSnapshot,
   binding: ValidatedTemplateBinding,
   result: ValidatedExecuteResult,
-  definition?: Pick<ReportDefinition, 'fields'>,
+  definition?: Pick<ReportDefinition, 'fields' | 'fieldPresentations'>,
 ): TemplatePreviewPlan['detail'] {
   const detailBinding = binding.detailBinding;
   if (detailBinding === null) {
@@ -409,7 +409,23 @@ function createDetailPlan(
   const columnTypes = definition === undefined
     ? undefined
     : new Map(definition.fields.map((field) => [field.code, field.dataType]));
-  const rows = createDetailRows(sheetId, templateRow, fields, result.rows, columnTypes);
+  // 已配置值映射的字段，预览数据里的取值是映射后的显示标签（字符串），
+  // 与导出文件的展示语义一致；类型守卫需要知道哪些字段属于这类合法标签。
+  const mappedCodes = definition === undefined
+    ? undefined
+    : new Set(
+        (definition.fieldPresentations ?? [])
+          .filter((presentation) => (presentation.valueMappings?.length ?? 0) > 0)
+          .map((presentation) => presentation.code),
+      );
+  const rows = createDetailRows(
+    sheetId,
+    templateRow,
+    fields,
+    result.rows,
+    columnTypes,
+    mappedCodes,
+  );
   const insertCount = Math.max(0, result.rows.length - 1);
 
   return {
@@ -584,6 +600,7 @@ function splitQuotedSegments(formula: string): Array<{ text: string; quoted: boo
  * @param fields - 参与映射、显示或数据写入的字段集合。
  * @param resultRows - 需要遍历、筛选或写入的业务数据集合。
  * @param columnTypes - columnTypes 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param mappedCodes - 已配置值映射的字段编码集合；这些字段的取值是映射后的显示标签。
  * @returns 返回值与当前方法声明的类型及空值约束保持一致。
  */
 function createDetailRows(
@@ -592,6 +609,7 @@ function createDetailRows(
   fields: Array<{ code: string; column: number }>,
   resultRows: unknown[],
   columnTypes?: ReadonlyMap<string, string>,
+  mappedCodes?: ReadonlySet<string>,
 ): DetailRowPlan[] {
   if (resultRows.length === 0) {
     // 零数据也保留一条模板行并清空绑定单元格，这样表头/边框/公式结构仍可预览且不会显示 token。
@@ -622,7 +640,7 @@ function createDetailRows(
           sheetId,
           row: targetRow,
           column,
-        }, columnTypes?.get(code)),
+        }, columnTypes?.get(code), mappedCodes?.has(code) ?? false),
       })),
     };
   });
@@ -634,6 +652,8 @@ function createDetailRows(
  * @param code - 需要读取、校验或转换的业务值。
  * @param location - location 对应的业务输入；具体类型和空值范围以方法签名为准。
  * @param dataType - dataType 对应的业务输入；具体类型和空值范围以方法签名为准。
+ * @param hasValueMapping - 该字段是否配置了值映射；映射字段的预览取值是字符串显示标签，
+ *                          与导出文件展示语义一致，类型守卫须放行而不视为结构漂移。
  * @returns 返回值与当前方法声明的类型及空值约束保持一致。
  */
 function getDetailFieldValue(
@@ -641,6 +661,7 @@ function getDetailFieldValue(
   code: string,
   location: ErrorLocation,
   dataType?: string,
+  hasValueMapping = false,
 ): DataRowValue {
   if (!Object.prototype.hasOwnProperty.call(resultRow, code)) {
     throw new TemplatePreviewError(`明细结果行缺少字段 '${code}'。`, location);
@@ -660,10 +681,13 @@ function getDetailFieldValue(
     const numberRequired = ['number', 'int', 'long', 'decimal'].includes(normalizedType);
     const booleanRequired = ['bool', 'boolean'].includes(normalizedType);
     const stringRequired = ['string', 'text', 'date', 'datetime'].includes(normalizedType);
+    // 映射字段的字符串标签是预期显示值；未映射字段的类型不符仍按结构漂移拒绝。
+    const isMappedLabel = hasValueMapping && typeof value === 'string';
     if (
-      (numberRequired && typeof value !== 'number') ||
-      (booleanRequired && typeof value !== 'boolean') ||
-      (stringRequired && typeof value !== 'string')
+      !isMappedLabel &&
+      ((numberRequired && typeof value !== 'number') ||
+        (booleanRequired && typeof value !== 'boolean') ||
+        (stringRequired && typeof value !== 'string'))
     ) {
       throw new TemplatePreviewError(
         `明细字段 '${code}' 与配置的数据类型 '${dataType}' 不一致。`,

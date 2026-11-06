@@ -216,4 +216,40 @@ public sealed class PocReportConfigurationStore : ITransient
             throw;
         }
     }
+
+    /// <summary>
+    /// 在单个事务里删除报表及其参数和模板快照，三张表要么一起消失要么保持原状；
+    /// 报表行本身删除未命中时抛 KeyNotFoundException，表示编码在删除瞬间已不存在。
+    /// </summary>
+    /// <param name="reportCode">待删除报表的编码，调用前应已完成存在性检查。</param>
+    /// <returns>异步任务，失败时事务回滚并向上抛出原始异常。</returns>
+    public async Task DeleteAsync(string reportCode)
+    {
+        var tenant = _database.AsTenant();
+        await tenant.BeginTranAsync();
+        try
+        {
+            // 模板与参数是报表的从属数据，先删从属再删主记录，全程在同一事务内。
+            await _database.Deleteable<PocReportTemplate>()
+                .Where(item => item.ReportCode == reportCode)
+                .ExecuteCommandAsync();
+            await _database.Deleteable<PocReportParameter>()
+                .Where(item => item.ReportCode == reportCode)
+                .ExecuteCommandAsync();
+            var affected = await _database.Deleteable<PocReport>()
+                .Where(item => item.Code == reportCode)
+                .ExecuteCommandAsync();
+            if (affected != 1)
+            {
+                throw new KeyNotFoundException($"不存在报表 '{reportCode}'。");
+            }
+
+            await tenant.CommitTranAsync();
+        }
+        catch
+        {
+            await tenant.RollbackTranAsync();
+            throw;
+        }
+    }
 }

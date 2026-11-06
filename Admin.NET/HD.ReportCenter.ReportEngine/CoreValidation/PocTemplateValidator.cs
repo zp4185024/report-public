@@ -201,10 +201,13 @@ public static partial class PocTemplateValidator
         return new PocTemplateBinding(1, orderedParameters, detailBinding);
     }
 
-    /// <summary>校验 PocTemplateValidator 的 Ensure Detail Row Is Not Merged 条件，并返回可供后续流程判断的结果。</summary>
-    /// <param name="snapshot">包含工作簿结构、单元格和样式信息的快照数据。</param>
-    /// <param name="sheetId">需要定位的业务记录标识。</param>
-    /// <param name="detailRow">需要遍历、筛选或写入的业务数据集合。</param>
+    /// <summary>
+    /// 检查明细模板行没有被合并区域覆盖：扫描 mergeData 的行坐标，命中明细行时直接拒绝保存。
+    /// 坐标读取通过 TryReadCoordinate 完成，因此既接受 JSON 整数也接受数字字符串（见该方法说明）。
+    /// </summary>
+    /// <param name="snapshot">已解析的 Univer 工作簿快照 JSON 对象。</param>
+    /// <param name="sheetId">明细 token 所在工作表的内部 ID，用于定位 mergeData。</param>
+    /// <param name="detailRow">明细模板行的零基行号。</param>
     private static void EnsureDetailRowIsNotMerged(JObject snapshot, string sheetId, int detailRow)
     {
         var mergeDataToken = snapshot["sheets"]?[sheetId]?["mergeData"];
@@ -237,25 +240,35 @@ public static partial class PocTemplateValidator
         }
     }
 
-    /// <summary>构建 PocTemplateValidator 所需的 Create Merge Data Exception 内容，并保证生成结果符合调用约定。</summary>
-    /// <param name="sheetId">需要定位的业务记录标识。</param>
-    /// <param name="detailRow">需要遍历、筛选或写入的业务数据集合。</param>
-    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
+    /// <summary>
+    /// 构建 mergeData 坐标无法解析时的校验异常：错误消息携带工作表与明细行 A1 地址，
+    /// 导入向导按 TEMPLATE_VALIDATION_FAILED 错误码展示，提示用户该包的合并区域数据不可读。
+    /// </summary>
+    /// <param name="sheetId">mergeData 所在工作表的内部 ID，用于错误定位。</param>
+    /// <param name="detailRow">明细模板行的零基行号，用于在错误消息中给出 A1 地址。</param>
+    /// <returns>携带定位信息的模板校验异常。</returns>
     private static PocTemplateValidationException CreateMergeDataException(string sheetId, int detailRow) =>
         new(
             $"mergeData at sheet '{sheetId}' must contain valid row coordinates near " +
             $"cell {GetCellAddress(detailRow, 0)}.");
 
-    /// <summary>尝试或判断 PocTemplateValidator 的 Try Read Coordinate 条件，并以明确结果表示是否匹配。</summary>
-    /// <param name="token">调用受保护接口或校验请求身份所需的访问令牌。</param>
-    /// <param name="coordinate">coordinate 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
-    /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
+    /// <summary>
+    /// 读取合并区域的行坐标：接受 JSON 整数，也接受内容可被 int 解析的数字字符串（如 "0"、"5"）。
+    /// 必须容忍字符串的原因：JNPF 迁移写入的快照与旧版 Univer 输出的 mergeData 坐标就是数字字符串
+    /// （还包括 "rangeType":"0" 这类枚举字段），是真实存量数据；浏览器保存前的归一化只覆盖编辑器路径，
+    /// 不能假设库内快照都已完成归一化。null、非数字文本与浮点值仍拒绝，避免掩盖损坏数据。
+    /// </summary>
+    /// <param name="token">mergeData 条目中的坐标 JSON 节点，允许为 null。</param>
+    /// <param name="coordinate">解析成功时输出零基坐标；失败时输出 0。</param>
+    /// <returns>坐标可解析为 32 位整数时返回 true，其余返回 false。</returns>
     private static bool TryReadCoordinate(JToken? token, out int coordinate)
     {
-        // 后台只接受真正的 JSON 整数。浏览器在保存前会归一化旧版 Univer 返回的数字字符串。
         coordinate = 0;
-        return token?.Type == JTokenType.Integer &&
-               int.TryParse(token.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out coordinate);
+        var text = token?.Type is JTokenType.Integer or JTokenType.String
+            ? token.ToString()
+            : null;
+        return text is not null &&
+               int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out coordinate);
     }
 
     /// <summary>将 PocTemplateValidator 中的 Parse Coordinate 输入转换为调用方需要的稳定格式。</summary>

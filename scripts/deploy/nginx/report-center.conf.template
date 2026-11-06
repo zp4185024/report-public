@@ -1,0 +1,52 @@
+# ============================================================================
+# hd-report-center 前端静态托管 + /api 反向代理（模板）
+# 由 scripts/deploy/New-ReportCenterNginxConfig.ps1 渲染双下划线包裹的占位符后，
+# 产物是仅含 server{} 块的 conf 文件，可直接 include 到 nginx 的 http{} 上下文。
+# 模板中不得出现具体内网 IP，所有主机/端口/路径一律由参数注入。
+# ============================================================================
+server {
+    listen __LISTEN_PORT__;
+    server_name __SERVER_NAME__;
+
+    # 大文件上传/导出：放开请求体限制，与后端 web.config 的 requestLimits 保持同一量级。
+    client_max_body_size __CLIENT_MAX_BODY_SIZE__;
+
+    # 前端静态资源 gzip：文本类先行压缩；woff2/图片等本身已压缩的类型不重复处理。
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1k;
+    gzip_vary on;
+    gzip_types text/plain text/css application/javascript application/json application/wasm image/svg+xml;
+
+    root __FRONTEND_ROOT__;
+    index index.html;
+
+    # history 路由回退：/reports/{code}、/share/reports/{code} 等深链统一回落 index.html。
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Vite 构建产物文件名带内容 hash，允许长缓存；命中失败回退 404 而不是 index.html。
+    location /assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # 后端反代：保留 /api 前缀原样转发（后端路由本身包含 /api，不做 rewrite）。
+    location __API_PREFIX__/ {
+        proxy_pass http://__BACKEND_HOST__:__BACKEND_PORT__;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # 大文件导出走流式下载：关闭缓冲，超时对齐长任务导出时长。
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_connect_timeout __PROXY_TIMEOUT__;
+        proxy_send_timeout __PROXY_TIMEOUT__;
+        proxy_read_timeout __PROXY_TIMEOUT__;
+    }
+}

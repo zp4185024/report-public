@@ -93,7 +93,7 @@ JNPF 查询区中基于结果字段的二次筛选不属于当前 SQL 变量模�
 ```powershell
 $env:JNPF_MYSQL_PASSWORD = '<JNPF MySQL 密码>'
 pwsh -File scripts/database/Invoke-JnpfHisReportMigration.ps1 `
-  -SourceServer '192.168.2.5' `
+  -SourceServer '188.188.2.5' `
   -SourcePort 13306 `
   -SourceDatabase 'jnpf_test_520' `
   -SourceUser 'root' `
@@ -108,7 +108,7 @@ pwsh -File scripts/database/Invoke-JnpfHisReportMigration.ps1 `
 
 ```powershell
 pwsh -File scripts/database/Invoke-JnpfHisReportMigration.ps1 `
-  -SourceServer '192.168.2.5' `
+  -SourceServer '188.188.2.5' `
   -SourcePort 13306 `
   -SourceDatabase 'jnpf_test_520' `
   -SourceUser 'root' `
@@ -123,7 +123,7 @@ pwsh -File scripts/database/Invoke-JnpfHisReportMigration.ps1 `
 ```powershell
 $env:HD_REPORT_CENTER_DB_PASSWORD = '<报表中心 SQL Server 密码>'
 pwsh -File scripts/database/Invoke-JnpfHisReportMigration.ps1 `
-  -SourceServer '192.168.2.5' `
+  -SourceServer '188.188.2.5' `
   -SourcePort 13306 `
   -SourceDatabase 'jnpf_test_520' `
   -SourceUser 'root' `
@@ -131,7 +131,7 @@ pwsh -File scripts/database/Invoke-JnpfHisReportMigration.ps1 `
   -ReportDataSourceType SqlServer `
   -SourceReportId '<report_id_1>','<report_id_2>' `
   -MaxReports 2 `
-  -TargetServer '192.168.2.5' `
+  -TargetServer '188.188.2.5' `
   -TargetPort 1433 `
   -TargetDatabase hd_report_center `
   -TargetUser hdhis `
@@ -178,3 +178,19 @@ pwsh -File scripts/database/Apply-ReportConfigurationSchema.ps1
 `Apply-ReportSchemaComments.sql`。脚本只新增或更新 `MS_Description` 扩展属性，不修改表结构和业务数据，可重复执行；
 覆盖 `RcReport`、`RcDataSource`、`RcDataset`、`RcReportParameter`、`RcExternalParameterSource`、
 `RcReportTemplate` 和 `RcExchangeMapping`。
+
+## AI 助手表升级
+
+启用产品内 AI 能力框架前，先在现有 `hd_report_center` 库上执行增量脚本：
+
+```powershell
+pwsh -File scripts/database/Apply-AiAssistantSchema.ps1
+```
+
+脚本新增 `RcAiSettings`（单行配置，`IsEnabled` 默认 0，即 AI 默认整体关闭）与
+`RcAiAuditLog`（AI 工具调用审计）两张表，并在 `RcAiSettings` 为空时播种一行默认关闭的配置。
+两张表都已存在时只校验必需列并跳过；只存在一张或列结构不完整时拒绝继续，不会自动改列、删表或覆盖配置。
+脚本要求先执行过 `Apply-ReportConfigurationSchema.ps1`（依赖 `RcDataSource` 做前置校验）。
+密码仍通过环境变量 `HD_REPORT_CENTER_DB_PASSWORD` 注入，不进命令参数。
+AI 能力是否放开由管理页“AI 设置”里的启用开关（`RcAiSettings.IsEnabled`）决定；
+关闭时后端所有 `/ai/*` 调用型接口按 `AI_DISABLED` fail-fast，前端也不渲染任何 AI 入口。

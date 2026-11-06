@@ -584,6 +584,48 @@ describe('createTemplatePreviewPlan', () => {
     });
   });
 
+  it('accepts mapped display labels for numeric fields configured with value mappings', () => {
+    const plan = createTemplatePreviewPlan(
+      workbook({ 7: { 0: { v: '{{detail.isEnabled}}' } } }),
+      detailBinding({ fields: [{ code: 'isEnabled', column: 0 }] as never }),
+      executeResult({ rows: [{ isEnabled: '启用' }] as never }),
+      {
+        fields: [{ code: 'isEnabled', displayName: '状态', dataType: 'number' }],
+        fieldPresentations: [
+          {
+            code: 'isEnabled',
+            valueMappings: [
+              { value: '1', label: '启用' },
+              { value: '0', label: '停用' },
+            ],
+          },
+        ],
+      },
+    );
+
+    expect(plan.detail).toEqual({
+      sheetId: 'sheet-1',
+      templateRow: 7,
+      insertCount: 0,
+      rows: [{ row: 7, values: [{ column: 0, value: '启用' }] }],
+      formulaRewrites: [],
+    });
+  });
+
+  it('still rejects a numeric field receiving a string when no value mapping is configured', () => {
+    expectPreviewError(
+      () => createTemplatePreviewPlan(
+        workbook({ 7: { 0: { v: '{{detail.sequence}}' } } }),
+        detailBinding({ fields: [{ code: 'sequence', column: 0 }] }),
+        executeResult({ rows: [{ sequence: '1' }] } as never),
+        {
+          fields: [{ code: 'sequence', displayName: '序号', dataType: 'number' }],
+        },
+      ),
+      { sheetId: 'sheet-1', row: 7, column: 0 },
+    );
+  });
+
   it('allows a detail token cell whose formula value is null', () => {
     const plan = createTemplatePreviewPlan(
       workbook({

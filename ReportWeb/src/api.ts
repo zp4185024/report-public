@@ -1,5 +1,12 @@
 import type { IWorkbookData } from '@univerjs/presets';
 import type {
+  DataSyncDryRunRequest,
+  DataSyncImportRequest,
+  DataSyncImportResult,
+  DataSyncPackage,
+  DataSyncTryRunRequest,
+  DataSyncTryRunResult,
+  DataSyncValidateResult,
   DataSourceDocument,
   DataSourceInput,
   DataSourceTestResult,
@@ -8,6 +15,7 @@ import type {
   DatasetPreviewResult,
   DatasetReferenceDocument,
   CreateReportRequest,
+  DeletedDocument,
   ExecuteRequest,
   ExecuteResult,
   ExportJob,
@@ -17,6 +25,12 @@ import type {
   ExternalParameterSourceTestResult,
   JnpfMigrationRunResult,
   ReportConfigurationDocument,
+  ReportPackage,
+  ReportPackageDryRunRequest,
+  ReportPackageDryRunResult,
+  ReportPackageImportRequest,
+  ReportPackageImportResult,
+  ReportPackageValidateResult,
   PagedDocument,
   ReportCenterFeatures,
   ReportCreateOptionsDocument,
@@ -25,8 +39,24 @@ import type {
   SaveReportConfigurationRequest,
   SaveTemplateRequest,
   ShareProtectionUnlockResult,
+  SyncRunLogDocument,
+  SyncSourcePreviewRequest,
+  SyncTableColumnsDocument,
+  SyncTableMetadataDocument,
+  SyncTaskDocument,
+  SyncTaskInput,
   TemplateDocument,
   TemplateXlsxImportResult,
+} from './types';
+import type {
+  AiChatRequest,
+  AiChatResult,
+  AiConnectionTestResult,
+  AiSessionClosedDocument,
+  AiSettings,
+  AiSettingsInput,
+  AiSyncMatchRequest,
+  AiSyncMatchResult,
 } from './types';
 import { normalizeExportFileName } from './exportFileName';
 
@@ -100,6 +130,50 @@ async function requestDownload(
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 请求返回 JSON 信封的接口，解出 Furion 统一信封里的 result 后序列化为
+ * 2 空格缩进的 JSON 文件触发浏览器下载。适用于返回 DTO 对象而非文件流的导出端点：
+ * 信封（code/type/message/result）只用于解析，不落盘，文件内容是纯业务对象。
+ * @param path - 请求路径。
+ * @param init - fetch 初始化参数；无请求体的 GET 可传 undefined。
+ * @param fallbackFilename - 下载文件名；本助手不读取 Content-Disposition，由调用方直接给定。
+ * @returns 下载触发后无返回值；网络不通、信封 code 非 200 或响应非 JSON 时抛出面向管理员的中文错误。
+ */
+async function requestJsonFileDownload(
+  path: string,
+  init: RequestInit | undefined,
+  fallbackFilename: string,
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(path, init);
+  } catch {
+    throw new Error('无法连接后端服务，请确认服务已启动。');
+  }
+
+  // 阶段：解析信封。与 requestJson 共用同一错误策略，导出失败时把后端 message 原样透出。
+  let body: ApiEnvelope<unknown>;
+  try {
+    body = (await response.json()) as ApiEnvelope<unknown>;
+  } catch {
+    throw new Error(response.ok
+      ? '服务器返回内容不是有效的 JSON。'
+      : `后端服务不可用（HTTP ${response.status}）。`);
+  }
+  if (!response.ok || body.code !== 200) {
+    throw new Error(body.message || `请求失败（${body.code || response.status}）`);
+  }
+
+  // 阶段：序列化纯业务对象并触发下载，避免把信封包装一并写进文件让导入向导误判。
+  const blob = new Blob([JSON.stringify(body.result, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fallbackFilename;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -328,6 +402,16 @@ export const reportCatalogApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     }),
+  /**
+   * 删除模板及其参数、模板快照等配套数据；被引用或不存在时后端回传冲突/404 说明。
+   * @param reportCode - 待删除模板（报表）的编码。
+   * @returns 回传被删除编码的确认回执。
+   */
+  deleteReport: (reportCode: string) =>
+    requestJson<DeletedDocument>(
+      `/api/report-center/poc/reports/${encodeURIComponent(reportCode)}`,
+      { method: 'DELETE' },
+    ),
 };
 
 /** 数据源和数据集是跨报表复用的全局资源，使用独立 API 与报表配置解耦。 */
@@ -351,6 +435,17 @@ export const dataAssetApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       },
+    ),
+
+  /**
+   * 删除未被数据集引用的全局数据源；仍被引用时后端回传 409 和引用数据集清单。
+   * @param code - 待删除数据源的编码。
+   * @returns 回传被删除编码的确认回执。
+   */
+  deleteDataSource: (code: string) =>
+    requestJson<DeletedDocument>(
+      `/api/report-center/poc/data-sources/${encodeURIComponent(code)}`,
+      { method: 'DELETE' },
     ),
 
   /**
@@ -412,6 +507,17 @@ export const dataAssetApi = {
     ),
 
   /**
+   * 删除未被报表引用的全局数据集；仍被引用时后端回传 409 和引用报表清单。
+   * @param code - 待删除数据集的编码。
+   * @returns 回传被删除编码的确认回执。
+   */
+  deleteDataset: (code: string) =>
+    requestJson<DeletedDocument>(
+      `/api/report-center/poc/datasets/${encodeURIComponent(code)}`,
+      { method: 'DELETE' },
+    ),
+
+  /**
    * 构造并发送 api 的 preview Dataset 网络请求，随后按接口类型返回响应结果。
    * @param code - 需要读取、校验或转换的业务值。
    * @param request - 本次操作使用的输入数据。
@@ -448,6 +554,17 @@ export const dataAssetApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
       },
+    ),
+
+  /**
+   * 删除未被引用的外部参数源；报表参数或数据集变量仍绑定时后端回传 409 和引用清单。
+   * @param code - 待删除接口参数源的编码。
+   * @returns 回传被删除编码的确认回执。
+   */
+  deleteExternalParameterSource: (code: string) =>
+    requestJson<DeletedDocument>(
+      `/api/report-center/poc/external-parameter-sources/${encodeURIComponent(code)}`,
+      { method: 'DELETE' },
     ),
 
   /**
@@ -500,4 +617,318 @@ export const jnpfMigrationApi = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   }),
+};
+
+/**
+ * 报表包导入导出接口集：开发机导出 JSON 包，线上向导完成校验、试跑和导入。
+ * 包请求体只携带业务定义，不包含连接串或密码。
+ */
+export const reportPackageApi = {
+  /**
+   * 下载指定报表的完整报表包 JSON，用于开发机到线上环境的跨环境迁移。
+   * 端点返回 Furion 统一信封（code/type/message/result），这里先解出 result 再把
+   * 纯报表包对象序列化为 2 空格缩进 JSON 落盘，避免导入向导拿到信封包装后误判类型标识；
+   * 文件名固定为 `<reportCode>.report-package.json`，信封 code 非 200 或响应异常时
+   * 抛出面向管理员的中文错误信息，不产生半截文件。
+   * @param reportCode - 待导出包的报表编码。
+   * @returns 下载完成后无业务返回值；失败时抛出面向管理员的错误信息。
+   */
+  exportReportPackage: (reportCode: string) =>
+    requestJsonFileDownload(
+      `/api/report-center/poc/reports/${encodeURIComponent(reportCode)}/package`,
+      undefined,
+      `${reportCode}.report-package.json`,
+    ),
+
+  /**
+   * 提交整份报表包做服务端结构校验和目标库冲突探测；errors 非空时包不可导入。
+   * @param requestPackage - 前端解析出的完整报表包对象。
+   * @returns 校验报告（摘要、错误、警告和冲突探测结果）。
+   */
+  validateReportPackage: (requestPackage: ReportPackage) =>
+    requestJson<ReportPackageValidateResult>('/api/report-center/poc/report-packages/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ package: requestPackage }),
+    }),
+
+  /**
+   * 用选定的目标数据源真实执行包内数据集 SQL，返回最多 50 行样例数据供导入前确认。
+   * @param request - 包、目标数据源编码和参数样例值。
+   * @returns 样例列、行、耗时以及字段契约比对结论。
+   */
+  dryRunReportPackage: (request: ReportPackageDryRunRequest) =>
+    requestJson<ReportPackageDryRunResult>('/api/report-center/poc/report-packages/dry-run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+
+  /**
+   * 确认导入报表包：按选择的模式写入数据集与报表定义，服务端负责写审计文件。
+   * @param request - 包、目标数据源、导入模式、是否替换数据集和是否已试跑。
+   * @returns 数据集与报表各自执行的动作摘要及警告。
+   */
+  importReportPackage: (request: ReportPackageImportRequest) =>
+    requestJson<ReportPackageImportResult>('/api/report-center/poc/report-packages/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+};
+
+/**
+ * 数据同步任务接口集：任务 CRUD、映射预览、试跑、后台运行与运行日志，
+ * 以及同步包的导出、校验、试跑（dry-run）和导入。包请求体只携带业务定义，不含连接串或密码。
+ */
+export const dataSyncApi = {
+  /**
+   * 构造并发送 api 的 tasks 网络请求，列出全部同步任务及其映射定义。
+   * @returns 全量同步任务文档列表。
+   */
+  tasks: () => requestJson<SyncTaskDocument[]>('/api/report-center/poc/data-sync-tasks'),
+
+  /**
+   * 按编码读取单个同步任务及其映射定义，供设计器加载最新修订号。
+   * @param code - 同步任务编码。
+   * @returns 同步任务文档。
+   */
+  getTask: (code: string) =>
+    requestJson<SyncTaskDocument>(
+      `/api/report-center/poc/data-sync-tasks/${encodeURIComponent(code)}`,
+    ),
+
+  /**
+   * 新增或更新同步任务；映射与调度在保存时由服务端完成编译级校验。
+   * @param code - 同步任务编码。
+   * @param request - 任务保存输入（含乐观并发期望修订号）。
+   * @returns 保存后的同步任务文档（服务端返回的最新修订号）。
+   */
+  saveTask: (code: string, request: SyncTaskInput) =>
+    requestJson<SyncTaskDocument>(
+      `/api/report-center/poc/data-sync-tasks/${encodeURIComponent(code)}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+
+  /**
+   * 删除同步任务；运行日志由服务端保留作执行审计，被占用或不存在时后端回传冲突/404。
+   * @param code - 待删除同步任务的编码。
+   * @returns 回传被删除编码的确认回执。
+   */
+  deleteTask: (code: string) =>
+    requestJson<DeletedDocument>(
+      `/api/report-center/poc/data-sync-tasks/${encodeURIComponent(code)}`,
+      { method: 'DELETE' },
+    ),
+
+  /**
+   * 预览源数据集的真实列与样例行（不做映射转换），供映射画布拉线；字段携带数据集声明中的中文注释。
+   * @param code - 同步任务编码。
+   * @param request - 数据集变量取值。
+   * @returns 字段清单（含可选注释）与样例行。
+   */
+  previewMapping: (code: string, request: DatasetPreviewRequest) =>
+    requestJson<DatasetPreviewResult>(
+      `/api/report-center/poc/data-sync-tasks/${encodeURIComponent(code)}/preview-mapping`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+
+  /**
+   * 端到端试跑：真实读源并按映射转换（最多 50 行），不写目标库。
+   * @param code - 同步任务编码。
+   * @param request - 试跑请求（行数上限与变量取值）。
+   * @returns 转换前后样例对照与失败统计。
+   */
+  tryRun: (code: string, request: DataSyncTryRunRequest) =>
+    requestJson<DataSyncTryRunResult>(
+      `/api/report-center/poc/data-sync-tasks/${encodeURIComponent(code)}/try-run`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+
+  /**
+   * 启动后台同步并立即返回运行日志占位；防重入由 Running 日志保证，前端据此轮询 runs。
+   * @param code - 同步任务编码。
+   * @returns 本次运行的初始运行日志。
+   */
+  runTask: (code: string) =>
+    requestJson<SyncRunLogDocument>(
+      `/api/report-center/poc/data-sync-tasks/${encodeURIComponent(code)}/run`,
+      { method: 'POST' },
+    ),
+
+  /**
+   * 按任务编码列出最近的运行日志（服务端倒序），供任务页展示和轮询。
+   * @param code - 同步任务编码。
+   * @returns 运行日志列表。
+   */
+  taskRuns: (code: string) =>
+    requestJson<SyncRunLogDocument[]>(
+      `/api/report-center/poc/data-sync-tasks/${encodeURIComponent(code)}/runs`,
+    ),
+
+  /**
+   * 读取指定任务的同步包 JSON（源数据集快照 + 映射 + 调度 + 目标描述），
+   * 由调用方负责触发浏览器下载；包内不含连接串/密码。
+   * @param code - 同步任务编码。
+   * @returns 完整同步包对象。
+   */
+  getTaskPackage: (code: string) =>
+    requestJson<DataSyncPackage>(
+      `/api/report-center/poc/data-sync-tasks/${encodeURIComponent(code)}/package`,
+    ),
+
+  /**
+   * 提交整份同步包做服务端结构校验和目标库冲突探测；errors 非空时包不可导入。
+   * @param requestPackage - 前端解析出的完整同步包对象。
+   * @returns 校验报告（摘要、错误、警告和冲突探测结果）。
+   */
+  validatePackage: (requestPackage: DataSyncPackage) =>
+    requestJson<DataSyncValidateResult>('/api/report-center/poc/data-sync-packages/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ package: requestPackage }),
+    }),
+
+  /**
+   * 用选定的目标数据源真实执行包内源数据集并按映射转换（最多 50 行），不写目标库。
+   * @param request - 包、目标数据源编码。
+   * @returns 转换前后样例对照与失败统计。
+   */
+  dryRunPackage: (request: DataSyncDryRunRequest) =>
+    requestJson<DataSyncTryRunResult>(
+      '/api/report-center/poc/data-sync-packages/dry-run',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+
+  /**
+   * 确认导入同步包：服务端重跑全部校验后按冲突策略落库，并记录审计文件。
+   * @param request - 包、目标数据源、导入模式与是否已试跑。
+   * @returns 数据集与同步任务各自执行的动作摘要及警告。
+   */
+  importPackage: (request: DataSyncImportRequest) =>
+    requestJson<DataSyncImportResult>(
+      '/api/report-center/poc/data-sync-packages/import',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+
+  /**
+   * 列出数据源连接库内的基础表名（仅 TABLE 类型，不含视图），供设计器源取数选表与目标表下拉。
+   * @param dataSourceCode - 数据源编码。
+   * @returns 表清单文档。
+   */
+  listTables: (dataSourceCode: string) =>
+    requestJson<SyncTableMetadataDocument>(
+      `/api/report-center/poc/data-sync-tasks/metadata/tables?dataSourceCode=${encodeURIComponent(dataSourceCode)}`,
+    ),
+
+  /**
+   * 读取目标表的真实列清单（列名/数据库类型/可空/长度/注释），供映射表格的目标字段下拉与注释展示。
+   * @param dataSourceCode - 数据源编码。
+   * @param table - 表名（按目录原样大小写传入）。
+   * @returns 列清单文档（含可选列注释）。
+   */
+  listTableColumns: (dataSourceCode: string, table: string) =>
+    requestJson<SyncTableColumnsDocument>(
+      `/api/report-center/poc/data-sync-tasks/metadata/columns?dataSourceCode=${encodeURIComponent(dataSourceCode)}&table=${encodeURIComponent(table)}`,
+    ),
+
+  /**
+   * 源取数预览（任务保存前可用）：对“数据源 + SQL”做真实受限查询（≤50 行，不写库），
+   * 返回动态列与样例行，供映射表格在任务尚未落库时取到真实源字段。
+   * @param request - 源取数预览请求（数据源编码 + SQL 文本 + 选表模式下的可选源表名）。
+   * @returns 字段清单（含可选列注释）与样例行。
+   */
+  previewSource: (request: SyncSourcePreviewRequest) =>
+    requestJson<DatasetPreviewResult>(
+      '/api/report-center/poc/data-sync-tasks/preview-source',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+};
+
+/** 产品内 AI 能力接口（阶段一：设置、连通性测试、只读查数对话）；后端在 AI 关闭时按 AI_DISABLED fail-fast。 */
+export const aiApi = {
+  /**
+   * 读取 AI 设置（ApiKey 打码）；未配置时返回默认关闭配置，前端据此控制 AI 入口渲染。
+   * @returns 打码后的设置文档。
+   */
+  getSettings: () => requestJson<AiSettings>('/api/report-center/ai/settings'),
+
+  /**
+   * 保存 AI 设置；apiKey 传空表示保留服务端已存值。
+   * @param request - 设置输入。
+   * @returns 保存后的打码设置文档。
+   */
+  saveSettings: (request: AiSettingsInput) =>
+    requestJson<AiSettings>('/api/report-center/ai/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+
+  /**
+   * 对已保存配置做连通性测试；AI 未启用或配置不完整时后端回传 AI_DISABLED 错误。
+   * @returns 测试结果（成功/失败原因/耗时）。
+   */
+  testConnection: () =>
+    requestJson<AiConnectionTestResult>('/api/report-center/ai/settings/test', { method: 'POST' }),
+
+  /**
+   * 模板 AI 对话：一次回复内完成工具循环；sessionId 为空表示新会话。
+   * @param request - 对话请求（会话号、数据源与消息文本）。
+   * @returns 本轮新增消息与会话号。
+   */
+  chat: (request: AiChatRequest) =>
+    requestJson<AiChatResult>('/api/report-center/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
+
+  /**
+   * 显式结束会话并清空服务端内存上下文；会话不存在时同样返回成功（幂等）。
+   * @param sessionId - 待关闭的会话编号。
+   * @returns 关闭回执。
+   */
+  closeSession: (sessionId: string) =>
+    requestJson<AiSessionClosedDocument>(
+      `/api/report-center/ai/sessions/${encodeURIComponent(sessionId)}`,
+      { method: 'DELETE' },
+    ),
+
+  /**
+   * 同步 AI 智能字段匹配：同名基线 + LLM 歧义补齐 + 白名单转换链建议；
+   * 服务端不落库，AI 关闭时按 AI_DISABLED fail-fast。
+   * @param request - 匹配请求（直接载荷或 taskCode）。
+   * @returns 建议列表、降级标记与原因。
+   */
+  syncMatch: (request: AiSyncMatchRequest) =>
+    requestJson<AiSyncMatchResult>('/api/report-center/ai/sync-match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }),
 };

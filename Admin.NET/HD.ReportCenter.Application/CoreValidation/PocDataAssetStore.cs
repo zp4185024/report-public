@@ -33,6 +33,42 @@ public sealed class PocDataAssetRevisionConflictException : Exception
     }
 }
 
+/// <summary>
+/// 目标资源仍被下游配置引用，删除请求被拒绝。API 层把它映射为 409 并回传引用清单，避免静默级联删除。
+/// </summary>
+public sealed class PocResourceInUseException : Exception
+{
+    /// <summary>初始化 PocResourceInUseException 异常实例，携带业务错误码和面向管理员的引用说明。</summary>
+    /// <param name="code">供前端识别冲突类型的稳定业务错误码，如 DATASET_IN_USE。</param>
+    /// <param name="message">说明谁在引用该资源以及下一步该怎么做的中文提示。</param>
+    public PocResourceInUseException(string code, string message)
+        : base(message)
+    {
+        Code = code;
+    }
+
+    /// <summary>供前端识别冲突类型的稳定业务错误码。</summary>
+    public string Code { get; }
+}
+
+/// <summary>删除校验共用的小工具，把引用名称列表压缩成适合错误提示展示的短句。</summary>
+internal static class PocDeleteGuard
+{
+    /// <summary>
+    /// 把引用方名称列表截断为最多 5 个的展示串；超出部分汇总为总数，避免长列表撑爆错误提示。
+    /// </summary>
+    /// <param name="names">引用方显示名称，顺序保持稳定以便管理员定位。</param>
+    /// <returns>可直接拼进异常消息的引用摘要文本。</returns>
+    public static string FormatReferenceSummary(IReadOnlyList<string> names)
+    {
+        const int displayLimit = 5;
+        var display = string.Join("、", names.Take(displayLimit));
+        return names.Count > displayLimit
+            ? $"{display} 等共 {names.Count} 个"
+            : display;
+    }
+}
+
 /// <summary>全局数据源和数据集的独立存储边界。</summary>
 public sealed class PocDataAssetStore : ITransient
 {
@@ -119,6 +155,33 @@ public sealed class PocDataAssetStore : ITransient
             .OrderBy(item => item.Name)
             .OrderBy(item => item.Code)
             .ToListAsync();
+
+    /// <summary>列出仍挂在该数据源下的数据集，供删除数据源前的引用校验使用。</summary>
+    /// <param name="dataSourceCode">待删除数据源的编码。</param>
+    /// <returns>引用该数据源的数据集实体列表，空列表表示可以安全删除。</returns>
+    public async Task<IReadOnlyList<PocReportDataset>> ListDatasetsByDataSourceAsync(
+        string dataSourceCode) =>
+        await _database.Queryable<PocReportDataset>()
+            .Where(item => item.DataSourceCode == dataSourceCode)
+            .OrderBy(item => item.Name)
+            .OrderBy(item => item.Code)
+            .ToListAsync();
+
+    /// <summary>按编码物理删除数据源；调用方必须先完成引用校验，本方法不做级联清理。</summary>
+    /// <param name="code">待删除数据源的编码。</param>
+    /// <returns>是否恰好删除了一行；false 表示编码在删除瞬间已不存在。</returns>
+    public async Task<bool> DeleteDataSourceAsync(string code) =>
+        await _database.Deleteable<PocDataSource>()
+            .Where(item => item.Code == code)
+            .ExecuteCommandAsync() == 1;
+
+    /// <summary>按编码物理删除数据集；调用方必须先确认没有报表引用，避免报表运行时找不到数据。</summary>
+    /// <param name="code">待删除数据集的编码。</param>
+    /// <returns>是否恰好删除了一行；false 表示编码在删除瞬间已不存在。</returns>
+    public async Task<bool> DeleteDatasetAsync(string code) =>
+        await _database.Deleteable<PocReportDataset>()
+            .Where(item => item.Code == code)
+            .ExecuteCommandAsync() == 1;
 
     /// <summary>更新 PocDataAssetStore 的 Save Data Source Async 状态，并同步相关业务数据。</summary>
     /// <param name="mutation">mutation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>

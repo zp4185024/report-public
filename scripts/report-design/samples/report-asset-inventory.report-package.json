@@ -1,0 +1,355 @@
+{
+  "packageKind": "hd-report-center.report-package",
+  "packageVersion": 1,
+  "exportedAt": "2026-11-02T09:22:17Z",
+  "sourceDataSourceCode": "data_source_2",
+  "sourceDataSourceType": "SqlServer",
+  "report": {
+    "code": "report_asset_inventory",
+    "name": "报表资产清单",
+    "sheetName": "报表资产清单",
+    "datasetCode": "report_asset_inventory",
+    "previewSettings": {
+      "mode": "Full",
+      "pageSize": 20,
+      "showExactTotal": false
+    },
+    "exportSettings": {
+      "defaultMode": "Normal",
+      "normalMaxRows": 20000,
+      "normalMaxCells": 500000,
+      "normalTimeoutSeconds": 60,
+      "largeExportEnabled": true,
+      "rowsPerSheet": 1000000,
+      "fileRetentionHours": 24
+    },
+    "fieldPresentations": [
+      {
+        "code": "isEnabled",
+        "valueMappings": [
+          {
+            "value": "1",
+            "label": "启用"
+          },
+          {
+            "value": "0",
+            "label": "停用"
+          }
+        ]
+      }
+    ],
+    "isEnabled": true
+  },
+  "parameters": [
+    {
+      "code": "startDate",
+      "displayName": "开始日期",
+      "dataType": "date",
+      "controlType": "date",
+      "sourceType": "Form",
+      "sourceCode": null,
+      "sourceFieldCode": null,
+      "urlKey": null,
+      "defaultExpression": "startofmonth(today())",
+      "fixedValue": null,
+      "options": null,
+      "isVisible": true,
+      "isReadOnly": false,
+      "isRequired": false,
+      "allowUrlPrefill": true,
+      "displayOrder": 1
+    }
+  ],
+  "template": {
+    "snapshot": {
+      "id": "report-report_asset_inventory",
+      "rev": 1,
+      "name": "报表资产清单",
+      "appVersion": "1.0.0",
+      "locale": "zhCN",
+      "styles": {
+        "title": {
+          "ff": "Microsoft YaHei",
+          "fs": 16,
+          "bl": 1,
+          "vt": 2
+        },
+        "meta": {
+          "ff": "Microsoft YaHei",
+          "fs": 10,
+          "cl": {
+            "rgb": "#344054"
+          },
+          "vt": 2
+        },
+        "header": {
+          "ff": "Microsoft YaHei",
+          "fs": 10,
+          "bl": 1,
+          "bg": {
+            "rgb": "#e9eef5"
+          },
+          "cl": {
+            "rgb": "#18212b"
+          },
+          "ht": 2,
+          "vt": 2
+        },
+        "center": {
+          "ht": 2,
+          "vt": 2
+        },
+        "number": {
+          "ht": 3,
+          "vt": 2,
+          "n": {
+            "pattern": "#,##0.00"
+          }
+        },
+        "totalsLabel": {
+          "ff": "Microsoft YaHei",
+          "fs": 10,
+          "bl": 1,
+          "ht": 2,
+          "vt": 2
+        },
+        "totals": {
+          "ff": "Microsoft YaHei",
+          "fs": 10,
+          "bl": 1,
+          "ht": 3,
+          "vt": 2,
+          "n": {
+            "pattern": "#,##0.00"
+          }
+        }
+      },
+      "sheetOrder": [
+        "report-sheet"
+      ],
+      "sheets": {
+        "report-sheet": {
+          "id": "report-sheet",
+          "name": "报表资产清单",
+          "hidden": 0,
+          "rowCount": 50,
+          "columnCount": 12,
+          "zoomRatio": 1,
+          "defaultColumnWidth": 100,
+          "defaultRowHeight": 26,
+          "mergeData": [
+            {
+              "startRow": 0,
+              "endRow": 0,
+              "startColumn": 0,
+              "endColumn": 5
+            }
+          ],
+          "cellData": {
+            "0": {
+              "0": {
+                "v": "报表资产清单",
+                "s": "title"
+              }
+            },
+            "1": {
+              "0": {
+                "v": "开始日期：{{params.startDate}}",
+                "s": "meta"
+              }
+            },
+            "2": {
+              "0": {
+                "v": "报表编码",
+                "s": "header"
+              },
+              "1": {
+                "v": "报表名称",
+                "s": "header"
+              },
+              "2": {
+                "v": "工作表名",
+                "s": "header"
+              },
+              "3": {
+                "v": "数据集编码",
+                "s": "header"
+              },
+              "4": {
+                "v": "数据集名称",
+                "s": "header"
+              },
+              "5": {
+                "v": "状态",
+                "s": "header"
+              }
+            },
+            "3": {
+              "0": {
+                "v": "{{detail.reportCode}}",
+                "s": "center"
+              },
+              "1": {
+                "v": "{{detail.reportName}}",
+                "s": "center"
+              },
+              "2": {
+                "v": "{{detail.sheetName}}",
+                "s": "center"
+              },
+              "3": {
+                "v": "{{detail.datasetCode}}",
+                "s": "center"
+              },
+              "4": {
+                "v": "{{detail.datasetName}}",
+                "s": "center"
+              },
+              "5": {
+                "v": "{{detail.isEnabled}}",
+                "s": "number"
+              }
+            }
+          },
+          "rowData": {
+            "0": {
+              "h": 42
+            },
+            "1": {
+              "h": 30
+            },
+            "2": {
+              "h": 34
+            }
+          },
+          "columnData": {
+            "0": {
+              "w": 150
+            },
+            "1": {
+              "w": 120
+            },
+            "2": {
+              "w": 120
+            },
+            "3": {
+              "w": 120
+            },
+            "4": {
+              "w": 120
+            },
+            "5": {
+              "w": 120
+            }
+          },
+          "rowHeader": {
+            "width": 46,
+            "hidden": 0
+          },
+          "columnHeader": {
+            "height": 24,
+            "hidden": 0
+          },
+          "showGridlines": 1,
+          "rightToLeft": 0
+        }
+      }
+    },
+    "binding": {
+      "version": 1,
+      "parameterBindings": [
+        {
+          "code": "startDate",
+          "sheetId": "report-sheet",
+          "row": 1,
+          "column": 0
+        }
+      ],
+      "detailBinding": {
+        "datasetCode": "detail",
+        "sheetId": "report-sheet",
+        "templateRow": 3,
+        "fields": [
+          {
+            "code": "reportCode",
+            "column": 0
+          },
+          {
+            "code": "reportName",
+            "column": 1
+          },
+          {
+            "code": "sheetName",
+            "column": 2
+          },
+          {
+            "code": "datasetCode",
+            "column": 3
+          },
+          {
+            "code": "datasetName",
+            "column": 4
+          },
+          {
+            "code": "isEnabled",
+            "column": 5
+          }
+        ]
+      }
+    },
+    "revision": 1
+  },
+  "dataset": {
+    "code": "report_asset_inventory",
+    "name": "报表资产清单数据集",
+    "queryText": "SELECT r.Code AS reportCode, r.Name AS reportName, r.SheetName AS sheetName, d.Code AS datasetCode, d.Name AS datasetName, CAST(r.IsEnabled AS int) AS isEnabled FROM dbo.RcReport r INNER JOIN dbo.RcDataset d ON d.Code = r.DatasetCode WHERE r.CreateTime >= @startDate OR @startDate IS NULL ORDER BY r.Code",
+    "fieldSchema": {
+      "variables": [
+        {
+          "code": "startDate",
+          "displayName": "开始日期",
+          "dataType": "date",
+          "required": false,
+          "sourceType": "Form",
+          "sourceCode": null,
+          "sourceFieldCode": null
+        }
+      ],
+      "fields": [
+        {
+          "code": "reportCode",
+          "displayName": "报表编码",
+          "dataType": "string"
+        },
+        {
+          "code": "reportName",
+          "displayName": "报表名称",
+          "dataType": "string"
+        },
+        {
+          "code": "sheetName",
+          "displayName": "工作表名",
+          "dataType": "string"
+        },
+        {
+          "code": "datasetCode",
+          "displayName": "数据集编码",
+          "dataType": "string"
+        },
+        {
+          "code": "datasetName",
+          "displayName": "数据集名称",
+          "dataType": "string"
+        },
+        {
+          "code": "isEnabled",
+          "displayName": "状态",
+          "dataType": "number"
+        }
+      ]
+    },
+    "timeoutSeconds": 60,
+    "maxRows": 20000,
+    "isEnabled": true
+  }
+}

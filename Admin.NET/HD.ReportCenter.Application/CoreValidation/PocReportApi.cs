@@ -33,6 +33,7 @@ public sealed class PocReportApi : IDynamicApiController
     private readonly PocDataAssetService? _dataAssetService;
     private readonly PocExternalParameterSourceService? _externalParameterSourceService;
     private readonly PocSqlDatasetExecutor? _datasetExecutor;
+    private readonly PocReportPackageService? _reportPackageService;
     private readonly PocTemplateDataExporter _templateDataExporter = new();
 
     /// <summary>初始化 PocReportApi 实例，保存后续处理所需的依赖并建立初始状态。</summary>
@@ -43,6 +44,7 @@ public sealed class PocReportApi : IDynamicApiController
     /// <param name="datasetExecutor">datasetExecutor 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <param name="dataAssetService">dataAssetService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <param name="externalParameterSourceService">externalParameterSourceService 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
+    /// <param name="reportPackageService">报表包导出/导入服务，缺失时包接口返回 503。</param>
     public PocReportApi(
         PocTemplateService templateService,
         PocTemplateExchangeService templateExchangeService,
@@ -50,7 +52,8 @@ public sealed class PocReportApi : IDynamicApiController
         PocReportConfigurationService? configurationService = null,
         PocSqlDatasetExecutor? datasetExecutor = null,
         PocDataAssetService? dataAssetService = null,
-        PocExternalParameterSourceService? externalParameterSourceService = null)
+        PocExternalParameterSourceService? externalParameterSourceService = null,
+        PocReportPackageService? reportPackageService = null)
     {
         _templateService = templateService;
         _templateExchangeService = templateExchangeService;
@@ -59,6 +62,7 @@ public sealed class PocReportApi : IDynamicApiController
         _datasetExecutor = datasetExecutor;
         _dataAssetService = dataAssetService;
         _externalParameterSourceService = externalParameterSourceService;
+        _reportPackageService = reportPackageService;
     }
 
     /// <summary>读取数据库模板；未保存过时由服务层返回 revision 0 的种子模板。</summary>
@@ -216,6 +220,64 @@ public sealed class PocReportApi : IDynamicApiController
         await HandleConfigurationOperation(
             () => RequireConfigurationService().CreateAsync(request));
 
+    /// <summary>删除报表及其参数、模板快照等全部配套数据；编码不存在时返回 404。</summary>
+    [SuppressMonitor]
+    [HttpDelete("/api/report-center/poc/reports/{reportCode}")]
+    public async Task<PocDeletedDocument> DeleteReport(
+        [FromRoute] string reportCode)
+    {
+        reportCode = EnsureReportCode(reportCode);
+        return await HandleConfigurationOperation(
+            () => RequireConfigurationService().DeleteReportAsync(reportCode));
+    }
+
+    /// <summary>
+    /// 把已保存的报表（配置 + 参数 + 模板 + 数据集定义）聚合导出为报表包 JSON；
+    /// 包内不含连接串/密码，也不含分享保护口令摘要。报表尚未保存模板时返回业务错误。
+    /// </summary>
+    [SuppressMonitor]
+    [HttpGet("/api/report-center/poc/reports/{reportCode}/package")]
+    public Task<PocReportPackage> ExportReportPackage([FromRoute] string reportCode)
+    {
+        reportCode = EnsureReportCode(reportCode);
+        return HandleReportPackageOperation(
+            () => RequireReportPackageService().ExportAsync(reportCode));
+    }
+
+    /// <summary>
+    /// 只读校验上传的报表包：结构、编码、参数、SQL、变量绑定、模板一致性逐项检查，
+    /// 并探测与当前库的编码冲突；响应不写库、不执行 SQL。
+    /// </summary>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/poc/report-packages/validate")]
+    public Task<PocReportPackageValidateResult> ValidateReportPackage(
+        [FromBody] PocReportPackageValidateRequest request) =>
+        HandleReportPackageOperation(
+            () => RequireReportPackageService().ValidateAsync(request?.Package));
+
+    /// <summary>
+    /// 在用户选定的目标数据源上受限试跑报表包：SQL 重过只读校验、参数按现有规则解析，
+    /// 最多返回 50 行并比对实际列与包内字段契约。
+    /// </summary>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/poc/report-packages/dry-run")]
+    public Task<PocReportPackageDryRunResult> DryRunReportPackage(
+        [FromBody] PocReportPackageDryRunRequest request,
+        CancellationToken cancellationToken) =>
+        HandleReportPackageOperation(
+            () => RequireReportPackageService().DryRunAsync(request, cancellationToken));
+
+    /// <summary>
+    /// 导入报表包：服务端重跑全部校验后按冲突策略落库（数据集新建/复用/替换，报表 Create/Replace），
+    /// 模板经服务端重扫绑定保存，导入后报表必须处于已保存配置 + 已保存模板状态。
+    /// </summary>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/poc/report-packages/import")]
+    public Task<PocReportPackageImportResult> ImportReportPackage(
+        [FromBody] PocReportPackageImportRequest request) =>
+        HandleReportPackageOperation(
+            () => RequireReportPackageService().ImportAsync(request));
+
     /// <summary>读取全部脱敏数据源。</summary>
     [SuppressMonitor]
     [HttpGet("/api/report-center/poc/data-sources")]
@@ -240,6 +302,13 @@ public sealed class PocReportApi : IDynamicApiController
         await HandleConfigurationOperation(
             () => RequireDataAssetService().TestDataSourceAsync(request, cancellationToken));
 
+    /// <summary>删除未被数据集引用的全局数据源；仍被引用时返回 409 和引用数据集清单。</summary>
+    [SuppressMonitor]
+    [HttpDelete("/api/report-center/poc/data-sources/{code}")]
+    public async Task<PocDeletedDocument> DeleteDataSource([FromRoute] string code) =>
+        await HandleConfigurationOperation(
+            () => RequireDataAssetService().DeleteDataSourceAsync(code));
+
     /// <summary>读取可跨报表复用的外部参数接口源；响应不包含运行时凭据。</summary>
     [SuppressMonitor]
     [HttpGet("/api/report-center/poc/external-parameter-sources")]
@@ -254,6 +323,14 @@ public sealed class PocReportApi : IDynamicApiController
         [FromBody] PocExternalParameterSourceInput request) =>
         await HandleConfigurationOperation(
             () => RequireExternalParameterSourceService().SaveAsync(code, request));
+
+    /// <summary>删除未被引用的外部参数源；报表参数或数据集变量仍绑定时返回 409 和引用清单。</summary>
+    [SuppressMonitor]
+    [HttpDelete("/api/report-center/poc/external-parameter-sources/{code}")]
+    public async Task<PocDeletedDocument> DeleteExternalParameterSource(
+        [FromRoute] string code) =>
+        await HandleConfigurationOperation(
+            () => RequireExternalParameterSourceService().DeleteAsync(code));
 
     /// <summary>使用临时上下文测试外部参数源，响应只返回已配置字段。</summary>
     [SuppressMonitor]
@@ -312,6 +389,13 @@ public sealed class PocReportApi : IDynamicApiController
         CancellationToken cancellationToken) =>
         await HandleDatasetOperation(
             () => RequireDataAssetService().PreviewDatasetAsync(code, request, cancellationToken));
+
+    /// <summary>删除未被报表引用的全局数据集；仍被引用时返回 409 和引用报表清单。</summary>
+    [SuppressMonitor]
+    [HttpDelete("/api/report-center/poc/datasets/{code}")]
+    public async Task<PocDeletedDocument> DeleteDataset([FromRoute] string code) =>
+        await HandleConfigurationOperation(
+            () => RequireDataAssetService().DeleteDatasetAsync(code));
 
     /// <summary>使用数据库中指定 revision 的模板生成普通体量全量数据 Excel。</summary>
     [SuppressMonitor]
@@ -555,6 +639,86 @@ public sealed class PocReportApi : IDynamicApiController
         _externalParameterSourceService
         ?? throw Oops.Oh("EXTERNAL_PARAMETER_SOURCE_SERVICE_NOT_AVAILABLE").StatusCode(503);
 
+    /// <summary>获取报表包服务；依赖未注册时返回稳定的 503 业务错误而不是空引用。</summary>
+    /// <returns>可用的报表包导出/导入服务实例。</returns>
+    private PocReportPackageService RequireReportPackageService() =>
+        _reportPackageService
+        ?? throw Oops.Oh("REPORT_PACKAGE_SERVICE_NOT_AVAILABLE").StatusCode(503);
+
+    /// <summary>
+    /// 报表包接口的统一异常翻译：包业务错误按错误码区分 409（DATASET_IN_USE、REPORT_ALREADY_EXISTS）
+    /// 与 400；同时覆盖导入编排触达的配置、模板、参数、执行和存储层既有异常，语义与其他入口一致。
+    /// </summary>
+    /// <param name="operation">待执行的包操作委托。</param>
+    /// <returns>操作结果，异常时抛出 FriendlyException。</returns>
+    private static async Task<T> HandleReportPackageOperation<T>(Func<Task<T>> operation)
+    {
+        try
+        {
+            return await operation();
+        }
+        // 第一层：报表包自身的业务拒绝码。资源被占用与撞码属于冲突语义映射 409，其余按请求错误映射 400。
+        catch (PocReportPackageException exception)
+        {
+            var statusCode = exception.Code is "DATASET_IN_USE" or "REPORT_ALREADY_EXISTS" ? 409 : 400;
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(statusCode);
+        }
+        // 第二层：乐观并发冲突。导入用修订号 0 新建，只有并发改动才会触发，统一按 409 返回。
+        catch (PocReportConfigurationRevisionConflictException)
+        {
+            throw Oops.Oh("REPORT_CONFIGURATION_REVISION_CONFLICT").StatusCode(409);
+        }
+        catch (PocTemplateRevisionConflictException)
+        {
+            throw Oops.Oh("TEMPLATE_REVISION_CONFLICT").StatusCode(409);
+        }
+        catch (PocDataAssetRevisionConflictException)
+        {
+            throw Oops.Oh("DATA_ASSET_REVISION_CONFLICT").StatusCode(409);
+        }
+        catch (PocReportAlreadyExistsException exception)
+        {
+            throw Oops.Oh($"REPORT_ALREADY_EXISTS: {exception.Message}").StatusCode(409);
+        }
+        // 第三层：导入编排触达的既有领域异常，翻译逻辑与配置/模板/数据集入口保持一致。
+        catch (PocTemplateBindingMismatchException)
+        {
+            throw Oops.Oh(PocTemplateBindingMismatchException.ErrorCode).StatusCode(400);
+        }
+        catch (PocTemplateValidationException exception)
+        {
+            throw Oops.Oh("TEMPLATE_VALIDATION_FAILED: {0}", exception.Message).StatusCode(400);
+        }
+        catch (PocParameterResolutionException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.ParameterCode}").StatusCode(400);
+        }
+        catch (PocDatasetConfigurationException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
+        }
+        catch (PocDatasetExecutionException exception)
+        {
+            throw Oops.Oh(exception.Code).StatusCode(400);
+        }
+        catch (PocExternalParameterException exception)
+        {
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
+        }
+        catch (KeyNotFoundException exception)
+        {
+            throw Oops.Oh($"REPORT_NOT_FOUND: {exception.Message}").StatusCode(404);
+        }
+        catch (DbException)
+        {
+            throw Oops.Oh("DATA_SOURCE_CONNECTION_FAILED").StatusCode(400);
+        }
+        catch (SqlSugarException)
+        {
+            throw Oops.Oh("DATA_SOURCE_CONNECTION_FAILED").StatusCode(400);
+        }
+    }
+
     /// <summary>响应 PocReportApi 的 Handle Configuration Operation 事件，并协调相关状态和后续操作。</summary>
     /// <param name="operation">operation 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <returns>返回值与当前方法声明的类型及空值约束保持一致。</returns>
@@ -571,6 +735,16 @@ public sealed class PocReportApi : IDynamicApiController
         catch (PocReportAlreadyExistsException exception)
         {
             throw Oops.Oh($"REPORT_ALREADY_EXISTS: {exception.Message}").StatusCode(409);
+        }
+        catch (PocResourceInUseException exception)
+        {
+            // 删除被引用资源属于业务冲突，回传错误码和引用清单让管理员先处理引用方。
+            throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(409);
+        }
+        catch (KeyNotFoundException exception)
+        {
+            // 删除目标在保存与删除之间被别人先删掉时按 404 处理，与 REPORT_NOT_FOUND 语义一致。
+            throw Oops.Oh($"REPORT_NOT_FOUND: {exception.Message}").StatusCode(404);
         }
         catch (PocDataAssetRevisionConflictException)
         {

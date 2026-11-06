@@ -120,6 +120,9 @@ public sealed record PocCreateReportRequest(
 public sealed record PocReportCreateOptionsDocument(
     IReadOnlyList<PocDatasetOption> Datasets);
 
+/// <summary>删除接口的确认回执，仅回传被删除的资源编码，不携带任何配置内容。</summary>
+public sealed record PocDeletedDocument(string Code);
+
 public sealed record PocSaveReportConfigurationRequest(
     string Name,
     string SheetName,
@@ -265,6 +268,7 @@ public sealed class PocReportConfigurationService : ITransient
     {
         var normalizedPage = Math.Max(page, 1);
         var normalizedPageSize = Math.Clamp(pageSize, 1, 100);
+        // 第一阶段：读取当前页报表，并只为该页报表补查模板修订号，控制查询范围。
         var storedPage = await _store.ListReportsPageAsync(
             normalizedPage,
             normalizedPageSize,
@@ -276,6 +280,7 @@ public sealed class PocReportConfigurationService : ITransient
         var templateByReport = templates.ToDictionary(
             item => item.ReportCode,
             StringComparer.OrdinalIgnoreCase);
+        // 第二阶段：合并报表与模板的版本、更新时间，生成管理列表需要的摘要文档。
         var items = storedPage.Items.Select(report =>
         {
             templateByReport.TryGetValue(report.Code, out var template);
@@ -295,6 +300,7 @@ public sealed class PocReportConfigurationService : ITransient
                 updatedAt);
         }).ToArray();
         var total = storedPage.Total;
+        // 第三阶段：库内没有报表且未搜索时回退到内置目录报表，保证列表页有可演示的首行。
         if (total == 0 && string.IsNullOrWhiteSpace(keyword))
         {
             var fallback = PocReportCatalog.GetDefinition();
@@ -580,6 +586,24 @@ public sealed class PocReportConfigurationService : ITransient
         return await GetDocumentAsync(reportCode);
     }
 
+    /// <summary>
+    /// 删除报表及其全部配套数据（参数、模板快照、随配置保存的分享保护口令摘要）。
+    /// 编码不存在时抛出 KeyNotFoundException，由 API 层映射为 404；数据集等共享资源不会被连带删除。
+    /// </summary>
+    /// <param name="reportCode">待删除报表的编码。</param>
+    /// <returns>回传被删除编码的确认文档。</returns>
+    public async Task<PocDeletedDocument> DeleteReportAsync(string reportCode)
+    {
+        var normalizedCode = NormalizeReportCode(reportCode);
+        if (!await _store.ReportExistsAsync(normalizedCode))
+        {
+            throw new KeyNotFoundException($"不存在报表 '{normalizedCode}'。");
+        }
+
+        await _store.DeleteAsync(normalizedCode);
+        return new PocDeletedDocument(normalizedCode);
+    }
+
     /// <summary>构建 PocReportConfigurationService 所需的 Create Fallback Document 内容，并保证生成结果符合调用约定。</summary>
     /// <param name="now">now 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
     /// <param name="storedDatasets">storedDatasets 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
@@ -751,10 +775,13 @@ public sealed class PocReportConfigurationService : ITransient
             dataset.IsEnabled);
     }
 
-    /// <summary>校验 PocReportConfigurationService 的 Validate Dataset Variable Bindings 条件，并返回可供后续流程判断的结果。</summary>
-    /// <param name="variables">variables 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
-    /// <param name="parameters">parameters 对应的业务输入；具体类型和空值范围以方法签名为准。</param>
-    private static void ValidateDatasetVariableBindings(
+    /// <summary>
+    /// 校验每个数据集变量都有同名、同类型（External 还需同源字段）的报表参数承接取值。
+    /// 报表包校验复用同一方法，使“包内数据集变量缺同名参数”在 validate 阶段即被拦截。
+    /// </summary>
+    /// <param name="variables">数据集输入变量定义。</param>
+    /// <param name="parameters">报表参数定义。</param>
+    internal static void ValidateDatasetVariableBindings(
         IReadOnlyList<PocDatasetVariableDefinition> variables,
         IReadOnlyList<PocParameterDefinition> parameters)
     {
@@ -915,9 +942,13 @@ public sealed class PocReportConfigurationService : ITransient
         }
     }
 
-    /// <summary>校验 PocReportConfigurationService 的 Validate Request 条件，并返回可供后续流程判断的结果。</summary>
+    /// <summary>
+    /// 校验报表保存请求的名称、工作表、预览/导出设置、数据集编码和全部参数定义。
+    /// 报表包校验（PocReportPackageService）复用同一方法，保证包内参数在导入前
+    /// 就按线上保存链路的规则被完整检查，而不是维护第二套白名单。
+    /// </summary>
     /// <param name="request">本次操作使用的输入数据。</param>
-    private static void ValidateRequest(PocSaveReportConfigurationRequest request)
+    internal static void ValidateRequest(PocSaveReportConfigurationRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Name) ||
             request.Name.Length > 128 ||

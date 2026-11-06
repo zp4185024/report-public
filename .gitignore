@@ -54,5 +54,13 @@ Admin.NET/Admin.NET.Application/Configuration/DeepSeek.json
 .gstack/
 
 # local verification artifacts and deployment packages
-.zcode/
-deploy/
+# deploy/ 只忽略仓库根的部署归档目录，不能写成裸 deploy/，否则 scripts/deploy、docs/deploy 会被一并忽略。
+# .zcode/ 下只放行 skills/（报表设计技能随仓库分发），会话与工作流状态仍全部忽略。
+.zcode/*
+!.zcode/skills/
+/deploy/
+
+# test run artifacts and local service logs
+Admin.NET/HD.ReportCenter.Tests/TestResults/
+ReportWeb/vite-codex.*.log
+/模板列表E2E测试报告.docx

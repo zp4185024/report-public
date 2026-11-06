@@ -138,6 +138,8 @@ export interface DatasetFieldDefinition {
   code: string;
   displayName: string;
   dataType: string;
+  /** 可选列注释（中文业务含义）；预览接口按数据库注释填充，取不到为 null。 */
+  description?: string | null;
 }
 
 /** 字段面板、查询区和模板校验共同消费的报表元数据。 */
@@ -318,6 +320,11 @@ export interface DatasetReferenceDocument {
   enabled: boolean;
 }
 
+/** 删除接口的确认回执，只回传被删除的资源编码。 */
+export interface DeletedDocument {
+  code: string;
+}
+
 export interface ReportSummaryDocument {
   reportCode: string;
   name: string;
@@ -444,4 +451,561 @@ export interface ExportJob {
   error: string | null;
   createdAt: string;
   completedAt: string | null;
+}
+
+/** 报表包文件的固定类型标识；上传向导用它先做一次本地识别。 */
+export const REPORT_PACKAGE_KIND = 'hd-report-center.report-package';
+
+/** 当前前端支持的报表包结构版本；更高的版本必须先升级导入向导。 */
+export const REPORT_PACKAGE_SUPPORTED_VERSION = 1;
+
+/** 报表包内的报表定义节；只含业务内容，不带数据库主键、修订号和分享保护口令。 */
+export interface ReportPackageReport {
+  code: string;
+  name: string;
+  sheetName: string;
+  datasetCode: string;
+  previewSettings: PreviewSettings;
+  exportSettings: ExportSettings;
+  fieldPresentations: FieldPresentationDefinition[] | null;
+  isEnabled: boolean;
+}
+
+/** 报表包内的参数定义；字段与后台 RcReportParameter 对应，默认值是表达式原文。 */
+export interface ReportPackageParameter {
+  code: string;
+  displayName: string;
+  dataType: string;
+  controlType: string;
+  sourceType: string;
+  sourceCode: string | null;
+  sourceFieldCode: string | null;
+  urlKey: string | null;
+  defaultExpression: string | null;
+  fixedValue: string | null;
+  options: ValueOption[] | null;
+  isVisible: boolean;
+  isReadOnly: boolean;
+  isRequired: boolean;
+  allowUrlPrefill: boolean;
+  displayOrder: number;
+}
+
+/** 报表包内的模板节；revision 只反映导出时的模板版本，导入后从 1 重新开始。 */
+export interface ReportPackageTemplate {
+  snapshot: IWorkbookData;
+  binding: TemplateBinding;
+  revision: number;
+}
+
+/** 报表包内的数据集字段契约：入参变量与返回字段的声明。 */
+export interface ReportPackageDatasetSchema {
+  variables: DatasetVariableDefinition[];
+  fields: DatasetFieldDefinition[];
+}
+
+/** 报表包内的数据集节；不含连接信息，导入时由用户选择目标数据源。 */
+export interface ReportPackageDataset {
+  code: string;
+  name: string;
+  queryText: string;
+  fieldSchema: ReportPackageDatasetSchema;
+  timeoutSeconds: number;
+  maxRows: number;
+  isEnabled: boolean;
+}
+
+/** 报表包根契约；包内绝不包含数据源连接串或密码。 */
+export interface ReportPackage {
+  packageKind: string;
+  packageVersion: number;
+  exportedAt: string;
+  sourceDataSourceCode: string;
+  sourceDataSourceType: string;
+  report: ReportPackageReport;
+  parameters: ReportPackageParameter[];
+  template: ReportPackageTemplate;
+  dataset: ReportPackageDataset;
+}
+
+/** 校验报告中的包内容摘要，供向导展示将要导入什么。 */
+export interface ReportPackageSummary {
+  reportCode: string;
+  reportName: string;
+  datasetCode: string;
+  parameterCount: number;
+  fieldCount: number;
+  sourceDataSourceType: string;
+}
+
+/** 与目标库的冲突探测结果；datasetIdentical 在数据集不存在时为 null。 */
+export interface ReportPackageCollisions {
+  reportCodeExists: boolean;
+  datasetCodeExists: boolean;
+  datasetIdentical: boolean | null;
+  datasetReferencedByOther: boolean | null;
+}
+
+/** 校验报告中的单条错误或警告；code 为稳定业务错误码，message 面向管理员展示。 */
+export interface ReportPackageIssue {
+  code: string;
+  message: string;
+}
+
+/** 报表包校验结果；errors 非空表示不可导入，warnings 只提示不阻断。 */
+export interface ReportPackageValidateResult {
+  ok: boolean;
+  errors: ReportPackageIssue[];
+  warnings: ReportPackageIssue[];
+  packageSummary: ReportPackageSummary;
+  collisions: ReportPackageCollisions;
+}
+
+/** 试跑请求：整份包 + 用户选择的目标数据源 + 为包参数填写的样例取值。 */
+export interface ReportPackageDryRunRequest {
+  package: ReportPackage;
+  targetDataSourceCode: string;
+  parameterValues: Record<string, string>;
+}
+
+/** 试跑返回的样例行；键为查询结果列名，值为标量。 */
+export type ReportPackageDryRunRow = Record<string, string | number | null>;
+
+/** 试跑结果：最多 50 行真实查询数据和字段契约比对结论。 */
+export interface ReportPackageDryRunResult {
+  columns: string[];
+  rows: ReportPackageDryRunRow[];
+  elapsedMilliseconds: number;
+  rowCountCapped: boolean;
+  fieldSchemaMatch: boolean;
+  fieldSchemaMismatches: string[];
+}
+
+/** 导入提交请求；mode=Replace 表示先删旧报表再建，replaceDataset 控制是否替换同编码数据集。 */
+export interface ReportPackageImportRequest {
+  package: ReportPackage;
+  targetDataSourceCode: string;
+  mode: 'Create' | 'Replace';
+  replaceDataset: boolean;
+  dryRunPerformed: boolean;
+}
+
+/** 导入完成后的动作摘要，告诉管理员数据集和报表各自执行了什么动作。 */
+export interface ReportPackageImportResult {
+  reportCode: string;
+  datasetAction: string;
+  reportAction: string;
+  warnings: string[];
+}
+
+/* ===== 数据同步任务契约（镜像 CoreValidation/PocDataSyncContracts.cs 与 PocDataSyncApi.cs）===== */
+
+/** 数据同步包文件的固定类型标识；导入向导用它先做一次本地识别。镜像 PocDataSyncPackageFormat.PackageKind。 */
+export const DATA_SYNC_PACKAGE_KIND = 'hd-report-center.sync-package';
+
+/** 当前前端支持的同步包结构版本；更高的版本必须先升级导入向导。镜像 PocDataSyncPackageFormat.PackageVersion。 */
+export const DATA_SYNC_PACKAGE_SUPPORTED_VERSION = 1;
+
+/** 字段级映射中的单个转换器步骤；Type 是内置转换器名，Args 值均为文本。镜像 PocSyncConverterStep。 */
+export interface SyncConverterStep {
+  type: string;
+  args: Record<string, string | null> | null;
+}
+
+/** 单个字段的同步映射：源字段经转换链后写入目标列。镜像 PocSyncColumnMapping。 */
+export interface SyncColumnMapping {
+  sourceField: string;
+  targetField: string;
+  targetType: string;
+  length: number | null;
+  nullable: boolean;
+  converters: SyncConverterStep[];
+}
+
+/** 任务调度定义；Type 为 Manual/Daily/Interval/Cron。镜像 PocSyncScheduleDefinition。 */
+export interface SyncScheduleDefinition {
+  type: string;
+  time: string | null;
+  intervalMinutes: number;
+  /** Cron 调度表达式（标准 5 段）；仅 Type 为 Cron 时有值，其余类型为 null。镜像 CronExpression。 */
+  cronExpression?: string | null;
+}
+
+/** 同步任务完整定义（DefinitionJson 的对象形态）。镜像 PocSyncTaskDefinition。 */
+export interface SyncTaskDefinition {
+  mappings: SyncColumnMapping[];
+  schedule: SyncScheduleDefinition | null;
+}
+
+/** 同步包内的源数据集快照；fieldSchema 后端按 JObject 原样携带，不做结构解释。镜像 PocDataSyncPackageDataset。 */
+export interface DataSyncPackageDataset {
+  code: string;
+  name: string;
+  dataSourceCode: string;
+  dataSourceType: string;
+  queryText: string;
+  fieldSchema: Record<string, unknown>;
+  timeoutSeconds: number;
+  maxRows: number;
+  isEnabled: boolean;
+}
+
+/** 数据同步包根契约；包内绝不包含连接串或密码。镜像 PocDataSyncPackage。 */
+export interface DataSyncPackage {
+  packageKind: string;
+  packageVersion: number;
+  exportedAt: string;
+  taskCode: string;
+  sourceDataset: DataSyncPackageDataset;
+  targetDataSourceCode: string;
+  targetDataSourceType: string;
+  targetTable: string;
+  conflictPolicy: string;
+  scheduleType: string;
+  scheduleTime: string | null;
+  intervalMinutes: number;
+  mappings: SyncColumnMapping[];
+  /** Cron 调度表达式（标准 5 段）；仅 scheduleType 为 Cron 时有值，旧包无此字段。 */
+  scheduleCron?: string | null;
+}
+
+/** 同步包校验请求体：直接携带整份解析后的同步包。镜像 PocDataSyncValidateRequest。 */
+export interface DataSyncValidateRequest {
+  package: DataSyncPackage | null;
+}
+
+/** 校验报告中的单条错误或警告；code 为稳定业务错误码。镜像 PocDataSyncIssue。 */
+export interface DataSyncIssue {
+  code: string;
+  message: string;
+}
+
+/** 与当前库的冲突探测结果；数据集一致性结论在数据集不存在时为 null。镜像 PocDataSyncCollisions。 */
+export interface DataSyncCollisions {
+  taskCodeExists: boolean;
+  datasetCodeExists: boolean;
+  datasetIdentical: boolean | null;
+  datasetReferencedByReports: boolean | null;
+  targetDataSourceExists: boolean;
+  targetDataSourceTypeMatch: boolean | null;
+}
+
+/** 校验报告里的包内容摘要，供导入向导展示将导入什么。镜像 PocDataSyncPackageSummary。 */
+export interface DataSyncPackageSummary {
+  taskCode: string;
+  sourceDatasetCode: string;
+  targetTable: string;
+  mappingCount: number;
+  targetDataSourceType: string;
+}
+
+/** 同步包校验结果；errors 非空表示不可导入，warnings 只提示不阻断。镜像 PocDataSyncValidateResult。 */
+export interface DataSyncValidateResult {
+  ok: boolean;
+  errors: DataSyncIssue[];
+  warnings: DataSyncIssue[];
+  collisions: DataSyncCollisions | null;
+  packageSummary: DataSyncPackageSummary | null;
+}
+
+/** 同步任务试跑请求：行数上限（服务端封顶 50）与源数据集变量的可选取值。镜像 PocDataSyncTryRunRequest。 */
+export interface DataSyncTryRunRequest {
+  rowLimit: number;
+  parameters?: Record<string, string | null>;
+}
+
+/** 同步包试跑请求：包 + 用户选择的目标数据源。镜像 PocDataSyncDryRunRequest。 */
+export interface DataSyncDryRunRequest {
+  package: DataSyncPackage | null;
+  targetDataSourceCode: string | null;
+  parameters?: Record<string, string | null>;
+}
+
+/** 试跑样例行：转换前后的字段值对照，键分别为源字段名与目标列名。镜像 PocDataSyncSampleRow。 */
+export interface DataSyncSampleRow {
+  source: Record<string, DataRowValue>;
+  target: Record<string, DataRowValue>;
+}
+
+/** 试跑结果：最多 50 行端到端读+转换（不写目标库），附目标列结论。镜像 PocDataSyncTryRunResult。 */
+export interface DataSyncTryRunResult {
+  ok: boolean;
+  targetColumns: string[];
+  samples: DataSyncSampleRow[];
+  elapsedMilliseconds: number;
+  rowCountCapped: boolean;
+  failedRows: number;
+  errors: string[];
+}
+
+/** 同步包导入提交请求；mode 为 Create（新建）或 Replace（先删旧任务再建）。镜像 PocDataSyncImportRequest。 */
+export interface DataSyncImportRequest {
+  package: DataSyncPackage | null;
+  targetDataSourceCode: string | null;
+  mode: string;
+  dryRunPerformed: boolean;
+}
+
+/** 导入完成后的动作摘要，告诉管理员数据集和同步任务各自执行了什么动作。镜像 PocDataSyncImportResult。 */
+export interface DataSyncImportResult {
+  taskCode: string;
+  datasetAction: string;
+  taskAction: string;
+  warnings: string[];
+}
+
+/** 同步任务对外文档：任务列配置 + 解析后的映射定义。镜像 PocSyncTaskDocument。 */
+export interface SyncTaskDocument {
+  code: string;
+  name: string;
+  sourceDatasetCode: string;
+  targetDataSourceCode: string;
+  targetTable: string;
+  conflictPolicy: string;
+  scheduleType: string;
+  scheduleTime: string | null;
+  intervalMinutes: number;
+  enabled: boolean;
+  revision: number;
+  lastRunAt: string | null;
+  mappings: SyncColumnMapping[];
+  /** Cron 调度表达式（标准 5 段）；仅 scheduleType 为 Cron 时有值，其余类型为 null。 */
+  scheduleCron?: string | null;
+}
+
+/** 同步任务保存输入；revision 是乐观并发期望修订号，0 表示首次落库。镜像 PocSyncTaskInput。 */
+export interface SyncTaskInput {
+  code: string;
+  name: string;
+  /** 旧契约的源数据集编码；携带 source 节时后端忽略本字段，保留是为了兼容旧客户端。 */
+  sourceDatasetCode?: string;
+  targetDataSourceCode: string;
+  targetTable: string;
+  conflictPolicy: string;
+  scheduleType: string;
+  scheduleTime: string | null;
+  intervalMinutes: number;
+  mappings: SyncColumnMapping[];
+  enabled: boolean;
+  revision: number;
+  /** 设计器新契约的源取数节；后端据此自动维护 `sync_src_<taskCode>` 源数据集。 */
+  source?: SyncTaskSourceInput | null;
+  /** Cron 调度表达式（标准 5 段）；仅 scheduleType 为 Cron 时提交，其余类型置 null（与后端裁剪规则一致）。 */
+  scheduleCron?: string | null;
+}
+
+/** 任务保存输入的源取数节：数据源编码 + 原样 SQL（选表模式由前端按方言生成）。镜像 PocSyncTaskSourceInput。 */
+export interface SyncTaskSourceInput {
+  dataSourceCode: string;
+  queryText: string;
+  name?: string | null;
+  /** 选表模式下的源表名：后端据此把数据库注释写入源数据集字段的 displayName。 */
+  sourceTable?: string | null;
+}
+
+/** 数据源表清单响应：该数据源连接库内的基础表名。镜像 PocSyncTableMetadataDocument。 */
+export interface SyncTableMetadataDocument {
+  dataSourceCode: string;
+  tables: string[];
+}
+
+/** 目标表列元数据：列名、数据库类型文本、可空标记与列注释（取不到为 null）。镜像 PocSyncColumnMetadataDocument。 */
+export interface SyncColumnMetadata {
+  name: string;
+  dataType: string;
+  nullable: boolean;
+  length: number | null;
+  description: string | null;
+}
+
+/** 目标表列清单响应：目标字段下拉选项的数据来源。镜像 PocSyncTableColumnsDocument。 */
+export interface SyncTableColumnsDocument {
+  dataSourceCode: string;
+  table: string;
+  columns: SyncColumnMetadata[];
+}
+
+/** 源取数预览请求：任务保存前对“数据源 + SQL”做真实受限查询。镜像 PocSyncSourcePreviewRequest。 */
+export interface SyncSourcePreviewRequest {
+  dataSourceCode: string;
+  queryText: string;
+  /** 选表模式下的源表名：提供时按列名匹配数据库注释填充字段的 description。 */
+  sourceTable?: string | null;
+}
+
+/** 同步运行日志状态；与后端字符串枚举保持一致。 */
+export type SyncRunStatus = 'Running' | 'Completed' | 'Failed' | 'Cancelled';
+
+/** 单行同步失败的定位明细；rowIndex 从 1 开始表示本次运行内的行序。镜像 PocDataSyncFailureDetail。 */
+export interface DataSyncFailureDetail {
+  rowIndex: number;
+  field: string;
+  reason: string;
+  originalValue: string | null;
+}
+
+/** 运行日志对外文档：统计与失败明细，供任务页轮询。镜像 PocSyncRunLogDocument。 */
+export interface SyncRunLogDocument {
+  runNo: string;
+  taskCode: string;
+  status: SyncRunStatus;
+  startedAt: string;
+  finishedAt: string | null;
+  rowsRead: number;
+  rowsWritten: number;
+  rowsFailed: number;
+  message: string | null;
+  failures: DataSyncFailureDetail[];
+}
+
+/** AI 助手全局设置文档；apiKeyMasked 为服务端打码值（sk-***last4），密钥原文永不下发。镜像 PocAiSettingsDocument。 */
+export interface AiSettings {
+  isEnabled: boolean;
+  baseUrl: string;
+  apiKeyMasked: string;
+  apiKeyConfigured: boolean;
+  model: string;
+  /// 视觉模型名（附件图片理解用）；空 = 回退主 model。模型名非密钥，正常回显。
+  visionModel: string;
+  sampleRowLimit: number;
+  sqlProbeEnabled: boolean;
+  sqlProbeRowLimit: number;
+  maxToolRounds: number;
+  updateTime: string | null;
+}
+
+/** AI 设置保存输入；apiKey 传空表示保留服务端已存值，避免打码回显被误清空。镜像 PocAiSettingsInput。 */
+export interface AiSettingsInput {
+  isEnabled: boolean;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  /// 视觉模型名；空串 = 回退主 model。
+  visionModel: string;
+  sampleRowLimit: number;
+  sqlProbeEnabled: boolean;
+  sqlProbeRowLimit: number;
+  maxToolRounds: number;
+}
+
+/** AI 连通性测试结果；message 面向管理员展示成功或失败原因。镜像 PocAiConnectionTestResult。 */
+export interface AiConnectionTestResult {
+  success: boolean;
+  message: string;
+  latencyMs: number;
+}
+
+/** AI 聊天消息角色；tool 消息由前端渲染为折叠条而不是正文。 */
+export type AiChatRole = 'user' | 'assistant' | 'tool';
+
+/** AI 聊天单条展示消息；tool 消息携带工具名/SQL 摘要/行数，content 为空。镜像 PocAiChatMessageView。 */
+export interface AiChatMessageView {
+  role: AiChatRole;
+  content: string | null;
+  toolName: string | null;
+  toolCallId: string | null;
+  sqlSummary: string | null;
+  rowCount: number | null;
+  success: boolean;
+  truncated: boolean;
+}
+
+/** AI 对话请求；sessionId 为空表示新会话，dataSourceCode 决定上下文注入与工具默认数据源。镜像 PocAiChatRequest。 */
+export interface AiChatRequest {
+  sessionId: string | null;
+  dataSourceCode: string;
+  message: string;
+  /// 参考材料附件（base64 内联，≤3 个；图片≤5MB、xlsx/pdf≤10MB）；内容不落库，随会话过期。
+  attachments?: AiChatAttachment[];
+}
+
+/** AI 聊天附件输入；dataBase64 不含 data: 前缀。镜像 PocAiChatAttachment。 */
+export interface AiChatAttachment {
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  dataBase64: string;
+}
+
+/** AI 对话响应；expired=true 表示前端携带的会话已过期，本轮按新上下文重建。镜像 PocAiChatResult。 */
+export interface AiChatResult {
+  sessionId: string;
+  messages: AiChatMessageView[];
+  expired: boolean;
+  draft: AiChatDraft | null;
+}
+
+/** AI 报表草稿状态：failed 表示最近一次编译/校验失败，等待 AI 按错误自修。镜像 PocAiDraftStatus。 */
+export type AiDraftStatus = 'submitted' | 'validated' | 'dryRunOk' | 'failed';
+
+/**
+ * 下发给前端草稿卡片的草稿：spec 原文、编译产物包、最近一次全链校验结果与状态。
+ * package 在编译失败时为 null（此时卡片只展示错误态）；校验/试跑/导入由前端复用
+ * reportPackageApi 完成，导入动作不经过任何 /ai/* 接口。镜像 PocAiChatDraftView。
+ */
+export interface AiChatDraft {
+  status: AiDraftStatus;
+  spec: Record<string, unknown> | null;
+  package: ReportPackage | null;
+  validateResult: ReportPackageValidateResult | null;
+}
+
+/** 会话关闭回执；closed=false 表示会话已不存在或早已过期，同样视为关闭成功。镜像 PocAiSessionClosedDocument。 */
+export interface AiSessionClosedDocument {
+  sessionId: string;
+  closed: boolean;
+}
+
+/** 前端侧栏使用的轻量数据源选项；来自 dataAssetApi.dataSources 的脱敏文档。 */
+export interface AiDataSourceOption {
+  code: string;
+  name: string;
+  dbType: string;
+}
+
+/**
+ * 同步 AI 智能匹配请求：直接携带源字段清单 + 目标列元数据 + 当前映射（设计器草稿在内存中齐备），
+ * 或只传 taskCode 由服务端装配。镜像 PocAiSyncMatchRequest。
+ */
+export interface AiSyncMatchRequest {
+  taskCode: string | null;
+  sourceDbType: string | null;
+  targetDbType: string | null;
+  sourceFields: AiSyncMatchSourceField[];
+  targetColumns: SyncColumnMetadata[];
+  mappings: SyncColumnMapping[];
+}
+
+/** 同步匹配的源字段描述：名称 + 类型代码 + 可选注释。镜像 PocAiSyncMatchSourceField。 */
+export interface AiSyncMatchSourceField {
+  name: string;
+  dataType: string;
+  description: string | null;
+}
+
+/** 置信度：high/mid/low；low 多与“需人工处理”并存。 */
+export type AiSyncMatchConfidence = 'high' | 'mid' | 'low';
+
+/**
+ * 单条映射建议：字段与 SyncColumnMapping 完全同构（可直接回填草稿），
+ * confidence/reason 仅供 UI 标注，写回 mappings 时丢弃；needsManual=true 表示
+ * 目标列无源字段对应（需人工处理），绝不写入 mappings。镜像 PocAiSyncMatchSuggestion。
+ */
+export interface AiSyncMatchSuggestion {
+  sourceField: string;
+  targetField: string;
+  targetType: string;
+  length: number | null;
+  nullable: boolean;
+  converters: SyncConverterStep[];
+  confidence: AiSyncMatchConfidence;
+  reason: string;
+  needsManual: boolean;
+}
+
+/** 同步匹配结果：建议列表 + 降级标记与原因。镜像 PocAiSyncMatchResult。 */
+export interface AiSyncMatchResult {
+  suggestions: AiSyncMatchSuggestion[];
+  degraded: boolean;
+  message: string | null;
 }
