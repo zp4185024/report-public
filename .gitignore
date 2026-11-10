@@ -67,3 +67,7 @@ ReportWeb/vite-codex.*.log
 
 # 开发机后台任务看板（ZCode 会话维护，不进仓库）
 ReportWeb/public/dev-status.html
+
+# 红线：内网运维信息永不入库（含凌河内网拓扑/远程管理放行脚本，仅本机留存）
+docs/ops/
+scripts/remote/
