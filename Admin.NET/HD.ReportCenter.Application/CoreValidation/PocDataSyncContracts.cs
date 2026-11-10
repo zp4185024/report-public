@@ -15,6 +15,9 @@ public sealed record PocSyncConverterStep(
 /// <summary>
 /// 单个字段的同步映射：源字段经转换链后写入目标列。
 /// TargetType 决定目标列 DDL 与终值校验；Nullable 为 false 时终值为 null 按失败行处理。
+/// IsKey 仅在冲突策略为 Upsert 时生效：标记该目标列为“按主键合并”的合并键，
+/// 全部映射中必须有且只有一条 IsKey=true 且该列不允许空；其余策略下该标志被忽略
+/// （随 DefinitionJson/同步包原样携带，旧 JSON 缺失反序列化为 false，天然兼容）。
 /// </summary>
 public sealed record PocSyncColumnMapping(
     string SourceField,
@@ -22,7 +25,8 @@ public sealed record PocSyncColumnMapping(
     string TargetType,
     int? Length,
     bool Nullable,
-    IReadOnlyList<PocSyncConverterStep> Converters);
+    IReadOnlyList<PocSyncConverterStep> Converters,
+    bool IsKey = false);
 
 /// <summary>
 /// 任务调度定义，随 DefinitionJson 一起保存并在导出包中携带。
@@ -262,13 +266,15 @@ public sealed record PocSyncTableMetadataDocument(
 /// <summary>
 /// 目标表列元数据：列名、数据库类型文本、可空标记与列注释（数据库里的 MS_Description/
 /// COMMENT 等中文业务含义）。Description 取不到时为 null，前端只在有值时展示，不造占位文案。
+/// IsPrimaryKey 来自数据库真实主键信息，供 Upsert 冲突策略在映射表格里提示“建议选它当合并键”。
 /// </summary>
 public sealed record PocSyncColumnMetadataDocument(
     string Name,
     string DataType,
     bool Nullable,
     int? Length,
-    string? Description = null);
+    string? Description = null,
+    bool IsPrimaryKey = false);
 
 /// <summary>目标表列清单响应：目标字段下拉选项的数据来源。</summary>
 public sealed record PocSyncTableColumnsDocument(

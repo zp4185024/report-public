@@ -38,6 +38,8 @@ export interface SyncTargetColumn {
   length: number | null;
   nullable: boolean;
   description?: string | null;
+  /** 数据库真实主键标志：Upsert 冲突策略选合并键时在下拉与键列提示中引用。 */
+  isPrimaryKey?: boolean;
 }
 
 /** 转换器参数表单字段描述；control 决定行内参数编辑器的输入控件形态。 */
@@ -72,6 +74,7 @@ export const TARGET_TYPE_OPTIONS: ReadonlyArray<{ value: string; label: string }
 export const CONFLICT_POLICY_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: 'TruncateFirst', label: '先清空目标表再写入' },
   { value: 'Append', label: '追加写入' },
+  { value: 'Upsert', label: '按主键合并（Upsert）' },
 ];
 
 /** 调度类型选项；与后端 ScheduleTypes 白名单保持一致。 */
@@ -432,7 +435,33 @@ export function targetColumnsFromMetadata(columns: readonly SyncColumnMetadata[]
     length: column.length,
     nullable: column.nullable,
     description: column.description ?? null,
+    isPrimaryKey: column.isPrimaryKey ?? false,
   }));
+}
+
+/**
+ * 校验 Upsert 冲突策略的合并键设计（保存前本地预检，后端以同一规则权威裁决）：
+ * Upsert 时全部映射中必须有且只有一条 isKey=true，且该列不允许空；
+ * 其他策略不消费合并键标志，直接放行。
+ * @param conflictPolicy - 当前冲突策略。
+ * @param mappings - 当前映射列表。
+ * @returns 面向设计器的中文错误信息；合法返回 null。
+ */
+export function validateUpsertKeySelection(
+  conflictPolicy: string,
+  mappings: readonly SyncColumnMapping[],
+): string | null {
+  if (conflictPolicy !== 'Upsert') {
+    return null;
+  }
+  const keyMappings = mappings.filter((mapping) => mapping.isKey);
+  if (keyMappings.length !== 1) {
+    return `冲突策略为“按主键合并（Upsert）”时必须在映射表格中勾选且只能勾选一个合并键列，当前勾选了 ${keyMappings.length} 个。`;
+  }
+  if (keyMappings[0].nullable) {
+    return `合并键列 ${keyMappings[0].targetField} 不能勾选“允许空”：键为空的行无法按主键合并。`;
+  }
+  return null;
 }
 
 /**

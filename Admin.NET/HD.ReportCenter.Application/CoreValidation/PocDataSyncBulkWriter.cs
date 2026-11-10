@@ -33,12 +33,14 @@ public sealed class PocDataSyncBulkWriter
     /// <param name="table">目标表名。</param>
     /// <param name="fields">编译后的映射字段，用于生成列 DDL。</param>
     /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <param name="upsertKeyField">Upsert 策略的合并键列名；提供时建表 DDL 在该列上落 PRIMARY KEY，null 表示不落主键。</param>
     public async Task EnsureTableAsync(
         DbConnection connection,
         string targetDbType,
         string table,
         IReadOnlyList<PocDataSyncCompiledField> fields,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? upsertKeyField = null)
     {
         ValidateFields(fields);
         await using var command = connection.CreateCommand();
@@ -54,7 +56,7 @@ public sealed class PocDataSyncBulkWriter
             // 探测失败按表缺失处理：真实连接故障会在随后的建表/写入阶段再次暴露并按失败收场。
         }
 
-        var createSql = BuildCreateTableSql(targetDbType, table, fields);
+        var createSql = BuildCreateTableSql(targetDbType, table, fields, upsertKeyField);
         await using var createCommand = connection.CreateCommand();
         createCommand.CommandText = createSql;
         createCommand.CommandTimeout = 60;
@@ -88,6 +90,8 @@ public sealed class PocDataSyncBulkWriter
     /// <summary>
     /// 把一批已转换行写入目标表。行字典以目标列名为键，值已完成目标类型收敛；
     /// 内部按方言分派批量通道，返回成功写入的行数。
+    /// upsertKeyField 非空时按方言分派合并通道（存在则覆盖、不存在则插入），
+    /// 调用方保证键列值非空（执行器已把空键行按失败行剔除）。
     /// </summary>
     /// <param name="connection">已打开的目标库连接。</param>
     /// <param name="targetDbType">目标库类型标识。</param>
@@ -95,6 +99,7 @@ public sealed class PocDataSyncBulkWriter
     /// <param name="fields">编译后的映射字段（决定列顺序与 DataTable 列类型）。</param>
     /// <param name="rows">本批已转换行，键为目标列名。</param>
     /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <param name="upsertKeyField">合并键目标列名；null 表示按普通批量写入。</param>
     /// <returns>成功写入的行数。</returns>
     public async Task<long> WriteBatchAsync(
         DbConnection connection,
@@ -102,7 +107,8 @@ public sealed class PocDataSyncBulkWriter
         string table,
         IReadOnlyList<PocDataSyncCompiledField> fields,
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? upsertKeyField = null)
     {
         ArgumentNullException.ThrowIfNull(connection);
         ValidateFields(fields);
@@ -113,6 +119,23 @@ public sealed class PocDataSyncBulkWriter
 
         // 第一阶段：按方言分派写入通道；SQLite 等兜底方言走事务内参数化 INSERT。
         var normalizedType = targetDbType.Trim();
+        if (!string.IsNullOrWhiteSpace(upsertKeyField))
+        {
+            return normalizedType switch
+            {
+                // SqlServer/Oracle 无“插入或覆盖”的批量简易语法，走事务内逐行 MERGE。
+                PocDatabaseProvider.SqlServer => await WriteWithSqlServerMergeAsync(
+                    connection, table, fields, rows, upsertKeyField, cancellationToken),
+                PocDatabaseProvider.Oracle => await WriteWithOracleMergeAsync(
+                    connection, table, fields, rows, upsertKeyField, cancellationToken),
+                PocDatabaseProvider.MySql => await WriteWithMySqlUpsertAsync(
+                    connection, table, fields, rows, upsertKeyField, cancellationToken),
+                PocDatabaseProvider.PostgreSql => await WriteWithNpgsqlUpsertAsync(
+                    connection, table, fields, rows, upsertKeyField, cancellationToken),
+                _ => await WriteWithUpsertFallbackAsync(
+                    connection, table, fields, rows, upsertKeyField, cancellationToken),
+            };
+        }
         switch (normalizedType)
         {
             case PocDatabaseProvider.SqlServer:
@@ -132,21 +155,27 @@ public sealed class PocDataSyncBulkWriter
         }
     }
 
-    /// <summary>生成建表 DDL：列类型按方言映射，非空约束按映射 Nullable 推导。</summary>
+    /// <summary>生成建表 DDL：列类型按方言映射，非空约束按映射 Nullable 推导；合并键列追加主键约束。</summary>
     /// <param name="targetDbType">目标库类型标识。</param>
     /// <param name="table">目标表名。</param>
     /// <param name="fields">编译后的映射字段。</param>
+    /// <param name="upsertKeyField">合并键目标列名；命中映射列时该列 DDL 追加 PRIMARY KEY（四种方言与 SQLite 兜底均支持列内联主键），null 或不命中时不落主键。</param>
     /// <returns>可执行的 CREATE TABLE 文本。</returns>
     public string BuildCreateTableSql(
         string targetDbType,
         string table,
-        IReadOnlyList<PocDataSyncCompiledField> fields)
+        IReadOnlyList<PocDataSyncCompiledField> fields,
+        string? upsertKeyField = null)
     {
         ValidateFields(fields);
         var columns = fields.Select(field =>
         {
             var nullability = field.Nullable ? "NULL" : "NOT NULL";
-            return $"{QuoteIdentifier(targetDbType, field.TargetField)} {ToSqlType(targetDbType, field)} {nullability}";
+            var primaryKey = !string.IsNullOrWhiteSpace(upsertKeyField) &&
+                field.TargetField.Equals(upsertKeyField.Trim(), StringComparison.OrdinalIgnoreCase)
+                ? " PRIMARY KEY"
+                : string.Empty;
+            return $"{QuoteIdentifier(targetDbType, field.TargetField)} {ToSqlType(targetDbType, field)} {nullability}{primaryKey}";
         });
         return $"CREATE TABLE {QuoteTable(targetDbType, table)} ({string.Join(", ", columns)})";
     }
@@ -523,5 +552,417 @@ public sealed class PocDataSyncBulkWriter
             await transaction.RollbackAsync(CancellationToken.None);
             throw;
         }
+    }
+
+    /// <summary>读取行字典里某目标列的写入值；缺失或 null 统一收敛为 DBNull，保证参数绑定形状一致。</summary>
+    /// <param name="row">已转换行。</param>
+    /// <param name="field">映射字段。</param>
+    /// <returns>列值或 DBNull.Value。</returns>
+    private static object? ValueOf(IReadOnlyDictionary<string, object?> row, PocDataSyncCompiledField field) =>
+        row.TryGetValue(field.TargetField, out var value) && value is not null ? value : DBNull.Value;
+
+    /// <summary>按目标列名（忽略大小写）定位映射字段；调用方保证键列一定在映射内。</summary>
+    /// <param name="fields">映射字段。</param>
+    /// <param name="targetField">目标列名。</param>
+    /// <returns>命中的映射字段。</returns>
+    private static PocDataSyncCompiledField FieldOf(
+        IReadOnlyList<PocDataSyncCompiledField> fields,
+        string targetField) =>
+        fields.First(field => field.TargetField.Equals(targetField, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// 未知方言兜底合并通道：单事务内逐行“先 UPDATE 后 INSERT”。
+    /// UPDATE 命中 0 行说明键不存在再走 INSERT；UPDATE 未命中不会污染事务，语义安全。
+    /// 映射只有键列（无非键列）时退化为存在性探测：键已存在则保留原行不再写入。
+    /// </summary>
+    /// <param name="connection">已打开的目标连接。</param>
+    /// <param name="table">目标表名。</param>
+    /// <param name="fields">映射字段。</param>
+    /// <param name="rows">已转换行。</param>
+    /// <param name="upsertKeyField">合并键目标列名。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>写入（含覆盖）行数。</returns>
+    private static async Task<long> WriteWithUpsertFallbackAsync(
+        DbConnection connection,
+        string table,
+        IReadOnlyList<PocDataSyncCompiledField> fields,
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        string upsertKeyField,
+        CancellationToken cancellationToken)
+    {
+        var quotedTable = QuoteTable("Fallback", table);
+        var keyField = FieldOf(fields, upsertKeyField);
+        var updateFields = fields
+            .Where(field => !field.TargetField.Equals(upsertKeyField, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var quotedAllColumns = string.Join(
+            ", ", fields.Select(field => QuoteIdentifier("Fallback", field.TargetField)));
+        var insertSql = $"INSERT INTO {quotedTable} ({quotedAllColumns}) VALUES ({BindPlaceholders(fields.Count)})";
+        // 单列表的 UPDATE 无 SET 项，退化为存在性探测；SET 占位在生成 SQL 时按有无非键列分支处理。
+        var updateSql = updateFields.Length == 0
+            ? $"SELECT COUNT(*) FROM {quotedTable} WHERE {QuoteIdentifier("Fallback", keyField.TargetField)} = @pk"
+            : $"UPDATE {quotedTable} SET {string.Join(", ", updateFields.Select((field, index) => $"{QuoteIdentifier("Fallback", field.TargetField)} = @v{index}"))} " +
+              $"WHERE {QuoteIdentifier("Fallback", keyField.TargetField)} = @pk";
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = updateSql;
+
+            foreach (var row in rows)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                command.Parameters.Clear();
+                var updateAffected = 0;
+                if (updateFields.Length == 0)
+                {
+                    // 存在性探测分支：键已存在即认为该行“已写入”，保持原值不覆盖。
+                    command.Parameters.Add(BindParameter(command, "pk", ValueOf(row, keyField)));
+                    updateAffected = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+                }
+                else
+                {
+                    command.Parameters.Add(BindParameter(command, "pk", ValueOf(row, keyField)));
+                    for (var index = 0; index < updateFields.Length; index++)
+                    {
+                        command.Parameters.Add(BindParameter(command, $"v{index}", ValueOf(row, updateFields[index])));
+                    }
+                    updateAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+                if (updateAffected > 0)
+                {
+                    continue;
+                }
+                command.Parameters.Clear();
+                command.CommandText = insertSql;
+                for (var index = 0; index < fields.Count; index++)
+                {
+                    command.Parameters.Add(BindParameter(command, $"p{index}", ValueOf(row, fields[index])));
+                }
+                await command.ExecuteNonQueryAsync(cancellationToken);
+                command.CommandText = updateSql;
+            }
+            await transaction.CommitAsync(cancellationToken);
+            return rows.Count;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// SqlServer 合并通道：事务内逐行 MERGE（USING 常量行按键匹配，命中覆盖非键列，未命中整行插入）。
+    /// 增量窗口场景每批行数有限，逐行 MERGE 换取零临时表依赖与最简实现；映射只有键列时省略 WHEN MATCHED 分支。
+    /// </summary>
+    /// <param name="connection">目标连接（须为 SqlConnection）。</param>
+    /// <param name="table">目标表名。</param>
+    /// <param name="fields">映射字段。</param>
+    /// <param name="rows">已转换行。</param>
+    /// <param name="upsertKeyField">合并键目标列名。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>写入（含覆盖）行数。</returns>
+    private static async Task<long> WriteWithSqlServerMergeAsync(
+        DbConnection connection,
+        string table,
+        IReadOnlyList<PocDataSyncCompiledField> fields,
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        string upsertKeyField,
+        CancellationToken cancellationToken)
+    {
+        var quotedTable = QuoteTable(PocDatabaseProvider.SqlServer, table);
+        var keyField = FieldOf(fields, upsertKeyField);
+        var updateFields = fields
+            .Where(field => !field.TargetField.Equals(upsertKeyField, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var quotedAllColumns = string.Join(
+            ", ", fields.Select(field => QuoteIdentifier(PocDatabaseProvider.SqlServer, field.TargetField)));
+        var quotedKeyColumn = QuoteIdentifier(PocDatabaseProvider.SqlServer, keyField.TargetField);
+        var updateClause = updateFields.Length == 0
+            ? string.Empty
+            : $"WHEN MATCHED THEN UPDATE SET {string.Join(", ", updateFields.Select((field, index) => $"tgt.{QuoteIdentifier(PocDatabaseProvider.SqlServer, field.TargetField)} = @v{index}"))} ";
+        var mergeSql =
+            $"MERGE INTO {quotedTable} AS tgt " +
+            $"USING (SELECT @pk AS {quotedKeyColumn}) AS src " +
+            $"ON tgt.{quotedKeyColumn} = src.{quotedKeyColumn} " +
+            updateClause +
+            $"WHEN NOT MATCHED THEN INSERT ({quotedAllColumns}) VALUES (@pk, {BindPlaceholders(fields.Count - 1, "p")});";
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = mergeSql;
+            foreach (var row in rows)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                command.Parameters.Clear();
+                // 参数按 SQL 占位符首现顺序绑定：先键值，再逐个非键列值；INSERT 段占位符跳过键列后从 p0 连续重编号。
+                command.Parameters.Add(BindParameter(command, "pk", ValueOf(row, keyField)));
+                for (var index = 0; index < updateFields.Length; index++)
+                {
+                    command.Parameters.Add(BindParameter(command, $"v{index}", ValueOf(row, updateFields[index])));
+                }
+                var insertParamIndex = 0;
+                for (var index = 0; index < fields.Count; index++)
+                {
+                    if (fields[index].TargetField.Equals(upsertKeyField, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+                    command.Parameters.Add(BindParameter(command, $"p{insertParamIndex}", ValueOf(row, fields[index])));
+                    insertParamIndex++;
+                }
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            await transaction.CommitAsync(cancellationToken);
+            return rows.Count;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Oracle 合并通道：事务内逐行 MERGE（USING SELECT :pk FROM dual 按键匹配），语义与 SqlServer 通道一致。
+    /// ODP.NET 命名绑定默认按位置，参数严格按 SQL 占位符首现顺序添加。
+    /// </summary>
+    /// <param name="connection">目标连接（须为 OracleConnection）。</param>
+    /// <param name="table">目标表名。</param>
+    /// <param name="fields">映射字段。</param>
+    /// <param name="rows">已转换行。</param>
+    /// <param name="upsertKeyField">合并键目标列名。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>写入（含覆盖）行数。</returns>
+    private static async Task<long> WriteWithOracleMergeAsync(
+        DbConnection connection,
+        string table,
+        IReadOnlyList<PocDataSyncCompiledField> fields,
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        string upsertKeyField,
+        CancellationToken cancellationToken)
+    {
+        var quotedTable = QuoteTable(PocDatabaseProvider.Oracle, table);
+        var keyField = FieldOf(fields, upsertKeyField);
+        var updateFields = fields
+            .Where(field => !field.TargetField.Equals(upsertKeyField, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var quotedAllColumns = string.Join(
+            ", ", fields.Select(field => QuoteIdentifier(PocDatabaseProvider.Oracle, field.TargetField)));
+        var quotedKeyColumn = QuoteIdentifier(PocDatabaseProvider.Oracle, keyField.TargetField);
+        var updateClause = updateFields.Length == 0
+            ? string.Empty
+            : $"WHEN MATCHED THEN UPDATE SET {string.Join(", ", updateFields.Select((field, index) => $"tgt.{QuoteIdentifier(PocDatabaseProvider.Oracle, field.TargetField)} = :v{index}"))} ";
+        var mergeSql =
+            $"MERGE INTO {quotedTable} tgt " +
+            $"USING (SELECT :pk AS {quotedKeyColumn} FROM dual) src " +
+            $"ON (tgt.{quotedKeyColumn} = src.{quotedKeyColumn}) " +
+            updateClause +
+            $"WHEN NOT MATCHED THEN INSERT ({quotedAllColumns}) VALUES (:pk, {OracleBindPlaceholders(fields.Count - 1)})";
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = mergeSql;
+            foreach (var row in rows)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                command.Parameters.Clear();
+                command.Parameters.Add(BindParameter(command, "pk", ValueOf(row, keyField)));
+                for (var index = 0; index < updateFields.Length; index++)
+                {
+                    command.Parameters.Add(BindParameter(command, $"v{index}", ValueOf(row, updateFields[index])));
+                }
+                for (var index = 0; index < fields.Count; index++)
+                {
+                    if (fields[index].TargetField.Equals(upsertKeyField, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+                    // Oracle 按位置绑定：INSERT VALUES 段的占位顺序是跳过键列后的映射顺序，参数名仅作集合内标识。
+                    command.Parameters.Add(BindParameter(command, $"p{index}", ValueOf(row, fields[index])));
+                }
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            await transaction.CommitAsync(cancellationToken);
+            return rows.Count;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// MySQL 合并通道：分块多行 INSERT ... ON DUPLICATE KEY UPDATE（每块单语句，整批一个事务）。
+    /// 分块大小按“每块参数总数 ≤ 1000”收敛，规避 max_allowed_packet 与参数上限；仅键列表用自引用赋值保持原行。
+    /// </summary>
+    /// <param name="connection">目标连接（须为 MySqlConnection）。</param>
+    /// <param name="table">目标表名。</param>
+    /// <param name="fields">映射字段。</param>
+    /// <param name="rows">已转换行。</param>
+    /// <param name="upsertKeyField">合并键目标列名。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>写入（含覆盖）行数。</returns>
+    private static async Task<long> WriteWithMySqlUpsertAsync(
+        DbConnection connection,
+        string table,
+        IReadOnlyList<PocDataSyncCompiledField> fields,
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        string upsertKeyField,
+        CancellationToken cancellationToken)
+    {
+        var quotedTable = QuoteTable(PocDatabaseProvider.MySql, table);
+        var keyField = FieldOf(fields, upsertKeyField);
+        var updateFields = fields
+            .Where(field => !field.TargetField.Equals(upsertKeyField, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var quotedAllColumns = string.Join(
+            ", ", fields.Select(field => QuoteIdentifier(PocDatabaseProvider.MySql, field.TargetField)));
+        // VALUES() 形态在 MySQL 8+ 虽标记过时但全版本可用，兼容性优先于新别名语法。
+        var updateClause = updateFields.Length == 0
+            ? $"{QuoteIdentifier(PocDatabaseProvider.MySql, keyField.TargetField)} = {QuoteIdentifier(PocDatabaseProvider.MySql, keyField.TargetField)}"
+            : string.Join(", ", updateFields.Select(field =>
+                $"{QuoteIdentifier(PocDatabaseProvider.MySql, field.TargetField)} = VALUES({QuoteIdentifier(PocDatabaseProvider.MySql, field.TargetField)})"));
+        var rowsPerStatement = Math.Max(1, 1000 / Math.Max(1, fields.Count));
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            for (var offset = 0; offset < rows.Count; offset += rowsPerStatement)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var chunk = rows.Skip(offset).Take(rowsPerStatement).ToArray();
+                var valuesClauses = string.Join(", ", chunk.Select((_, rowIndex) =>
+                    $"({BindPlaceholders(fields.Count, $"r{rowIndex}_")})"));
+                command.Parameters.Clear();
+                command.CommandText =
+                    $"INSERT INTO {quotedTable} ({quotedAllColumns}) VALUES {valuesClauses} ON DUPLICATE KEY UPDATE {updateClause}";
+                for (var rowIndex = 0; rowIndex < chunk.Length; rowIndex++)
+                {
+                    foreach (var field in fields)
+                    {
+                        command.Parameters.Add(BindParameter(
+                            command,
+                            $"r{rowIndex}_{field.TargetField}",
+                            ValueOf(chunk[rowIndex], field)));
+                    }
+                }
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            await transaction.CommitAsync(cancellationToken);
+            return rows.Count;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// PostgreSQL 合并通道：分块多行 INSERT ... ON CONFLICT DO UPDATE（整批一个事务）。
+    /// 冲突目标显式声明合并键列，要求目标表在键列上存在唯一约束（Upsert 建表 DDL 已落主键，选现有表由库方保证）。
+    /// </summary>
+    /// <param name="connection">目标连接（须为 NpgsqlConnection）。</param>
+    /// <param name="table">目标表名。</param>
+    /// <param name="fields">映射字段。</param>
+    /// <param name="rows">已转换行。</param>
+    /// <param name="upsertKeyField">合并键目标列名。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>写入（含覆盖）行数。</returns>
+    private static async Task<long> WriteWithNpgsqlUpsertAsync(
+        DbConnection connection,
+        string table,
+        IReadOnlyList<PocDataSyncCompiledField> fields,
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        string upsertKeyField,
+        CancellationToken cancellationToken)
+    {
+        var quotedTable = QuoteTable(PocDatabaseProvider.PostgreSql, table);
+        var keyField = FieldOf(fields, upsertKeyField);
+        var updateFields = fields
+            .Where(field => !field.TargetField.Equals(upsertKeyField, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var quotedAllColumns = string.Join(
+            ", ", fields.Select(field => QuoteIdentifier(PocDatabaseProvider.PostgreSql, field.TargetField)));
+        var quotedKeyColumn = QuoteIdentifier(PocDatabaseProvider.PostgreSql, keyField.TargetField);
+        var conflictAction = updateFields.Length == 0
+            ? "DO NOTHING"
+            : $"DO UPDATE SET {string.Join(", ", updateFields.Select(field =>
+                $"{QuoteIdentifier(PocDatabaseProvider.PostgreSql, field.TargetField)} = EXCLUDED.{QuoteIdentifier(PocDatabaseProvider.PostgreSql, field.TargetField)}"))}";
+        var rowsPerStatement = Math.Max(1, 8000 / Math.Max(1, fields.Count));
+
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            for (var offset = 0; offset < rows.Count; offset += rowsPerStatement)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var chunk = rows.Skip(offset).Take(rowsPerStatement).ToArray();
+                var valuesClauses = string.Join(", ", chunk.Select((_, rowIndex) =>
+                    $"({BindPlaceholders(fields.Count, $"r{rowIndex}_")})"));
+                command.Parameters.Clear();
+                command.CommandText =
+                    $"INSERT INTO {quotedTable} ({quotedAllColumns}) VALUES {valuesClauses} ON CONFLICT ({quotedKeyColumn}) {conflictAction}";
+                for (var rowIndex = 0; rowIndex < chunk.Length; rowIndex++)
+                {
+                    foreach (var field in fields)
+                    {
+                        command.Parameters.Add(BindParameter(
+                            command,
+                            $"r{rowIndex}_{field.TargetField}",
+                            ValueOf(chunk[rowIndex], field)));
+                    }
+                }
+                await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            await transaction.CommitAsync(cancellationToken);
+            return rows.Count;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+    }
+
+    /// <summary>生成 @前缀 位置占位符序列：@p0, @p1, ... 供 INSERT VALUES 段使用。</summary>
+    /// <param name="count">占位符个数。</param>
+    /// <param name="prefix">占位符前缀，默认 p。</param>
+    /// <returns>逗号分隔的占位符文本；count ≤ 0 返回空串。</returns>
+    private static string BindPlaceholders(int count, string prefix = "p") =>
+        string.Join(", ", Enumerable.Range(0, count).Select(index => $"@{prefix}{index}"));
+
+    /// <summary>生成 Oracle :前缀 位置占位符序列：:p0, :p1, ...。</summary>
+    /// <param name="count">占位符个数。</param>
+    /// <returns>逗号分隔的占位符文本；count ≤ 0 返回空串。</returns>
+    private static string OracleBindPlaceholders(int count) =>
+        string.Join(", ", Enumerable.Range(0, count).Select(index => $":p{index}"));
+
+    /// <summary>创建并绑定一个方言无关的命令参数：参数名 + 已收敛的列值。</summary>
+    /// <param name="command">目标命令。</param>
+    /// <param name="name">参数名（不含前缀符号）。</param>
+    /// <param name="value">列值（null 已收敛为 DBNull）。</param>
+    /// <returns>已加入参数集合前的参数对象。</returns>
+    private static DbParameter BindParameter(DbCommand command, string name, object? value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value ?? DBNull.Value;
+        return parameter;
     }
 }

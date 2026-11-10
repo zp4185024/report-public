@@ -624,6 +624,8 @@ export interface SyncColumnMapping {
   length: number | null;
   nullable: boolean;
   converters: SyncConverterStep[];
+  /** 合并键标志：仅冲突策略为 Upsert 时生效，全部映射中必须有且只有一条为 true 且该列不允许空。 */
+  isKey?: boolean;
 }
 
 /** 任务调度定义；Type 为 Manual/Daily/Interval/Cron。镜像 PocSyncScheduleDefinition。 */
@@ -822,6 +824,8 @@ export interface SyncColumnMetadata {
   nullable: boolean;
   length: number | null;
   description: string | null;
+  /** 数据库真实主键标志：Upsert 冲突策略选合并键时提示“建议选它”。 */
+  isPrimaryKey?: boolean;
 }
 
 /** 目标表列清单响应：目标字段下拉选项的数据来源。镜像 PocSyncTableColumnsDocument。 */

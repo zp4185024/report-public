@@ -366,9 +366,11 @@ public sealed class PocDataSyncPackageService : ITransient
         }
 
         // 包内不携带任务显示名，导入后名称取任务编码，管理员可在任务页改名。
-        // 映射编译校验在保存前已完成（ValidateMappings 抛出即拒绝），落库仍携带原始映射定义。
+        // 映射编译校验在保存前已完成（ValidateMappings 抛出即拒绝），落库仍携带原始映射定义；
+        // Upsert 策略在此再次裁决合并键，保证静态校验通过后落库口径不变。
         var schedule = ValidateSchedule(package.ScheduleType, package.ScheduleTime, package.IntervalMinutes, package.ScheduleCron);
         _ = PocDataSyncService.ValidateMappings(package.Mappings);
+        _ = PocDataSyncService.ResolveUpsertKeyField(package.ConflictPolicy, package.Mappings);
         var definition = new PocSyncTaskDefinition(
             package.Mappings,
             new PocSyncScheduleDefinition(schedule.Type, schedule.Time, schedule.IntervalMinutes, schedule.CronExpression));
@@ -497,11 +499,22 @@ public sealed class PocDataSyncPackageService : ITransient
         }
         var policy = package.ConflictPolicy.Trim();
         if (!policy.Equals("TruncateFirst", StringComparison.OrdinalIgnoreCase) &&
-            !policy.Equals("Append", StringComparison.OrdinalIgnoreCase))
+            !policy.Equals("Append", StringComparison.OrdinalIgnoreCase) &&
+            !policy.Equals("Upsert", StringComparison.OrdinalIgnoreCase))
         {
             errors.Add(new PocDataSyncIssue(
                 "SYNC_CONFLICT_POLICY_INVALID",
-                $"冲突策略 '{package.ConflictPolicy}' 无效，仅支持 TruncateFirst 或 Append。"));
+                $"冲突策略 '{package.ConflictPolicy}' 无效，仅支持 TruncateFirst、Append 或 Upsert。"));
+        }
+
+        // 第四阶段补：Upsert 策略的合并键裁决（唯一 + 非空），与保存/执行同一份口径。
+        try
+        {
+            _ = PocDataSyncService.ResolveUpsertKeyField(package.ConflictPolicy, package.Mappings);
+        }
+        catch (PocDataSyncException exception)
+        {
+            errors.Add(new PocDataSyncIssue(exception.Code, exception.Message));
         }
 
         // 第五阶段：非阻断警告——目标数据源类型提示非法由管理员在导入时选择真实数据源兜底。

@@ -47,6 +47,7 @@ import {
   validateCronScheduleInput,
   validateSyncMappings,
   validateSyncVariables,
+  validateUpsertKeySelection,
   type AiSyncMatchMark,
   type SyncSourceColumn,
   type SyncTargetColumn,
@@ -507,11 +508,13 @@ function ConverterStepEditor({
 
 /**
  * 映射表格（表格+下拉交互）：每行 = 源字段（名称+类型徽标）→ 目标字段（下拉或文本）
- * → 目标类型 → 转换器 chip 区。转换链为空的行按“直通”语义保存（converters 空数组）；
+ * → 目标类型 → 合并键 → 转换器 chip 区。转换链为空的行按“直通”语义保存（converters 空数组）；
  * 未建立映射的源行展示为“(不同步)”置灰状态。行内转换器 chip 点击展开参数编辑器。
+ * 合并键列仅在冲突策略为 Upsert 时可勾选（单选语义：勾选一行自动清除其余行）。
  * @param sourceColumns - 源字段列（预览结果或数据集字段声明）。
  * @param targetOptions - 目标字段下拉选项（现有表模式来自真实列元数据，可为空数组）。
  * @param targetMode - 目标模式：existing=下拉选列，create=文本输入目标列名。
+ * @param conflictPolicy - 当前冲突策略；Upsert 时合并键列可勾选。
  * @param mappings - 当前映射列表（唯一数据源，保存时原样提交）。
  * @param expandedKey - 当前展开转换器编辑器的源字段名，null 表示全部收起。
  * @param onExpandChange - 展开/收起回调。
@@ -522,6 +525,7 @@ function SyncMappingTable({
   sourceColumns,
   targetOptions,
   targetMode,
+  conflictPolicy,
   mappings,
   expandedKey,
   onExpandChange,
@@ -530,11 +534,13 @@ function SyncMappingTable({
   sourceColumns: readonly SyncSourceColumn[];
   targetOptions: readonly SyncTargetColumn[];
   targetMode: 'existing' | 'create';
+  conflictPolicy: string;
   mappings: readonly SyncColumnMapping[];
   expandedKey: string | null;
   onExpandChange: (sourceField: string | null) => void;
   onChange: (next: SyncColumnMapping[]) => void;
 }) {
+  const upsertEnabled = conflictPolicy === 'Upsert';
   // 阶段一：映射定位与替换。映射列表是唯一数据源，所有编辑都以源字段名为键整体回传。
   /**
    * 按源字段名（忽略大小写）定位映射；未同步的源行返回 null。
@@ -580,6 +586,20 @@ function SyncMappingTable({
   const patchMapping = (sourceField: string, patch: Partial<SyncColumnMapping>) => {
     const mapping = findMapping(sourceField);
     if (mapping) replaceMapping(sourceField, { ...mapping, ...patch });
+  };
+
+  /**
+   * 设置/取消合并键（Upsert 冲突策略专用，单选语义）：
+   * 勾选一行时清除其余行的勾选，取消勾选只影响该行。
+   * @param sourceField - 源字段名。
+   * @param isKey - 是否勾选为合并键。
+   */
+  const setKeyMapping = (sourceField: string, isKey: boolean) => {
+    onChange(mappings.map((item) => (
+      item.sourceField.toLowerCase() === sourceField.toLowerCase()
+        ? { ...item, isKey }
+        : (isKey ? { ...item, isKey: false } : item)
+    )));
   };
 
   // 阶段三：目标字段选择。现有表模式在“(不同步)”与真实列之间切换并沿用列元数据类型。
@@ -718,21 +738,28 @@ function SyncMappingTable({
     });
   };
 
-  // 阶段七：渲染映射表格。逐行渲染源字段、目标字段、类型与转换器 chip，展开行紧跟其后。
+  // 阶段七：渲染映射表格。逐行渲染源字段、目标字段、类型、合并键与转换器 chip，展开行紧跟其后。
   return (
     <div className="sync-mapping-table-scroll">
+      {upsertEnabled && (
+        <p className="sync-step-hint">
+          当前冲突策略为“按主键合并（Upsert）”：请在下方勾选一个合并键列（建议选目标表主键列），
+          相同键值的新数据将覆盖旧行而不是重复追加。
+        </p>
+      )}
       <table className="sync-mapping-table">
         <thead>
           <tr>
             <th>源字段</th>
             <th>目标字段</th>
             <th>目标类型</th>
+            <th title="仅冲突策略为“按主键合并（Upsert）”时生效；勾选后相同键值的新数据覆盖旧行">合并键</th>
             <th>转换器</th>
           </tr>
         </thead>
         <tbody>
           {sourceColumns.length === 0 ? (
-            <tr><td colSpan={4} className="sync-table-empty">还没有源字段：请先在步骤 1 完成“预览源列”。</td></tr>
+            <tr><td colSpan={5} className="sync-table-empty">还没有源字段：请先在步骤 1 完成“预览源列”。</td></tr>
           ) : sourceColumns.map((column) => {
             // 逐行派生：定位映射、计算展开态与下拉回显值，“(不同步)”行走置灰样式。
             const mapping = findMapping(column.name);
@@ -784,6 +811,7 @@ function SyncMappingTable({
                             title={option.description ?? undefined}
                           >
                             {formatColumnWithDescription(option.name, option.description)}
+                            {option.isPrimaryKey ? '（主键）' : ''}
                           </option>
                         ))}
                       </select>
@@ -802,6 +830,22 @@ function SyncMappingTable({
                       <option value="datetime">日期时间</option>
                       <option value="bool">布尔</option>
                     </select>
+                  </td>
+                  <td className="sync-key-cell">
+                    <input
+                      type="checkbox"
+                      checked={mapping?.isKey ?? false}
+                      disabled={!mapping || !upsertEnabled}
+                      title={
+                        !upsertEnabled
+                          ? '仅冲突策略为“按主键合并（Upsert）”时可勾选合并键'
+                          : mapping?.isKey
+                            ? '该列是合并键：相同键值的新数据覆盖旧行'
+                            : '勾选为合并键（全局唯一，勾选会清除其他行的勾选）'
+                      }
+                      aria-label={`源字段 ${column.name} 是否作为合并键`}
+                      onChange={(event) => setKeyMapping(column.name, event.target.checked)}
+                    />
                   </td>
                   <td>
                     <div className="sync-converter-cell">
@@ -1500,7 +1544,14 @@ function SyncTaskDesigner({
     if (draft.mappings.length === 0) localErrors.push('至少需要一个字段映射（不同步的源列不计入）。');
     const mappingErrors = validateSyncMappings(sourceColumns, targetOptions, draft.mappings);
     const variableErrors = validateSyncVariables(draft.variables, draft.sourceQueryText);
-    const allErrors = [...localErrors, ...mappingErrors, ...variableErrors];
+    // Upsert 冲突策略的合并键本地预检：后端保存时会以同一规则权威裁决，这里提前定位到行。
+    const upsertKeyError = validateUpsertKeySelection(draft.conflictPolicy, draft.mappings);
+    const allErrors = [
+      ...localErrors,
+      ...mappingErrors,
+      ...variableErrors,
+      ...(upsertKeyError ? [upsertKeyError] : []),
+    ];
     if (allErrors.length > 0) {
       setError(`保存被阻止，请先修正以下问题：\n${allErrors.map((item, index) => `${index + 1}. ${item}`).join('\n')}`);
       return;
@@ -2039,6 +2090,7 @@ function SyncTaskDesigner({
           sourceColumns={sourceColumns}
           targetOptions={targetOptions}
           targetMode={draft.targetMode}
+          conflictPolicy={draft.conflictPolicy}
           mappings={draft.mappings}
           expandedKey={expandedConverter}
           onExpandChange={setExpandedConverter}

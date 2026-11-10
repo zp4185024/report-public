@@ -89,6 +89,61 @@ public sealed class PocDataSyncExecutorTests : IDisposable
         Assert.Equal(2, _environment.QueryTargetRows("sync_tgt_demo").Count);
     }
 
+    /// <summary>
+    /// 验证 Upsert 冲突策略的合并语义：相同键值的行被覆盖而不是重复追加（增量窗口重跑不产生重复数据），
+    /// 新键值行正常插入，键值变化的非键列随最新一批更新。
+    /// </summary>
+    [Fact]
+    public async Task Upsert_policy_merges_target_rows_on_rerun()
+    {
+        await _environment.SeedSourceTableAsync(("A-001", "1", "20240101", "CARD"));
+        await _environment.SeedTaskAsync("sync_demo", "Upsert", markCardNoAsKey: true);
+        await _environment.SyncService.ExecuteTaskNowAsync("sync_demo");
+
+        // 同一窗口原样重跑：合并键相同，目标表仍只有一行（Append 策略在此场景会翻倍）。
+        await _environment.SyncService.ExecuteTaskNowAsync("sync_demo");
+        Assert.Single(_environment.QueryTargetRows("sync_tgt_demo"));
+
+        // 源表是累积插入：第三次运行时 A-001 金额已变 + 新增 B-009，
+        // 合并后 A-001 覆盖为新金额，B-009 作为新键插入，总计两行。
+        await _environment.SeedSourceTableAsync(("A-001", "99", "20240101", "CARD"));
+        await _environment.SeedSourceTableAsync(("B-009", "2", "20240202", "WARD"));
+        await _environment.SyncService.ExecuteTaskNowAsync("sync_demo");
+
+        var rows = _environment.QueryTargetRows("sync_tgt_demo");
+        Assert.Equal(2, rows.Count);
+        var merged = rows.Single(row => Equals(row["CARD_NO"], "A-001"));
+        Assert.Equal(
+            99m,
+            Convert.ToDecimal(merged["AMOUNT"], System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Contains(rows, row => Equals(row["CARD_NO"], "B-009"));
+    }
+
+    /// <summary>
+    /// 验证 Upsert 策略下键为空的行处理：合并键在保存时即强制非空（Nullable=false），
+    /// 真实 NULL 键的行在转换阶段被非空校验按失败行跳过并计数，其余行照常合并写入。
+    /// </summary>
+    [Fact]
+    public async Task Upsert_policy_counts_null_key_rows_as_failures()
+    {
+        await _environment.SeedSourceTableAsync(
+            ("A-001", "1", "20240101", "CARD"),
+            (null, "2", "20240102", "WARD"));
+        await _environment.SeedTaskAsync("sync_demo", "Upsert", markCardNoAsKey: true);
+
+        var log = await _environment.SyncService.ExecuteTaskNowAsync("sync_demo");
+
+        Assert.Equal(2, log.RowsRead);
+        Assert.Equal(1, log.RowsWritten);
+        Assert.Equal(1, log.RowsFailed);
+        Assert.Single(log.Failures);
+        Assert.Equal("cardNo", log.Failures[0].Field);
+        Assert.Contains("不允许空值", log.Failures[0].Reason);
+        var rows = _environment.QueryTargetRows("sync_tgt_demo");
+        Assert.Single(rows);
+        Assert.Equal("A-001", rows[0]["CARD_NO"]);
+    }
+
     /// <summary>验证行级失败策略：必填列为空的行被跳过并计数，其余行照常写入。</summary>
     [Fact]
     public async Task Row_transform_failures_are_skipped_and_counted()
@@ -237,6 +292,74 @@ public sealed class PocDataSyncExecutorTests : IDisposable
             () => _environment.SyncService.SaveAsync("sync_dup", duplicateInput));
         Assert.Equal("SYNC_MAPPING_INCOMPLETE", exception.Code);
         Assert.Null(await _environment.SyncStore.GetTaskAsync("sync_dup"));
+    }
+
+    /// <summary>验证 Upsert 冲突策略的合并键保存校验：缺键、多键、键可空三种形态都被拒绝且不落库。</summary>
+    [Fact]
+    public async Task Save_rejects_invalid_upsert_key_designation()
+    {
+        await _environment.SeedSourceTableAsync(("A-001", "1", "20240101", "CARD"));
+        // 目标源声明为受支持类型（SqlServer）以通过保存校验，连接本身仍由绑定工厂指向 SQLite 内存库。
+        await _environment.SeedTaskAsync("sync_demo", "Append", targetDbType: "SqlServer");
+
+        // 缺键：Upsert 策略要求恰好一个 IsKey 映射。
+        var missingKey = new PocSyncTaskInput(
+            "sync_upsert_missing",
+            "缺键任务",
+            _environment.SourceDatasetCode,
+            _environment.TargetSourceCode,
+            "SYNC_TGT_MISSING",
+            "Upsert",
+            "Manual",
+            null,
+            0,
+            [new PocSyncColumnMapping("cardNo", "CARD_NO", "string", 16, false, [])],
+            true,
+            0);
+        var missingException = await Assert.ThrowsAsync<PocDataSyncException>(
+            () => _environment.SyncService.SaveAsync("sync_upsert_missing", missingKey));
+        Assert.Equal("SYNC_UPSERT_KEY_INVALID", missingException.Code);
+        Assert.Null(await _environment.SyncStore.GetTaskAsync("sync_upsert_missing"));
+
+        // 多键：两个 IsKey 映射同样拒绝。
+        var duplicateKey = missingKey with
+        {
+            Code = "sync_upsert_dupkey",
+            Mappings =
+            [
+                new PocSyncColumnMapping("cardNo", "CARD_NO", "string", 16, false, [], IsKey: true),
+                new PocSyncColumnMapping("deptCode", "DEPT_CODE", "string", 8, false, [], IsKey: true)
+            ]
+        };
+        var duplicateException = await Assert.ThrowsAsync<PocDataSyncException>(
+            () => _environment.SyncService.SaveAsync("sync_upsert_dupkey", duplicateKey));
+        Assert.Equal("SYNC_UPSERT_KEY_INVALID", duplicateException.Code);
+
+        // 键可空：键列为空时无法定位目标行，保存即拒绝。
+        var nullableKey = missingKey with
+        {
+            Code = "sync_upsert_nullable",
+            Mappings =
+            [
+                new PocSyncColumnMapping("cardNo", "CARD_NO", "string", 16, true, [], IsKey: true)
+            ]
+        };
+        var nullableException = await Assert.ThrowsAsync<PocDataSyncException>(
+            () => _environment.SyncService.SaveAsync("sync_upsert_nullable", nullableKey));
+        Assert.Equal("SYNC_UPSERT_KEY_INVALID", nullableException.Code);
+
+        // 合法形态：恰好一个非空 IsKey 映射可保存；非 Upsert 策略忽略合并键标志。
+        var validUpsert = missingKey with
+        {
+            Code = "sync_upsert_valid",
+            Mappings =
+            [
+                new PocSyncColumnMapping("cardNo", "CARD_NO", "string", 16, false, [], IsKey: true),
+                new PocSyncColumnMapping("deptCode", "DEPT_CODE", "string", 8, true, [])
+            ]
+        };
+        var saved = await _environment.SyncService.SaveAsync("sync_upsert_valid", validUpsert);
+        Assert.Equal("Upsert", saved.ConflictPolicy);
     }
 
     /// <summary>
@@ -604,9 +727,9 @@ public sealed class PocDataSyncTestEnvironment : IDisposable
         return client;
     }
 
-    /// <summary>创建源数据表并插入样例行；visit_date 用 HIS 常见的 yyyyMMdd 文本形态。</summary>
+    /// <summary>创建源数据表并插入样例行；visit_date 用 HIS 常见的 yyyyMMdd 文本形态，卡号为 null 时插入真实 NULL。</summary>
     /// <param name="rows">样例行（卡号、金额、就诊日期、科室码）。</param>
-    public Task SeedSourceTableAsync(params (string CardNo, string Amount, string VisitDate, string DeptCode)[] rows)
+    public Task SeedSourceTableAsync(params (string? CardNo, string Amount, string VisitDate, string DeptCode)[] rows)
     {
         var command = _connection.CreateCommand();
         command.CommandText = """
@@ -624,11 +747,17 @@ public sealed class PocDataSyncTestEnvironment : IDisposable
             var insert = _connection.CreateCommand();
             insert.CommandText =
                 "INSERT INTO sync_src_demo (card_no, amount, visit_date, dept_code) " +
-                $"VALUES ('{row.CardNo}', '{row.Amount}', '{row.VisitDate}', '{row.DeptCode}')";
+                $"VALUES ({FormatSqlText(row.CardNo)}, '{row.Amount}', '{row.VisitDate}', '{row.DeptCode}')";
             insert.ExecuteNonQuery();
         }
         return Task.CompletedTask;
     }
+
+    /// <summary>把文本收敛为 SQL 字面量：null 输出 NULL 关键字，其余输出带引号文本。</summary>
+    /// <param name="value">原始文本。</param>
+    /// <returns>SQL 字面量。</returns>
+    private static string FormatSqlText(string? value) =>
+        value is null ? "NULL" : $"'{value}'";
 
     /// <summary>播种一个可执行的同步任务（源数据源 + 数据集 + 目标数据源 + 映射 + 任务行）。</summary>
     /// <param name="taskCode">任务编码。</param>
@@ -638,6 +767,7 @@ public sealed class PocDataSyncTestEnvironment : IDisposable
     /// <param name="targetDbType">目标数据源类型文本。</param>
     /// <param name="targetSourceCode">要播种的目标数据源编码；传 null 表示由调用方另行创建。</param>
     /// <param name="taskTargetSourceCode">任务绑定与导出描述使用的目标数据源编码。</param>
+    /// <param name="markCardNoAsKey">是否把卡号列标记为 Upsert 合并键（同时置非空，满足合并键校验）。</param>
     public async Task SeedTaskAsync(
         string taskCode,
         string conflictPolicy,
@@ -645,7 +775,8 @@ public sealed class PocDataSyncTestEnvironment : IDisposable
         string sourceDbType = "SQLite",
         string targetDbType = "SQLite",
         string? targetSourceCode = null,
-        string? taskTargetSourceCode = null)
+        string? taskTargetSourceCode = null,
+        bool markCardNoAsKey = false)
     {
         // SQLite 不在受支持数据源白名单内，源数据源直接落到存储表，模拟测试方言环境；
         // 数据源类型只是文本标注，连接一律走绑定工厂。
@@ -695,7 +826,9 @@ public sealed class PocDataSyncTestEnvironment : IDisposable
 
         var mappings = new List<PocSyncColumnMapping>
         {
-            new("cardNo", "CARD_NO", "string", 16, true, [new PocSyncConverterStep("trim")]),
+            markCardNoAsKey
+                ? new("cardNo", "CARD_NO", "string", 16, false, [new PocSyncConverterStep("trim")], IsKey: true)
+                : new("cardNo", "CARD_NO", "string", 16, true, [new PocSyncConverterStep("trim")]),
             new("amount", "AMOUNT", "decimal", null, true, [
                 new PocSyncConverterStep("toDecimal", new Dictionary<string, string?> { ["scale"] = "2" })
             ]),

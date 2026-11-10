@@ -40,7 +40,7 @@ public sealed class PocDataSyncService : ITransient
         "^[A-Za-z][A-Za-z0-9_]{0,63}$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-    private static readonly IReadOnlyList<string> ConflictPolicies = ["TruncateFirst", "Append"];
+    private static readonly IReadOnlyList<string> ConflictPolicies = ["TruncateFirst", "Append", "Upsert"];
     private static readonly IReadOnlyList<string> ScheduleTypes = ["Manual", "Daily", "Interval", "Cron"];
 
     /// <summary>Cron 表达式的存储列长上限，与 PocSyncTask.ScheduleCron 列定义一致（超长在保存前拒绝，避免落库时报错）。</summary>
@@ -144,8 +144,10 @@ public sealed class PocDataSyncService : ITransient
             ? (await RequireEnabledDatasetAsync(input.SourceDatasetCode)).Code
             : await UpsertSourceDatasetAsync(input.Code.Trim(), input.Source);
 
-        // 第三阶段：编译验证全部字段映射，编译错误即保存失败。
+        // 第三阶段：编译验证全部字段映射，编译错误即保存失败；Upsert 策略在此一并裁决合并键唯一性与非空。
         ValidateMappings(input.Mappings);
+        var conflictPolicy = NormalizeConflictPolicy(input.ConflictPolicy);
+        _ = ResolveUpsertKeyField(conflictPolicy, input.Mappings);
         var definition = new PocSyncTaskDefinition(
             input.Mappings,
             new PocSyncScheduleDefinition(schedule.Type, schedule.Time, schedule.IntervalMinutes, schedule.Cron));
@@ -157,7 +159,7 @@ public sealed class PocDataSyncService : ITransient
             input.TargetDataSourceCode.Trim(),
             input.TargetTable.Trim(),
             SerializeDefinition(definition),
-            NormalizeConflictPolicy(input.ConflictPolicy),
+            conflictPolicy,
             schedule.Type,
             schedule.Time,
             schedule.IntervalMinutes,
@@ -332,7 +334,8 @@ public sealed class PocDataSyncService : ITransient
                     ResolveColumnDescription(
                         column.DbColumnName,
                         comments,
-                        column.ColumnDescription)))
+                        column.ColumnDescription),
+                    column.IsPrimarykey))
                 .ToArray();
             if (columns.Length == 0)
             {
@@ -1237,7 +1240,44 @@ public sealed class PocDataSyncService : ITransient
         return policy
             ?? throw new PocDataSyncException(
                 "SYNC_CONFLICT_POLICY_INVALID",
-                $"冲突策略 '{conflictPolicy}' 无效，仅支持 TruncateFirst 或 Append。");
+                $"冲突策略 '{conflictPolicy}' 无效，仅支持 TruncateFirst、Append 或 Upsert。");
+    }
+
+    /// <summary>
+    /// 解析并校验 Upsert 冲突策略的合并键：策略为 Upsert 时，映射中必须有且只有一条
+    /// IsKey=true，且该列不允许空（键为空的行无法按主键合并）；其他策略忽略合并键标志。
+    /// 保存、导入校验与执行输入冻结三处共用同一份裁决，保证设计器、同步包与运行期口径一致。
+    /// </summary>
+    /// <param name="conflictPolicy">冲突策略（任意大小写）。</param>
+    /// <param name="mappings">字段映射定义。</param>
+    /// <returns>Upsert 时返回唯一合并键的目标列名；其他策略返回 null。</returns>
+    public static string? ResolveUpsertKeyField(string? conflictPolicy, IReadOnlyList<PocSyncColumnMapping>? mappings)
+    {
+        var isUpsert = "Upsert".Equals(conflictPolicy?.Trim(), StringComparison.OrdinalIgnoreCase);
+        var keyMappings = (mappings ?? [])
+            .Where(item => item.IsKey)
+            .Select(item => item.TargetField?.Trim())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (!isUpsert)
+        {
+            return null;
+        }
+        if (keyMappings.Length != 1)
+        {
+            throw new PocDataSyncException(
+                "SYNC_UPSERT_KEY_INVALID",
+                $"冲突策略为 Upsert 时必须有且只有一个合并键列，当前配置了 {keyMappings.Length} 个。");
+        }
+        var keyMapping = (mappings ?? []).First(item => item.IsKey);
+        if (keyMapping.Nullable)
+        {
+            throw new PocDataSyncException(
+                "SYNC_UPSERT_KEY_INVALID",
+                $"合并键列 '{keyMapping.TargetField}' 不允许配置为可空：键为空的行无法按主键合并。");
+        }
+        return keyMappings[0];
     }
 
     /// <summary>
@@ -1494,8 +1534,10 @@ public sealed class PocDataSyncService : ITransient
         }
 
         // 第一阶段：在请求线程内冻结执行输入——任务、映射编译结果、源计划与目标连接信息。
+        // Upsert 策略在此再次裁决合并键（防御历史任务被改坏键定义后仍被调度拉起）。
         var definition = DeserializeDefinition(task.DefinitionJson);
         var fields = ValidateMappings(definition.Mappings);
+        var upsertKeyField = ResolveUpsertKeyField(task.ConflictPolicy, definition.Mappings);
         var plan = await BuildSourcePlanAsync(task, definition.Mappings, null, CancellationToken.None);
         var parameterSummary = BuildParameterSummary(plan);
         var target = await RequireEnabledDataSourceAsync(task.TargetDataSourceCode);
@@ -1506,7 +1548,8 @@ public sealed class PocDataSyncService : ITransient
             target.DefaultTimeoutSeconds,
             task.TargetTable,
             task.ConflictPolicy,
-            fields);
+            fields,
+            UpsertKeyField: upsertKeyField);
 
         // 第二阶段：先置 Running 再执行，保证防重入与轮询状态一致。
         var log = new PocSyncRunLog

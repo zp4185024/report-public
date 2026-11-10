@@ -14,13 +14,15 @@ namespace HD.ReportCenter.Application.CoreValidation;
 /// <param name="Length">字符串目标列长度；null 表示建表时取方言默认值。</param>
 /// <param name="Nullable">目标列是否允许空；false 时终值为 null 按失败行处理。</param>
 /// <param name="Transform">编译完成的转换委托：原始值进、目标类型值出。</param>
+/// <param name="IsKey">是否为 Upsert 冲突策略的合并键列；仅冲突策略为 Upsert 时被写入器消费。</param>
 public sealed record PocDataSyncCompiledField(
     string SourceField,
     string TargetField,
     string TargetType,
     int? Length,
     bool Nullable,
-    Func<object?, object?> Transform);
+    Func<object?, object?> Transform,
+    bool IsKey = false);
 
 /// <summary>
 /// 字段转换链编译器：把映射里的转换器步骤编译成单一委托串。
@@ -77,7 +79,8 @@ public static class PocDataSyncConverter
             targetType,
             length,
             mapping.Nullable,
-            value => typed(nonNull(value)));
+            value => typed(nonNull(value)),
+            mapping.IsKey);
     }
 
     /// <summary>校验映射形状：源/目标字段、目标类型与转换器步骤的基础合法性。</summary>

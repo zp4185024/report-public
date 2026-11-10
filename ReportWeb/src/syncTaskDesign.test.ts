@@ -27,6 +27,7 @@ import {
   TRY_RUN_CELL_MAX_CHARS,
   validateCronScheduleInput,
   validateSyncMappings,
+  validateUpsertKeySelection,
   type SyncPackageParseResult,
 } from './syncTaskDesign';
 import type { DataRowValue, DataSyncPackage, DataSyncSampleRow, SyncColumnMapping, SyncConverterStep } from './types';
@@ -178,15 +179,34 @@ describe('syncTaskDesign target metadata mapping', () => {
     expect(targetDbTypeToType('')).toBe('string');
   });
 
-  /** 验证元数据列清单转换为映射表格的目标列集合（类型推断 + 可空/长度/注释透传）。 */
+  /** 验证元数据列清单转换为映射表格的目标列集合（类型推断 + 可空/长度/注释/主键透传）。 */
   it('builds target columns from metadata columns', () => {
     expect(targetColumnsFromMetadata([
-      { name: 'CARD_NO', dataType: 'nvarchar', nullable: true, length: 16, description: '卡号' },
+      { name: 'CARD_NO', dataType: 'nvarchar', nullable: false, length: 16, description: '卡号', isPrimaryKey: true },
       { name: 'VISIT_DATE', dataType: 'datetime', nullable: false, length: null, description: null },
     ])).toEqual([
-      { name: 'CARD_NO', targetType: 'string', length: 16, nullable: true, description: '卡号' },
-      { name: 'VISIT_DATE', targetType: 'datetime', length: null, nullable: false, description: null },
+      { name: 'CARD_NO', targetType: 'string', length: 16, nullable: false, description: '卡号', isPrimaryKey: true },
+      { name: 'VISIT_DATE', targetType: 'datetime', length: null, nullable: false, description: null, isPrimaryKey: false },
     ]);
+  });
+
+  /** 验证 Upsert 合并键本地校验：缺键/多键/键可空均报错，非 Upsert 策略与合法单键放行。 */
+  it('validates upsert key selection rules', () => {
+    const mappings = [
+      { sourceField: 'cardNo', targetField: 'CARD_NO', targetType: 'string', length: 16, nullable: false, converters: [], isKey: true },
+      { sourceField: 'deptCode', targetField: 'DEPT_CODE', targetType: 'string', length: 8, nullable: true, converters: [] },
+    ];
+    expect(validateUpsertKeySelection('Upsert', mappings)).toBeNull();
+    expect(validateUpsertKeySelection('Append', mappings)).toBeNull();
+    expect(validateUpsertKeySelection('Upsert', mappings.map((item) => ({ ...item, isKey: false }))))
+      .toContain('只能勾选一个合并键');
+    expect(validateUpsertKeySelection('Upsert', [
+      ...mappings,
+      { sourceField: 'idNo', targetField: 'ID_NO', targetType: 'string', length: 8, nullable: false, converters: [], isKey: true },
+    ])).toContain('只能勾选一个合并键');
+    expect(validateUpsertKeySelection('Upsert', [
+      { sourceField: 'cardNo', targetField: 'CARD_NO', targetType: 'string', length: 16, nullable: true, converters: [], isKey: true },
+    ])).toContain('不能勾选“允许空”');
   });
 
   /** 验证列注释展示文本拼接：有注释拼“列名 · 注释”，无注释（null/空白）只显示列名。 */
@@ -354,6 +374,7 @@ describe('syncTaskDesign labels and converter defaults', () => {
     expect(targetTypeLabel('xml')).toBe('xml');
     expect(conflictPolicyLabel('TruncateFirst')).toBe('先清空目标表再写入');
     expect(conflictPolicyLabel('Append')).toBe('追加写入');
+    expect(conflictPolicyLabel('Upsert')).toBe('按主键合并（Upsert）');
     expect(scheduleTypeLabel('Manual')).toBe('手动执行');
     expect(scheduleTypeLabel('Daily')).toBe('每天定时');
     expect(scheduleTypeLabel('Interval')).toBe('固定间隔');

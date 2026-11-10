@@ -9,9 +9,10 @@ namespace HD.ReportCenter.Application.CoreValidation;
 /// <param name="TargetConnectionString">目标库连接串。</param>
 /// <param name="TargetTimeoutSeconds">目标库命令超时秒数。</param>
 /// <param name="TargetTable">目标表名。</param>
-/// <param name="ConflictPolicy">冲突策略：TruncateFirst 清空后写入，其余直接追加。</param>
+/// <param name="ConflictPolicy">冲突策略：TruncateFirst 清空后写入，Append 直接追加，Upsert 按合并键覆盖写。</param>
 /// <param name="Fields">编译后的映射字段（含转换委托与目标类型）。</param>
 /// <param name="RowLimit">可选行数上限；仅受限验证场景使用，正式跑保持 null 不限行数。</param>
+/// <param name="UpsertKeyField">Upsert 策略的合并键目标列名；其他策略为 null。</param>
 public sealed record PocDataSyncExecutionInput(
     PocRuntimeExecutionPlan SourcePlan,
     string TargetDbType,
@@ -20,7 +21,8 @@ public sealed record PocDataSyncExecutionInput(
     string TargetTable,
     string ConflictPolicy,
     IReadOnlyList<PocDataSyncCompiledField> Fields,
-    int? RowLimit = null);
+    int? RowLimit = null,
+    string? UpsertKeyField = null);
 
 /// <summary>一次真实同步的统计结果；失败明细封顶 200 条，完整明细写入运行日志。</summary>
 /// <param name="RowsRead">源端读取的总行数。</param>
@@ -230,12 +232,26 @@ public sealed class PocDataSyncExecutor : ITransient
                 "同步目标配置不完整：目标表、目标数据源类型与连接信息都必须提供。");
         }
         var policy = (input.ConflictPolicy ?? string.Empty).Trim();
+        var isUpsert = policy.Equals("Upsert", StringComparison.OrdinalIgnoreCase);
         if (!policy.Equals("TruncateFirst", StringComparison.OrdinalIgnoreCase) &&
-            !policy.Equals("Append", StringComparison.OrdinalIgnoreCase))
+            !policy.Equals("Append", StringComparison.OrdinalIgnoreCase) &&
+            !isUpsert)
         {
             throw new PocDataSyncException(
                 "SYNC_CONFLICT_POLICY_INVALID",
-                $"冲突策略 '{input.ConflictPolicy}' 无效，仅支持 TruncateFirst 或 Append。");
+                $"冲突策略 '{input.ConflictPolicy}' 无效，仅支持 TruncateFirst、Append 或 Upsert。");
+        }
+        // Upsert 策略必须携带合并键，且键必须是映射里的真实目标列（大小写不敏感比对）。
+        if (isUpsert)
+        {
+            var keyField = input.UpsertKeyField?.Trim();
+            if (string.IsNullOrWhiteSpace(keyField) ||
+                !input.Fields.Any(field => field.TargetField.Equals(keyField, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new PocDataSyncException(
+                    "SYNC_UPSERT_KEY_INVALID",
+                    $"冲突策略为 Upsert 时必须提供映射内真实存在的合并键列，当前为 '{input.UpsertKeyField ?? "(空)"}'。");
+            }
         }
     }
 
@@ -263,14 +279,17 @@ public sealed class PocDataSyncExecutor : ITransient
     {
         try
         {
-            // 第一阶段：目标表存在性探测与自动建表，映射即 DDL 契约。
+            // 第一阶段：目标表存在性探测与自动建表，映射即 DDL 契约；Upsert 策略在建表 DDL 上落合并键主键。
             await _writer.EnsureTableAsync(
                 connection,
                 input.TargetDbType,
                 input.TargetTable,
                 input.Fields,
-                cancellationToken);
-            // 第二阶段：按冲突策略清空；Append 策略跳过清空直接追加。
+                cancellationToken,
+                input.ConflictPolicy.Trim().Equals("Upsert", StringComparison.OrdinalIgnoreCase)
+                    ? input.UpsertKeyField
+                    : null);
+            // 第二阶段：按冲突策略清空；Append/Upsert 策略跳过清空直接追加或合并。
             if (input.ConflictPolicy.Trim().Equals("TruncateFirst", StringComparison.OrdinalIgnoreCase))
             {
                 await _writer.TruncateAsync(connection, input.TargetDbType, input.TargetTable, cancellationToken);
@@ -309,6 +328,8 @@ public sealed class PocDataSyncExecutor : ITransient
         var batch = new List<IReadOnlyDictionary<string, object?>>(rows.Count);
         var batchFailures = new List<PocDataSyncFailureDetail>();
         long failed = 0;
+        var isUpsert = input.ConflictPolicy.Trim().Equals("Upsert", StringComparison.OrdinalIgnoreCase);
+        var upsertKeyField = input.UpsertKeyField?.Trim();
 
         // 第一阶段：逐行转换，失败行按策略跳过并记明细（封顶后在统计层截断）。
         foreach (var row in rows)
@@ -318,6 +339,18 @@ public sealed class PocDataSyncExecutor : ITransient
             {
                 failed++;
                 batchFailures.Add(failure);
+                continue;
+            }
+            // Upsert 策略下合并键为空的行无法定位目标行，按失败行跳过（与转换失败同一管线，不中断任务）。
+            if (isUpsert &&
+                (!target!.TryGetValue(upsertKeyField!, out var keyValue) || keyValue is null or DBNull))
+            {
+                failed++;
+                batchFailures.Add(new PocDataSyncFailureDetail(
+                    rowsReadSoFar + batch.Count + failed,
+                    upsertKeyField!,
+                    "合并键取值为空，无法按主键合并，该行已跳过。",
+                    null));
                 continue;
             }
             batch.Add(target!);
@@ -332,7 +365,8 @@ public sealed class PocDataSyncExecutor : ITransient
                 input.TargetTable,
                 input.Fields,
                 batch,
-                cancellationToken);
+                cancellationToken,
+                isUpsert ? upsertKeyField : null);
         }
         catch (PocDataSyncException)
         {
