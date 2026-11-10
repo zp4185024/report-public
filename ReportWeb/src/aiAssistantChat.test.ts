@@ -1,14 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AiSlowTurnHintThresholdMs,
+  aiToolCardVisual,
   aiToolDetail,
+  buildAiBubbleItems,
+  buildAiThoughtChainItems,
+  deriveAiThinkingStatus,
   formatAiToolLabel,
   isAiDisabledError,
   isAiLoopFailed,
   isAiRetryableError,
+  isAiTurnStalled,
   latestAiSeq,
+  markAiGuidanceSeq,
   mergeAiProgressMessages,
   reconcileAiTurnMessages,
+  resetAiTurnStateAfterAbort,
   resolveAiDataSourceOptions,
+  shouldPreCreateAiSession,
+  shouldSendAsGuidance,
 } from './aiAssistantChat';
 import type {
   AiChatMessageView,
@@ -303,5 +313,211 @@ describe('resolveAiDataSourceOptions', () => {
     // zh-CN 排序下“检验库”排在拉丁字母名称之前；断言只锁定“启用过滤 + 稳定排序”语义。
     expect(options.map((option) => option.code)).toEqual(['lis_db', 'his_db']);
     expect(options.every((option) => !option.dbType.includes('ConnectionString'))).toBe(true);
+  });
+});
+
+describe('shouldPreCreateAiSession', () => {
+  it('triggers only when no session exists, a source is picked and not sending', () => {
+    expect(shouldPreCreateAiSession(null, 'his_db', false)).toBe(true);
+  });
+
+  it('does not trigger when a session id already exists', () => {
+    expect(shouldPreCreateAiSession('ai-abc', 'his_db', false)).toBe(false);
+  });
+
+  it('does not trigger before a data source is selected', () => {
+    expect(shouldPreCreateAiSession(null, '', false)).toBe(false);
+    expect(shouldPreCreateAiSession(null, '   ', false)).toBe(false);
+  });
+
+  it('does not trigger while a turn is in flight', () => {
+    expect(shouldPreCreateAiSession(null, 'his_db', true)).toBe(false);
+  });
+});
+
+describe('deriveAiThinkingStatus', () => {
+  it('shows a planning headline before any tool round starts', () => {
+    const status = deriveAiThinkingStatus([optimisticUserMessage('数一下行数')], 3);
+
+    expect(status.headline).toBe('正在理解问题并规划查询');
+    expect(status.toolName).toBeNull();
+    expect(status.round).toBeNull();
+    expect(status.elapsedLabel).toBe('已思考 3s');
+  });
+
+  it('derives the running tool name and round from the latest polled messages', () => {
+    const messages = [
+      userMessage('数一下行数', 1),
+      assistantMessage('我先统计一下', 2),
+      toolMessage({ seq: 3, toolName: 'run_readonly_sql', rowCount: 4 }),
+    ];
+
+    const status = deriveAiThinkingStatus(messages, 42.7);
+
+    expect(status.headline).toBe('正在调用 run_readonly_sql（第 1 轮）');
+    expect(status.toolName).toBe('run_readonly_sql');
+    expect(status.round).toBe(1);
+    expect(status.elapsedLabel).toBe('已思考 42s');
+  });
+
+  it('advances to the next round headline when the latest message is an assistant plan', () => {
+    const messages = [
+      userMessage('数一下行数', 1),
+      toolMessage({ seq: 2, toolName: 'describe_table', rowCount: null }),
+      toolMessage({ seq: 3, toolName: 'sample_rows', rowCount: 5 }),
+      assistantMessage('再取一次样', 4),
+    ];
+
+    const status = deriveAiThinkingStatus(messages, 8);
+
+    expect(status.headline).toBe('正在执行第 3 轮工具调用');
+    expect(status.toolName).toBe('sample_rows');
+    expect(status.round).toBe(3);
+  });
+
+  it('clamps negative elapsed seconds and keeps the label stable for empty streams', () => {
+    const status = deriveAiThinkingStatus([], -5);
+
+    expect(status.headline).toBe('正在理解问题并规划查询');
+    expect(status.elapsedLabel).toBe('已思考 0s');
+  });
+});
+
+describe('aiToolCardVisual', () => {
+  it('maps every known tool to a dedicated icon kind and Chinese label', () => {
+    expect(aiToolCardVisual('describe_table')).toEqual({ kind: 'structure', label: '查表结构' });
+    expect(aiToolCardVisual('sample_rows')).toEqual({ kind: 'data', label: '采样数据' });
+    expect(aiToolCardVisual('run_readonly_sql')).toEqual({ kind: 'sql', label: '只读 SQL' });
+    expect(aiToolCardVisual('submit_report_spec')).toEqual({ kind: 'submit', label: '提交草稿' });
+    expect(aiToolCardVisual('dry_run_report_spec')).toEqual({ kind: 'dryrun', label: '试跑验证' });
+    expect(aiToolCardVisual('list_tables')).toEqual({ kind: 'structure', label: '查表清单' });
+  });
+
+  it('falls back to the generic card for unknown or missing tool names', () => {
+    expect(aiToolCardVisual('future_tool')).toEqual({ kind: 'generic', label: 'future_tool' });
+    expect(aiToolCardVisual(null)).toEqual({ kind: 'generic', label: '工具调用' });
+  });
+});
+
+describe('isAiTurnStalled', () => {
+  it('flags a turn only after the threshold elapsed since sending', () => {
+    const startedAt = 1_000_000;
+    expect(isAiTurnStalled(startedAt, startedAt + AiSlowTurnHintThresholdMs - 1, null)).toBe(false);
+    expect(isAiTurnStalled(startedAt, startedAt + AiSlowTurnHintThresholdMs, null)).toBe(true);
+  });
+
+  it('resets the baseline whenever progress messages keep arriving', () => {
+    const startedAt = 1_000_000;
+    const lastProgress = startedAt + 40_000;
+    // 虽然整轮已超过 45 秒，但最近 5 秒内仍有增量，说明链路活着，不应提示。
+    expect(isAiTurnStalled(startedAt, startedAt + 46_000, lastProgress)).toBe(false);
+    expect(isAiTurnStalled(startedAt, startedAt + 86_000, lastProgress)).toBe(true);
+  });
+
+  it('honours a custom threshold for tests', () => {
+    const startedAt = 2_000_000;
+    expect(isAiTurnStalled(startedAt, startedAt + 4_999, null, 5_000)).toBe(false);
+    expect(isAiTurnStalled(startedAt, startedAt + 5_000, null, 5_000)).toBe(true);
+  });
+});
+
+describe('shouldSendAsGuidance', () => {
+  it('routes to the guidance endpoint only while a turn is running with a live session', () => {
+    expect(shouldSendAsGuidance(true, 'session-1')).toBe(true);
+    // 空闲发送走正常 /chat，即便已有历史会话号。
+    expect(shouldSendAsGuidance(false, 'session-1')).toBe(false);
+    // 无会话号的运行态（首回合话未建）：降级走正常链路。
+    expect(shouldSendAsGuidance(true, null)).toBe(false);
+  });
+});
+
+describe('markAiGuidanceSeq', () => {
+  it('records the server seq of a guidance reply once', () => {
+    const first = markAiGuidanceSeq([], userMessage('换个口径', 7));
+    expect(first).toEqual([7]);
+    // 重复响应幂等：同一 Seq 不重复记录。
+    expect(markAiGuidanceSeq(first, userMessage('换个口径', 7))).toBe(first);
+  });
+
+  it('ignores replies without a usable seq', () => {
+    expect(markAiGuidanceSeq([3], optimisticUserMessage('换个口径'))).toEqual([3]);
+  });
+});
+
+describe('buildAiThoughtChainItems', () => {
+  it('maps tool messages into success nodes with label, sql summary and row count', () => {
+    const nodes = buildAiThoughtChainItems([toolMessage({ seq: 5 })]);
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]).toMatchObject({
+      key: 'tool-5',
+      toolName: 'run_readonly_sql',
+      label: '只读 SQL',
+      sqlSummary: 'SELECT COUNT(1) AS Total FROM PatientInfo',
+      rowCount: 4,
+      status: 'success',
+    });
+  });
+
+  it('marks failed tools with the error status and error detail text', () => {
+    const failed = toolMessage({ seq: 6, success: false, content: '{"error":"boom"}', rowCount: null, sqlSummary: null });
+    const nodes = buildAiThoughtChainItems([failed]);
+    expect(nodes[0].status).toBe('error');
+    expect(nodes[0].detail).toBe('{"error":"boom"}');
+  });
+});
+
+describe('buildAiBubbleItems', () => {
+  it('merges an empty assistant tool-call round with its following tools into one toolTrace item', () => {
+    const items = buildAiBubbleItems([
+      userMessage('查一下患者表', 1),
+      assistantMessage('', 2),
+      toolMessage({ seq: 3 }),
+      toolMessage({ seq: 4, toolName: 'list_tables', sqlSummary: null, rowCount: 12 }),
+      assistantMessage('患者表共有 12 张相关表', 5),
+    ], { guidanceSeqs: [], pendingGuidanceContent: null });
+    expect(items.map((item) => item.kind)).toEqual(['user', 'toolTrace', 'assistant']);
+    expect(items[1].thoughtNodes.map((node) => node.toolName)).toEqual(['run_readonly_sql', 'list_tables']);
+    // 文本 assistant 保持独立气泡且不受 toolTrace 合并影响。
+    expect(items[2].content).toBe('患者表共有 12 张相关表');
+  });
+
+  it('falls back to a placeholder bubble for an empty assistant round without tools', () => {
+    const items = buildAiBubbleItems([assistantMessage('', 9)],
+      { guidanceSeqs: [], pendingGuidanceContent: null });
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ kind: 'assistant', content: '（模型未返回文本）', thoughtNodes: [] });
+  });
+
+  it('collects trailing tools into a standalone toolTrace while the loop is still running', () => {
+    const items = buildAiBubbleItems([
+      userMessage('继续', 1),
+      assistantMessage('好的', 2),
+      toolMessage({ seq: 3, toolName: 'sample_rows' }),
+    ], { guidanceSeqs: [], pendingGuidanceContent: null });
+    expect(items.map((item) => item.kind)).toEqual(['user', 'assistant', 'toolTrace']);
+    expect(items[2].thoughtNodes[0].label).toBe('采样数据');
+  });
+
+  it('badges guidance bubbles by confirmed seq or by matching pending optimistic content', () => {
+    const confirmed = buildAiBubbleItems([
+      userMessage('只看门诊数据', 4),
+      optimisticUserMessage('换一张表'),
+    ], { guidanceSeqs: [4], pendingGuidanceContent: '换一张表' });
+    expect(confirmed[0].guidanceBadge).toBe(true);
+    expect(confirmed[1].guidanceBadge).toBe(true);
+
+    // 普通乐观消息（非插话）不携带角标。
+    const plain = buildAiBubbleItems([optimisticUserMessage('普通新问题')],
+      { guidanceSeqs: [], pendingGuidanceContent: '别的文本' });
+    expect(plain[0].guidanceBadge).toBe(false);
+  });
+});
+
+describe('resetAiTurnStateAfterAbort', () => {
+  it('resets sending state without marking the turn as failed', () => {
+    const state = resetAiTurnStateAfterAbort();
+    expect(state.sending).toBe(false);
+    expect(state.turnFailed).toBe(false);
+    expect(state.notice.length).toBeGreaterThan(0);
   });
 });

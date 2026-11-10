@@ -16,8 +16,8 @@ public sealed class ReportCenterStartup : AppStartup
         services.AddHttpClient(
             CoreValidation.PocExternalParameterSourceService.HttpClientName,
             client => client.DefaultRequestHeaders.Accept.ParseAdd("application/json"));
-        // AI LLM 客户端：不引入 SDK，超时按调用方（对话 120s / 连通性测试 30s）逐次控制，
-        // 这里把 HttpClient 自身的固定超时放开，避免被 100s 默认值提前截断长对话。
+        // AI LLM 客户端：不引入 SDK，超时按调用方逐次控制（对话不设每调用硬超时、仅由取消令牌
+        // 中止；连通性测试 30s），这里把 HttpClient 自身的固定超时放开，避免默认值提前截断长对话。
         services.AddHttpClient(
             CoreValidation.AiAssistant.PocLlmClient.HttpClientName,
             client => {

@@ -111,4 +111,30 @@ public sealed class PocAiChatSessionStoreTests
         Assert.Null(store.Get(null));
         Assert.Null(store.Get("never-created"));
     }
+
+    /// <summary>
+    /// 验证预创建入口（实时体验补强）：登记绑定数据源的空会话、循环状态空闲，
+    /// 且可被既有 GetOrCreate（真实续聊路径）按 id 命中——首轮 /chat 因此可无缝续用预创建编号。
+    /// </summary>
+    [Fact]
+    public void PreCreate_registers_empty_session_bound_to_data_source()
+    {
+        var now = DateTime.Now;
+        var store = new PocAiChatSessionStore(() => now);
+
+        var session = store.PreCreate("lis_db");
+
+        Assert.StartsWith("ai-", session.Id);
+        Assert.Equal("lis_db", session.DataSourceCode);
+        Assert.Equal(now, session.LastActiveAt);
+        Assert.Empty(session.Messages);
+        Assert.Equal(PocAiLoopState.Idle, session.LoopState);
+        // 预创建会话必须能被 GetOrCreate 按 id 复用而不是再建一个；空会话上的进度轮询快照安全（idle + 零增量）。
+        var (reused, created) = store.GetOrCreate(session.Id, "lis_db");
+        Assert.False(created);
+        Assert.Same(session, reused);
+        var (state, messages) = session.GetProgressSnapshot(0);
+        Assert.Equal(PocAiLoopState.Idle, state);
+        Assert.Empty(messages);
+    }
 }

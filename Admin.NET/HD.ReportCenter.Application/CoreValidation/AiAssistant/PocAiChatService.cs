@@ -26,6 +26,15 @@ public sealed record PocAiChatMessageView(
     bool Truncated,
     long Seq = 0);
 
+/// <summary>会话预创建请求：仅携带数据源编码；服务端创建空会话（无消息历史）并返回编号。</summary>
+public sealed record PocAiSessionPreCreateRequest(string DataSourceCode);
+
+/// <summary>会话预创建回执：空会话编号与绑定数据源；前端后续每轮 /chat 直接携带该编号。</summary>
+public sealed record PocAiSessionPreCreateDocument(string SessionId, string DataSourceCode);
+
+/// <summary>会话插话纠正请求：一条以用户身份追加的方向纠正文本；运行中的工具循环下一轮即读到。</summary>
+public sealed record PocAiSessionGuidanceRequest(string Message);
+
 /// <summary>一次对话的响应：会话号、本轮新增消息、会话是否刚被判定过期重建，以及当前草稿卡片（可为空）。</summary>
 public sealed record PocAiChatResult(
     string SessionId,
@@ -60,11 +69,23 @@ public sealed record PocAiChatDraftView(
 /// <summary>
 /// 模板 AI 对话服务：维护“LLM 调用 ↔ 工具执行”循环，轮数上限 MaxToolRounds，
 /// 超限强制要求模型给出结论性回复；LLM 请求失败保留会话并抛可重试业务错误。
+/// 对话链路不设每调用硬超时（仅由调用方取消令牌中止），并支持运行中插话纠正：
+/// 每轮从会话快照重建 llmMessages，guidance 追加的用户消息下一轮即被模型读到；
+/// 发送前对早期轮次工具结果做上下文压缩，控制长会话的请求体积。
 /// </summary>
 public sealed class PocAiChatService : ITransient
 {
     /// <summary>同一会话允许的连续失败提交次数上限；达到后熔断 submit 工具并提示人工介入。</summary>
     public const int MaxSubmitFailures = 3;
+
+    /// <summary>上下文压缩保持全文回传的最近工具轮数；更早轮次的超长 tool 结果截为前缀摘要。</summary>
+    internal const int FullToolResultRounds = 2;
+
+    /// <summary>早期工具结果在 LLM 请求中保留的字符数；只影响发送历史，会话存储与前端展示不动。</summary>
+    internal const int CompressedToolContentLength = 600;
+
+    /// <summary>早期工具结果被截断后追加的标记文本，明确告知模型该结果不完整。</summary>
+    internal const string CompressedToolContentSuffix = "\n…(早期工具结果已截断)";
 
     private readonly PocAiSettingsService _settingsService;
     private readonly PocAiChatSessionStore _sessionStore;
@@ -165,6 +186,21 @@ public sealed class PocAiChatService : ITransient
             session.BeginLoop();
             await RunToolLoopAsync(settings, session, appended, cancellationToken);
             session.CompleteLoop();
+            return new PocAiChatResult(
+                session.Id,
+                appended.Select(ToView).ToArray(),
+                expired,
+                BuildDraftView(session.Draft));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // 客户端中止（浏览器关闭或面板“停止按钮”abort fetch）：RequestAborted 触发后，取消异常会从
+            // LLM/查数等 await 点冒泡到这里。必须优雅收口而不是让取消异常穿透到 Furion 异常管道——
+            // 否则每次中止都会被当成 500 记 Error 日志并连带触发错误邮件等后台旁路。会话保留（消息与
+            // 草稿原样）、循环状态记 failed 供前端重试，返回已产生的部分结果，stderr 只留一行观测痕迹。
+            session.FailLoop();
+            Console.Error.WriteLine(
+                $"[AI] chat aborted by client: session={session.Id}, keptMessages={appended.Count}");
             return new PocAiChatResult(
                 session.Id,
                 appended.Select(ToView).ToArray(),
@@ -328,7 +364,7 @@ public sealed class PocAiChatService : ITransient
             }).ToArray(),
             ["parsedColumns"] = materials.Sum(item => item.Columns.Count),
         }, Formatting.None);
-        await _auditStore.WriteAsync(sessionId, new PocAiToolExecutionResult(
+        await TryWriteAuditAsync(sessionId, new PocAiToolExecutionResult(
             "attachment_reference",
             null,
             null,
@@ -337,6 +373,28 @@ public sealed class PocAiChatService : ITransient
             true,
             null,
             metadata));
+    }
+
+    /// <summary>
+    /// 尽力写入一次工具/附件审计：审计是旁路能力，写入失败（主库不可用、连接中断或请求取消）
+    /// 不允许打断对话主流程，也不允许异常穿透到 API 层——就地消化并只向 stderr 写一行观测痕迹，
+    /// 便于事后核对“审计缺行”的原因。
+    /// </summary>
+    /// <param name="sessionId">AI 会话编号。</param>
+    /// <param name="result">工具执行结果（含 SQL、行数、耗时与错误摘要）。</param>
+    /// <returns>Task 完成信号；审计失败已就地消化，绝不抛出。</returns>
+    private async Task TryWriteAuditAsync(string sessionId, PocAiToolExecutionResult result)
+    {
+        try
+        {
+            await _auditStore.WriteAsync(sessionId, result);
+        }
+        catch (Exception exception)
+        {
+            // 审计失败只留痕不阻断：会话消息与响应主体均不受影响，stderr 一行便于排查。
+            Console.Error.WriteLine(
+                $"[AI] audit write failed: session={sessionId}, tool={result.ToolName}, error={exception.Message}");
+        }
     }
 
     /// <summary>执行“模型↔工具”循环：模型请求工具则执行并回传结构化结果，直到模型给出结论或达到轮数上限。</summary>
@@ -354,9 +412,14 @@ public sealed class PocAiChatService : ITransient
         var systemPrompt = await BuildSystemPromptAsync(session, cancellationToken);
         while (true)
         {
-            // 第一阶段：组装请求并调用 LLM；达到轮数上限后不再提供工具，只要求模型给出结论。
+            // 第一阶段：每轮从会话快照重建 llmMessages（而不是循环开始时构建一次）——这是插话
+            // 纠正能生效的前提：用户在循环运行中经 guidance 接口追加的消息，下一轮自然被带上。
+            // 达到轮数上限后不再提供工具，只要求模型给出结论。
             var llmMessages = ComposeLlmMessages(systemPrompt, session);
             var forceConclusion = rounds >= settings.MaxToolRounds;
+            // 对话链路不设每调用硬超时（超时理念：超时只该发生在失败时；交互式对话的成功
+            // 生成可合法超过任何预设上限），请求只由调用方取消令牌中止——浏览器断开/取消
+            // 即中止整个工具循环，不再消耗 LLM token。
             var response = await _llmClient.ChatAsync(
                 new PocLlmEndpoint(settings.BaseUrl, settings.ApiKey, settings.Model),
                 new PocLlmRequest(
@@ -364,7 +427,7 @@ public sealed class PocAiChatService : ITransient
                         ? [.. llmMessages, PocAiChatServicePrompts.ForceConclusion]
                         : llmMessages,
                     forceConclusion ? null : PocAiToolRegistry.ListTools()),
-                PocLlmClient.ChatTimeoutSeconds,
+                PocLlmClient.ChatUnboundedTimeoutSeconds,
                 cancellationToken);
 
             // 第二阶段：模型请求工具时执行并回传结果，一轮可能包含多个工具调用。
@@ -400,7 +463,7 @@ public sealed class PocAiChatService : ITransient
                             session.DataSourceCode,
                             cancellationToken);
                     }
-                    await _auditStore.WriteAsync(session.Id, result);
+                    await TryWriteAuditAsync(session.Id, result);
                     var toolMessage = new PocAiChatMessage(
                         PocAiToolRegistry.IsRegistered(toolCall.Name) ? PocAiChatRole.Tool : PocAiChatRole.Assistant,
                         result.ContentJson,
@@ -408,7 +471,7 @@ public sealed class PocAiChatService : ITransient
                         toolCall.Id,
                         toolCall.Name,
                         result.DataSourceCode,
-                        result.SqlText,
+                        result.SqlText ?? BuildToolParamSummary(toolCall.Name, toolCall.ArgumentsJson),
                         result.RowCount,
                         result.Success);
                     session.AppendMessages([toolMessage]);
@@ -425,10 +488,111 @@ public sealed class PocAiChatService : ITransient
         }
     }
 
+    /// <summary>
+    /// 为无 SQL 文本的元数据类工具生成卡片摘要：describe_table 取目标表名，list_tables 标注为全量清单。
+    /// 前端工具卡片以该摘要作副标题，避免只显示工具名让人看不出"查的是哪张表"。
+    /// </summary>
+    /// <param name="toolName">工具名。</param>
+    /// <param name="argumentsJson">模型给出的工具调用参数 JSON。</param>
+    /// <returns>可读摘要；参数缺失或解析失败时返回 null，卡片回退为仅工具名。</returns>
+    private static string? BuildToolParamSummary(string toolName, string? argumentsJson)
+    {
+        if (string.IsNullOrWhiteSpace(argumentsJson))
+        {
+            return null;
+        }
+        try
+        {
+            var root = JToken.Parse(argumentsJson);
+            switch (toolName)
+            {
+                case "describe_table":
+                    return root.Value<string>("tableName") is { Length: > 0 } table ? table : null;
+                case "list_tables":
+                    return "全部表与视图清单";
+                default:
+                    return null;
+            }
+        }
+        catch (JsonReaderException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 预创建空会话（实时体验补强）：AI 关闭 fail-fast 照旧，数据源必填且必须存在并启用，
+    /// 通过后登记一个无消息历史的空会话并返回编号。前端在面板打开且选定数据源时调用，
+    /// 使每一轮对话（含首轮）从发消息瞬间就能按 Seq 轮询 progress；会话本身 30 分钟空闲过期。
+    /// </summary>
+    /// <param name="request">预创建请求（数据源编码）。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>会话编号与绑定数据源。</returns>
+    public async Task<PocAiSessionPreCreateDocument> PreCreateSessionAsync(
+        PocAiSessionPreCreateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+        // 与 chat 同一道闸：AI 关闭/配置不完整时不建会话、不发任何请求，保持“AI 可关闭”硬约束。
+        await _settingsService.RequireEnabledAsync();
+        var dataSourceCode = (request.DataSourceCode ?? string.Empty).Trim();
+        if (dataSourceCode.Length == 0)
+        {
+            throw new PocDatasetConfigurationException("AI_DATA_SOURCE_REQUIRED", "预创建会话必须先选择数据源。");
+        }
+
+        // 数据源存在性预检：让前端在发消息前就发现选错源，而不是等首轮对话才收到 400。
+        var dataSource = await _dataAssetStore.GetDataSourceAsync(dataSourceCode);
+        if (dataSource is null || !dataSource.IsEnabled)
+        {
+            throw new PocDatasetConfigurationException(
+                "AI_DATA_SOURCE_INVALID",
+                $"数据源「{dataSourceCode}」不存在或已停用。");
+        }
+
+        var session = _sessionStore.PreCreate(dataSourceCode);
+        return new PocAiSessionPreCreateDocument(session.Id, session.DataSourceCode);
+    }
+
     /// <summary>显式关闭会话：清空内存上下文；会话不存在同样幂等成功。</summary>
     /// <param name="sessionId">会话编号。</param>
     /// <returns>是否关闭了现存会话。</returns>
     public bool CloseSession(string sessionId) => _sessionStore.Delete(sessionId);
+
+    /// <summary>
+    /// 插话纠正（中途方向修正）：把一条文本以 User 角色追加进指定会话（正常分配 Seq），
+    /// 运行中的工具循环在下一轮组装 llmMessages 时自然读到——模型即收到用户的方向纠正，
+    /// 不必等本轮失败后从头重来；循环未运行时同样允许追加，作为下一轮对话的既有上下文。
+    /// AI 关闭 fail-fast；会话不存在或已过期抛 AI_SESSION_NOT_FOUND；内容必填；
+    /// 插话照常进入 50 条裁剪、progress 轮询与前端展示流，并刷新会话活跃时间。
+    /// </summary>
+    /// <param name="sessionId">目标会话编号。</param>
+    /// <param name="message">插话文本（用户视角的方向纠正）。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>追加后的消息展示视图（含 Seq，供前端对齐消息流）。</returns>
+    public async Task<PocAiChatMessageView> AppendGuidanceAsync(
+        string sessionId,
+        string message,
+        CancellationToken cancellationToken = default)
+    {
+        _ = cancellationToken;
+        // 与 chat 同一道闸：AI 关闭/配置不完整时不改任何会话状态，保持“AI 可关闭”硬约束。
+        await _settingsService.RequireEnabledAsync();
+        var content = (message ?? string.Empty).Trim();
+        if (content.Length == 0)
+        {
+            throw new PocDatasetConfigurationException("AI_MESSAGE_REQUIRED", "插话内容不能为空。");
+        }
+        var session = _sessionStore.Get(sessionId);
+        if (session is null)
+        {
+            throw new PocDatasetConfigurationException("AI_SESSION_NOT_FOUND", "会话不存在或已过期，无法插话。");
+        }
+        _sessionStore.Touch(sessionId);
+        var guidance = new PocAiChatMessage(PocAiChatRole.User, content);
+        session.AppendMessages([guidance]);
+        return ToView(guidance);
+    }
 
     /// <summary>
     /// 产物工具统一入口：submit_report_spec 走“编译 + 全链校验”，dry_run_report_spec 走“编译 + 受限试跑”。
@@ -941,7 +1105,14 @@ public sealed class PocAiChatService : ITransient
         return PocAiSystemPrompt.Build(summary, referenceSection);
     }
 
-    /// <summary>把会话历史转换为 LLM 线格式消息：system 在前，其余按会话顺序；tool 消息补充工具名。</summary>
+    /// <summary>
+    /// 把会话历史转换为 LLM 线格式消息：system 在前，其余按会话顺序；tool 消息补充工具名。
+    /// 发送前对历史做上下文压缩（超时治理）：仅压缩较老轮次的 tool 结果——保留最近
+    /// FullToolResultRounds 轮全文，更早轮次的超长结果截为前缀并追加截断标记；
+    /// user/assistant 消息（承载排查思路主线与中间结论）一律全文保留。
+    /// 压缩只作用于本次请求，会话内存储、前端展示与 Seq 语义均不变，
+    /// 目的是压低长会话上下文体积、让每轮更快返回，避免后期轮次系统性逼近请求超时。
+    /// </summary>
     /// <param name="systemPrompt">系统提示词。</param>
     /// <param name="session">当前会话。</param>
     /// <returns>LLM 请求消息列表。</returns>
@@ -949,27 +1120,79 @@ public sealed class PocAiChatService : ITransient
         string systemPrompt,
         PocAiChatSession session)
     {
-        List<PocLlmChatMessage> messages = [new PocLlmChatMessage("system", systemPrompt)];
+        List<PocAiChatMessage> snapshot;
         lock (session.Messages)
         {
-            foreach (var item in session.Messages)
+            // 锁内只做快照复制，压缩与映射放到锁外执行，避免长会话处理拉长并发追加/轮询的锁等待。
+            snapshot = [.. session.Messages];
+        }
+        List<PocLlmChatMessage> messages = [new PocLlmChatMessage("system", systemPrompt)];
+        foreach (var item in CompressHistoryForLlm(snapshot))
+        {
+            var role = item.Role switch
             {
-                var role = item.Role switch
-                {
-                    PocAiChatRole.User => "user",
-                    PocAiChatRole.Assistant => "assistant",
-                    PocAiChatRole.Tool => "tool",
-                    _ => "system"
-                };
-                messages.Add(new PocLlmChatMessage(
-                    role,
-                    item.Content,
-                    item.ToolCalls,
-                    item.ToolCallId,
-                    item.ToolName));
-            }
+                PocAiChatRole.User => "user",
+                PocAiChatRole.Assistant => "assistant",
+                PocAiChatRole.Tool => "tool",
+                _ => "system"
+            };
+            messages.Add(new PocLlmChatMessage(
+                role,
+                item.Content,
+                item.ToolCalls,
+                item.ToolCallId,
+                item.ToolName));
         }
         return messages;
+    }
+
+    /// <summary>
+    /// 会话历史的发送前压缩（纯函数）：以「assistant 携带 tool_calls」为界把 tool 结果划入
+    /// 工具调用轮次，最近 FullToolResultRounds 轮保持全文，更早轮次中超长的 tool 消息内容
+    /// 截为前 CompressedToolContentLength 字符并追加 CompressedToolContentSuffix；
+    /// 长度未超限的早期结果保持原样，不追加误导性的“已截断”标记。
+    /// 返回新列表（原消息对象或其截断副本），绝不改动会话状态；轮次不足或无历史时原样返回。
+    /// </summary>
+    /// <param name="history">会话消息快照（不含系统提示词）。</param>
+    /// <returns>压缩后的消息列表，顺序与输入一致。</returns>
+    internal static IReadOnlyList<PocAiChatMessage> CompressHistoryForLlm(IReadOnlyList<PocAiChatMessage> history)
+    {
+        // 第一遍：按最近的 assistant tool_calls 给每条 tool 消息标注所属轮次（从 1 起计数），
+        // 没有前置 tool_calls 的孤立 tool 消息归入轮次 0，视作最早的压缩候选。
+        var annotated = new List<(PocAiChatMessage Message, int ToolRound)>(history.Count);
+        var currentRound = 0;
+        foreach (var item in history)
+        {
+            if (item.Role == PocAiChatRole.Assistant && item.ToolCalls is { Count: > 0 })
+            {
+                currentRound++;
+            }
+            annotated.Add((item, item.Role == PocAiChatRole.Tool ? currentRound : 0));
+        }
+        // 轮次号不大于该值的 tool 结果属“更早轮次”；总轮数不足时不压缩，直接原样返回。
+        var compressUpToRound = currentRound - FullToolResultRounds;
+        if (compressUpToRound <= 0)
+        {
+            return history;
+        }
+
+        // 第二遍：只替换命中压缩条件的超长 tool 内容；短结果与最近两轮均保持原对象引用。
+        var compressed = new List<PocAiChatMessage>(history.Count);
+        foreach (var (item, toolRound) in annotated)
+        {
+            if (item.Role == PocAiChatRole.Tool
+                && toolRound <= compressUpToRound
+                && item.Content is { Length: > CompressedToolContentLength } content)
+            {
+                compressed.Add(item with
+                {
+                    Content = content[..CompressedToolContentLength] + CompressedToolContentSuffix
+                });
+                continue;
+            }
+            compressed.Add(item);
+        }
+        return compressed;
     }
 
     /// <summary>把会话消息转换为前端展示视图：tool 消息折叠为“工具名 + SQL 摘要 + 行数”，并携带 Seq 供轮询去重。</summary>

@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Bot, ExternalLink, FilePenLine, LoaderCircle, Package, PackageOpen, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import { reportCatalogApi, reportPackageApi } from './api';
 import { confirmDeleteMessage, deleteErrorMessage } from './assetDeletion';
-import AiAssistantPanel from './AiAssistantPanel';
 import { PaginationBar } from './PaginationBar';
 import ReportPackageImportDialog from './ReportPackageImportDialog';
 import { StatusToasts } from './StatusToasts';
 import type { CreateReportRequest, DatasetOption, ReportSummaryDocument } from './types';
+
+/* AI 助手抽屉按需懒加载：antd/@ant-design/x 只进该分包，AI 未开启时主包零感知（体积红线）。 */
+const AiAssistantPanel = lazy(() => import('./AiAssistantPanel'));
 
 const emptyCreateRequest: CreateReportRequest = {
   reportCode: '',
@@ -450,7 +452,13 @@ export default function ReportListPage({ aiAssistantEnabled = false }: ReportLis
         </button>
       )}
       {aiAssistantEnabled && aiPanelOpen && (
-        <AiAssistantPanel onClose={() => setAiPanelOpen(false)} />
+        <Suspense
+          fallback={(
+            <div className="ai-drawer-overlay" aria-hidden="true" />
+          )}
+        >
+          <AiAssistantPanel onClose={() => setAiPanelOpen(false)} />
+        </Suspense>
       )}
     </main>
   );

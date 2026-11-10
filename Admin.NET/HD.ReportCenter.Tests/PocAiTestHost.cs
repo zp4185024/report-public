@@ -326,6 +326,19 @@ internal sealed class ScriptedLlmHandler : HttpMessageHandler
             return HttpResponse(Text(body));
         });
 
+    /// <summary>
+    /// 入队一个“手动放行”的响应：请求发出后挂起，直到调用返回的放行委托才回包。
+    /// 用于确定性地编排“工具循环运行中插话”等时序敏感用例，避免依赖真实延迟与轮询竞争。
+    /// </summary>
+    /// <param name="body">放行后返回的响应 JSON 文本。</param>
+    /// <returns>手动放行该响应的委托（可安全重复调用，仅首次生效）。</returns>
+    public Action EnqueueDeferredJson(string body)
+    {
+        var completion = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _scripted.Enqueue(_ => completion.Task);
+        return () => completion.TrySetResult(HttpResponse(Text(body)));
+    }
+
     /// <summary>发送一次请求：记录请求体并回放下一个脚本项；脚本耗尽视为测试编排错误。</summary>
     /// <param name="request">HTTP 请求消息。</param>
     /// <param name="cancellationToken">用于取消异步操作的令牌。</param>

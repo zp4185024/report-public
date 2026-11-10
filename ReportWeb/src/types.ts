@@ -122,7 +122,7 @@ export interface ExternalParameterSourceTestResult {
   values: Record<string, string>;
 }
 
-/** 数据集声明的 SQL 输入变量；具体值来源由每张报表配置。 */
+/** 数据集声明的 SQL 输入变量；取值来源可为查询表单，或固定值/滚动表达式兜底。 */
 export interface DatasetVariableDefinition {
   code: string;
   displayName: string;
@@ -131,6 +131,10 @@ export interface DatasetVariableDefinition {
   sourceType?: 'Form' | 'External';
   sourceCode?: string | null;
   sourceFieldCode?: string | null;
+  /** 固定兜底值：调用方未传值时使用；与 defaultExpression 同时存在时表达式现算优先。 */
+  defaultValue?: string | null;
+  /** 时间滚动默认表达式（如 startofmonth(addmonths(today(),-1))），每次执行按当前时间现算，仅日期类变量可用。 */
+  defaultExpression?: string | null;
 }
 
 /** 查询返回字段，只描述数据契约；表头、列宽和公式属于工作簿模板。 */
@@ -708,10 +712,10 @@ export interface DataSyncValidateResult {
   packageSummary: DataSyncPackageSummary | null;
 }
 
-/** 同步任务试跑请求：行数上限（服务端封顶 50）与源数据集变量的可选取值。镜像 PocDataSyncTryRunRequest。 */
+/** 同步任务试跑请求：行数上限（服务端封顶 50）与源数据集变量的可选取值（缺省回落滚动表达式现算）。镜像 PocDataSyncTryRunRequest。 */
 export interface DataSyncTryRunRequest {
   rowLimit: number;
-  parameters?: Record<string, string | null>;
+  parameters?: Record<string, string | null> | null;
 }
 
 /** 同步包试跑请求：包 + 用户选择的目标数据源。镜像 PocDataSyncDryRunRequest。 */
@@ -801,6 +805,8 @@ export interface SyncTaskSourceInput {
   name?: string | null;
   /** 选表模式下的源表名：后端据此把数据库注释写入源数据集字段的 displayName。 */
   sourceTable?: string | null;
+  /** 取数参数契约：与 SQL @引用一一对应，随源数据集落库并随同步包携带；固定值/滚动表达式按次运行现算兜底。 */
+  variables?: DatasetVariableDefinition[] | null;
 }
 
 /** 数据源表清单响应：该数据源连接库内的基础表名。镜像 PocSyncTableMetadataDocument。 */
@@ -831,6 +837,10 @@ export interface SyncSourcePreviewRequest {
   queryText: string;
   /** 选表模式下的源表名：提供时按列名匹配数据库注释填充字段的 description。 */
   sourceTable?: string | null;
+  /** 设计器正在编辑的取数参数契约：服务端按当前时间现算表达式兜底。 */
+  variables?: DatasetVariableDefinition[] | null;
+  /** 显式给定的变量取值，优先于变量默认值；两者皆无时 SQL 引用的变量按必填缺值拒绝。 */
+  parameters?: Record<string, string | null> | null;
 }
 
 /** 同步运行日志状态；与后端字符串枚举保持一致。 */
@@ -954,6 +964,22 @@ export interface AiChatDraft {
 export interface AiSessionClosedDocument {
   sessionId: string;
   closed: boolean;
+}
+
+/** AI 会话预创建请求：仅携带数据源编码；服务端创建空会话（无消息历史）并返回编号。镜像 PocAiSessionPreCreateRequest。 */
+export interface AiSessionPreCreateRequest {
+  dataSourceCode: string;
+}
+
+/** AI 会话插话（方向纠正）请求：message 为下一轮进入模型上下文的纠正文本。镜像 PocAiSessionGuidanceRequest。 */
+export interface AiSessionGuidanceRequest {
+  message: string;
+}
+
+/** AI 会话预创建回执：空会话编号与绑定数据源，前端后续每轮 /chat 直接携带该编号。镜像 PocAiSessionPreCreateDocument。 */
+export interface AiSessionPreCreateDocument {
+  sessionId: string;
+  dataSourceCode: string;
 }
 
 /** 前端侧栏使用的轻量数据源选项；来自 dataAssetApi.dataSources 的脱敏文档。 */

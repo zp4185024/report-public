@@ -61,8 +61,12 @@ public sealed class PocLlmClient
     /// <summary>命名 HttpClient 的注册名；由 ReportCenterStartup 统一注册超时与请求头。</summary>
     public const string HttpClientName = "ReportCenterAiLlm";
 
-    /// <summary>对话补全的默认超时秒数；聊天可能经历多轮思考，取宽于普通接口的超时。</summary>
-    public const int ChatTimeoutSeconds = 120;
+    /// <summary>
+    /// 对话链路使用的超时约定值：0 表示不设每调用硬超时——超时只该发生在真正失败时，
+    /// 交互式对话的成功生成可以合法超过任何预设上限；请求只由调用方取消令牌中止
+    /// （浏览器断开/取消即中止循环），连通性测试等短调用仍传各自的有限超时。
+    /// </summary>
+    public const int ChatUnboundedTimeoutSeconds = 0;
 
     /// <summary>连通性测试的超时秒数；测试只发一条短消息，快速失败给管理员明确提示。</summary>
     public const int TestTimeoutSeconds = 30;
@@ -86,7 +90,7 @@ public sealed class PocLlmClient
     /// <summary>发送一次 OpenAI 兼容对话补全请求，解析 content 或 tool_calls；网络、协议和响应异常统一转业务错误。</summary>
     /// <param name="endpoint">目标端点（baseUrl/apiKey/model）。</param>
     /// <param name="request">消息历史与工具 schema。</param>
-    /// <param name="timeoutSeconds">本次调用超时秒数。</param>
+    /// <param name="timeoutSeconds">本次调用超时秒数；传 0 或负数表示不设每调用硬超时，仅由取消令牌中止。</param>
     /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
     /// <returns>解析后的补全结果。</returns>
     public Task<PocLlmResponse> ChatAsync(
@@ -101,7 +105,7 @@ public sealed class PocLlmClient
     /// <summary>执行一次对话补全的实际网络与解析流程；由诊断包装层调用。</summary>
     /// <param name="endpoint">目标端点。</param>
     /// <param name="request">消息历史与工具 schema。</param>
-    /// <param name="timeoutSeconds">本次调用超时秒数。</param>
+    /// <param name="timeoutSeconds">本次调用超时秒数；0 或负数表示不限时。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>解析后的补全结果。</returns>
     private async Task<PocLlmResponse> ChatAsyncCore(
@@ -112,7 +116,11 @@ public sealed class PocLlmClient
     {
         var url = BuildChatCompletionsUrl(endpoint.BaseUrl);
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(timeoutSeconds, 1, 600)));
+        // 仅当调用方给定正值时才设每调用限时；对话链路传 0，长生成不设硬超时，只由取消令牌中止。
+        if (timeoutSeconds > 0)
+        {
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(Math.Clamp(timeoutSeconds, 1, 600)));
+        }
 
         // 第一阶段：组装请求体与鉴权头；密钥只进入 Authorization 头，绝不写入 URL 或日志。
         // 请求体按 ASCII 转义序列化，规避链路上任何按本机码页解码请求体的中间件。

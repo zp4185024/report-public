@@ -1,0 +1,737 @@
+/* ==================== AI 助手抽屉（@ant-design/x 外壳） ====================
+   本文件由 AiAssistantPanel.tsx 懒加载引入：样式随 AI 分包下发，AI 未开启时主包零感知。
+   布局：固定右侧全高抽屉 + 三段式（品牌头含数据源工具行 / 消息流 Bubble.List / 底部 Sender）。
+   动画只用 transform/opacity（GPU 合成）；统一在文件末尾 @media (prefers-reduced-motion) 关停。 */
+
+@keyframes ai-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ai-drawer-in {
+  from { opacity: 0; transform: translate3d(28px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes ai-msg-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.ai-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 69;
+  background: rgba(15, 23, 42, 0.32);
+  animation: ai-overlay-in 180ms ease-out both;
+}
+
+.ai-assistant-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 70;
+  display: flex;
+  width: 468px;
+  max-width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  flex-direction: column;
+  background: var(--surface, #fff);
+  border-left: 1px solid var(--border, #e2e8f0);
+  box-shadow: -24px 0 48px rgba(15, 23, 42, 0.22);
+  overflow: hidden;
+  animation: ai-drawer-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* —— 顶部固定区：品牌渐变条 + 头像 + 状态点 + 数据源工具行（Select + 表清单 Popover） —— */
+
+.ai-panel-header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border, #e2e8f0);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.07), rgba(124, 58, 237, 0.06));
+}
+
+/* 品牌渐变条：与报表中心主色（.button-primary 的 #2563eb）同源，压在抽屉顶边。 */
+.ai-panel-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #2563eb, #4f46e5 55%, #7c3aed);
+}
+
+.ai-panel-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ai-panel-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+}
+
+.ai-panel-heading {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-panel-heading strong {
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--text-primary, #0f172a);
+}
+
+.ai-panel-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+}
+
+.ai-status-dot {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+/* 呼吸态用伪元素扩散圈实现：只动 transform/opacity，不动画 box-shadow（避免 CPU 重绘）。 */
+.ai-status-dot.running {
+  background: #10b981;
+}
+
+.ai-status-dot.running::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.45);
+  animation: ai-status-pulse 1.6s ease-out infinite;
+}
+
+@keyframes ai-status-pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  70%, 100% { transform: scale(2.8); opacity: 0; }
+}
+
+.ai-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 数据源工具行：antd Select（compact 截断显示）+ 表清单 Popover 图标按钮。 */
+.ai-panel-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-panel-source-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 300px;
+}
+
+.ai-tables-trigger {
+  flex-shrink: 0;
+}
+
+/* —— 通知条区（顶部固定）：外发警示 + 会话提示 + 错误 + 45 秒慢响应，语义色统一 —— */
+
+.ai-panel-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 16px 4px;
+}
+
+.ai-panel-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.ai-panel-notice,
+.ai-panel-error,
+.ai-panel-slow {
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.ai-panel-notice {
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.ai-panel-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.ai-panel-slow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  animation: ai-msg-in 160ms ease-out both;
+}
+
+.ai-panel-slow-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-panel-slow-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.ai-slow-button {
+  padding: 2px 9px;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-slow-button:hover {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+.ai-slow-button.ghost {
+  background: transparent;
+  color: #b45309;
+}
+
+.ai-slow-button.ghost:hover {
+  background: rgba(245, 158, 11, 0.14);
+}
+
+/* —— 中部消息流：Bubble.List 自带滚动容器贴底自动滚 + “回到底部”悬浮按钮 —— */
+
+.ai-messages-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* Bubble.List 根节点：占满 wrap，内部 -scroll-box（overflowY:auto）才是真正滚动容器。 */
+.ai-panel-messages {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 10px;
+}
+
+.ai-back-bottom {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #2563eb;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14);
+  transform: translateX(-50%);
+  animation: ai-msg-in 160ms ease-out both;
+}
+
+.ai-back-bottom:hover {
+  border-color: #93c5fd;
+}
+
+.ai-panel-empty {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary, #64748b);
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* —— 气泡（Bubble.List 角色渲染）：头像圆点/插话角标/失败气泡保留自研观感 —— */
+
+.ai-msg-avatar {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff;
+}
+
+/* 插话角标：挂在用户气泡 outer footer，明示“下一轮才进模型上下文”。 */
+.ai-guidance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px dashed #f59e0b;
+  border-radius: 999px;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 失败气泡：复用旧语义色（作用域收紧到消息流内，避免影响 system/空态气泡）。 */
+.ai-panel-messages .ai-bubble.failed {
+  align-self: stretch;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* —— 动态思考条：三点跳动 + 从 progress 推导的工具/轮次文案 + 已耗时秒数 —— */
+
+.ai-thinking-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(124, 58, 237, 0.05));
+  animation: ai-msg-in 180ms ease-out both;
+}
+
+.ai-thinking-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ai-thinking-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+  animation: ai-dot-bounce 1.2s ease-in-out infinite;
+}
+
+.ai-thinking-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.ai-thinking-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes ai-dot-bounce {
+  0%, 70%, 100% { transform: translate3d(0, 0, 0); opacity: 0.45; }
+  35% { transform: translate3d(0, -5px, 0); opacity: 1; }
+}
+
+.ai-thinking-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ai-thinking-text strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
+.ai-thinking-text small {
+  font-size: 11px;
+  color: var(--text-secondary, #64748b);
+}
+
+/* —— 工具轨迹 ThoughtChain：链式节点 = 中文标签 + 工具名 + 行数徽标 + SQL 摘要，折叠展开保持可读 —— */
+
+.ai-thought-chain {
+  width: 100%;
+  font-size: 12px;
+}
+
+.ai-thought-chain .ant-thought-chain-node-content {
+  padding: 4px 0;
+}
+
+.ai-thought-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-thought-title small {
+  max-width: 170px;
+  overflow: hidden;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  font-weight: 400;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-thought-rows {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e0e9ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ai-thought-sql {
+  display: block;
+  overflow: hidden;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: #475569;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-thought-detail {
+  max-height: 180px;
+  margin: 0;
+  padding: 8px 10px;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #475569;
+}
+
+/* ThoughtChain 错误节点：标题/摘要转红色态（状态图标由内置 status-error 徽标负责）。 */
+.ai-thought-title.failed,
+.ai-thought-title.failed small {
+  color: #b91c1c;
+}
+
+/* —— 底部固定区：附件条 + Sender 输入区（运行中不禁用，Enter 走插话） —— */
+
+.ai-panel-footer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border, #e2e8f0);
+  background: var(--surface, #fff);
+}
+
+.ai-panel-composer {
+  padding: 10px 12px 12px;
+}
+
+/* 表清单 Popover 内容：固定宽度 + 内滚 + 过滤条（沿用 aiDataSourceTables 纯函数）。 */
+.ai-table-popover {
+  display: flex;
+  width: 320px;
+  max-height: 340px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-table-popover .ai-table-list-filterbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-table-list-scroll {
+  flex: 1;
+  min-height: 120px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px dashed var(--border, #cbd5e1);
+  border-radius: 8px;
+  background: var(--surface-muted, #f8fafc);
+}
+
+.ai-table-list-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-table-list-row:last-child {
+  border-bottom: none;
+}
+
+.ai-table-kind {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.ai-table-kind.view {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.ai-table-name {
+  flex-shrink: 0;
+  max-width: 45%;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--text-primary, #0f172a);
+}
+
+.ai-table-comment {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary, #64748b);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-table-list-hint {
+  padding: 6px 10px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.5;
+}
+
+/* —— 草稿卡片：状态徽标（试跑通过绿 / 校验通过蓝 / 待确认黄 / 失败红）+ 紧凑 chip 流 + 分层按钮 —— */
+
+.ai-draft-card {
+  width: 100%;
+  max-height: 300px;
+  padding: 12px;
+  overflow-y: auto;
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #eef2ff, #f6f8ff);
+  font-size: 12px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+  animation: ai-msg-in 180ms ease-out both;
+}
+
+.ai-draft-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ai-draft-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ai-draft-badge.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ai-draft-badge.info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.ai-draft-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ai-draft-badge.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.ai-draft-section {
+  margin-bottom: 8px;
+}
+
+.ai-draft-section strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #4338ca;
+}
+
+.ai-draft-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ai-draft-chip {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 3px 8px;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  background: #fff;
+  line-height: 1.3;
+}
+
+.ai-draft-chip small {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.ai-draft-result {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px dashed #a5b4fc;
+  border-radius: 8px;
+  background: #fff;
+  color: #1e293b;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.ai-draft-result.muted {
+  color: #64748b;
+}
+
+.ai-draft-empty {
+  margin: 0;
+  color: #9f1239;
+  line-height: 1.5;
+}
+
+.ai-draft-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ai-draft-actions .button {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+/* —— 附件参考：待发送附件条与隐藏文件输入 —— */
+
+.ai-attachment-input {
+  display: none;
+}
+
+.ai-panel-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px 0;
+}
+
+.ai-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--surface-muted, #f8fafc);
+}
+
+.ai-attachment-chip button {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+}
+
+/* —— 消息气泡入场动画：作用到 antd-x 气泡根节点 —— */
+
+.ai-panel-messages .ant-bubble {
+  animation: ai-msg-in 180ms ease-out both;
+}
+
+/* 无障碍：用户偏好减弱动效时关停全部 AI 装饰动画（抽屉、气泡、思考点、呼吸圈）。 */
+@media (prefers-reduced-motion: reduce) {
+  .ai-drawer-overlay,
+  .ai-assistant-panel,
+  .ai-panel-messages .ant-bubble,
+  .ai-thinking-bar,
+  .ai-draft-card,
+  .ai-back-bottom,
+  .ai-panel-slow,
+  .ai-status-dot.running::after,
+  .ai-thinking-dots i {
+    animation: none;
+  }
+}

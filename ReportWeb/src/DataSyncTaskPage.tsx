@@ -32,27 +32,44 @@ import {
   converterSummary,
   createConverterStep,
   CRON_EXPRESSION_HINT,
+  extractSqlParameterCodes,
   findConverterDescriptor,
   formatColumnWithDescription,
+  mergeSyncVariables,
   previewCronExpression,
   scheduleCronForSave,
   scheduleSummary,
   SCHEDULE_TYPE_OPTIONS,
   SKIP_TARGET_OPTION,
+  SYNC_VARIABLE_DATA_TYPE_OPTIONS,
   targetColumnsFromMetadata,
   tryRunCellDisplay,
   validateCronScheduleInput,
   validateSyncMappings,
+  validateSyncVariables,
   type AiSyncMatchMark,
   type SyncSourceColumn,
   type SyncTargetColumn,
 } from './syncTaskDesign';
+import {
+  buildOffsetExpression,
+  describeOffset,
+  evaluateDefaultExpression,
+  getDefaultExpressionError,
+  getRelativePointPresets,
+  matchOffsetExpression,
+  matchRelativePointPreset,
+  SYNC_WINDOW_PRESETS,
+  type RelativeOffset,
+  type RelativeOffsetUnit,
+} from './defaultExpressions';
 import type {
   DataSyncSampleRow,
   DataSyncTryRunResult,
   DataSourceDocument,
   DatasetDocument,
   DatasetPreviewResult,
+  DatasetVariableDefinition,
   DeletedDocument,
   SyncColumnMapping,
   SyncColumnMetadata,
@@ -74,6 +91,9 @@ const RUN_POLL_INTERVAL_MS = 5000;
 /** 源取数预览面板展示的样例行数上限，完整样例可展开区域滚动查看。 */
 const SOURCE_PREVIEW_ROW_LIMIT = 5;
 
+/** 语义时间点下拉里“自定义偏移…”入口的哨兵值：选中后该行展开数量/单位/方向构造器。 */
+const CUSTOM_OFFSET_OPTION = '__offset__';
+
 /** SQL 编辑器体积较大，与数据资产页保持一致按需加载，避免拖慢任务列表首屏。 */
 const SqlEditor = lazy(() => import('./SqlEditor'));
 
@@ -93,6 +113,10 @@ interface SyncTaskDraft {
   sourceDataSourceCode: string;
   sourceTableName: string;
   sourceQueryText: string;
+  /** 选表模式的过滤条件（不含 WHERE 关键字）：支持 @变量 按滚动时间窗口过滤，空白为全量。 */
+  sourceFilter: string;
+  /** 取数参数契约：与 SQL @引用一一对应，支持固定值或滚动表达式，随源数据集落库。 */
+  variables: DatasetVariableDefinition[];
   /** 目标模式：existing=选择现有表（目标字段下拉来自真实列），create=新建表（目标字段为文本）。 */
   targetMode: 'existing' | 'create';
   targetDataSourceCode: string;
@@ -126,6 +150,8 @@ function draftFromDocument(document: SyncTaskDocument, datasets: readonly Datase
     sourceDataSourceCode: dataset?.dataSourceCode ?? '',
     sourceTableName: '',
     sourceQueryText: dataset?.queryText ?? '',
+    sourceFilter: '',
+    variables: (dataset?.variables ?? []).map((variable) => ({ ...variable })),
     targetMode: 'existing',
     targetDataSourceCode: document.targetDataSourceCode,
     targetTable: document.targetTable,
@@ -158,6 +184,8 @@ function newSyncTaskDraft(existingCodes: readonly string[]): SyncTaskDraft {
     sourceDataSourceCode: '',
     sourceTableName: '',
     sourceQueryText: '',
+    sourceFilter: '',
+    variables: [],
     targetMode: 'existing',
     targetDataSourceCode: '',
     targetTable: '',
@@ -1040,6 +1068,8 @@ function SyncTaskDesigner({
   const [aiMatchManualTargets, setAiMatchManualTargets] = useState<string[]>([]);
   const [aiMatchSummary, setAiMatchSummary] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // 试跑的参数覆盖值：留空按滚动表达式现算，填写则按指定历史窗口核数。
+  const [tryRunOverrides, setTryRunOverrides] = useState<Record<string, string>>({});
 
   // 草稿引用：异步回调（列加载完成后的自动匹配）里读取最新草稿，避免闭包旧值覆盖新编辑。
   const draftRef = useRef(draft);
@@ -1091,6 +1121,86 @@ function SyncTaskDesigner({
    */
   const patchDraft = (patch: Partial<SyncTaskDraft>) => {
     onDraftChange({ ...draft, ...patch });
+  };
+
+  // 阶段：取数参数。变量契约随源 SQL @引用自动物化，滚动窗口预设一键填充起止表达式。
+  const dateVariables = useMemo(
+    () => draft.variables.filter((variable) => variable.dataType === 'date' || variable.dataType === 'datetime'),
+    [draft.variables],
+  );
+
+  /**
+   * 源取数定义（SQL 或选表过滤条件）变更：按新 @引用重新物化变量草稿——
+   * 新引用追加日期型默认定义，不再引用的移除，编码未变的既有配置原样保留。
+   * @param patch - 源取数定义字段的部分覆盖。
+   */
+  const patchSourceDefinition = (patch: { sourceQueryText?: string; sourceFilter?: string }) => {
+    const nextQueryText = patch.sourceQueryText ?? draft.sourceQueryText;
+    onDraftChange({
+      ...draft,
+      ...patch,
+      variables: mergeSyncVariables(draft.variables, extractSqlParameterCodes(nextQueryText)),
+    });
+  };
+
+  /**
+   * 更新单个取数参数的配置（名称/类型/固定值/滚动表达式）；空白文本归一为 null，
+   * 避免把空串落库成“有默认值”。
+   * @param index - 变量在草稿列表中的下标。
+   * @param patch - 变量字段的部分覆盖。
+   */
+  const updateVariable = (index: number, patch: Partial<DatasetVariableDefinition>) => {
+    patchDraft({
+      variables: draft.variables.map((variable, itemIndex) => itemIndex !== index
+        ? variable
+        : {
+            ...variable,
+            ...patch,
+            defaultValue: patch.defaultValue !== undefined
+              ? (patch.defaultValue.trim() || null)
+              : variable.defaultValue,
+            defaultExpression: patch.defaultExpression !== undefined
+              ? (patch.defaultExpression.trim() || null)
+              : variable.defaultExpression,
+          }),
+    });
+  };
+
+  /**
+   * 一键应用滚动窗口预设：恰好有两个日期型取数参数时按声明顺序填充“起点/终点”
+   * 表达式（SQL 引用顺序即物化顺序，起止各就各位）；参数数量不符时按钮置灰，
+   * 提示改为逐个配置，绝不猜变量语义。
+   * @param preset - 窗口预设（起点与终点表达式）。
+   */
+  const applyWindowPreset = (preset: { startExpression: string; endExpression: string }) => {
+    if (dateVariables.length !== 2) return;
+    const [start, end] = dateVariables;
+    patchDraft({
+      variables: draft.variables.map((variable) => {
+        if (variable.code === start.code) {
+          return { ...variable, defaultExpression: preset.startExpression };
+        }
+        if (variable.code === end.code) {
+          return { ...variable, defaultExpression: preset.endExpression };
+        }
+        return variable;
+      }),
+    });
+    setNotice(`已应用窗口预设「${preset.label}」：每次运行按当前时间自动滚动取数窗口。`);
+  };
+
+  /**
+   * 修改选表模式的过滤条件：作废旧预览并按方言重新生成带 WHERE 的取数 SQL，
+   * 变量契约随新 SQL 的 @引用同步物化。
+   * @param filter - 过滤条件文本（不含 WHERE 关键字）。
+   */
+  const changeSourceFilter = (filter: string) => {
+    const queryText = draft.sourceTableName && sourceDataSource
+      ? buildTableSelectSql(sourceDataSource.dbType, draft.sourceTableName, filter)
+      : draft.sourceQueryText;
+    setPreview(null);
+    setTryRunResult(null);
+    patchSourceDefinition({ sourceFilter: filter, sourceQueryText: queryText });
   };
 
   /**
@@ -1191,6 +1301,8 @@ function SyncTaskDesigner({
         queryText: draft.sourceQueryText,
         // 选表模式携带源表名：后端按列名匹配数据库注释填充 fields 的 description。
         sourceTable: draft.sourceMode === 'table' ? draft.sourceTableName : null,
+        // 取数参数契约随预览透传：滚动表达式由服务端按当前时间现算兜底。
+        variables: draft.variables.length > 0 ? draft.variables : null,
       });
       const nextSources = result.fields.map((field) => ({ name: field.code, dataType: field.dataType }));
       setPreview(result);
@@ -1212,7 +1324,7 @@ function SyncTaskDesigner({
       onDraftChange({
         ...draft,
         sourceMode: mode,
-        sourceQueryText: buildTableSelectSql(sourceDataSource.dbType, draft.sourceTableName),
+        sourceQueryText: buildTableSelectSql(sourceDataSource.dbType, draft.sourceTableName, draft.sourceFilter),
       });
       return;
     }
@@ -1225,11 +1337,11 @@ function SyncTaskDesigner({
    */
   const changeSourceTable = (table: string) => {
     const queryText = table && sourceDataSource
-      ? buildTableSelectSql(sourceDataSource.dbType, table)
+      ? buildTableSelectSql(sourceDataSource.dbType, table, draft.sourceFilter)
       : '';
     setPreview(null);
     setTryRunResult(null);
-    patchDraft({ sourceTableName: table, sourceQueryText: queryText });
+    patchSourceDefinition({ sourceTableName: table, sourceQueryText: queryText });
   };
 
   /**
@@ -1241,7 +1353,8 @@ function SyncTaskDesigner({
     setSourceTables(null);
     setPreview(null);
     setTryRunResult(null);
-    patchDraft({ sourceDataSourceCode: code, sourceTableName: '', sourceQueryText: '' });
+    setCustomExpressionCodes([]);
+    patchDraft({ sourceDataSourceCode: code, sourceTableName: '', sourceQueryText: '', sourceFilter: '', variables: [] });
   };
 
   /**
@@ -1386,7 +1499,8 @@ function SyncTaskDesigner({
     if (cronError) localErrors.push(cronError);
     if (draft.mappings.length === 0) localErrors.push('至少需要一个字段映射（不同步的源列不计入）。');
     const mappingErrors = validateSyncMappings(sourceColumns, targetOptions, draft.mappings);
-    const allErrors = [...localErrors, ...mappingErrors];
+    const variableErrors = validateSyncVariables(draft.variables, draft.sourceQueryText);
+    const allErrors = [...localErrors, ...mappingErrors, ...variableErrors];
     if (allErrors.length > 0) {
       setError(`保存被阻止，请先修正以下问题：\n${allErrors.map((item, index) => `${index + 1}. ${item}`).join('\n')}`);
       return;
@@ -1402,6 +1516,8 @@ function SyncTaskDesigner({
         queryText: draft.sourceQueryText,
         // 选表模式携带源表名：保存后服务端把数据库注释写入源数据集字段的 displayName。
         sourceTable: draft.sourceMode === 'table' ? draft.sourceTableName : null,
+        // 取数参数契约随源节落库：滚动表达式在每次运行开始时由服务端按当前时间现算。
+        variables: draft.variables.length > 0 ? draft.variables : null,
       },
       targetDataSourceCode: draft.targetDataSourceCode,
       targetTable: draft.targetTable.trim(),
@@ -1445,7 +1561,14 @@ function SyncTaskDesigner({
     setTryRunning(true);
     setError(null);
     try {
-      const result = await dataSyncApi.tryRun(draft.code, { rowLimit: DESIGN_TRY_RUN_ROW_LIMIT });
+      // 覆盖值只提交已填写的参数：留空按任务配置的滚动表达式现算兜底。
+      const overrides = Object.fromEntries(
+        Object.entries(tryRunOverrides).filter(([, value]) => value.trim() !== ''),
+      );
+      const result = await dataSyncApi.tryRun(draft.code, {
+        rowLimit: DESIGN_TRY_RUN_ROW_LIMIT,
+        parameters: Object.keys(overrides).length > 0 ? overrides : null,
+      });
       setTryRunResult(result);
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : '试跑失败。');
@@ -1620,7 +1743,7 @@ function SyncTaskDesigner({
               <SqlEditor
                 value={draft.sourceQueryText}
                 dbType={sourceDataSource?.dbType ?? 'SqlServer'}
-                onChange={(queryText) => patchDraft({ sourceQueryText: queryText })}
+                onChange={(queryText) => patchSourceDefinition({ sourceQueryText: queryText })}
               />
             </Suspense>
           </div>
@@ -1634,6 +1757,249 @@ function SyncTaskDesigner({
             <code className="sync-generated-sql">{draft.sourceQueryText}</code>
           </div>
         )}
+        {/* 选表模式的过滤条件：拼接为 WHERE 子句并随整条 SQL 过只读校验，支持 @变量 做滚动窗口。 */}
+        {draft.sourceMode === 'table' && draft.sourceTableName && (
+          <div className="sync-source-filter">
+            <div className="sync-source-sql-head">
+              <span>过滤条件（可选，不含 WHERE，支持 @变量）</span>
+            </div>
+            <textarea
+              aria-label="选表过滤条件"
+              className="sync-filter-input"
+              value={draft.sourceFilter}
+              rows={2}
+              placeholder="例：VisitDate >= @startDate AND VisitDate < @endDate（配合下方取数参数做滚动窗口）"
+              onChange={(event) => changeSourceFilter(event.target.value)}
+            />
+          </div>
+        )}
+        {/* 取数参数（滚动时间窗口）：变量契约随 SQL @引用自动物化，预设一键填充起止表达式。 */}
+        <div className="sync-variables-section">
+          <div className="sync-source-sql-head">
+            <span>取数参数（滚动时间窗口）</span>
+            <div className="sync-window-presets">
+              {SYNC_WINDOW_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  className="button"
+                  title={dateVariables.length === 2 ? preset.hint : '窗口预设需要恰好两个日期型参数（起点/终点）'}
+                  disabled={dateVariables.length !== 2}
+                  onClick={() => applyWindowPreset(preset)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <small>
+            在取数 SQL 或过滤条件里写 @变量（如 @startDate、@endDate），配置滚动表达式后，
+            每次运行由服务端按当前时间现算取数窗口——每天同步昨天、每月同步上月都不用改任务。
+            {dateVariables.length !== 2 && ' 窗口预设按钮需要恰好两个日期型参数时才可用。'}
+          </small>
+          {draft.variables.length === 0 ? (
+            <p className="sync-variables-empty">
+              当前取数定义没有 @参数，将按全量取数；需要按时间窗口取数时，在 SQL 或过滤条件里引用 @startDate / @endDate 等变量。
+            </p>
+          ) : (
+            <div className="sync-variables-scroll">
+              <table className="sync-variables-table">
+                <thead>
+                  <tr>
+                    <th>参数编码</th><th>业务名称</th><th>类型</th><th>取值方式</th><th>取值</th><th>本次运行值</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {draft.variables.map((variable, index) => {
+                    const expression = (variable.defaultExpression ?? '').trim();
+                    const expressionError = getDefaultExpressionError(variable.defaultExpression ?? null);
+                    const previewValue = expression
+                      ? (expressionError ?? evaluateDefaultExpression(variable.defaultExpression, variable.dataType, new Date()) ?? '—')
+                      : (variable.defaultValue ?? '').trim() || '—';
+                    // 取值形态纯派生：表达式命中语义目录或偏移形态 = 滚动时间（界面只见中文标签），
+                    // 其余表达式 = 高级（手写组合兜底）；无表达式按固定值/不设默认区分。
+                    const presetMatch = matchRelativePointPreset(variable.defaultExpression ?? null, variable.dataType);
+                    const offsetMatch = matchOffsetExpression(variable.defaultExpression ?? null);
+                    const valueMode = expression
+                      ? (presetMatch || offsetMatch ? 'relative' : 'advanced')
+                      : (variable.defaultValue ?? '') !== '' ? 'fixed' : 'none';
+                    const presets = getRelativePointPresets(variable.dataType);
+                    const offset: RelativeOffset = offsetMatch ?? { amount: -7, unit: 'day' };
+                    const offsetDirection = offset.amount < 0 ? 'past' : 'future';
+                    /**
+                     * 把行内偏移构造器的当前输入写回表达式；量取绝对值、方向由前后选择决定。
+                     * @param amount - 构造器里的正整数数量。
+                     * @param unit - 偏移单位（周落库折算为 7 倍天数）。
+                     * @param direction - past=向前，future=向后。
+                     */
+                    const applyOffset = (amount: number, unit: RelativeOffsetUnit, direction: 'past' | 'future') => {
+                      const normalized = Number.isFinite(amount) && amount > 0 ? Math.trunc(amount) : 1;
+                      updateVariable(index, {
+                        defaultExpression: buildOffsetExpression({
+                          amount: direction === 'past' ? -normalized : normalized,
+                          unit,
+                        }),
+                      });
+                    };
+                    return (
+                      <tr key={variable.code}>
+                        <td><code>@{variable.code}</code></td>
+                        <td>
+                          <input
+                            aria-label={`参数名称 ${variable.code}`}
+                            value={variable.displayName}
+                            onChange={(event) => updateVariable(index, { displayName: event.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <select
+                            aria-label={`参数类型 ${variable.code}`}
+                            value={variable.dataType}
+                            onChange={(event) => updateVariable(index, { dataType: event.target.value })}
+                          >
+                            {SYNC_VARIABLE_DATA_TYPE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            aria-label={`取值方式 ${variable.code}`}
+                            value={valueMode}
+                            onChange={(event) => {
+                              const mode = event.target.value;
+                              if (mode === 'relative') {
+                                // 滚动时间入口：现有表达式能回显就保留，否则种入"昨天"供语义选择。
+                                updateVariable(index, {
+                                  defaultExpression: presetMatch || offsetMatch ? variable.defaultExpression : 'yesterday()',
+                                  defaultValue: null,
+                                });
+                                return;
+                              }
+                              if (mode === 'advanced') {
+                                updateVariable(index, {
+                                  defaultExpression: expression || 'today()',
+                                  defaultValue: null,
+                                });
+                                return;
+                              }
+                              if (mode === 'fixed') {
+                                updateVariable(index, { defaultExpression: null, defaultValue: '' });
+                                return;
+                              }
+                              updateVariable(index, { defaultExpression: null, defaultValue: null });
+                            }}
+                          >
+                            <option value="none">不设默认</option>
+                            <option value="fixed">固定值</option>
+                            <option value="relative">滚动时间</option>
+                            <option value="advanced">高级表达式</option>
+                          </select>
+                        </td>
+                        <td>
+                          {valueMode === 'relative' ? (
+                            <div className="sync-variable-expression">
+                              <select
+                                aria-label={`滚动时间点 ${variable.code}`}
+                                value={variable.defaultExpression ?? ''}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  if (value === CUSTOM_OFFSET_OPTION) {
+                                    // 自定义偏移入口：当前已是偏移形态就保留；否则种入 14 天前——
+                                    // 刻意避开目录里的 7/30 天前静态条目，保证构造器一定展开可调。
+                                    updateVariable(index, {
+                                      defaultExpression: offsetMatch && !presetMatch
+                                        ? variable.defaultExpression
+                                        : buildOffsetExpression({ amount: -14, unit: 'day' }),
+                                    });
+                                    return;
+                                  }
+                                  updateVariable(index, { defaultExpression: value || 'yesterday()' });
+                                }}
+                              >
+                                <option value="">选择时间点…</option>
+                                {presets.map((preset) => (
+                                  <option key={preset.expression} value={preset.expression}>{preset.label}</option>
+                                ))}
+                                {offsetMatch && !presetMatch && (
+                                  <option value={expression}>{describeOffset(offsetMatch)}</option>
+                                )}
+                                <option value={CUSTOM_OFFSET_OPTION}>自定义偏移…</option>
+                              </select>
+                              {offsetMatch && !presetMatch && (
+                                <div className="sync-variable-offset">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    aria-label={`偏移数量 ${variable.code}`}
+                                    value={Math.abs(offset.amount) || 1}
+                                    onChange={(event) => applyOffset(
+                                      Number(event.target.value),
+                                      offset.unit,
+                                      offsetDirection,
+                                    )}
+                                  />
+                                  <select
+                                    aria-label={`偏移单位 ${variable.code}`}
+                                    value={offset.unit}
+                                    onChange={(event) => applyOffset(
+                                      Math.abs(offset.amount) || 1,
+                                      event.target.value as RelativeOffsetUnit,
+                                      offsetDirection,
+                                    )}
+                                  >
+                                    <option value="day">天</option>
+                                    <option value="week">周</option>
+                                    <option value="month">个月</option>
+                                    <option value="year">年</option>
+                                  </select>
+                                  <select
+                                    aria-label={`偏移方向 ${variable.code}`}
+                                    value={offsetDirection}
+                                    onChange={(event) => applyOffset(
+                                      Math.abs(offset.amount) || 1,
+                                      offset.unit,
+                                      event.target.value as 'past' | 'future',
+                                    )}
+                                  >
+                                    <option value="past">之前</option>
+                                    <option value="future">之后</option>
+                                  </select>
+                                </div>
+                              )}
+                            </div>
+                          ) : valueMode === 'advanced' ? (
+                            <div className="sync-variable-expression">
+                              <input
+                                aria-label={`高级表达式 ${variable.code}`}
+                                value={variable.defaultExpression ?? ''}
+                                placeholder="如 startofmonth(addmonths(today(),-1))"
+                                onChange={(event) => updateVariable(index, { defaultExpression: event.target.value })}
+                              />
+                              {expressionError && (
+                                <span className="sync-variable-preview">{expressionError}</span>
+                              )}
+                            </div>
+                          ) : valueMode === 'fixed' ? (
+                            <input
+                              aria-label={`固定默认值 ${variable.code}`}
+                              value={variable.defaultValue ?? ''}
+                              placeholder={variable.dataType === 'date' ? 'yyyy-MM-dd' : '默认值'}
+                              onChange={(event) => updateVariable(index, { defaultValue: event.target.value })}
+                            />
+                          ) : (
+                            <span className="sync-variable-none">运行时必填或按空值处理</span>
+                          )}
+                        </td>
+                        <td><span className="sync-variable-preview">{previewValue}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
         {preview && <SourcePreviewPanel preview={preview} />}
       </section>
       )}
@@ -1876,6 +2242,28 @@ function SyncTaskDesigner({
           {draft.isNew && <small>任务保存后才能试跑。</small>}
           {!draft.isNew && <small>试跑按映射真实读取源数据并转换，校验目标列结论，但绝不写入目标库。</small>}
         </div>
+        {/* 取数参数覆盖：留空按滚动表达式现算；填了具体日期则按指定历史窗口核数。 */}
+        {draft.variables.length > 0 && (
+          <div className="sync-tryrun-overrides">
+            <strong>取数参数覆盖（留空按滚动表达式现算）</strong>
+            <div className="sync-tryrun-override-grid">
+              {draft.variables.map((variable) => (
+                <label key={variable.code} className="sync-field">
+                  <span>@{variable.code}{(variable.defaultExpression ?? '').trim() ? '（表达式：' + variable.defaultExpression + '）' : ''}</span>
+                  <input
+                    aria-label={`试跑覆盖 ${variable.code}`}
+                    value={tryRunOverrides[variable.code] ?? ''}
+                    placeholder={variable.dataType === 'date' ? 'yyyy-MM-dd' : variable.dataType === 'datetime' ? 'yyyy-MM-dd HH:mm:ss' : '留空按默认值'}
+                    onChange={(event) => setTryRunOverrides({
+                      ...tryRunOverrides,
+                      [variable.code]: event.target.value,
+                    })}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
         {tryRunResult && (
           <TryRunResultPanel
             result={tryRunResult}

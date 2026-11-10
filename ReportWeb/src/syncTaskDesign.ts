@@ -11,6 +11,7 @@ import type {
   DataSyncSampleRow,
   DataRowValue,
   DataSourceDbType,
+  DatasetVariableDefinition,
   SyncColumnMetadata,
   SyncColumnMapping,
   SyncConverterStep,
@@ -21,6 +22,7 @@ import {
   type DataSyncPackage,
 } from './types';
 import { unwrapEnvelopeResult } from './reportPackageWizard';
+import { getDefaultExpressionError } from './defaultExpressions';
 
 /** 映射表格中的源字段行模型；name 与源取数列名一致，dataType 用于类型徽标展示，description 为可选列注释。 */
 export interface SyncSourceColumn {
@@ -271,25 +273,135 @@ export const SKIP_TARGET_OPTION = '__skip__';
 /**
  * 按数据源方言生成“选表模式”的取数 SQL：单条只读 SELECT，标识符按方言引用。
  * 表名取自元数据接口返回的原样大小写，引用后可安全包含大小写敏感或保留字表名。
+ * 过滤条件可选：提供时拼接为 WHERE 子句（文本按设计者原样引用，支持 @变量 取数窗口），
+ * 与 SQL 模式同一道只读校验防线。
  * @param dbType - 数据源方言（SqlServer/Oracle/MySql/PostgreSQL）。
  * @param table - 元数据返回的表名。
+ * @param filter - 可选过滤条件文本（不含 WHERE 关键字），空白视为不过滤。
  * @returns 合法的单条 SELECT 语句文本；未知方言退化为不引用的原样表名。
  */
-export function buildTableSelectSql(dbType: DataSourceDbType | string, table: string): string {
+export function buildTableSelectSql(
+  dbType: DataSourceDbType | string,
+  table: string,
+  filter?: string | null,
+): string {
   const name = table.trim();
   if (!name) return '';
   const normalized = String(dbType).trim();
-  switch (normalized) {
-    case 'SqlServer':
-      return `SELECT * FROM [${name}]`;
-    case 'MySql':
-      return `SELECT * FROM \`${name}\``;
-    case 'Oracle':
-    case 'PostgreSQL':
-      return `SELECT * FROM "${name}"`;
-    default:
-      return `SELECT * FROM ${name}`;
+  const select = (() => {
+    switch (normalized) {
+      case 'SqlServer':
+        return `SELECT * FROM [${name}]`;
+      case 'MySql':
+        return `SELECT * FROM \`${name}\``;
+      case 'Oracle':
+      case 'PostgreSQL':
+        return `SELECT * FROM "${name}"`;
+      default:
+        return `SELECT * FROM ${name}`;
+    }
+  })();
+  const condition = (filter ?? '').trim();
+  return condition ? `${select} WHERE ${condition}` : select;
+}
+
+/**
+ * 提取 SQL/过滤条件文本里引用的 @变量 编码：口径与后端 SqlParameterRegex 一致
+ * （字母开头、字母数字下划线，忽略 @@ 系统形式），供变量自动物化与一致性校验使用。
+ * @param text - SQL 或过滤条件文本。
+ * @returns 按出现顺序去重后的变量编码列表。
+ */
+export function extractSqlParameterCodes(text: string): string[] {
+  const codes: string[] = [];
+  for (const match of text.matchAll(/(?<!@)@([A-Za-z][A-Za-z0-9_]{0,63})/gu)) {
+    const code = match[1];
+    if (!codes.some((existing) => existing.toLowerCase() === code.toLowerCase())) {
+      codes.push(code);
+    }
   }
+  return codes;
+}
+
+/** 同步取数参数支持的数据类型；与后端 PocDataAssetService.VariableDataTypes 白名单一致。 */
+export const SYNC_VARIABLE_DATA_TYPE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'date', label: '日期（可配滚动表达式）' },
+  { value: 'datetime', label: '日期时间（可配滚动表达式）' },
+  { value: 'string', label: '文本' },
+  { value: 'int', label: '整数' },
+  { value: 'long', label: '长整数' },
+  { value: 'decimal', label: '小数' },
+  { value: 'bool', label: '布尔' },
+];
+
+/**
+ * 把 SQL 引用的变量编码物化为变量草稿列表，并保留已有配置：SQL 新引用的编码追加
+ * 默认定义（日期型、表单来源、显示名回退编码），SQL 不再引用的编码移除，编辑过的
+ * 名称/类型/取值配置在编码不变时原样保留——与数据集页的变量物化交互一致。
+ * @param existing - 当前草稿里的变量列表。
+ * @param codes - SQL/过滤条件引用的变量编码（按出现顺序）。
+ * @returns 物化后的变量列表（新变量在前，保持引用顺序；已有变量随后按原顺序）。
+ */
+export function mergeSyncVariables(
+  existing: readonly DatasetVariableDefinition[],
+  codes: readonly string[],
+): DatasetVariableDefinition[] {
+  const byCode = new Map(
+    existing.map((variable) => [variable.code.toLowerCase(), variable] as const),
+  );
+  const known = new Set(codes.map((code) => code.toLowerCase()));
+  const materialized = codes
+    .filter((code) => !byCode.has(code.toLowerCase()))
+    .map((code) => ({
+      code,
+      displayName: code,
+      dataType: 'date',
+      required: false,
+      sourceType: 'Form',
+    } satisfies DatasetVariableDefinition));
+  return [...materialized, ...existing.filter((variable) => known.has(variable.code.toLowerCase()))];
+}
+
+/**
+ * 保存前本地校验取数参数契约：变量编码与 SQL @引用必须一一对应、编码形态合法且
+ * 不重复、滚动表达式只允许日期类变量且文法合法。错误列表为空才提交保存——后端
+ * 会再做一次同样规则的权威校验，这里提前给出定位到具体变量的中文提示。
+ * @param variables - 当前草稿里的变量列表。
+ * @param queryText - 源 SQL（含选表模式的 WHERE 过滤条件）。
+ * @returns 面向设计器的中文错误列表。
+ */
+export function validateSyncVariables(
+  variables: readonly DatasetVariableDefinition[],
+  queryText: string,
+): string[] {
+  const errors: string[] = [];
+  const referenced = extractSqlParameterCodes(queryText);
+  const declared = new Set<string>();
+  for (const variable of variables) {
+    const code = variable.code.trim();
+    if (!code) {
+      errors.push('存在变量编码为空的取数参数。');
+      continue;
+    }
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/u.test(code)) {
+      errors.push(`变量 @${code} 的编码不合法：字母开头，仅含字母数字下划线，不超过 64 位。`);
+    }
+    if (declared.has(code.toLowerCase())) {
+      errors.push(`变量 @${code} 重复定义。`);
+    }
+    declared.add(code.toLowerCase());
+    if ((variable.defaultExpression ?? '').trim()
+      && variable.dataType !== 'date' && variable.dataType !== 'datetime') {
+      errors.push(`变量 @${code} 仅日期/日期时间类型可配置滚动表达式。`);
+    }
+    const expressionError = getDefaultExpressionError(variable.defaultExpression ?? null);
+    if (expressionError) errors.push(`变量 @${code}：${expressionError}`);
+  }
+  for (const code of referenced) {
+    if (!declared.has(code.toLowerCase())) {
+      errors.push(`SQL 引用的变量 @${code} 尚未在取数参数中声明。`);
+    }
+  }
+  return errors;
 }
 
 /**

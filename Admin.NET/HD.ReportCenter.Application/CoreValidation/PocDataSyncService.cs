@@ -369,13 +369,16 @@ public sealed class PocDataSyncService : ITransient
         ArgumentNullException.ThrowIfNull(request);
         var source = await RequireEnabledDataSourceAsync(request.DataSourceCode);
         var queryText = request.QueryText?.Trim() ?? string.Empty;
-        ValidateReadOnlySourceSql(queryText);
+        ValidateReadOnlySourceSql(
+            queryText,
+            (request.Variables ?? []).Select(item => item.Code));
         // 注释匹配只在选表模式可用：源表名来自前端已知信息，SQL 输出列与表列同名（忽略大小写）时命中。
         var sourceTable = request.SourceTable?.Trim();
         var comments = string.IsNullOrWhiteSpace(sourceTable)
             ? EmptyComments
             : await TryLoadColumnCommentsAsync(source, sourceTable, cancellationToken);
-        var plan = BuildAdHocSourcePlan(source, queryText);
+        // 变量契约与显式取值随预览请求透传：设计器在任务落库前即可按滚动窗口或指定日期预览源数据。
+        var plan = BuildAdHocSourcePlan(source, queryText, request.Variables, request.Parameters);
         var started = System.Diagnostics.Stopwatch.StartNew();
         var preview = await PocSqlDatasetExecutor.ExecutePreviewAsync(
             plan,
@@ -405,11 +408,12 @@ public sealed class PocDataSyncService : ITransient
 
     /// <summary>
     /// 把保存输入的源节落成/更新为任务专属源数据集（编码 `sync_src_&lt;taskCode&gt;`）：
-    /// SQL 先过只读校验；数据集已存在且内容一致则复用不动；内容不一致且被报表引用时拒绝
-    /// （与同步包导入同一保护口径），否则以库内修订号执行更新。返回数据集编码供任务落库。
-    /// 选表模式（SourceTable 提供时）会读取源表列清单与数据库注释，把中文含义写入
-    /// 数据集字段的 displayName——有注释才覆盖、无注释保留原声明，元数据读取失败按
+    /// SQL 先过只读校验；数据集已存在且内容一致（SQL 原文 + 变量契约）则复用不动；
+    /// 内容不一致且被报表引用时拒绝（与同步包导入同一保护口径），否则以库内修订号执行更新。
+    /// 返回数据集编码供任务落库。选表模式（SourceTable 提供时）会读取源表列清单与数据库注释，
+    /// 把中文含义写入数据集字段的 displayName——有注释才覆盖、无注释保留原声明，元数据读取失败按
     /// “字段契约留空”降级，绝不阻断任务保存；写 SQL 模式保持字段契约为空。
+    /// 变量契约（取数参数）随 FieldSchemaJson 一起落库并随同步包自动携带。
     /// </summary>
     /// <param name="taskCode">任务编码（已通过格式校验）。</param>
     /// <param name="source">保存输入的源取数节。</param>
@@ -426,14 +430,18 @@ public sealed class PocDataSyncService : ITransient
                 "源取数定义无效：必须选择数据源并提供取数 SQL（选表模式由前端按方言生成）。");
         }
         var dataSource = await RequireEnabledDataSourceAsync(dataSourceCode);
-        ValidateReadOnlySourceSql(queryText);
+        var variables = NormalizeSyncVariables(source.Variables);
+        // 变量契约先行规范化：只读校验按契约放行 SQL 里的 @引用，引用与声明不一致在此拒绝。
+        ValidateReadOnlySourceSql(queryText, variables.Select(item => item.Code));
 
         // 第二阶段：内容一致则复用，避免每次保存都推高数据集修订号；不一致时先做报表引用保护。
+        // 变量契约参与一致性判断：只改取数参数不动 SQL 时也必须落库，否则滚动窗口改动不生效。
         var datasetCode = $"sync_src_{taskCode}";
         var existing = await _dataAssets.GetDatasetAsync(datasetCode);
         if (existing is not null &&
             string.Equals(existing.DataSourceCode.Trim(), dataSourceCode, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals((existing.QueryText ?? string.Empty).Trim(), queryText, StringComparison.Ordinal))
+            string.Equals((existing.QueryText ?? string.Empty).Trim(), queryText, StringComparison.Ordinal) &&
+            VariablesMatch(PocDataAssetService.ReadSchema(existing).Variables, variables))
         {
             return datasetCode;
         }
@@ -458,6 +466,7 @@ public sealed class PocDataSyncService : ITransient
             : await BuildSourceDatasetFieldsAsync(dataSource, sourceTable, existing);
 
         // 第四阶段：落库。修订号沿用库内值，启用状态固定为 true（源数据集随任务生灭）。
+        // 变量契约在这里一并校验与保存（数据集校验含表达式试算），表达式非法直接拒绝保存。
         var name = source.Name?.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -468,13 +477,94 @@ public sealed class PocDataSyncService : ITransient
             name,
             dataSourceCode,
             queryText,
-            [],
+            variables,
             fields,
             SourceDatasetTimeoutSeconds,
             SourceDatasetMaxRows,
             Enabled: true,
             existing?.Revision ?? 0));
         return datasetCode;
+    }
+
+    /// <summary>
+    /// 规范化保存输入的取数参数契约：同步源数据集的变量只允许 Form 来源（客户端不可见的
+    /// External/Fixed 绑定在同步链路没有解析通道，收到即拒绝而非静默改写），编码/显示名/
+    /// 默认值剔除首尾空白，显示名缺省回退到编码，并按编码排序得到稳定形态，供一致性比对与落库使用。
+    /// </summary>
+    /// <param name="variables">保存输入的变量契约，可为 null。</param>
+    /// <returns>规范化后的变量列表；无变量返回空列表。</returns>
+    private static IReadOnlyList<PocDatasetVariableDefinition> NormalizeSyncVariables(
+        IReadOnlyList<PocDatasetVariableDefinition>? variables)
+    {
+        if (variables is null || variables.Count == 0)
+        {
+            return [];
+        }
+
+        if (variables.Any(variable => !variable.SourceType.Equals("Form", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new PocDataSyncException(
+                "SYNC_SOURCE_INVALID",
+                "源取数参数无效：同步任务暂不支持外部接口（External）或固定来源变量，请使用表单来源。");
+        }
+
+        // 第一阶段：逐个剔除首尾空白并回退空白显示名，按编码排序得到与保存输入无关的稳定形态。
+        var normalized = variables
+            .Select(variable => variable with
+            {
+                Code = (variable.Code ?? string.Empty).Trim(),
+                DisplayName = string.IsNullOrWhiteSpace(variable.DisplayName)
+                    ? (variable.Code ?? string.Empty).Trim()
+                    : variable.DisplayName.Trim(),
+                SourceCode = null,
+                SourceFieldCode = null,
+                DefaultValue = string.IsNullOrWhiteSpace(variable.DefaultValue)
+                    ? null
+                    : variable.DefaultValue.Trim(),
+                DefaultExpression = string.IsNullOrWhiteSpace(variable.DefaultExpression)
+                    ? null
+                    : variable.DefaultExpression.Trim()
+            })
+            .OrderBy(variable => variable.Code, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        // 第2阶段：编码完整性检查——空编码与重复编码都会破坏 SQL 绑定的确定性，保存前拒绝。
+        if (normalized.Any(variable => variable.Code.Length == 0) ||
+            normalized.Select(variable => variable.Code)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count() != normalized.Length)
+        {
+            throw new PocDataSyncException(
+                "SYNC_SOURCE_INVALID",
+                "源取数参数无效：变量编码必须非空且互不重复。");
+        }
+
+        return normalized;
+    }
+
+    /// <summary>
+    /// 判断两份变量契约是否等价：两侧都按同步规范化形态（排序 + Form 来源）比较，
+    /// 覆盖编码、显示名、类型、必填、默认值与默认表达式全部字段——任何一项变化都视为
+    /// 内容变化，确保只改取数窗口的保存会真正落到源数据集。
+    /// </summary>
+    /// <param name="left">库内（经 ReadSchema 读出）的变量列表。</param>
+    /// <param name="right">保存输入规范化后的变量列表。</param>
+    /// <returns>完全一致返回 true。</returns>
+    private static bool VariablesMatch(
+        IReadOnlyList<PocDatasetVariableDefinition> left,
+        IReadOnlyList<PocDatasetVariableDefinition> right)
+    {
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+
+        return left.Zip(right, (a, b) => (a, b)).All(pair =>
+            string.Equals(pair.a.Code, pair.b.Code, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(pair.a.DisplayName, pair.b.DisplayName, StringComparison.Ordinal) &&
+            string.Equals(pair.a.DataType, pair.b.DataType, StringComparison.OrdinalIgnoreCase) &&
+            pair.a.Required == pair.b.Required &&
+            string.Equals(pair.a.DefaultValue ?? string.Empty, pair.b.DefaultValue ?? string.Empty, StringComparison.Ordinal) &&
+            string.Equals(pair.a.DefaultExpression ?? string.Empty, pair.b.DefaultExpression ?? string.Empty, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -573,11 +663,14 @@ public sealed class PocDataSyncService : ITransient
 
     /// <summary>校验源取数 SQL 为单条只读 SELECT/WITH；失败统一收敛为 SYNC_SOURCE_SQL_INVALID。</summary>
     /// <param name="queryText">待校验的 SQL 文本。</param>
-    private static void ValidateReadOnlySourceSql(string queryText)
+    /// <param name="parameterCodes">SQL 允许引用的变量编码（取数参数契约）；缺省为空表示不允许任何参数。</param>
+    private static void ValidateReadOnlySourceSql(
+        string queryText,
+        IEnumerable<string>? parameterCodes = null)
     {
         try
         {
-            _ = PocReadOnlySqlValidator.Validate(queryText, [], PocPreviewMode.Full);
+            _ = PocReadOnlySqlValidator.Validate(queryText, parameterCodes ?? [], PocPreviewMode.Full);
         }
         catch (PocDatasetConfigurationException exception)
         {
@@ -598,13 +691,39 @@ public sealed class PocDataSyncService : ITransient
             source.DefaultTimeoutSeconds,
             cancellationToken);
 
-    /// <summary>用临时数据源实体拼装“无变量、无字段契约”的源预览执行计划，管线与映射预览同构。</summary>
+    /// <summary>
+    /// 用临时数据源实体拼装源预览执行计划（无字段契约），管线与映射预览同构。
+    /// Variables 是设计器正在编辑的取数参数契约：默认表达式按当前时间现算兜底，
+    /// Overrides 是调用方显式取值（优先于默认值）——SQL 引用的变量两者皆无时，
+    /// 参数解析器的必填校验会拒绝预览，与保存后的执行语义一致。
+    /// </summary>
     /// <param name="source">已校验启用的数据源实体。</param>
     /// <param name="queryText">已通过只读校验的源 SQL。</param>
+    /// <param name="variables">预览请求携带的变量契约，可为 null。</param>
+    /// <param name="overrides">调用方显式给定的变量取值，可为 null。</param>
     /// <returns>执行计划。</returns>
-    private static PocRuntimeExecutionPlan BuildAdHocSourcePlan(PocDataSource source, string queryText)
+    private static PocRuntimeExecutionPlan BuildAdHocSourcePlan(
+        PocDataSource source,
+        string queryText,
+        IReadOnlyList<PocDatasetVariableDefinition>? variables = null,
+        IReadOnlyDictionary<string, string?>? overrides = null)
     {
-        // 第一阶段：构造无参数定义的报告骨架；预览只关心列与样例行，字段契约留空。
+        // 第一阶段：把变量契约物化为参数定义（表达式现算兜底）并解析取值，语义与正式运行一致。
+        var parameterDefinitions = (variables ?? []).Select(variable => new PocParameterDefinition(
+            variable.Code,
+            variable.DisplayName,
+            "text",
+            variable.SourceType,
+            PocDataAssetService.ResolveVariableFallback(variable),
+            true,
+            variable.DataType,
+            Required: variable.Required,
+            SourceCode: variable.SourceCode,
+            SourceFieldCode: variable.SourceFieldCode)).ToArray();
+        var resolved = PocParameterResolver.Resolve(
+            parameterDefinitions,
+            overrides ?? new Dictionary<string, string?>());
+        // 第二阶段：组装预览骨架；预览只关心列与样例行，字段契约留空。
         var definition = new PocReportDefinition(
             "sync-source-preview",
             "同步源取数预览",
@@ -618,7 +737,7 @@ public sealed class PocDataSyncService : ITransient
                 LargeExportEnabled: true,
                 RowsPerSheet: 1_000_000,
                 FileRetentionHours: 24),
-            [],
+            parameterDefinitions,
             []);
         // DbType 原样透传（与 BuildSourcePlanAsync 同口径），方言合法性由连接工厂在执行时收敛。
         var configuration = new PocRuntimeReportConfiguration(
@@ -632,8 +751,8 @@ public sealed class PocDataSyncService : ITransient
             UsesFallbackData: false);
         return new PocRuntimeExecutionPlan(
             configuration,
-            new PocExecuteRequest(1, new Dictionary<string, string?>()),
-            PocParameterResolver.Resolve([], new Dictionary<string, string?>()));
+            new PocExecuteRequest(1, overrides ?? new Dictionary<string, string?>()),
+            resolved);
     }
 
     /// <summary>把元数据读取的数据库故障包装为 SYNC_METADATA_FAILED，错误文本经安全脱敏。</summary>
@@ -832,7 +951,7 @@ public sealed class PocDataSyncService : ITransient
     /// <returns>Running 状态的运行日志文档。</returns>
     public async Task<PocSyncRunLogDocument> RunAsync(string taskCode)
     {
-        var (task, input, log) = await StartRunAsync(taskCode);
+        var (task, input, log, parameterSummary) = await StartRunAsync(taskCode);
         var backgroundStore = new PocDataSyncStore(CopyDatabaseForBackground());
         var runNo = log.RunNo;
         _ = Task.Run(
@@ -841,7 +960,7 @@ public sealed class PocDataSyncService : ITransient
                 try
                 {
                     var stats = await _executor.ExecuteAsync(input);
-                    await CompleteRunAsync(backgroundStore, runNo, task.Code, stats, message: null);
+                    await CompleteRunAsync(backgroundStore, runNo, task.Code, stats, message: null, parameterSummary);
                 }
                 catch (Exception exception)
                 {
@@ -862,11 +981,11 @@ public sealed class PocDataSyncService : ITransient
         string taskCode,
         CancellationToken cancellationToken = default)
     {
-        var (task, input, log) = await StartRunAsync(taskCode);
+        var (task, input, log, parameterSummary) = await StartRunAsync(taskCode);
         try
         {
             var stats = await _executor.ExecuteAsync(input, cancellationToken);
-            var completed = await CompleteRunAsync(_store, log.RunNo, task.Code, stats, message: null);
+            var completed = await CompleteRunAsync(_store, log.RunNo, task.Code, stats, message: null, parameterSummary);
             return ToRunLogDocument(completed);
         }
         catch (Exception exception)
@@ -1297,12 +1416,14 @@ public sealed class PocDataSyncService : ITransient
         var schema = PocDataAssetService.ReadSchema(dataset);
 
         // 第一阶段：把数据集变量物化为参数定义并解析取值，绑定语义与数据集预览完全一致。
+        // 默认表达式在此按本次运行时间现算并作为兜底值——正式跑（parameters=null）每次
+        // 自动滚动到当前窗口；试跑传值时客户端取值优先，便于按历史窗口验证数据。
         var parameterDefinitions = schema.Variables.Select(variable => new PocParameterDefinition(
             variable.Code,
             variable.DisplayName,
             "text",
             variable.SourceType,
-            null,
+            PocDataAssetService.ResolveVariableFallback(variable),
             true,
             variable.DataType,
             Required: variable.Required,
@@ -1349,13 +1470,14 @@ public sealed class PocDataSyncService : ITransient
     }
 
     /// <summary>
-    /// 启动一次运行的前置阶段：加载任务、编译映射、冻结执行输入、防重入检查并落 Running 日志。
-    /// 返回任务、执行输入与日志实体，供同步/后台两条路径继续执行。
+    /// 启动一次运行的前置阶段：加载任务、编译映射、冻结执行输入（含按当前时间现算的
+    /// 取数参数兜底值）、防重入检查并落 Running 日志。返回任务、执行输入、日志实体与
+    /// 取数参数摘要，供同步/后台两条路径继续执行。
     /// </summary>
     /// <param name="taskCode">任务编码。</param>
-    /// <returns>任务、执行输入与已落库的 Running 日志。</returns>
-    private async Task<(PocSyncTask Task, PocDataSyncExecutionInput Input, PocSyncRunLog Log)> StartRunAsync(
-        string taskCode)
+    /// <returns>任务、执行输入、已落库的 Running 日志与取数参数摘要（无参数为空串）。</returns>
+    private async Task<(PocSyncTask Task, PocDataSyncExecutionInput Input, PocSyncRunLog Log, string ParameterSummary)>
+        StartRunAsync(string taskCode)
     {
         var task = await RequireTaskAsync(taskCode);
         if (!task.IsEnabled)
@@ -1375,6 +1497,7 @@ public sealed class PocDataSyncService : ITransient
         var definition = DeserializeDefinition(task.DefinitionJson);
         var fields = ValidateMappings(definition.Mappings);
         var plan = await BuildSourcePlanAsync(task, definition.Mappings, null, CancellationToken.None);
+        var parameterSummary = BuildParameterSummary(plan);
         var target = await RequireEnabledDataSourceAsync(task.TargetDataSourceCode);
         var input = new PocDataSyncExecutionInput(
             plan,
@@ -1394,7 +1517,25 @@ public sealed class PocDataSyncService : ITransient
             StartedAt = DateTimeOffset.Now
         };
         await _store.InsertRunLogAsync(log);
-        return (task, input, log);
+        return (task, input, log, parameterSummary);
+    }
+
+    /// <summary>
+    /// 汇总本次运行实际代入的取数参数：只列源 SQL 真正引用的变量及其解析后取值，
+    /// 写入运行日志消息，使“每次跑了哪个时间窗口”可审计——滚动表达式每天算出的值不同，
+    /// 不落日志就无法回溯历史运行的实际窗口。
+    /// </summary>
+    /// <param name="plan">已解析取值的执行计划。</param>
+    /// <returns>形如 startDate=2026-10-01, endDate=2026-10-31 的摘要；无引用变量返回空串。</returns>
+    private static string BuildParameterSummary(PocRuntimeExecutionPlan plan)
+    {
+        var referenced = PocDataAssetService.ExtractParameterCodes(plan.Configuration.QueryText);
+        return string.Join(
+            ", ",
+            referenced
+                .Select(code => (Code: code, Value: plan.Parameters.DisplayValues.TryGetValue(code, out var value) ? value : null))
+                .Where(item => !string.IsNullOrWhiteSpace(item.Value))
+                .Select(item => $"{item.Code}={item.Value}"));
     }
 
     /// <summary>回写终态为 Completed：更新日志统计、失败明细并刷新任务最近运行时间。</summary>
@@ -1403,13 +1544,15 @@ public sealed class PocDataSyncService : ITransient
     /// <param name="taskCode">任务编码。</param>
     /// <param name="stats">执行统计。</param>
     /// <param name="message">结果消息。</param>
+    /// <param name="parameterSummary">本次运行实际代入的取数参数摘要（滚动窗口审计用），空值不追加。</param>
     /// <returns>更新后的日志实体。</returns>
     private async Task<PocSyncRunLog> CompleteRunAsync(
         PocDataSyncStore logStore,
         string runNo,
         string taskCode,
         PocDataSyncRunStats stats,
-        string? message)
+        string? message,
+        string? parameterSummary = null)
     {
         var log = await logStore.GetRunLogAsync(runNo)
             ?? throw new PocDataSyncException(
@@ -1421,7 +1564,11 @@ public sealed class PocDataSyncService : ITransient
         log.RowsWritten = stats.RowsWritten;
         log.RowsFailed = stats.RowsFailed;
         log.ErrorSummaryJson = SerializeFailures(stats.Failures);
-        log.Message = message ?? $"读取 {stats.RowsRead} 行，写入 {stats.RowsWritten} 行，失败 {stats.RowsFailed} 行。";
+        // 第1阶段：拼装结果消息——取数参数前缀置顶（窗口可审计），统计信息保持原有口径。
+        var statistics = message ?? $"读取 {stats.RowsRead} 行，写入 {stats.RowsWritten} 行，失败 {stats.RowsFailed} 行。";
+        log.Message = string.IsNullOrWhiteSpace(parameterSummary)
+            ? statistics
+            : $"取数参数 {parameterSummary}；{statistics}";
         await logStore.UpdateRunLogAsync(log);
         await logStore.UpdateTaskLastRunAsync(taskCode, DateTimeOffset.Now);
         return log;

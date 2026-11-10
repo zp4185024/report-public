@@ -244,12 +244,15 @@ public sealed record PocSyncTaskInput(
 /// 包导出、执行器与调度链路不感知该变化。SourceTable 是选表模式下前端已知的源表名：
 /// 提供时保存服务端读取该表的列清单与注释，把中文含义写入源数据集字段的 displayName，
 /// 供数据集管理页与任务预览展示；写 SQL 模式不传，字段契约保持为空。
+/// Variables 是源 SQL 的取数参数契约（编码与 @引用一一对应），随源数据集 FieldSchemaJson
+/// 一起落库并随同步包自动携带；固定值/滚动表达式在每次运行开始时由服务端现算兜底。
 /// </summary>
 public sealed record PocSyncTaskSourceInput(
     string DataSourceCode,
     string QueryText,
     string? Name = null,
-    string? SourceTable = null);
+    string? SourceTable = null,
+    IReadOnlyList<PocDatasetVariableDefinition>? Variables = null);
 
 /// <summary>数据源表清单响应：列出该数据源连接库内的基础表名，供源/目标表下拉选择。</summary>
 public sealed record PocSyncTableMetadataDocument(
@@ -277,11 +280,16 @@ public sealed record PocSyncTableColumnsDocument(
 /// 源取数预览请求：任务保存前对“数据源 + SQL”做真实受限查询，返回动态列与样例行，
 /// 供映射表格在任务尚未落库时取到真实源字段。SourceTable 是选表模式下前端已知的源表名：
 /// 提供时按列名匹配数据库注释填充 fields 的 description；写 SQL 模式不传，注释诚实留空。
+/// Variables 是设计器正在编辑的变量契约（含固定值/滚动表达式），服务端按当前时间现算兜底；
+/// Parameters 是调用方显式给定的变量取值，优先级高于变量默认值——两条通道都缺省时，
+/// SQL 引用的变量仍按“必填缺值”拒绝，与保存后的执行语义一致。
 /// </summary>
 public sealed record PocSyncSourcePreviewRequest(
     string? DataSourceCode,
     string? QueryText,
-    string? SourceTable = null);
+    string? SourceTable = null,
+    IReadOnlyList<PocDatasetVariableDefinition>? Variables = null,
+    IReadOnlyDictionary<string, string?>? Parameters = null);
 
 /// <summary>运行日志对外文档：统计与失败明细，供任务页轮询。</summary>
 public sealed record PocSyncRunLogDocument(

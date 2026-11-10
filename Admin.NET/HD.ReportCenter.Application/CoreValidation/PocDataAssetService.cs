@@ -327,7 +327,7 @@ public sealed class PocDataAssetService : ITransient
                 variable.DisplayName,
                 "text",
                 variable.SourceType,
-                null,
+                ResolveVariableFallback(variable),
                 true,
                 variable.DataType,
                 Required: variable.Required,
@@ -350,7 +350,9 @@ public sealed class PocDataAssetService : ITransient
         {
             var definition = parameterDefinitions.Single(item =>
                 item.Code.Equals(parameterCode, StringComparison.OrdinalIgnoreCase));
+            // 变量带默认值（表达式现算结果或固定默认值）时允许免填预览，取值回落交给解析器。
             if (!definition.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase) &&
+                string.IsNullOrWhiteSpace(definition.DefaultValue) &&
                 !input.Parameters.Keys.Any(key =>
                     key.Equals(parameterCode, StringComparison.OrdinalIgnoreCase)))
             {
@@ -672,12 +674,16 @@ public sealed class PocDataAssetService : ITransient
                   string.IsNullOrWhiteSpace(variable.SourceFieldCode))) ||
                 (!variable.SourceType.Equals("External", StringComparison.OrdinalIgnoreCase) &&
                  (!string.IsNullOrWhiteSpace(variable.SourceCode) ||
-                  !string.IsNullOrWhiteSpace(variable.SourceFieldCode))))
+                  !string.IsNullOrWhiteSpace(variable.SourceFieldCode))) ||
+                variable.DefaultValue is { Length: > 1024 } ||
+                variable.DefaultExpression is { Length: > 256 })
             {
                 throw new PocDatasetConfigurationException(
                     "DATASET_VARIABLE_INVALID",
                     $"变量 '@{variable.Code}' 的定义无效。");
             }
+
+            ValidateVariableDefault(variable);
         }
         if (referencedCodes.Count != variableCodes.Count ||
             referencedCodes.Any(code => !variableCodes.Contains(code)))
@@ -707,6 +713,55 @@ public sealed class PocDataAssetService : ITransient
                     $"返回字段 '{field.Code}' 的定义无效。");
             }
         }
+    }
+
+    /// <summary>
+    /// 校验数据集变量的默认表达式声明：仅日期类变量（date/datetime）允许配置，
+    /// 且保存即按当前时间试算一遍——坏表达式在落库前就被拒绝，而不是等到预览或同步运行时才失败。
+    /// 非法表达式沿用求值器的 DEFAULT_EXPRESSION_INVALID 错误码与消息（含表达式原文），便于定位。
+    /// </summary>
+    /// <param name="variable">待校验的变量定义。</param>
+    private static void ValidateVariableDefault(PocDatasetVariableDefinition variable)
+    {
+        if (string.IsNullOrWhiteSpace(variable.DefaultExpression))
+        {
+            return;
+        }
+
+        if (!variable.DataType.Equals("date", StringComparison.OrdinalIgnoreCase) &&
+            !variable.DataType.Equals("datetime", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new PocDatasetConfigurationException(
+                "DATASET_VARIABLE_INVALID",
+                $"变量 '@{variable.Code}' 仅日期类变量可配置默认表达式。");
+        }
+
+        _ = PocDefaultExpressionEvaluator.Evaluate(
+            variable.DefaultExpression,
+            variable.DataType,
+            DateTimeOffset.Now);
+    }
+
+    /// <summary>
+    /// 把数据集变量收敛为运行时兜底值：默认表达式按当前时间现算的结果优先（随时间滚动），
+    /// 其次是固定默认值；两者都为空时返回 null，交由参数解析器的必填校验兜底。
+    /// 表达式求值失败直接抛出（保存时已试算，运行期失败通常意味着表达式与数据类型组合异常）。
+    /// 静态公开供数据同步构造执行计划时复用，保证预览、正式跑与报表参数同一套兜底语义。
+    /// </summary>
+    /// <param name="variable">数据集变量定义。</param>
+    /// <returns>可作参数兜底值的文本；无兜底时为 null。</returns>
+    public static string? ResolveVariableFallback(PocDatasetVariableDefinition variable)
+    {
+        var evaluated = PocDefaultExpressionEvaluator.Evaluate(
+            variable.DefaultExpression,
+            variable.DataType,
+            DateTimeOffset.Now);
+        if (!string.IsNullOrWhiteSpace(evaluated))
+        {
+            return evaluated;
+        }
+
+        return string.IsNullOrWhiteSpace(variable.DefaultValue) ? null : variable.DefaultValue;
     }
 
     /// <summary>校验 PocDataAssetService 的 Validate External Variable Bindings Async 条件，并返回可供后续流程判断的结果。</summary>

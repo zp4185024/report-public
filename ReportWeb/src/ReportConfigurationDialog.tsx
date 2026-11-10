@@ -27,6 +27,11 @@ import {
   importExternalSourceFields,
 } from './reportParameterSources';
 import {
+  evaluateDefaultExpression,
+  getDefaultExpressionError,
+  getPresetsForControl,
+} from './defaultExpressions';
+import {
   defaultDataTypeForControl,
   isTemporalControlType,
   parameterInputAttributes,
@@ -191,16 +196,8 @@ function controlTypeForDataType(dataType: string): string {
   }
 }
 
-const dateDefaultPresets = [
-  { value: '', label: '无默认值' },
-  { value: 'today()', label: '今天' },
-  { value: 'yesterday()', label: '昨天' },
-  { value: 'tomorrow()', label: '明天' },
-  { value: 'startOfMonth(today())', label: '本月第一天' },
-  { value: 'endOfMonth(today())', label: '本月最后一天' },
-  { value: 'startOfYear(today())', label: '今年第一天' },
-  { value: 'endOfYear(today())', label: '今年最后一天' },
-];
+/** 预设下拉里"自定义表达式"入口的哨兵值：选中后该参数行切换为可编辑的表达式输入框。 */
+const CUSTOM_EXPRESSION_OPTION = '__custom__';
 
 /**
  * 校验 ReportConfigurationDialog 的 is Date Parameter 条件，并返回可供后续流程判断的结果。
@@ -216,56 +213,84 @@ function isDateParameter(dataType: string, controlType?: string): boolean {
 }
 
 /**
- * 按 date Default Options 规则筛选 ReportConfigurationDialog 数据，并返回满足条件的结果。
- * @param current - current 对应的业务输入；具体类型和空值范围以方法签名为准。
- * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ * 与后端 DefaultExpressionDataType 同口径推导表达式输出格式：month/year/datetime
+ * 控件按控件粒度，其余按数据类型（datetime 按时刻、date 按天）。前端预览值必须与
+ * 该口径一致，否则编辑界面看到的默认值会和正式预览/导出的实际值分叉。
+ * @param dataType - 参数数据类型。
+ * @param controlType - 参数控件类型，可为空。
+ * @returns 传给表达式求值器的格式化类型。
  */
-function dateDefaultOptions(current: string | null): typeof dateDefaultPresets {
-  if (!current || dateDefaultPresets.some((option) => option.value.toLowerCase() === current.toLowerCase())) {
-    return dateDefaultPresets;
+function defaultExpressionDataType(dataType: string, controlType?: string): string {
+  switch ((controlType ?? '').trim().toLowerCase()) {
+    case 'month':
+      return 'month';
+    case 'year':
+      return 'year';
+    case 'datetime':
+      return 'datetime';
+    default:
+      return dataType.trim().toLowerCase() === 'datetime' ? 'datetime' : 'date';
   }
-  return [
-    { value: current, label: `当前表达式：${current}` },
-    ...dateDefaultPresets,
-  ];
 }
 
 /**
- * 按 calendar Default Options 规则筛选 ReportConfigurationDialog 数据，并返回满足条件的结果。
- * @param controlType - controlType 对应的业务输入；具体类型和空值范围以方法签名为准。
- * @param current - current 对应的业务输入；具体类型和空值范围以方法签名为准。
- * @returns 返回值与当前方法声明的类型及空值约束保持一致。
+ * 取时间类参数的默认值下拉选项：统一语义时间点目录（defaultExpressions 共享词表，
+ * 与后端求值器同一套滚动文法）按控件类型过滤，末尾固定追加"自定义…"入口支持
+ * 任意组合表达式；当前表达式合法但不在目录里时（旧词表或外部导入），追加当前值
+ * 选项保证回显不丢。
+ * @param controlType - 参数控件类型（date/datetime/month/year）。
+ * @param current - 当前已保存的表达式，可为 null。
+ * @returns 下拉选项列表（首项为"无默认值"）。
  */
 function calendarDefaultOptions(
   controlType: string,
   current: string | null,
-): typeof dateDefaultPresets {
-  const normalized = controlType.toLowerCase();
-  if (normalized === 'month') {
-    const options = [
-      { value: '', label: '无默认值' },
-      { value: 'today()', label: '本月' },
-      { value: 'yesterday()', label: '上月' },
-      { value: 'tomorrow()', label: '下月' },
-      { value: 'startOfYear(today())', label: '今年 1 月' },
-      { value: 'endOfYear(today())', label: '今年 12 月' },
-    ];
-    return !current || options.some((option) => option.value.toLowerCase() === current.toLowerCase())
-      ? options
-      : [{ value: current, label: `当前表达式：${current}` }, ...options];
-  }
-  if (normalized === 'year') {
-    const options = [
-      { value: '', label: '无默认值' },
-      { value: 'today()', label: '今年' },
-      { value: 'yesterday()', label: '去年' },
-      { value: 'tomorrow()', label: '明年' },
-    ];
-    return !current || options.some((option) => option.value.toLowerCase() === current.toLowerCase())
-      ? options
-      : [{ value: current, label: `当前表达式：${current}` }, ...options];
-  }
-  return dateDefaultOptions(current);
+): { value: string; label: string }[] {
+  const options = [
+    { value: '', label: '无默认值' },
+    ...getPresetsForControl(controlType).map((preset) => ({
+      value: preset.expression,
+      label: preset.label,
+    })),
+    { value: CUSTOM_EXPRESSION_OPTION, label: '自定义…' },
+  ];
+  const isKnown = !current
+    || options.some((option) => option.value.toLowerCase() === current.toLowerCase());
+  return isKnown
+    ? options
+    : [{ value: current, label: `当前表达式：${current}` }, ...options];
+}
+
+/**
+ * 判断参数是否处于自定义表达式形态：用户显式进入过自定义编辑，或已保存的表达式
+ * 不在共享预设词表内。两种情况都渲染表达式输入框而非预设下拉，保证自由组合
+ * （如最近 N 天、嵌套偏移）有入口、存量自定义值有回显。
+ * @param parameter - 参数草稿。
+ * @param customCodes - 本会话内显式进入过自定义编辑的参数编码列表。
+ * @returns 处于自定义形态返回 true。
+ */
+function isCustomExpressionMode(parameter: ParameterDefinition, customCodes: string[]): boolean {
+  if (customCodes.includes(parameter.code)) return true;
+  const expression = parameter.defaultExpression;
+  if (!expression || !expression.trim()) return false;
+  return !getPresetsForControl(parameter.controlType)
+    .some((preset) => preset.expression.toLowerCase() === expression.trim().toLowerCase());
+}
+
+/**
+ * 现算自定义表达式的当前值并格式化为预览文本：非法表达式显示错误原因，
+ * 空白表达式显示"无默认值"，帮助设计者在保存前确认窗口语义。
+ * @param parameter - 参数草稿。
+ * @returns 面向用户的预览文本。
+ */
+function formatDefaultExpressionPreview(parameter: ParameterDefinition): string {
+  const error = getDefaultExpressionError(parameter.defaultExpression);
+  if (error) return error;
+  return evaluateDefaultExpression(
+    parameter.defaultExpression,
+    defaultExpressionDataType(parameter.dataType, parameter.controlType),
+    new Date(),
+  ) ?? '无默认值';
 }
 
 /**
@@ -300,6 +325,8 @@ export function ReportConfigurationDialog({
   const [error, setError] = useState<string | null>(null);
   const [valueEditorTarget, setValueEditorTarget] = useState<ValueEditorTarget | null>(null);
   const [externalSourceToImport, setExternalSourceToImport] = useState('');
+  // 进入过自定义表达式编辑的参数编码：让该行保持输入框形态，避免逐字输入时被预设下拉打断。
+  const [customExpressionCodes, setCustomExpressionCodes] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) {
@@ -842,18 +869,51 @@ export function ReportConfigurationDialog({
                         <td>{localFilter || parameter.sourceType === 'External' ? (
                           <span className="parameter-source-none">无需配置</span>
                         ) : isDateParameter(parameter.dataType, parameter.controlType) && parameter.sourceType !== 'Fixed' ? (
-                          <select
-                            aria-label={`时间格式默认值 ${index + 1}`}
-                            value={parameter.defaultExpression ?? ''}
-                            onChange={(event) => updateParameter(index, {
-                              defaultExpression: event.target.value || null,
-                              fixedValue: null,
-                            })}
-                          >
-                            {calendarDefaultOptions(parameter.controlType, parameter.defaultExpression).map((option) => (
-                              <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                          </select>
+                          isCustomExpressionMode(parameter, customExpressionCodes) ? (
+                            <div className="default-expression-editor">
+                              <input
+                                aria-label={`默认表达式 ${index + 1}`}
+                                value={parameter.defaultExpression ?? ''}
+                                placeholder="如 startofmonth(addmonths(today(),-1))"
+                                onChange={(event) => updateParameter(index, {
+                                  defaultExpression: event.target.value || null,
+                                  fixedValue: null,
+                                })}
+                              />
+                              <span className="default-expression-preview" aria-label={`默认表达式预览 ${index + 1}`}>
+                                {formatDefaultExpressionPreview(parameter)}
+                              </span>
+                              <button
+                                type="button"
+                                className="button option-maintenance-button"
+                                aria-label={`返回预设选择 ${index + 1}`}
+                                onClick={() => setCustomExpressionCodes(customExpressionCodes.filter(
+                                  (code) => code !== parameter.code,
+                                ))}
+                              >
+                                返回预设
+                              </button>
+                            </div>
+                          ) : (
+                            <select
+                              aria-label={`时间格式默认值 ${index + 1}`}
+                              value={parameter.defaultExpression ?? ''}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                if (value === CUSTOM_EXPRESSION_OPTION) {
+                                  // 自定义入口：种入可编辑的合法表达式，并记录该行进入自定义形态。
+                                  setCustomExpressionCodes([...customExpressionCodes, parameter.code]);
+                                  updateParameter(index, { defaultExpression: 'today()', fixedValue: null });
+                                  return;
+                                }
+                                updateParameter(index, { defaultExpression: value || null, fixedValue: null });
+                              }}
+                            >
+                              {calendarDefaultOptions(parameter.controlType, parameter.defaultExpression).map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
+                            </select>
+                          )
                         ) : parameter.controlType.toLowerCase() === 'select' ? (
                           <select
                             aria-label={`选项默认值 ${index + 1}`}

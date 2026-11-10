@@ -94,6 +94,28 @@ public sealed class PocAiAssistantApi : IDynamicApiController
         return HandleAiOperation(() => _chatService.ChatAsync(request, cancellationToken));
     }
 
+    /// <summary>
+    /// 预创建空 AI 会话（实时体验补强）：前端在面板打开且选定数据源后立即建号，
+    /// 此后每一轮对话（含首轮）从发消息瞬间开始按 Seq 轮询 progress，
+    /// 消除“新会话首轮不可轮询”导致的长时间无反馈。AI 关闭或配置不完整时按
+    /// AI_DISABLED fail-fast，不建会话；数据源缺失/停用返回 400。
+    /// </summary>
+    /// <param name="request">预创建请求（数据源编码）。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>会话编号与绑定数据源。</returns>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/ai/sessions")]
+    public Task<PocAiSessionPreCreateDocument> CreateSession(
+        [FromBody] PocAiSessionPreCreateRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (_chatService is null)
+        {
+            throw Oops.Oh("AI_CHAT_SERVICE_NOT_AVAILABLE").StatusCode(503);
+        }
+        return HandleAiOperation(() => _chatService.PreCreateSessionAsync(request, cancellationToken));
+    }
+
     /// <summary>显式结束会话并清空内存上下文；会话不存在时同样返回成功，保证幂等。</summary>
     /// <param name="id">会话编号。</param>
     /// <returns>关闭结果。</returns>
@@ -102,6 +124,30 @@ public sealed class PocAiAssistantApi : IDynamicApiController
     public Task<PocAiSessionClosedDocument> CloseSession([FromRoute] string id) =>
         HandleAiOperation(() => Task.FromResult(
             new PocAiSessionClosedDocument(id, _chatService?.CloseSession(id) ?? false)));
+
+    /// <summary>
+    /// 插话纠正（中途方向修正）：向指定会话追加一条用户消息。运行中的工具循环在下一轮
+    /// 组装 llmMessages 时自然读到该插话——模型即收到方向纠正，不必等本轮失败后从头重来；
+    /// 循环未运行时同样允许追加，作为下一轮对话的既有上下文。AI 关闭 fail-fast；
+    /// 会话不存在/已过期按 AI_SESSION_NOT_FOUND 映射 400，内容为空按 AI_MESSAGE_REQUIRED 映射 400。
+    /// </summary>
+    /// <param name="id">目标会话编号。</param>
+    /// <param name="request">插话请求（message 为方向纠正文本）。</param>
+    /// <param name="cancellationToken">用于取消异步操作的令牌。</param>
+    /// <returns>追加后的消息视图（含 Seq，供前端对齐消息流）。</returns>
+    [SuppressMonitor]
+    [HttpPost("/api/report-center/ai/sessions/{id}/guidance")]
+    public Task<PocAiChatMessageView> AppendSessionGuidance(
+        [FromRoute] string id,
+        [FromBody] PocAiSessionGuidanceRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (_chatService is null)
+        {
+            throw Oops.Oh("AI_CHAT_SERVICE_NOT_AVAILABLE").StatusCode(503);
+        }
+        return HandleAiOperation(() => _chatService.AppendGuidanceAsync(id, request.Message, cancellationToken));
+    }
 
     /// <summary>
     /// 数据源表清单（方案 A 透明化）：把静默注入给模型的“AI 眼中的数据源”直接展示给用户。
@@ -146,7 +192,7 @@ public sealed class PocAiAssistantApi : IDynamicApiController
         return HandleAiOperation(() => _chatService.GetProgressAsync(sessionId, afterSeq, cancellationToken));
     }
 
-    /// <summary>AI 接口统一异常翻译：AI 关闭降级映射 403，配置与参数错误映射 400，LLM 失败映射 502 且保留会话语义。</summary>
+    /// <summary>AI 接口统一异常翻译：AI 关闭降级映射 403，配置与参数错误映射 400，LLM 失败映射 502 且保留会话语义；客户端中止映射受控 499。</summary>
     /// <param name="operation">待执行的 AI 操作。</param>
     /// <returns>操作结果，异常时抛出 FriendlyException。</returns>
     private static async Task<T> HandleAiOperation<T>(Func<Task<T>> operation)
@@ -154,6 +200,14 @@ public sealed class PocAiAssistantApi : IDynamicApiController
         try
         {
             return await operation();
+        }
+        catch (OperationCanceledException)
+        {
+            // 客户端中止（浏览器关闭或“停止按钮”abort fetch）带来的取消异常不能以原始形态穿透到
+            // Furion 异常管道：否则会被当 500 记 Error 日志（含完整堆栈），并连带触发错误邮件等
+            // 后台旁路。这里统一翻译为受控 FriendlyException(499)，按 BahLogLevel（Information）
+            // 记日志；连接已断开所以客户端不可感知，服务端只留下安静的可控翻译。
+            throw ClientAborted();
         }
         catch (PocAiDisabledException exception)
         {
@@ -175,6 +229,15 @@ public sealed class PocAiAssistantApi : IDynamicApiController
             throw Oops.Oh($"{exception.Code}: {exception.Message}").StatusCode(400);
         }
     }
+
+    /// <summary>
+    /// 构造“客户端中止”的受控业务异常：499 语义（连接已断，客户端不可感知），错误码 AI_REQUEST_ABORTED。
+    /// 直接构造 AppFriendlyException 而不是走 Oops.Oh，保证无 Furion 宿主环境的单测也能构造与断言，
+    /// 运行时行为（MVC 管道按 StatusCode 返回、按 BahLogLevel 记日志）与 Oops.Oh+StatusCode 完全一致。
+    /// </summary>
+    /// <returns>StatusCode=499 的 FriendlyException 实例。</returns>
+    internal static AppFriendlyException ClientAborted() =>
+        new("AI_REQUEST_ABORTED", "AI_REQUEST_ABORTED") { StatusCode = 499 };
 }
 
 /// <summary>会话关闭回执；closed=false 表示会话已不存在或早已过期，同样视为关闭成功。</summary>

@@ -325,6 +325,16 @@ public sealed class PocAiChatSessionStore : ISingleton
         return (session, true);
     }
 
+    /// <summary>
+    /// 预创建空会话（实时体验补强）：前端在面板打开且选定数据源后立即建号，
+    /// 让后续每一轮对话（含首轮）从发消息瞬间就能按 Seq 轮询 progress，
+    /// 消除“新会话首轮不可轮询”的等待盲区。复用 GetOrCreate 的空号分支，
+    /// 只登记绑定数据源、不写入任何消息；空闲 30 分钟过期与 50 条裁剪语义不变。
+    /// </summary>
+    /// <param name="dataSourceCode">会话绑定的数据源编码。</param>
+    /// <returns>新建的空会话（无消息历史、循环状态 Idle）。</returns>
+    public PocAiChatSession PreCreate(string dataSourceCode) => GetOrCreate(null, dataSourceCode).Session;
+
     /// <summary>显式结束会话：从内存移除上下文；编号不存在时同样返回成功，保证幂等。</summary>
     /// <param name="sessionId">待关闭的会话编号。</param>
     /// <returns>是否关闭了现存会话。</returns>
@@ -332,6 +342,17 @@ public sealed class PocAiChatSessionStore : ISingleton
     {
         RemoveExpiredSessions();
         return _sessions.TryRemove(sessionId, out _);
+    }
+
+    /// <summary>刷新指定会话的活跃时间（插话视为会话活动，延缓 30 分钟空闲过期）；会话不存在时不做任何事。</summary>
+    /// <param name="sessionId">会话编号。</param>
+    internal void Touch(string sessionId)
+    {
+        RemoveExpiredSessions();
+        if (_sessions.TryGetValue(sessionId, out var session))
+        {
+            session.LastActiveAt = _clock();
+        }
     }
 
     /// <summary>当前存活的会话数量；仅测试与诊断使用。</summary>

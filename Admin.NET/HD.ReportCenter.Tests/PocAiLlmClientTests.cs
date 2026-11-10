@@ -22,7 +22,7 @@ public sealed class PocAiLlmClientTests
         var response = await client.ChatAsync(
             new PocLlmEndpoint("http://llm.test/v1", "sk-key", "test-model"),
             new PocLlmRequest([new PocLlmChatMessage("user", "你好")]),
-            PocLlmClient.ChatTimeoutSeconds);
+            PocLlmClient.TestTimeoutSeconds);
 
         Assert.Equal("结论：表结构正常。", response.Content);
         Assert.Empty(response.ToolCalls);
@@ -44,7 +44,7 @@ public sealed class PocAiLlmClientTests
         var response = await client.ChatAsync(
             new PocLlmEndpoint("http://llm.test/v1", null, "m"),
             new PocLlmRequest([new PocLlmChatMessage("user", "看看数据")]),
-            PocLlmClient.ChatTimeoutSeconds);
+            PocLlmClient.TestTimeoutSeconds);
 
         Assert.Equal("我先查一下", response.Content);
         var call = Assert.Single(response.ToolCalls);
@@ -71,7 +71,7 @@ public sealed class PocAiLlmClientTests
                 new PocLlmChatMessage("tool", "{\"count\":1}", ToolCallId: "c1", ToolName: "list_tables"),
                 new PocLlmChatMessage("user", "继续"),
             ], tools),
-            PocLlmClient.ChatTimeoutSeconds);
+            PocLlmClient.TestTimeoutSeconds);
 
         Assert.Single(handler.RequestBodies);
         var payload = JObject.Parse(handler.RequestBodies[0]);
@@ -95,7 +95,7 @@ public sealed class PocAiLlmClientTests
         var exception = await Assert.ThrowsAsync<PocAiLlmException>(() => client.ChatAsync(
             new PocLlmEndpoint("not-a-url", null, "m"),
             new PocLlmRequest([new PocLlmChatMessage("user", "hi")]),
-            PocLlmClient.ChatTimeoutSeconds));
+            PocLlmClient.TestTimeoutSeconds));
 
         Assert.Equal("LLM_BASE_URL_INVALID", exception.Code);
         Assert.Equal(0, handler.RequestCount);
@@ -112,7 +112,7 @@ public sealed class PocAiLlmClientTests
         var exception = await Assert.ThrowsAsync<PocAiLlmException>(() => client.ChatAsync(
             new PocLlmEndpoint("http://llm.test/v1", "sk-secret", "m"),
             new PocLlmRequest([new PocLlmChatMessage("user", "hi")]),
-            PocLlmClient.ChatTimeoutSeconds));
+            PocLlmClient.TestTimeoutSeconds));
 
         Assert.Equal("LLM_REQUEST_FAILED", exception.Code);
         Assert.Contains("401", exception.Message);
@@ -128,7 +128,7 @@ public sealed class PocAiLlmClientTests
         var missingChoice = await Assert.ThrowsAsync<PocAiLlmException>(() => client.ChatAsync(
             new PocLlmEndpoint("http://llm.test/v1", null, "m"),
             new PocLlmRequest([new PocLlmChatMessage("user", "hi")]),
-            PocLlmClient.ChatTimeoutSeconds));
+            PocLlmClient.TestTimeoutSeconds));
         Assert.Equal("LLM_RESPONSE_INVALID", missingChoice.Code);
 
         var emptyHandler = new ScriptedLlmHandler();
@@ -137,11 +137,11 @@ public sealed class PocAiLlmClientTests
         var empty = await Assert.ThrowsAsync<PocAiLlmException>(() => emptyClient.ChatAsync(
             new PocLlmEndpoint("http://llm.test/v1", null, "m"),
             new PocLlmRequest([new PocLlmChatMessage("user", "hi")]),
-            PocLlmClient.ChatTimeoutSeconds));
+            PocLlmClient.TestTimeoutSeconds));
         Assert.Equal("LLM_RESPONSE_INVALID", empty.Code);
     }
 
-    /// <summary>验证超时转换为 LLM_REQUEST_TIMEOUT；区分调用方主动取消（OperationCanceledException 原样外抛）。</summary>
+    /// <summary>验证超时转换为 LLM_REQUEST_TIMEOUT；并验证不限时（0）调用仍会被调用方取消令牌中止（对话链路语义）。</summary>
     [Fact]
     public async Task ChatAsync_maps_timeout_and_preserves_caller_cancellation()
     {
@@ -154,6 +154,7 @@ public sealed class PocAiLlmClientTests
             timeoutSeconds: 1));
         Assert.Equal("LLM_REQUEST_TIMEOUT", timeout.Code);
 
+        // 不设每调用硬超时（对话链路传 0）：没有限时器，调用方取消令牌触发后仍能中止请求。
         var cancelHandler = new ScriptedLlmHandler();
         cancelHandler.EnqueueDelayedJson(PocAiLlmFixtures.ContentResponse("late"), TimeSpan.FromSeconds(5));
         var cancelClient = new PocLlmClient(new HttpClient(cancelHandler));
@@ -161,7 +162,7 @@ public sealed class PocAiLlmClientTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelClient.ChatAsync(
             new PocLlmEndpoint("http://llm.test/v1", null, "m"),
             new PocLlmRequest([new PocLlmChatMessage("user", "hi")]),
-            PocLlmClient.ChatTimeoutSeconds,
+            PocLlmClient.ChatUnboundedTimeoutSeconds,
             cts.Token));
     }
 

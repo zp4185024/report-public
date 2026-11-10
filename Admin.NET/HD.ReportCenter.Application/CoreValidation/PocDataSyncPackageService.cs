@@ -694,13 +694,14 @@ public sealed class PocDataSyncPackageService : ITransient
         IReadOnlyDictionary<string, string?>? parameters)
     {
         // 第一阶段：把包内数据集契约物化为参数定义并解析变量取值，绑定语义与报表包试跑一致。
+        // 包内滚动表达式（取数窗口）按当前时间现算兜底，用户样例取值仍可覆盖，便于按历史窗口验证。
         var schema = ToDatasetDocument(package.SourceDataset, target.Code, 0);
         var parameterDefinitions = schema.Variables.Select(variable => new PocParameterDefinition(
             variable.Code,
             variable.DisplayName,
             "text",
             variable.SourceType,
-            null,
+            PocDataAssetService.ResolveVariableFallback(variable),
             true,
             variable.DataType,
             Required: variable.Required,

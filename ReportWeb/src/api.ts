@@ -52,9 +52,13 @@ import type {
   AiChatProgressDocument,
   AiChatRequest,
   AiChatResult,
+  AiChatSeqMessageView,
   AiConnectionTestResult,
   AiDataSourceTable,
   AiSessionClosedDocument,
+  AiSessionGuidanceRequest,
+  AiSessionPreCreateDocument,
+  AiSessionPreCreateRequest,
   AiSettings,
   AiSettingsInput,
   AiSyncMatchRequest,
@@ -900,11 +904,45 @@ export const aiApi = {
 
   /**
    * 模板 AI 对话：一次回复内完成工具循环；sessionId 为空表示新会话。
+   * 无服务端硬超时：浏览器中断连接（abort）会连带中止后端工具循环。
    * @param request - 对话请求（会话号、数据源与消息文本）。
+   * @param options - 可选中止信号；Sender 内置停止按钮传入 AbortController 的 signal。
    * @returns 本轮新增消息与会话号。
    */
-  chat: (request: AiChatRequest) =>
+  chat: (request: AiChatRequest, options?: { signal?: AbortSignal }) =>
     requestJson<AiChatResult>('/api/report-center/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal: options?.signal,
+    }),
+
+  /**
+   * 会话插话纠正（方向修正）：向运行中的工具循环追加一条用户消息，
+   * 下一轮组装模型上下文时自然读到；会话未运行时同样合法，作为下一轮的既有上下文。
+   * @param sessionId - 目标会话编号。
+   * @param request - 插话请求（纠正文本）。
+   * @returns 追加后的消息视图（含 Seq，供前端对齐消息流并打“插话”角标）。
+   */
+  appendGuidance: (sessionId: string, request: AiSessionGuidanceRequest) =>
+    requestJson<AiChatSeqMessageView>(
+      `/api/report-center/ai/sessions/${encodeURIComponent(sessionId)}/guidance`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      },
+    ),
+
+  /**
+   * 预创建空 AI 会话（实时体验补强）：面板打开且选定数据源后立即建号，
+   * 让每一轮对话（含首轮）从发消息瞬间就能按 Seq 轮询 progress。
+   * AI 关闭时后端按 AI_DISABLED fail-fast；数据源缺失/停用返回 400。
+   * @param request - 预创建请求（数据源编码）。
+   * @returns 空会话编号与绑定数据源。
+   */
+  createSession: (request: AiSessionPreCreateRequest) =>
+    requestJson<AiSessionPreCreateDocument>('/api/report-center/ai/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),

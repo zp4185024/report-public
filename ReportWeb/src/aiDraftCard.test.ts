@@ -104,7 +104,7 @@ describe('aiDraftStatusLabel / aiDraftBadgeClass', () => {
     expect(aiDraftStatusLabel('submitted')).toBe('已提交待确认');
     expect(aiDraftStatusLabel('failed')).toBe('提交失败，等待 AI 修正');
 
-    expect(aiDraftBadgeClass('validated')).toBe('ai-draft-badge ok');
+    expect(aiDraftBadgeClass('validated')).toBe('ai-draft-badge info');
     expect(aiDraftBadgeClass('dryRunOk')).toBe('ai-draft-badge ok');
     expect(aiDraftBadgeClass('submitted')).toBe('ai-draft-badge pending');
     expect(aiDraftBadgeClass('failed')).toBe('ai-draft-badge error');

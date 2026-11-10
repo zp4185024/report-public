@@ -64,3 +64,6 @@ Admin.NET/Admin.NET.Application/Configuration/DeepSeek.json
 Admin.NET/HD.ReportCenter.Tests/TestResults/
 ReportWeb/vite-codex.*.log
 /模板列表E2E测试报告.docx
+
+# 开发机后台任务看板（ZCode 会话维护，不进仓库）
+ReportWeb/public/dev-status.html

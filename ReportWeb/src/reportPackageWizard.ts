@@ -4,6 +4,7 @@ import {
   type ReportPackage,
   type ReportPackageParameter,
 } from './types';
+import { evaluateDefaultExpression as evaluateSharedExpression } from './defaultExpressions';
 
 /** 上传解析结果：要么得到可用的包对象（来自信封解包时带标记），要么得到可直接展示的中文错误。 */
 export type ReportPackageParseResult =
@@ -86,10 +87,11 @@ export function parseReportPackageText(text: string): ReportPackageParseResult {
 }
 
 /**
- * 按后端 PocDefaultExpressionEvaluator 的封闭表达式词表计算默认值，
+ * 按后端 PocDefaultExpressionEvaluator 的封闭文法计算默认值，
  * 让导入向导在浏览器内为试跑表单提供与正式报表一致的日期默认值。
- * 词表两端保持同步：新增表达式必须同时改后端求值器和这里。
- * @param expression - 包参数声明的默认值表达式原文，如 startofmonth(today())。
+ * 文法实现收敛在 defaultExpressions.ts 共享模块（后端求值器的唯一前端镜像），
+ * 本函数只保留向导侧的签名适配：空白或非法表达式返回 null 交必填校验拦截。
+ * @param expression - 包参数声明的默认值表达式原文，如 startofmonth(addmonths(today(),-1))。
  * @param dataType - 参数数据类型，决定最终格式化（date/month/year/其他）。
  * @param now - 用于计算的时间基准，便于测试传入固定值。
  * @returns 可直接填入输入框的字符串；表达式为空返回 null，非法表达式返回 null。
@@ -99,64 +101,7 @@ export function evaluateDefaultExpression(
   dataType: string,
   now: Date,
 ): string | null {
-  if (!expression || !expression.trim()) return null;
-  // 阶段：规范化表达式并计算时间基准；未收录的表达式一律返回 null 交必填校验拦截。
-  const normalized = expression.replace(/\s+/gu, '').toLowerCase();
-  const startOfToday = startOfDay(now);
-  let value: Date;
-  switch (normalized) {
-    case 'now()':
-      value = new Date(now);
-      break;
-    case 'today()':
-    case 'startofday(now())':
-    case 'startofday(today())':
-      value = startOfToday;
-      break;
-    case 'yesterday()':
-    case 'startofday(yesterday())':
-      value = addDays(startOfToday, -1);
-      break;
-    case 'tomorrow()':
-    case 'startofday(tomorrow())':
-      value = addDays(startOfToday, 1);
-      break;
-    case 'endofday(today())':
-      value = endOfDay(startOfToday);
-      break;
-    case 'endofday(yesterday())':
-      value = endOfDay(addDays(startOfToday, -1));
-      break;
-    case 'endofday(tomorrow())':
-      value = endOfDay(addDays(startOfToday, 1));
-      break;
-    case 'startofmonth(today())':
-      value = new Date(now.getFullYear(), now.getMonth(), 1);
-      break;
-    case 'endofmonth(today())':
-      value = new Date(new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime() - 1);
-      break;
-    case 'startofyear(today())':
-      value = new Date(now.getFullYear(), 0, 1);
-      break;
-    case 'endofyear(today())':
-      value = new Date(new Date(now.getFullYear() + 1, 0, 1).getTime() - 1);
-      break;
-    default:
-      return null;
-  }
-
-  // 阶段：按参数数据类型格式化结果，date/month/year 裁剪精度，其余保留时间部分。
-  switch (dataType.trim().toLowerCase()) {
-    case 'date':
-      return formatDate(value);
-    case 'month':
-      return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}`;
-    case 'year':
-      return String(value.getFullYear());
-    default:
-      return `${formatDate(value)} ${pad2(value.getHours())}:${pad2(value.getMinutes())}:${pad2(value.getSeconds())}`;
-  }
+  return evaluateSharedExpression(expression, dataType, now);
 }
 
 /**
@@ -237,50 +182,4 @@ export function rememberTargetDataSourceCode(code: string): void {
   } catch {
     // 隐私模式等场景写入失败时静默降级为不记忆。
   }
-}
-
-/**
- * 取当天零点的本地时间副本，作为日期表达式计算的统一基准。
- * @param value - 任意时间点。
- * @returns 当天 00:00:00.000 的 Date 对象。
- */
-function startOfDay(value: Date): Date {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-}
-
-/**
- * 计算整天偏移后的新日期，不修改入参。
- * @param value - 基准日期。
- * @param days - 偏移天数，可为负。
- * @returns 偏移后的新 Date 对象。
- */
-function addDays(value: Date, days: number): Date {
-  return new Date(value.getFullYear(), value.getMonth(), value.getDate() + days);
-}
-
-/**
- * 把某天零点转换为当天最后一毫秒，对应后端 endofday 的语义。
- * @param dayStart - 当天零点。
- * @returns 当天 23:59:59.999 的 Date 对象。
- */
-function endOfDay(dayStart: Date): Date {
-  return new Date(addDays(dayStart, 1).getTime() - 1);
-}
-
-/**
- * 把日期格式化为 yyyy-MM-dd。
- * @param value - 待格式化的日期。
- * @returns 四位年份与两位月日的字符串。
- */
-function formatDate(value: Date): string {
-  return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
-}
-
-/**
- * 把 0-99 的数字格式化为至少两位的十进制文本。
- * @param value - 待格式化的数字。
- * @returns 两位字符的数字文本。
- */
-function pad2(value: number): string {
-  return String(value).padStart(2, '0');
 }

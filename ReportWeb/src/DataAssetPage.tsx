@@ -16,6 +16,14 @@ import { dataAssetApi } from './api';
 import { confirmDeleteMessage, deleteErrorMessage, pickResourceAfterDeletion } from './assetDeletion';
 import { PaginationBar } from './PaginationBar';
 import { StatusToasts } from './StatusToasts';
+import {
+  describeOffset,
+  evaluateDefaultExpression,
+  getDefaultExpressionError,
+  getRelativePointPresets,
+  matchOffsetExpression,
+  matchRelativePointPreset,
+} from './defaultExpressions';
 import type {
   DataSourceDocument,
   DataSourceDbType,
@@ -720,12 +728,22 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
               </div>
               <div className="dataset-parameter-line"><strong>SQL 输入变量</strong><span className="parameter-legend form">查询输入</span><span className="parameter-legend external">外部接口</span><span>{datasetVariables.length === 0 ? '无' : datasetVariables.map((variable) => `@${variable.code}`).join('、')}</span></div>
               <div className="dataset-columns-header"><div><strong>变量定义</strong><span>{datasetVariables.length} 个变量</span></div></div>
-              <div className="configuration-table-scroll asset-column-scroll"><table className="configuration-table dataset-variable-table"><thead><tr><th>SQL 变量</th><th>业务名称</th><th>数据类型</th><th>参数来源</th><th>接口字段</th><th>必填</th></tr></thead><tbody>{datasetVariables.length === 0 ? <tr><td colSpan={6} className="dataset-preview-empty">当前 SQL 没有输入变量</td></tr> : datasetVariables.map((variable) => {
+              <div className="configuration-table-scroll asset-column-scroll"><table className="configuration-table dataset-variable-table"><thead><tr><th>SQL 变量</th><th>业务名称</th><th>数据类型</th><th>参数来源</th><th>接口字段</th><th>默认值方式</th><th>默认值</th><th>必填</th></tr></thead><tbody>{datasetVariables.length === 0 ? <tr><td colSpan={8} className="dataset-preview-empty">当前 SQL 没有输入变量</td></tr> : datasetVariables.map((variable) => {
                 // 第8阶段：构造 DataAssetPage 当前阶段需要的中间数据和执行参数。
-                // 第9阶段：构造 DataAssetPage 当前阶段需要的中间数据和执行参数。
                 const source = externalSources.find((item) => item.code === variable.sourceCode);
-                // 第9阶段：遍历 DataAssetPage 当前数据集合，逐项转换并维护处理结果。
-                // 第10阶段：遍历 DataAssetPage 当前数据集合，逐项转换并维护处理结果。
+                // 第9阶段：派生默认值形态——表达式命中语义目录或偏移形态 = 滚动时间（只见中文标签），
+                // 其余表达式 = 高级兜底；预览值两端同口径按当前时间现算。
+                const expressionText = (variable.defaultExpression ?? '').trim();
+                const defaultPresetMatch = matchRelativePointPreset(variable.defaultExpression ?? null, variable.dataType);
+                const defaultOffsetMatch = matchOffsetExpression(variable.defaultExpression ?? null);
+                const defaultValueMode = expressionText
+                  ? (defaultPresetMatch || defaultOffsetMatch ? 'relative' : 'advanced')
+                  : variable.defaultValue !== null && variable.defaultValue !== undefined ? 'fixed' : 'none';
+                const defaultPreviewValue = expressionText
+                  ? (getDefaultExpressionError(variable.defaultExpression ?? null)
+                    ?? evaluateDefaultExpression(variable.defaultExpression, variable.dataType, new Date())
+                    ?? '—')
+                  : '—';
                 return <tr key={variable.code}><td><input disabled value={`@${variable.code}`} /></td><td><input value={variable.displayName} onChange={(event) => updateVariable(variable.code, { displayName: event.target.value })} /></td><td><select disabled={variable.sourceType === 'External'} value={variable.dataType} onChange={(event) => updateVariable(variable.code, { dataType: event.target.value })}><option value="string">文本</option><option value="int">整数</option><option value="long">长整数</option><option value="decimal">小数</option><option value="date">日期</option><option value="datetime">日期时间</option><option value="bool">布尔值</option></select></td><td><select value={variable.sourceType === 'External' ? variable.sourceCode ?? '' : 'Form'} onChange={(event) => {
                   const external = externalSources.find((item) => item.code === event.target.value);
                   const field = external?.fields.find((item) =>
@@ -745,7 +763,19 @@ export default function DataAssetPage({ initialKind }: DataAssetPageProps) {
                     dataType: field?.dataType ?? 'string',
                     displayName: field?.displayName ?? variable.displayName,
                   });
-                }}><option value="">请选择字段</option>{source?.fields.map((field) => <option key={field.code} value={field.code}>{field.displayName}（{field.code}）</option>)}</select> : <span className="source-field-empty">不适用</span>}</td><td><input type="checkbox" checked={variable.required} onChange={(event) => updateVariable(variable.code, { required: event.target.checked })} /></td></tr>;
+                }}><option value="">请选择字段</option>{source?.fields.map((field) => <option key={field.code} value={field.code}>{field.displayName}（{field.code}）</option>)}</select> : <span className="source-field-empty">不适用</span>}</td><td><select disabled={variable.sourceType === 'External'} value={defaultValueMode} onChange={(event) => {
+                  const mode = event.target.value;
+                  if (mode === 'relative') updateVariable(variable.code, { defaultExpression: defaultPresetMatch || defaultOffsetMatch ? variable.defaultExpression : 'yesterday()', defaultValue: null });
+                  else if (mode === 'advanced') updateVariable(variable.code, { defaultExpression: (variable.defaultExpression ?? '').trim() || 'today()', defaultValue: null });
+                  else if (mode === 'fixed') updateVariable(variable.code, { defaultExpression: null, defaultValue: '' });
+                  else updateVariable(variable.code, { defaultExpression: null, defaultValue: null });
+                }}><option value="none">无默认值</option><option value="fixed">固定值</option><option value="relative">滚动时间</option><option value="advanced">高级表达式</option></select></td><td>{defaultValueMode === 'relative' ? (() => {
+                  const presets = getRelativePointPresets(variable.dataType);
+                  return <div className="variable-default-cell"><select value={variable.defaultExpression ?? ''} onChange={(event) => updateVariable(variable.code, { defaultExpression: event.target.value || 'yesterday()' })}><option value="">选择时间点…</option>{presets.map((preset) => <option key={preset.expression} value={preset.expression}>{preset.label}</option>)}{defaultOffsetMatch && !defaultPresetMatch && <option value={variable.defaultExpression ?? ''}>{describeOffset(defaultOffsetMatch)}</option>}</select><span className="variable-default-preview">{defaultPreviewValue}</span></div>;
+                })() : defaultValueMode === 'advanced' ? (() => {
+                  const expressionError = getDefaultExpressionError(variable.defaultExpression ?? null);
+                  return <div className="variable-default-cell"><input value={variable.defaultExpression ?? ''} placeholder="如 startofmonth(addmonths(today(),-1))" onChange={(event) => updateVariable(variable.code, { defaultExpression: event.target.value || null })} /><span className="variable-default-preview">{expressionError ?? defaultPreviewValue}</span></div>;
+                })() : variable.defaultValue !== null && variable.defaultValue !== undefined ? <input value={variable.defaultValue ?? ''} placeholder={variable.dataType === 'date' ? 'yyyy-MM-dd' : '默认值'} onChange={(event) => updateVariable(variable.code, { defaultValue: event.target.value })} /> : <span className="source-field-empty">—</span>}</td><td><input type="checkbox" checked={variable.required} onChange={(event) => updateVariable(variable.code, { required: event.target.checked })} /></td></tr>;
               })}</tbody></table></div>
             </>
           ) : <div className="asset-empty">请选择资源</div>}

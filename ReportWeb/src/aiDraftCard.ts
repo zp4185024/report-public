@@ -31,16 +31,19 @@ export function aiDraftStatusLabel(status: AiDraftStatus): string {
 }
 
 /**
- * 状态徽标的样式类名（绿=可导入，黄=待确认，红=失败）。
+ * 状态徽标的样式类名（绿=试跑通过可导入，蓝=校验通过，黄=待确认，红=失败）：
+ * 把“校验通过”与“试跑通过”拆成两档语义色，让用户一眼分清当前草稿走到哪一步。
  * @param status - 草稿状态。
  * @returns CSS 类名。
  */
 export function aiDraftBadgeClass(status: AiDraftStatus): string {
-  return status === 'validated' || status === 'dryRunOk'
+  return status === 'dryRunOk'
     ? 'ai-draft-badge ok'
-    : status === 'failed'
-      ? 'ai-draft-badge error'
-      : 'ai-draft-badge pending';
+    : status === 'validated'
+      ? 'ai-draft-badge info'
+      : status === 'failed'
+        ? 'ai-draft-badge error'
+        : 'ai-draft-badge pending';
 }
 
 /**

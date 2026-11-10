@@ -98,7 +98,12 @@ public sealed record PocExternalParameterSourceDefinition(
     IReadOnlyList<PocExternalParameterFieldDefinition> Fields,
     IReadOnlyList<string> ContextKeys);
 
-/// <summary>数据集 SQL 输入变量；可由查询表单或已登记的外部接口提供取值。</summary>
+/// <summary>
+/// 数据集 SQL 输入变量；可由查询表单、已登记的外部接口或默认值兜底提供取值。
+/// DefaultValue 是固定兜底值；DefaultExpression 是时间滚动表达式（每次执行时按当前时间
+/// 由 PocDefaultExpressionEvaluator 现算，仅日期类变量可用），两者都为空时变量取值回落
+/// 到"调用方必填"的原有语义。历史 FieldSchemaJson 反序列化时两个字段缺省为 null，无需迁移。
+/// </summary>
 public sealed record PocDatasetVariableDefinition(
     string Code,
     string DisplayName,
@@ -106,7 +111,9 @@ public sealed record PocDatasetVariableDefinition(
     bool Required,
     string SourceType = "Form",
     string? SourceCode = null,
-    string? SourceFieldCode = null);
+    string? SourceFieldCode = null,
+    string? DefaultValue = null,
+    string? DefaultExpression = null);
 
 /// <summary>
 /// 数据集查询返回字段，只描述数据契约，不包含 Excel 表现属性。
